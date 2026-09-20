@@ -1,0 +1,178 @@
+﻿# OrganizationAI — Project A
+
+# Secrets and environment variables
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+*.pfx
+*.p12
+secrets/
+credentials/
+appsettings.Development.json
+appsettings.*.local.json
+
+# Visual Studio
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# VS Code
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.example.json
+
+# .NET / C#
+[Bb]in/
+[Oo]bj/
+[Dd]ebug/
+[Rr]elease/
+artifacts/
+TestResults/
+packages/
+*.nupkg
+*.snupkg
+
+# Node.js / frontend
+node_modules/
+.pnpm-store/
+.yarn/
+.next/
+.nuxt/
+.svelte-kit/
+dist/
+build/
+coverage/
+*.tsbuildinfo
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.npmrc
+
+# Python / AI pipeline
+__pycache__/
+*.py[cod]
+*.pyd
+*.so
+.venv/
+venv/
+env/
+ENV/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.ipynb_checkpoints/
+*.egg-info/
+
+# Local VLM models and checkpoints
+models/*
+!models/README.md
+!models/.gitkeep
+checkpoints/
+weights/
+*.onnx
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+*.gguf
+
+# Runtime files and uploads
+uploads/
+runtime/
+temp/
+tmp/
+cache/
+logs/
+*.log
+
+# Private or generated data
+data/private/
+data/raw/
+data/generated/
+data/uploads/
+
+# Local databases
+*.db
+*.sqlite
+*.sqlite3
+*.db-shm
+*.db-wal
+
+# Generated reports
+test-results/
+playwright-report/
+allure-results/
+allure-report/
+reports/generated/
+*.coverage
+*.trx
+lcov.info
+
+# Docker local overrides
+docker-compose.override.yml
+docker-compose.local.yml
+
+# Codex local runtime state
+.codex/logs/
+.codex/cache/
+.codex/tmp/
+.codex/sessions/
+.codex/*.local.*
+
+# Operating system files
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Archives and temporary files
+*.zip
+*.7z
+*.rar
+*.tar
+*.tar.gz
+*.tmp
+*.temp
+*.bak
+*.swp
+*~
+
+# Codex and agent-only files
+.agents/
+.codex/
+AGENTS.md
+
+# Local environment
+.venv/
+.env
+.vs/
+
+# Private/generated data
+data/private/
+data/raw/
+data/generated/
+uploads/
+logs/
+
+# Models
+models/
+checkpoints/
+weights/
+*.onnx
+*.pt
+*.pth
+*.safetensors
+*.gguf
+# Internal team and Codex work packages
+docs/team/role/
+docs/work-packages/
+docs/contracts/WP1-signoff.md
+docs/contracts/verified-commands.md
+docs/contracts/repository-ownership.md
