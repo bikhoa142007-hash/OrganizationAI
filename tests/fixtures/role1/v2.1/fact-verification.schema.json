@@ -1,0 +1,179 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:role1:fixture:fact-verification:1.0-proposed",
+  "title": "Proposed fixture evidence extension, NOT a verified WP1/WP2 schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "verification_status",
+    "assertion_origin",
+    "issues"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "role1.fact-verification/1.0-proposed"
+    },
+    "verification_status": {
+      "enum": [
+        "UNCERTAIN",
+        "VERIFIED"
+      ]
+    },
+    "assertion_origin": {
+      "const": "SYNTHETIC_FIXTURE"
+    },
+    "issues": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/issue"
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "verification_status": {
+            "const": "UNCERTAIN"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "issues": {
+            "minItems": 1
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "verification_status": {
+            "const": "VERIFIED"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "issues": {
+            "maxItems": 0
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "pointer",
+        "observed_value",
+        "normalized_value",
+        "evidence_ref"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "PLAN_FIELD",
+            "VLM_EVIDENCE"
+          ]
+        },
+        "pointer": {
+          "type": "string",
+          "pattern": "^/"
+        },
+        "observed_value": {
+          "type": [
+            "string",
+            "number",
+            "null"
+          ]
+        },
+        "normalized_value": {
+          "type": [
+            "string",
+            "number",
+            "null"
+          ]
+        },
+        "evidence_ref": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "issue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "issue_id",
+        "field",
+        "affected_input_pointer",
+        "issue_type",
+        "status",
+        "verified_value",
+        "sources",
+        "evidence_refs",
+        "rationale",
+        "fixture_rule_ref"
+      ],
+      "properties": {
+        "issue_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "field": {
+          "type": "string",
+          "minLength": 1
+        },
+        "affected_input_pointer": {
+          "type": "string",
+          "pattern": "^/"
+        },
+        "issue_type": {
+          "enum": [
+            "CONFLICTING_VALUES",
+            "INCOMPLETE_EXTRACTION"
+          ]
+        },
+        "status": {
+          "const": "UNRESOLVED"
+        },
+        "verified_value": {
+          "type": "null"
+        },
+        "sources": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/source"
+          }
+        },
+        "evidence_refs": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string"
+          }
+        },
+        "rationale": {
+          "type": "string",
+          "minLength": 20
+        },
+        "fixture_rule_ref": {
+          "enum": [
+            "R1-FIX-CONFLICT-01",
+            "R1-FIX-INCOMPLETE-01"
+          ]
+        }
+      }
+    }
+  }
+}

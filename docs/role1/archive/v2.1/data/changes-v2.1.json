@@ -1,0 +1,766 @@
+{
+  "revision": "2.1",
+  "baseline_archive": "Role1_Sprint1_v2.zip",
+  "baseline_archive_sha256": "096549169b53b84d4b3f68d5ce7c535c59e57355132b7d8a32b1e617fe583e43",
+  "diff_format": "JSON Pointer changes with exact before/after; before absent for add, after absent for remove",
+  "wp1_wp2_schema_verified": false,
+  "application_tests_executed": false,
+  "runtime_outcome_catalog": [
+    "AUTO_APPROVED",
+    "HUMAN_REVIEW_REQUIRED"
+  ],
+  "files": [
+    {
+      "file": "data/fixture-manifest.json",
+      "before_raw_sha256": "97084ed1560596b898c7f834cd9f3a03658f918a1096309bb08f65214cd81c01",
+      "before_canonical_sha256": "81919418c80a4b6832f8c4f576512bb2b333ec35f07709ca049d1a531e5d41c4",
+      "after_canonical_sha256": "339db05949ea60b650be30b516d9c97d9015bf97b6eb871a4cccc49f0443960e",
+      "patches": [
+        {
+          "op": "add",
+          "path": "/artifact_revision",
+          "after": "2.1"
+        },
+        {
+          "op": "add",
+          "path": "/business_policy_version_unchanged",
+          "after": "2.0"
+        },
+        {
+          "op": "add",
+          "path": "/wp1_wp2_compatibility_status",
+          "after": "NOT_VERIFIED"
+        },
+        {
+          "op": "replace",
+          "path": "/dataset_version",
+          "before": "ROLE1-DEMO-V2",
+          "after": "ROLE1-DEMO-V2.1"
+        },
+        {
+          "op": "replace",
+          "path": "/files",
+          "before": [
+            {
+              "path": "data/base-policy.json",
+              "sha256": "94ffd06c66d4df4bade1275f46ff33fe0b274e20ea5156f561144e97b66464bb"
+            },
+            {
+              "path": "data/ground-truth-cases.json",
+              "sha256": "ac344004b4038620b2f21a9b38a272b3c6df76be80f0ee594981a11d5792e29d"
+            },
+            {
+              "path": "data/verify-inputs.json",
+              "sha256": "d54e396c1b0bb271d2a88af4db816b881a6e2f4bc95807fd089dc37405d178e4"
+            },
+            {
+              "path": "data/verify-expected-results.json",
+              "sha256": "00457ede32006ebeeba14515d433490c44cb86c80261b16b9b88695bb67958af"
+            }
+          ],
+          "after": [
+            {
+              "path": "data/base-policy.json",
+              "sha256": "94ffd06c66d4df4bade1275f46ff33fe0b274e20ea5156f561144e97b66464bb"
+            },
+            {
+              "path": "data/ground-truth-cases.json",
+              "sha256": "d7ccf17e7cf974b17209569309d4e1abd3dcca321b850e74f66beb7d908c43e0"
+            },
+            {
+              "path": "data/verify-inputs.json",
+              "sha256": "9a6740620ba714383660b0438fb324529c93b95955bba73646aff16085de8b41"
+            },
+            {
+              "path": "data/verify-expected-results.json",
+              "sha256": "0e109a6c64f2fc1473076ae6083e053ef385c61ec89388500814e10d8ca123bd"
+            },
+            {
+              "path": "data/fact-verification.schema.json",
+              "sha256": "bbf6a148c7d998400aba8e1f719ebd205f837e633eefedc9342077da80e50f38"
+            },
+            {
+              "path": "data/wp1-wp2-mapping-status.json",
+              "sha256": "18adbaac2a0e806f25fdaa8e447ef6ee4c5776309dd6661a7915d8895856dee5"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "file": "data/ground-truth-cases.json",
+      "before_raw_sha256": "ac344004b4038620b2f21a9b38a272b3c6df76be80f0ee594981a11d5792e29d",
+      "before_canonical_sha256": "49687b728704b2f07c29e5ed48cddca6519cf443ba668c9595efe0383cb07974",
+      "after_canonical_sha256": "85eb9046ca0301d2438ecbea00a252b6a37b3575b32c6c285353c279eedf4173",
+      "patches": [
+        {
+          "op": "replace",
+          "path": "/0/expected/route",
+          "before": "AUTO_APPROVE",
+          "after": "AUTO_APPROVED"
+        },
+        {
+          "op": "replace",
+          "path": "/1/expected/route",
+          "before": "AUTO_APPROVE",
+          "after": "AUTO_APPROVED"
+        },
+        {
+          "op": "replace",
+          "path": "/2/expected/route",
+          "before": "AUTO_APPROVE",
+          "after": "AUTO_APPROVED"
+        },
+        {
+          "op": "replace",
+          "path": "/3/expected/route",
+          "before": "AUTO_APPROVE",
+          "after": "AUTO_APPROVED"
+        },
+        {
+          "op": "replace",
+          "path": "/4/expected/route",
+          "before": "AUTO_APPROVE",
+          "after": "AUTO_APPROVED"
+        },
+        {
+          "op": "replace",
+          "path": "/5/expected/route",
+          "before": "AUTO_APPROVE",
+          "after": "AUTO_APPROVED"
+        },
+        {
+          "op": "add",
+          "path": "/6/expected/explanation_requirements",
+          "after": {
+            "affected_fields": [
+              "budget_vnd"
+            ],
+            "issue_types": [
+              "CONFLICTING_VALUES"
+            ],
+            "required_evidence_refs": [
+              "E-GT-007"
+            ],
+            "required_factual_issue_refs": [
+              "ISSUE-GT-007-01"
+            ],
+            "must_describe_unresolved_fact": true,
+            "media_result_alone_is_insufficient": true,
+            "wp_runtime_code_mapping_status": "NOT_VERIFIED"
+          }
+        },
+        {
+          "op": "add",
+          "path": "/6/expected/policy_references",
+          "after": [
+            {
+              "source": "sources/scope-phase-1.md",
+              "reference": "BR-AI-10",
+              "supports": "Confidence thấp/kết quả thiếu phải chuyển Human Review."
+            },
+            {
+              "source": "sources/sprint-1-deliverables.md",
+              "reference": "§4: unresolved_conflict_count = 0",
+              "supports": "Conflict chưa giải quyết chặn auto; không chứng minh thiếu policy mapping."
+            },
+            {
+              "source": "04-escalation-policy.md",
+              "reference": "FACT_UNCERTAIN / precedence",
+              "supports": "Taxonomy kế thừa: fact chưa chắc được phân biệt với policy ngoài phạm vi."
+            },
+            {
+              "source": "18-fact-uncertainty-correction.md",
+              "reference": "R1-FIX-CONFLICT-01",
+              "supports": "Quy tắc dữ liệu fixture bổ sung; chưa phải rule ID runtime WP1/WP2."
+            }
+          ]
+        },
+        {
+          "op": "add",
+          "path": "/6/expected/rationale",
+          "after": "Ngân sách khai báo trong form là 50.000.000 VND, còn ảnh có hai phương án 120.000.000 và 180.000.000 VND. Chưa có bằng chứng lựa chọn phương án chính thức. Đây là xung đột giá trị budget_vnd, không phải thiếu mapping policy. Giữ form hợp lệ; không tự thay ngân sách bằng OCR."
+        },
+        {
+          "op": "replace",
+          "path": "/6/expected/question_example",
+          "before": "Form ghi 50.000.000 VND nhưng ảnh nêu 120.000.000 và 180.000.000 VND, VLM confidence 0,61. Vui lòng đối chiếu ảnh gốc và ghi căn cứ; nếu nội dung cần sửa, từ chối để Maker gửi phiên bản mới.",
+          "after": "Form ghi 50.000.000 VND, ảnh nêu phương án A 120.000.000 và B 180.000.000 VND. Hãy đối chiếu E-GT-007 và xác định ngân sách chính thức. Nếu cần sửa hồ sơ, từ chối có lý do để Maker gửi phiên bản mới."
+        },
+        {
+          "op": "replace",
+          "path": "/6/expected/required_reason_codes",
+          "before": [
+            "VLM_LOW_CONFIDENCE",
+            "MEDIA_CONFIDENCE_BELOW_THRESHOLD",
+            "MEDIA_REVIEW_REQUIRED",
+            "UNRESOLVED_CONFLICT"
+          ],
+          "after": [
+            "VLM_LOW_CONFIDENCE",
+            "UNRESOLVED_CONFLICT"
+          ]
+        },
+        {
+          "op": "add",
+          "path": "/6/input/evaluation_fixture_hash",
+          "after": "f2e1598cd6b216f805bbbce5f72adc3ec1f6874f68b193a09f63a0848751fe35"
+        },
+        {
+          "op": "add",
+          "path": "/6/input/fact_verification",
+          "after": {
+            "schema_version": "role1.fact-verification/1.0-proposed",
+            "verification_status": "UNCERTAIN",
+            "assertion_origin": "SYNTHETIC_FIXTURE",
+            "issues": [
+              {
+                "issue_id": "ISSUE-GT-007-01",
+                "field": "budget_vnd",
+                "affected_input_pointer": "/plan_snapshot/budget_vnd",
+                "issue_type": "CONFLICTING_VALUES",
+                "status": "UNRESOLVED",
+                "verified_value": null,
+                "sources": [
+                  {
+                    "kind": "PLAN_FIELD",
+                    "pointer": "/plan_snapshot/budget_vnd",
+                    "observed_value": 50000000,
+                    "normalized_value": 50000000,
+                    "evidence_ref": null
+                  },
+                  {
+                    "kind": "VLM_EVIDENCE",
+                    "pointer": "/agent_outputs/vlm/evidence/0/observed_text",
+                    "observed_value": "Phương án A: 120.000.000 VND",
+                    "normalized_value": 120000000,
+                    "evidence_ref": "E-GT-007"
+                  },
+                  {
+                    "kind": "VLM_EVIDENCE",
+                    "pointer": "/agent_outputs/vlm/evidence/0/observed_text",
+                    "observed_value": "Phương án B: 180.000.000 VND",
+                    "normalized_value": 180000000,
+                    "evidence_ref": "E-GT-007"
+                  }
+                ],
+                "evidence_refs": [
+                  "E-GT-007"
+                ],
+                "rationale": "Ngân sách khai báo trong form là 50.000.000 VND, còn ảnh có hai phương án 120.000.000 và 180.000.000 VND. Chưa có bằng chứng lựa chọn phương án chính thức. Đây là xung đột giá trị budget_vnd, không phải thiếu mapping policy. Giữ form hợp lệ; không tự thay ngân sách bằng OCR.",
+                "fixture_rule_ref": "R1-FIX-CONFLICT-01"
+              }
+            ]
+          }
+        },
+        {
+          "op": "add",
+          "path": "/6/input/agent_outputs/vlm/evidence/0/fact_verification_status",
+          "after": "UNRESOLVED"
+        },
+        {
+          "op": "add",
+          "path": "/6/input/agent_outputs/vlm/evidence/0/factual_issue_refs",
+          "after": [
+            "ISSUE-GT-007-01"
+          ]
+        },
+        {
+          "op": "add",
+          "path": "/7/expected/explanation_requirements",
+          "after": {
+            "affected_fields": [
+              "kpi_expected"
+            ],
+            "issue_types": [
+              "CONFLICTING_VALUES"
+            ],
+            "required_evidence_refs": [
+              "E-GT-008"
+            ],
+            "required_factual_issue_refs": [
+              "ISSUE-GT-008-01"
+            ],
+            "must_describe_unresolved_fact": true,
+            "media_result_alone_is_insufficient": true,
+            "wp_runtime_code_mapping_status": "NOT_VERIFIED"
+          }
+        },
+        {
+          "op": "add",
+          "path": "/7/expected/policy_references",
+          "after": [
+            {
+              "source": "sources/scope-phase-1.md",
+              "reference": "BR-AI-10",
+              "supports": "Confidence thấp/kết quả thiếu phải chuyển Human Review."
+            },
+            {
+              "source": "sources/sprint-1-deliverables.md",
+              "reference": "§4: unresolved_conflict_count = 0",
+              "supports": "Conflict chưa giải quyết chặn auto; không chứng minh thiếu policy mapping."
+            },
+            {
+              "source": "04-escalation-policy.md",
+              "reference": "FACT_UNCERTAIN / precedence",
+              "supports": "Taxonomy kế thừa: fact chưa chắc được phân biệt với policy ngoài phạm vi."
+            },
+            {
+              "source": "18-fact-uncertainty-correction.md",
+              "reference": "R1-FIX-CONFLICT-01",
+              "supports": "Quy tắc dữ liệu fixture bổ sung; chưa phải rule ID runtime WP1/WP2."
+            }
+          ]
+        },
+        {
+          "op": "add",
+          "path": "/7/expected/rationale",
+          "after": "Form/KPI nêu 1.200 lượt đăng ký, trong khi dòng KPI chính trên ảnh nêu 12.000 lượt đăng ký. Confidence OCR 0,90 không giải quyết được xung đột liên nguồn. Chưa xác định target chính thức; không đổi score/confidence để ép case."
+        },
+        {
+          "op": "replace",
+          "path": "/7/expected/question_example",
+          "before": "Form ghi 1.200 lượt đăng ký còn ảnh ghi 12.000. Vui lòng xác định căn cứ KPI được thẩm định hoặc từ chối để Maker sửa và gửi lại.",
+          "after": "Form ghi 1.200 lượt đăng ký, dòng KPI trên ảnh E-GT-008 ghi 12.000. Hãy xác định target được thẩm định và căn cứ. Nếu nội dung phải sửa, từ chối để Maker gửi phiên bản mới."
+        },
+        {
+          "op": "replace",
+          "path": "/7/expected/required_reason_codes",
+          "before": [
+            "MEDIA_REVIEW_REQUIRED",
+            "UNRESOLVED_CONFLICT"
+          ],
+          "after": [
+            "UNRESOLVED_CONFLICT"
+          ]
+        },
+        {
+          "op": "add",
+          "path": "/7/input/evaluation_fixture_hash",
+          "after": "180ad61f4837526c3cf596ad14ef70f241d83179a26d728a9e848b41d258b8a5"
+        },
+        {
+          "op": "add",
+          "path": "/7/input/fact_verification",
+          "after": {
+            "schema_version": "role1.fact-verification/1.0-proposed",
+            "verification_status": "UNCERTAIN",
+            "assertion_origin": "SYNTHETIC_FIXTURE",
+            "issues": [
+              {
+                "issue_id": "ISSUE-GT-008-01",
+                "field": "kpi_expected",
+                "affected_input_pointer": "/plan_snapshot/kpi_expected",
+                "issue_type": "CONFLICTING_VALUES",
+                "status": "UNRESOLVED",
+                "verified_value": null,
+                "sources": [
+                  {
+                    "kind": "PLAN_FIELD",
+                    "pointer": "/plan_snapshot/kpi_expected",
+                    "observed_value": "1.200 lượt đăng ký trước 2026-10-30",
+                    "normalized_value": 1200,
+                    "evidence_ref": null
+                  },
+                  {
+                    "kind": "VLM_EVIDENCE",
+                    "pointer": "/agent_outputs/vlm/evidence/0/observed_text",
+                    "observed_value": "Mục tiêu: 12.000 lượt đăng ký",
+                    "normalized_value": 12000,
+                    "evidence_ref": "E-GT-008"
+                  }
+                ],
+                "evidence_refs": [
+                  "E-GT-008"
+                ],
+                "rationale": "Form/KPI nêu 1.200 lượt đăng ký, trong khi dòng KPI chính trên ảnh nêu 12.000 lượt đăng ký. Confidence OCR 0,90 không giải quyết được xung đột liên nguồn. Chưa xác định target chính thức; không đổi score/confidence để ép case.",
+                "fixture_rule_ref": "R1-FIX-CONFLICT-01"
+              }
+            ]
+          }
+        },
+        {
+          "op": "add",
+          "path": "/7/input/agent_outputs/vlm/evidence/0/fact_verification_status",
+          "after": "UNRESOLVED"
+        },
+        {
+          "op": "add",
+          "path": "/7/input/agent_outputs/vlm/evidence/0/factual_issue_refs",
+          "after": [
+            "ISSUE-GT-008-01"
+          ]
+        },
+        {
+          "op": "add",
+          "path": "/8/expected/explanation_requirements",
+          "after": {
+            "affected_fields": [
+              "creative_text"
+            ],
+            "issue_types": [
+              "INCOMPLETE_EXTRACTION"
+            ],
+            "required_evidence_refs": [
+              "E-GT-009"
+            ],
+            "required_factual_issue_refs": [
+              "ISSUE-GT-009-01"
+            ],
+            "must_describe_unresolved_fact": true,
+            "media_result_alone_is_insufficient": true,
+            "wp_runtime_code_mapping_status": "NOT_VERIFIED"
+          }
+        },
+        {
+          "op": "add",
+          "path": "/8/expected/policy_references",
+          "after": [
+            {
+              "source": "sources/scope-phase-1.md",
+              "reference": "BR-AI-10",
+              "supports": "Confidence thấp/kết quả thiếu phải chuyển Human Review."
+            },
+            {
+              "source": "sources/sprint-1-deliverables.md",
+              "reference": "§4: unresolved_conflict_count = 0",
+              "supports": "Conflict chưa giải quyết chặn auto; không chứng minh thiếu policy mapping."
+            },
+            {
+              "source": "04-escalation-policy.md",
+              "reference": "FACT_UNCERTAIN / precedence",
+              "supports": "Taxonomy kế thừa: fact chưa chắc được phân biệt với policy ngoài phạm vi."
+            },
+            {
+              "source": "18-fact-uncertainty-correction.md",
+              "reference": "R1-FIX-INCOMPLETE-01",
+              "supports": "Quy tắc dữ liệu fixture bổ sung; chưa phải rule ID runtime WP1/WP2."
+            }
+          ]
+        },
+        {
+          "op": "add",
+          "path": "/8/expected/rationale",
+          "after": "Mock OCR chỉ trả phần đầu 'Thông điệp'; phần còn lại của dòng chưa được xác minh. Case mô phỏng trích xuất không đầy đủ, không khẳng định một model thật đã chạy hoặc ảnh chứa claim/disclaimer vi phạm. creative_text chưa đủ bằng chứng nên cần human review."
+        },
+        {
+          "op": "replace",
+          "path": "/8/expected/question_example",
+          "before": "VLM confidence 0,72 thấp hơn 0,85. Vui lòng đọc lại ảnh gốc và xác nhận bằng chứng đủ cho quyết định; không suy đoán phần chữ chưa rõ.",
+          "after": "Kết quả OCR E-GT-009 chỉ xác minh phần đầu 'Thông điệp', chưa xác minh phần còn lại (confidence 0,72). Hãy đọc ảnh gốc hoặc yêu cầu Maker gửi ảnh/phiên bản đủ rõ qua luồng từ chối và gửi lại."
+        },
+        {
+          "op": "replace",
+          "path": "/8/expected/required_reason_codes",
+          "before": [
+            "VLM_LOW_CONFIDENCE",
+            "MEDIA_REVIEW_REQUIRED"
+          ],
+          "after": [
+            "VLM_LOW_CONFIDENCE"
+          ]
+        },
+        {
+          "op": "add",
+          "path": "/8/input/evaluation_fixture_hash",
+          "after": "6115a418c1a0e815fc3788ed0fb9c0a9746ab10b94f72fe71ec8b1d300ab5bb6"
+        },
+        {
+          "op": "add",
+          "path": "/8/input/fact_verification",
+          "after": {
+            "schema_version": "role1.fact-verification/1.0-proposed",
+            "verification_status": "UNCERTAIN",
+            "assertion_origin": "SYNTHETIC_FIXTURE",
+            "issues": [
+              {
+                "issue_id": "ISSUE-GT-009-01",
+                "field": "creative_text",
+                "affected_input_pointer": "/agent_outputs/vlm/evidence/0/observed_text",
+                "issue_type": "INCOMPLETE_EXTRACTION",
+                "status": "UNRESOLVED",
+                "verified_value": null,
+                "sources": [
+                  {
+                    "kind": "VLM_EVIDENCE",
+                    "pointer": "/agent_outputs/vlm/evidence/0/observed_text",
+                    "observed_value": "Thông điệp [phần còn lại chưa xác minh]",
+                    "normalized_value": null,
+                    "evidence_ref": "E-GT-009"
+                  }
+                ],
+                "evidence_refs": [
+                  "E-GT-009"
+                ],
+                "rationale": "Mock OCR chỉ trả phần đầu 'Thông điệp'; phần còn lại của dòng chưa được xác minh. Case mô phỏng trích xuất không đầy đủ, không khẳng định một model thật đã chạy hoặc ảnh chứa claim/disclaimer vi phạm. creative_text chưa đủ bằng chứng nên cần human review.",
+                "fixture_rule_ref": "R1-FIX-INCOMPLETE-01"
+              }
+            ]
+          }
+        },
+        {
+          "op": "add",
+          "path": "/8/input/agent_outputs/vlm/evidence/0/extraction_mode",
+          "after": "MOCK_PARTIAL_OCR"
+        },
+        {
+          "op": "add",
+          "path": "/8/input/agent_outputs/vlm/evidence/0/fact_verification_status",
+          "after": "UNVERIFIED"
+        },
+        {
+          "op": "add",
+          "path": "/8/input/agent_outputs/vlm/evidence/0/factual_issue_refs",
+          "after": [
+            "ISSUE-GT-009-01"
+          ]
+        },
+        {
+          "op": "add",
+          "path": "/8/input/agent_outputs/vlm/evidence/0/is_complete",
+          "after": false
+        },
+        {
+          "op": "replace",
+          "path": "/8/input/agent_outputs/vlm/evidence/0/bbox_normalized/0",
+          "before": 0.02,
+          "after": 0.025
+        },
+        {
+          "op": "replace",
+          "path": "/8/input/agent_outputs/vlm/evidence/0/bbox_normalized/1",
+          "before": 0.15,
+          "after": 0.33
+        },
+        {
+          "op": "replace",
+          "path": "/8/input/agent_outputs/vlm/evidence/0/bbox_normalized/2",
+          "before": 0.98,
+          "after": 0.975
+        },
+        {
+          "op": "replace",
+          "path": "/8/input/agent_outputs/vlm/evidence/0/bbox_normalized/3",
+          "before": 0.84,
+          "after": 0.44
+        },
+        {
+          "op": "replace",
+          "path": "/8/input/agent_outputs/vlm/evidence/0/observed_text",
+          "before": "Thông điệp cần được đọc lại từ ảnh gốc. | Không suy đoán phần chữ không rõ. | Confidence thấp được đặt trong fixture test.",
+          "after": "Thông điệp [phần còn lại chưa xác minh]"
+        },
+        {
+          "op": "replace",
+          "path": "/8/input/agent_outputs/vlm/quality_flags",
+          "before": [
+            "LOW_CONFIDENCE"
+          ],
+          "after": [
+            "LOW_CONFIDENCE",
+            "INCOMPLETE_TEXT_EXTRACTION"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "data/mock-provider-modes.json",
+      "before_raw_sha256": "3ece0d5ee3b46edf2e860ed9455ea1d7a92492f30549aa717d305871d87d98dc",
+      "before_canonical_sha256": "58880ad5323af3246f5cec0c1031572fa4df9d2c14805c8d70b81f705ecc1bd3",
+      "after_canonical_sha256": "6bf22deec3e5fc824d95a3d2a936cfc3ca15d402b996f2d5f65c72d816b47823",
+      "patches": [
+        {
+          "op": "replace",
+          "path": "/0/expected_route",
+          "before": "AUTO_APPROVE",
+          "after": "AUTO_APPROVED"
+        }
+      ]
+    },
+    {
+      "file": "data/verify-expected-results.json",
+      "before_raw_sha256": "00457ede32006ebeeba14515d433490c44cb86c80261b16b9b88695bb67958af",
+      "before_canonical_sha256": "824f0879b6a3c675aafb7f020382e89b52c2dd68fbeae54c69cd3609b240adb0",
+      "after_canonical_sha256": "1f92149ec4116c8ca8a8539524006cb43102af35a9c4f18ad7ee05ce36875b8c",
+      "patches": [
+        {
+          "op": "replace",
+          "path": "/0/expected/route",
+          "before": "AUTO_APPROVE",
+          "after": "AUTO_APPROVED"
+        },
+        {
+          "op": "replace",
+          "path": "/1/expected/route",
+          "before": "AUTO_APPROVE",
+          "after": "AUTO_APPROVED"
+        },
+        {
+          "op": "replace",
+          "path": "/2/expected/route",
+          "before": "AUTO_APPROVE",
+          "after": "AUTO_APPROVED"
+        },
+        {
+          "op": "add",
+          "path": "/3/expected/explanation_requirements",
+          "after": {
+            "affected_fields": [
+              "budget_vnd"
+            ],
+            "issue_types": [
+              "CONFLICTING_VALUES"
+            ],
+            "required_evidence_refs": [
+              "E-GT-007"
+            ],
+            "required_factual_issue_refs": [
+              "ISSUE-GT-007-01"
+            ],
+            "must_describe_unresolved_fact": true,
+            "media_result_alone_is_insufficient": true,
+            "wp_runtime_code_mapping_status": "NOT_VERIFIED"
+          }
+        },
+        {
+          "op": "add",
+          "path": "/3/expected/policy_references",
+          "after": [
+            {
+              "source": "sources/scope-phase-1.md",
+              "reference": "BR-AI-10",
+              "supports": "Confidence thấp/kết quả thiếu phải chuyển Human Review."
+            },
+            {
+              "source": "sources/sprint-1-deliverables.md",
+              "reference": "§4: unresolved_conflict_count = 0",
+              "supports": "Conflict chưa giải quyết chặn auto; không chứng minh thiếu policy mapping."
+            },
+            {
+              "source": "04-escalation-policy.md",
+              "reference": "FACT_UNCERTAIN / precedence",
+              "supports": "Taxonomy kế thừa: fact chưa chắc được phân biệt với policy ngoài phạm vi."
+            },
+            {
+              "source": "18-fact-uncertainty-correction.md",
+              "reference": "R1-FIX-CONFLICT-01",
+              "supports": "Quy tắc dữ liệu fixture bổ sung; chưa phải rule ID runtime WP1/WP2."
+            }
+          ]
+        },
+        {
+          "op": "add",
+          "path": "/3/expected/rationale",
+          "after": "Ngân sách khai báo trong form là 50.000.000 VND, còn ảnh có hai phương án 120.000.000 và 180.000.000 VND. Chưa có bằng chứng lựa chọn phương án chính thức. Đây là xung đột giá trị budget_vnd, không phải thiếu mapping policy. Giữ form hợp lệ; không tự thay ngân sách bằng OCR."
+        },
+        {
+          "op": "replace",
+          "path": "/3/expected/question_example",
+          "before": "Form ghi 50.000.000 VND nhưng ảnh nêu 120.000.000 và 180.000.000 VND, VLM confidence 0,61. Vui lòng đối chiếu ảnh gốc và ghi căn cứ; nếu nội dung cần sửa, từ chối để Maker gửi phiên bản mới.",
+          "after": "Form ghi 50.000.000 VND, ảnh nêu phương án A 120.000.000 và B 180.000.000 VND. Hãy đối chiếu E-GT-007 và xác định ngân sách chính thức. Nếu cần sửa hồ sơ, từ chối có lý do để Maker gửi phiên bản mới."
+        },
+        {
+          "op": "replace",
+          "path": "/3/expected/required_reason_codes",
+          "before": [
+            "VLM_LOW_CONFIDENCE",
+            "MEDIA_CONFIDENCE_BELOW_THRESHOLD",
+            "MEDIA_REVIEW_REQUIRED",
+            "UNRESOLVED_CONFLICT"
+          ],
+          "after": [
+            "VLM_LOW_CONFIDENCE",
+            "UNRESOLVED_CONFLICT"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "data/verify-inputs.json",
+      "before_raw_sha256": "d54e396c1b0bb271d2a88af4db816b881a6e2f4bc95807fd089dc37405d178e4",
+      "before_canonical_sha256": "17870e8f55b4c9941cc30dc7f58ad31569eaab83cac6ccef7d9b903d37e06b18",
+      "after_canonical_sha256": "7163d33e83f076c611caa187b32c333d4ea087f222ed04e017cc73ec7879c906",
+      "patches": [
+        {
+          "op": "add",
+          "path": "/3/input/evaluation_fixture_hash",
+          "after": "3a8047a76ef12cef3fafa732582b8cd1358a27cf3a9ef14acd65cb017bdaa467"
+        },
+        {
+          "op": "add",
+          "path": "/3/input/fact_verification",
+          "after": {
+            "schema_version": "role1.fact-verification/1.0-proposed",
+            "verification_status": "UNCERTAIN",
+            "assertion_origin": "SYNTHETIC_FIXTURE",
+            "issues": [
+              {
+                "issue_id": "ISSUE-GT-007-01",
+                "field": "budget_vnd",
+                "affected_input_pointer": "/plan_snapshot/budget_vnd",
+                "issue_type": "CONFLICTING_VALUES",
+                "status": "UNRESOLVED",
+                "verified_value": null,
+                "sources": [
+                  {
+                    "kind": "PLAN_FIELD",
+                    "pointer": "/plan_snapshot/budget_vnd",
+                    "observed_value": 50000000,
+                    "normalized_value": 50000000,
+                    "evidence_ref": null
+                  },
+                  {
+                    "kind": "VLM_EVIDENCE",
+                    "pointer": "/agent_outputs/vlm/evidence/0/observed_text",
+                    "observed_value": "Phương án A: 120.000.000 VND",
+                    "normalized_value": 120000000,
+                    "evidence_ref": "E-GT-007"
+                  },
+                  {
+                    "kind": "VLM_EVIDENCE",
+                    "pointer": "/agent_outputs/vlm/evidence/0/observed_text",
+                    "observed_value": "Phương án B: 180.000.000 VND",
+                    "normalized_value": 180000000,
+                    "evidence_ref": "E-GT-007"
+                  }
+                ],
+                "evidence_refs": [
+                  "E-GT-007"
+                ],
+                "rationale": "Ngân sách khai báo trong form là 50.000.000 VND, còn ảnh có hai phương án 120.000.000 và 180.000.000 VND. Chưa có bằng chứng lựa chọn phương án chính thức. Đây là xung đột giá trị budget_vnd, không phải thiếu mapping policy. Giữ form hợp lệ; không tự thay ngân sách bằng OCR.",
+                "fixture_rule_ref": "R1-FIX-CONFLICT-01"
+              }
+            ]
+          }
+        },
+        {
+          "op": "add",
+          "path": "/3/input/agent_outputs/vlm/evidence/0/fact_verification_status",
+          "after": "UNRESOLVED"
+        },
+        {
+          "op": "add",
+          "path": "/3/input/agent_outputs/vlm/evidence/0/factual_issue_refs",
+          "after": [
+            "ISSUE-GT-007-01"
+          ]
+        }
+      ]
+    }
+  ],
+  "identity_only_differences_allowed_for_A04": [
+    "/context/round_id",
+    "/context/run_id",
+    "/context/correlation_id",
+    "/plan_snapshot/plan_id",
+    "/plan_snapshot/code",
+    "/plan_snapshot/name",
+    "/input_hash",
+    "/evaluation_fixture_hash"
+  ],
+  "source_file_relocation": {
+    "from": "Role1_Marketing_Escalation_Referee.pdf",
+    "to": "legacy/Role1_Marketing_Escalation_Referee.pdf",
+    "bytes_changed": false
+  }
+}

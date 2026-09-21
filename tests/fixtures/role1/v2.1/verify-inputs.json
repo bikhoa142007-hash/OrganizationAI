@@ -1,0 +1,1214 @@
+[
+  {
+    "id": "VERIFY-A01",
+    "source_case_id": "GT-001",
+    "data_classification": "SYNTHETIC",
+    "evaluation_layer": "DECISION_POLICY_CONTRACT",
+    "input": {
+      "context": {
+        "plan_status": "PENDING_APPROVAL",
+        "approval_round_status": "ACTIVE",
+        "plan_version": 1,
+        "approval_round": 1,
+        "round_id": "ROUND-VERIFY-A01",
+        "run_id": "RUN-VERIFY-A01",
+        "correlation_id": "CORR-VERIFY-A01",
+        "final_decision_exists": false,
+        "checker_active": true,
+        "checker_has_permission": true,
+        "provider_mode": "MOCK",
+        "submitted_at": "2026-10-01T02:00:00Z"
+      },
+      "plan_snapshot": {
+        "plan_id": "PLAN-VERIFY-A01",
+        "code": "MKT-VERIFY-A01",
+        "name": "Verify / Kế hoạch thông thường đủ gate",
+        "maker_id": "DEMO-MAKER-01",
+        "department_id": "DEMO-DEPT-01",
+        "checker_id": "DEMO-CHECKER-01",
+        "objective": "Đạt 1.200 lượt đăng ký quan tâm trong tháng 10 theo kế hoạch demo.",
+        "summary": "Triển khai thông tin sản phẩm mẫu trên kênh demo; theo dõi lượt đăng ký hằng tuần, kiểm tra nội dung trước phát hành và đối chiếu ngân sách.",
+        "target_audience": "Nhóm khách hàng giả lập quan tâm sản phẩm mẫu",
+        "channels": [
+          "DEMO_SOCIAL"
+        ],
+        "kpi_expected": "1.200 lượt đăng ký trước 2026-10-30",
+        "start_date": "2026-10-02",
+        "end_date": "2026-10-30",
+        "budget_vnd": 50000000,
+        "currency": "VND",
+        "notes": "Toàn bộ thông tin phục vụ kiểm thử, không phải kế hoạch thực tế.",
+        "attachments": [
+          {
+            "attachment_id": "ATT-GT-001",
+            "path": "data/fixtures/creative-pass.png",
+            "sha256": "db5193a49b36567a2be1edfd16135beebe4d6144dc4442726b3163de56c47c90",
+            "mime_type": "image/png",
+            "size_bytes": 41493,
+            "upload_status": "COMPLETED"
+          }
+        ]
+      },
+      "policy_snapshot": {
+        "policy_id": "DEMO-POLICY-V2",
+        "version": "2.0",
+        "data_classification": "SYNTHETIC",
+        "approval_status": "PROPOSED_NOT_PO_SIGNED",
+        "mode": "CONTROLLED_AUTO_APPROVAL",
+        "enabled": true,
+        "effective_from": "2026-10-01T00:00:00Z",
+        "effective_to": "2026-12-31T23:59:59Z",
+        "score_threshold": 70,
+        "score_operator": ">",
+        "vlm_confidence_threshold": 0.85,
+        "media_confidence_threshold": 0.85,
+        "media_confidence_gate_status": "PROPOSED_OQ_01",
+        "strategy_confidence_threshold": 0.8,
+        "criteria_weights": {
+          "objective": 15,
+          "audience": 15,
+          "channel": 15,
+          "timeline": 15,
+          "kpi": 15,
+          "budget_efficiency": 15,
+          "risk_control": 10
+        },
+        "content_policy_ref": "DEMO-CONTENT-V2",
+        "limit_snapshot": {
+          "id": "DEMO-LIMIT-V2",
+          "version": "2.0",
+          "amount_vnd": 100000000,
+          "currency": "VND",
+          "scope_department_id": "DEMO-DEPT-01",
+          "effective_from": "2026-10-01T00:00:00Z",
+          "effective_to": "2026-12-31T23:59:59Z",
+          "data_classification": "SYNTHETIC"
+        }
+      },
+      "agent_outputs": {
+        "vlm": {
+          "status": "SUCCEEDED",
+          "confidence": 0.96,
+          "model_version": "mock-vlm-fixture-v2",
+          "agent_version": "vlm-adapter-fixture-v2",
+          "prompt_version": "not-applicable-fixture",
+          "description": "CHIẾN DỊCH DEMO",
+          "objects": [],
+          "quality_flags": [],
+          "evidence": [
+            {
+              "evidence_id": "E-GT-001",
+              "attachment_id": "ATT-GT-001",
+              "attachment_sha256": "db5193a49b36567a2be1edfd16135beebe4d6144dc4442726b3163de56c47c90",
+              "plan_version": 1,
+              "source_type": "IMAGE",
+              "bbox_normalized": [
+                0.02,
+                0.15,
+                0.98,
+                0.84
+              ],
+              "observed_text": "Giới thiệu sản phẩm mẫu | Tìm hiểu thông tin tại trang sản phẩm. | Dữ liệu tổng hợp — không dùng để quảng cáo thực tế.",
+              "confidence": 0.96,
+              "evidence_origin": "SYNTHETIC_FIXTURE"
+            }
+          ]
+        },
+        "media": {
+          "status": "SUCCEEDED",
+          "result": "PASS",
+          "confidence": 0.94,
+          "model_version": "mock-media-fixture-v2",
+          "agent_version": "media-agent-fixture-v2",
+          "prompt_version": "not-applicable-fixture",
+          "policy_version": "DEMO-CONTENT-V2",
+          "hard_violations": [],
+          "warnings": [],
+          "evidence_refs": [
+            "E-GT-001"
+          ]
+        },
+        "strategy": {
+          "status": "SUCCEEDED",
+          "score": 84,
+          "confidence": 0.91,
+          "model_version": "mock-strategy-fixture-v2",
+          "agent_version": "strategy-agent-fixture-v2",
+          "prompt_version": "not-applicable-fixture",
+          "criteria": [
+            {
+              "id": "objective",
+              "score": 84,
+              "weight": 15,
+              "reason": "Điểm đồng nhất được đặt trước để kiểm tra công thức và gate; không phải chấm nội dung thật.",
+              "evidence_refs": [
+                "plan.objective",
+                "plan.summary"
+              ]
+            },
+            {
+              "id": "audience",
+              "score": 84,
+              "weight": 15,
+              "reason": "Điểm đồng nhất được đặt trước để kiểm tra công thức và gate; không phải chấm nội dung thật.",
+              "evidence_refs": [
+                "plan.objective",
+                "plan.summary"
+              ]
+            },
+            {
+              "id": "channel",
+              "score": 84,
+              "weight": 15,
+              "reason": "Điểm đồng nhất được đặt trước để kiểm tra công thức và gate; không phải chấm nội dung thật.",
+              "evidence_refs": [
+                "plan.objective",
+                "plan.summary"
+              ]
+            },
+            {
+              "id": "timeline",
+              "score": 84,
+              "weight": 15,
+              "reason": "Điểm đồng nhất được đặt trước để kiểm tra công thức và gate; không phải chấm nội dung thật.",
+              "evidence_refs": [
+                "plan.objective",
+                "plan.summary"
+              ]
+            },
+            {
+              "id": "kpi",
+              "score": 84,
+              "weight": 15,
+              "reason": "Điểm đồng nhất được đặt trước để kiểm tra công thức và gate; không phải chấm nội dung thật.",
+              "evidence_refs": [
+                "plan.objective",
+                "plan.summary"
+              ]
+            },
+            {
+              "id": "budget_efficiency",
+              "score": 84,
+              "weight": 15,
+              "reason": "Điểm đồng nhất được đặt trước để kiểm tra công thức và gate; không phải chấm nội dung thật.",
+              "evidence_refs": [
+                "plan.objective",
+                "plan.summary"
+              ]
+            },
+            {
+              "id": "risk_control",
+              "score": 84,
+              "weight": 10,
+              "reason": "Điểm đồng nhất được đặt trước để kiểm tra công thức và gate; không phải chấm nội dung thật.",
+              "evidence_refs": [
+                "plan.objective",
+                "plan.summary"
+              ]
+            }
+          ],
+          "assumptions": [
+            "Kết quả agent được đặt trước để kiểm contract."
+          ],
+          "critical_gaps": []
+        },
+        "budget": {
+          "engine_version": "budget-rules-v2-demo",
+          "amount_vnd": 50000000,
+          "currency": "VND",
+          "limit_vnd": 100000000,
+          "limit_snapshot_id": "DEMO-LIMIT-V2",
+          "result": "IN_LIMIT",
+          "difference_vnd": -50000000,
+          "rule_ids": [
+            "BR-BUD-02"
+          ]
+        }
+      },
+      "unresolved_conflict_count": 0,
+      "policy_scope_covered": true,
+      "agent_error_count": 0,
+      "input_hash": "1694ea30377d48f7ca01e5e07dc116a4cf0c50e5c464aeef6c6c3c4ef5f78369"
+    }
+  },
+  {
+    "id": "VERIFY-A02",
+    "source_case_id": "GT-002",
+    "data_classification": "SYNTHETIC",
+    "evaluation_layer": "DECISION_POLICY_CONTRACT",
+    "input": {
+      "context": {
+        "plan_status": "PENDING_APPROVAL",
+        "approval_round_status": "ACTIVE",
+        "plan_version": 1,
+        "approval_round": 1,
+        "round_id": "ROUND-VERIFY-A02",
+        "run_id": "RUN-VERIFY-A02",
+        "correlation_id": "CORR-VERIFY-A02",
+        "final_decision_exists": false,
+        "checker_active": true,
+        "checker_has_permission": true,
+        "provider_mode": "MOCK",
+        "submitted_at": "2026-10-01T02:00:00Z"
+      },
+      "plan_snapshot": {
+        "plan_id": "PLAN-VERIFY-A02",
+        "code": "MKT-VERIFY-A02",
+        "name": "Verify / Ngân sách bằng đúng L",
+        "maker_id": "DEMO-MAKER-01",
+        "department_id": "DEMO-DEPT-01",
+        "checker_id": "DEMO-CHECKER-01",
+        "objective": "Đạt 1.200 lượt đăng ký quan tâm trong tháng 10 theo kế hoạch demo.",
+        "summary": "Triển khai thông tin sản phẩm mẫu trên kênh demo; theo dõi lượt đăng ký hằng tuần, kiểm tra nội dung trước phát hành và đối chiếu ngân sách.",
+        "target_audience": "Nhóm khách hàng giả lập quan tâm sản phẩm mẫu",
+        "channels": [
+          "DEMO_SOCIAL"
+        ],
+        "kpi_expected": "1.200 lượt đăng ký trước 2026-10-30",
+        "start_date": "2026-10-02",
+        "end_date": "2026-10-30",
+        "budget_vnd": 100000000,
+        "currency": "VND",
+        "notes": "Toàn bộ thông tin phục vụ kiểm thử, không phải kế hoạch thực tế.",
+        "attachments": [
+          {
+            "attachment_id": "ATT-GT-002",
+            "path": "data/fixtures/creative-pass.png",
+            "sha256": "db5193a49b36567a2be1edfd16135beebe4d6144dc4442726b3163de56c47c90",
+            "mime_type": "image/png",
+            "size_bytes": 41493,
+            "upload_status": "COMPLETED"
+          }
+        ]
+      },
+      "policy_snapshot": {
+        "policy_id": "DEMO-POLICY-V2",
+        "version": "2.0",
+        "data_classification": "SYNTHETIC",
+        "approval_status": "PROPOSED_NOT_PO_SIGNED",
+        "mode": "CONTROLLED_AUTO_APPROVAL",
+        "enabled": true,
+        "effective_from": "2026-10-01T00:00:00Z",
+        "effective_to": "2026-12-31T23:59:59Z",
+        "score_threshold": 70,
+        "score_operator": ">",
+        "vlm_confidence_threshold": 0.85,
+        "media_confidence_threshold": 0.85,
+        "media_confidence_gate_status": "PROPOSED_OQ_01",
+        "strategy_confidence_threshold": 0.8,
+        "criteria_weights": {
+          "objective": 15,
+          "audience": 15,
+          "channel": 15,
+          "timeline": 15,
+          "kpi": 15,
+          "budget_efficiency": 15,
+          "risk_control": 10
+        },
+        "content_policy_ref": "DEMO-CONTENT-V2",
+        "limit_snapshot": {
+          "id": "DEMO-LIMIT-V2",
+          "version": "2.0",
+          "amount_vnd": 100000000,
+          "currency": "VND",
+          "scope_department_id": "DEMO-DEPT-01",
+          "effective_from": "2026-10-01T00:00:00Z",
+          "effective_to": "2026-12-31T23:59:59Z",
+          "data_classification": "SYNTHETIC"
+        }
+      },
+      "agent_outputs": {
+        "vlm": {
+          "status": "SUCCEEDED",
+          "confidence": 0.93,
+          "model_version": "mock-vlm-fixture-v2",
+          "agent_version": "vlm-adapter-fixture-v2",
+          "prompt_version": "not-applicable-fixture",
+          "description": "CHIẾN DỊCH DEMO",
+          "objects": [],
+          "quality_flags": [],
+          "evidence": [
+            {
+              "evidence_id": "E-GT-002",
+              "attachment_id": "ATT-GT-002",
+              "attachment_sha256": "db5193a49b36567a2be1edfd16135beebe4d6144dc4442726b3163de56c47c90",
+              "plan_version": 1,
+              "source_type": "IMAGE",
+              "bbox_normalized": [
+                0.02,
+                0.15,
+                0.98,
+                0.84
+              ],
+              "observed_text": "Giới thiệu sản phẩm mẫu | Tìm hiểu thông tin tại trang sản phẩm. | Dữ liệu tổng hợp — không dùng để quảng cáo thực tế.",
+              "confidence": 0.93,
+              "evidence_origin": "SYNTHETIC_FIXTURE"
+            }
+          ]
+        },
+        "media": {
+          "status": "SUCCEEDED",
+          "result": "PASS",
+          "confidence": 0.93,
+          "model_version": "mock-media-fixture-v2",
+          "agent_version": "media-agent-fixture-v2",
+          "prompt_version": "not-applicable-fixture",
+          "policy_version": "DEMO-CONTENT-V2",
+          "hard_violations": [],
+          "warnings": [],
+          "evidence_refs": [
+            "E-GT-002"
+          ]
+        },
+        "strategy": {
+          "status": "SUCCEEDED",
+          "score": 82.5,
+          "confidence": 0.86,
+          "model_version": "mock-strategy-fixture-v2",
+          "agent_version": "strategy-agent-fixture-v2",
+          "prompt_version": "not-applicable-fixture",
+          "criteria": [
+            {
+              "id": "objective",
+              "score": 82.5,
+              "weight": 15,
+              "reason": "Điểm đồng nhất được đặt trước để kiểm tra công thức và gate; không phải chấm nội dung thật.",
+              "evidence_refs": [
+                "plan.objective",
+                "plan.summary"
+              ]
+            },
+            {
+              "id": "audience",
+              "score": 82.5,
+              "weight": 15,
+              "reason": "Điểm đồng nhất được đặt trước để kiểm tra công thức và gate; không phải chấm nội dung thật.",
+              "evidence_refs": [
+                "plan.objective",
+                "plan.summary"
+              ]
+            },
+            {
+              "id": "channel",
+              "score": 82.5,
+              "weight": 15,
+              "reason": "Điểm đồng nhất được đặt trước để kiểm tra công thức và gate; không phải chấm nội dung thật.",
+              "evidence_refs": [
+                "plan.objective",
+                "plan.summary"
+              ]
+            },
+            {
+              "id": "timeline",
+              "score": 82.5,
+              "weight": 15,
+              "reason": "Điểm đồng nhất được đặt trước để kiểm tra công thức và gate; không phải chấm nội dung thật.",
+              "evidence_refs": [
+                "plan.objective",
+                "plan.summary"
+              ]
+            },
+            {
+              "id": "kpi",
+              "score": 82.5,
+              "weight": 15,
+              "reason": "Điểm đồng nhất được đặt trước để kiểm tra công thức và gate; không phải chấm nội dung thật.",
+              "evidence_refs": [
+                "plan.objective",
+                "plan.summary"
+              ]
+            },
+            {
+              "id": "budget_efficiency",
+              "score": 82.5,
+              "weight": 15,
+              "reason": "Điểm đồng nhất được đặt trước để kiểm tra công thức và gate; không phải chấm nội dung thật.",
+              "evidence_refs": [
+                "plan.objective",
+                "plan.summary"
+              ]
+            },
+            {
+              "id": "risk_control",
+              "score": 82.5,
+              "weight": 10,
+              "reason": "Điểm đồng nhất được đặt trước để kiểm tra công thức và gate; không phải chấm nội dung thật.",
+              "evidence_refs": [
+                "plan.objective",
+                "plan.summary"
+              ]
+            }
+          ],
+          "assumptions": [
+            "Kết quả agent được đặt trước để kiểm contract."
+          ],
+          "critical_gaps": []
+        },
+        "budget": {
+          "engine_version": "budget-rules-v2-demo",
+          "amount_vnd": 100000000,
+          "currency": "VND",
+          "limit_vnd": 100000000,
+          "limit_snapshot_id": "DEMO-LIMIT-V2",
+          "result": "IN_LIMIT",
+          "difference_vnd": 0,
+          "rule_ids": [
+            "BR-BUD-02"
+          ]
+        }
+      },
+      "unresolved_conflict_count": 0,
+      "policy_scope_covered": true,
+      "agent_error_count": 0,
+      "input_hash": "46a7069e3fe126cabfcd27b17529163c25d33b91c8a8830dce6ca3e12a7a1073"
+    }
+  },
+  {
+    "id": "VERIFY-A03",
+    "source_case_id": "GT-004",
+    "data_classification": "SYNTHETIC",
+    "evaluation_layer": "DECISION_POLICY_CONTRACT",
+    "input": {
+      "context": {
+        "plan_status": "PENDING_APPROVAL",
+        "approval_round_status": "ACTIVE",
+        "plan_version": 1,
+        "approval_round": 1,
+        "round_id": "ROUND-VERIFY-A03",
+        "run_id": "RUN-VERIFY-A03",
+        "correlation_id": "CORR-VERIFY-A03",
+        "final_decision_exists": false,
+        "checker_active": true,
+        "checker_has_permission": true,
+        "provider_mode": "MOCK",
+        "submitted_at": "2026-10-01T02:00:00Z"
+      },
+      "plan_snapshot": {
+        "plan_id": "PLAN-VERIFY-A03",
+        "code": "MKT-VERIFY-A03",
+        "name": "Verify / Điểm 70,1 vượt ngưỡng 70",
+        "maker_id": "DEMO-MAKER-01",
+        "department_id": "DEMO-DEPT-01",
+        "checker_id": "DEMO-CHECKER-01",
+        "objective": "Đạt 1.200 lượt đăng ký quan tâm trong tháng 10 theo kế hoạch demo.",
+        "summary": "Triển khai thông tin sản phẩm mẫu trên kênh demo; theo dõi lượt đăng ký hằng tuần, kiểm tra nội dung trước phát hành và đối chiếu ngân sách.",
+        "target_audience": "Nhóm khách hàng giả lập quan tâm sản phẩm mẫu",
+        "channels": [
+          "DEMO_SOCIAL"
+        ],
+        "kpi_expected": "1.200 lượt đăng ký trước 2026-10-30",
+        "start_date": "2026-10-02",
+        "end_date": "2026-10-30",
+        "budget_vnd": 90000000,
+        "currency": "VND",
+        "notes": "Toàn bộ thông tin phục vụ kiểm thử, không phải kế hoạch thực tế.",
+        "attachments": [
+          {
+            "attachment_id": "ATT-GT-004",
+            "path": "data/fixtures/creative-pass.png",
+            "sha256": "db5193a49b36567a2be1edfd16135beebe4d6144dc4442726b3163de56c47c90",
+            "mime_type": "image/png",
+            "size_bytes": 41493,
+            "upload_status": "COMPLETED"
+          }
+        ]
+      },
+      "policy_snapshot": {
+        "policy_id": "DEMO-POLICY-V2",
+        "version": "2.0",
+        "data_classification": "SYNTHETIC",
+        "approval_status": "PROPOSED_NOT_PO_SIGNED",
+        "mode": "CONTROLLED_AUTO_APPROVAL",
+        "enabled": true,
+        "effective_from": "2026-10-01T00:00:00Z",
+        "effective_to": "2026-12-31T23:59:59Z",
+        "score_threshold": 70,
+        "score_operator": ">",
+        "vlm_confidence_threshold": 0.85,
+        "media_confidence_threshold": 0.85,
+        "media_confidence_gate_status": "PROPOSED_OQ_01",
+        "strategy_confidence_threshold": 0.8,
+        "criteria_weights": {
+          "objective": 15,
+          "audience": 15,
+          "channel": 15,
+          "timeline": 15,
+          "kpi": 15,
+          "budget_efficiency": 15,
+          "risk_control": 10
+        },
+        "content_policy_ref": "DEMO-CONTENT-V2",
+        "limit_snapshot": {
+          "id": "DEMO-LIMIT-V2",
+          "version": "2.0",
+          "amount_vnd": 100000000,
+          "currency": "VND",
+          "scope_department_id": "DEMO-DEPT-01",
+          "effective_from": "2026-10-01T00:00:00Z",
+          "effective_to": "2026-12-31T23:59:59Z",
+          "data_classification": "SYNTHETIC"
+        }
+      },
+      "agent_outputs": {
+        "vlm": {
+          "status": "SUCCEEDED",
+          "confidence": 0.89,
+          "model_version": "mock-vlm-fixture-v2",
+          "agent_version": "vlm-adapter-fixture-v2",
+          "prompt_version": "not-applicable-fixture",
+          "description": "CHIẾN DỊCH DEMO",
+          "objects": [],
+          "quality_flags": [],
+          "evidence": [
+            {
+              "evidence_id": "E-GT-004",
+              "attachment_id": "ATT-GT-004",
+              "attachment_sha256": "db5193a49b36567a2be1edfd16135beebe4d6144dc4442726b3163de56c47c90",
+              "plan_version": 1,
+              "source_type": "IMAGE",
+              "bbox_normalized": [
+                0.02,
+                0.15,
+                0.98,
+                0.84
+              ],
+              "observed_text": "Giới thiệu sản phẩm mẫu | Tìm hiểu thông tin tại trang sản phẩm. | Dữ liệu tổng hợp — không dùng để quảng cáo thực tế.",
+              "confidence": 0.89,
+              "evidence_origin": "SYNTHETIC_FIXTURE"
+            }
+          ]
+        },
+        "media": {
+          "status": "SUCCEEDED",
+          "result": "PASS",
+          "confidence": 0.9,
+          "model_version": "mock-media-fixture-v2",
+          "agent_version": "media-agent-fixture-v2",
+          "prompt_version": "not-applicable-fixture",
+          "policy_version": "DEMO-CONTENT-V2",
+          "hard_violations": [],
+          "warnings": [],
+          "evidence_refs": [
+            "E-GT-004"
+          ]
+        },
+        "strategy": {
+          "status": "SUCCEEDED",
+          "score": 70.1,
+          "confidence": 0.81,
+          "model_version": "mock-strategy-fixture-v2",
+          "agent_version": "strategy-agent-fixture-v2",
+          "prompt_version": "not-applicable-fixture",
+          "criteria": [
+            {
+              "id": "objective",
+              "score": 70.1,
+              "weight": 15,
+              "reason": "Điểm đồng nhất được đặt trước để kiểm tra công thức và gate; không phải chấm nội dung thật.",
+              "evidence_refs": [
+                "plan.objective",
+                "plan.summary"
+              ]
+            },
+            {
+              "id": "audience",
+              "score": 70.1,
+              "weight": 15,
+              "reason": "Điểm đồng nhất được đặt trước để kiểm tra công thức và gate; không phải chấm nội dung thật.",
+              "evidence_refs": [
+                "plan.objective",
+                "plan.summary"
+              ]
+            },
+            {
+              "id": "channel",
+              "score": 70.1,
+              "weight": 15,
+              "reason": "Điểm đồng nhất được đặt trước để kiểm tra công thức và gate; không phải chấm nội dung thật.",
+              "evidence_refs": [
+                "plan.objective",
+                "plan.summary"
+              ]
+            },
+            {
+              "id": "timeline",
+              "score": 70.1,
+              "weight": 15,
+              "reason": "Điểm đồng nhất được đặt trước để kiểm tra công thức và gate; không phải chấm nội dung thật.",
+              "evidence_refs": [
+                "plan.objective",
+                "plan.summary"
+              ]
+            },
+            {
+              "id": "kpi",
+              "score": 70.1,
+              "weight": 15,
+              "reason": "Điểm đồng nhất được đặt trước để kiểm tra công thức và gate; không phải chấm nội dung thật.",
+              "evidence_refs": [
+                "plan.objective",
+                "plan.summary"
+              ]
+            },
+            {
+              "id": "budget_efficiency",
+              "score": 70.1,
+              "weight": 15,
+              "reason": "Điểm đồng nhất được đặt trước để kiểm tra công thức và gate; không phải chấm nội dung thật.",
+              "evidence_refs": [
+                "plan.objective",
+                "plan.summary"
+              ]
+            },
+            {
+              "id": "risk_control",
+              "score": 70.1,
+              "weight": 10,
+              "reason": "Điểm đồng nhất được đặt trước để kiểm tra công thức và gate; không phải chấm nội dung thật.",
+              "evidence_refs": [
+                "plan.objective",
+                "plan.summary"
+              ]
+            }
+          ],
+          "assumptions": [
+            "Kết quả agent được đặt trước để kiểm contract."
+          ],
+          "critical_gaps": []
+        },
+        "budget": {
+          "engine_version": "budget-rules-v2-demo",
+          "amount_vnd": 90000000,
+          "currency": "VND",
+          "limit_vnd": 100000000,
+          "limit_snapshot_id": "DEMO-LIMIT-V2",
+          "result": "IN_LIMIT",
+          "difference_vnd": -10000000,
+          "rule_ids": [
+            "BR-BUD-02"
+          ]
+        }
+      },
+      "unresolved_conflict_count": 0,
+      "policy_scope_covered": true,
+      "agent_error_count": 0,
+      "input_hash": "18ffda081db5fa7fe9b433985b5ab10e3f86823a8a714b0f130068b9460a9acc"
+    }
+  },
+  {
+    "id": "VERIFY-A04",
+    "source_case_id": "GT-007",
+    "data_classification": "SYNTHETIC",
+    "evaluation_layer": "DECISION_POLICY_CONTRACT",
+    "input": {
+      "context": {
+        "plan_status": "PENDING_APPROVAL",
+        "approval_round_status": "ACTIVE",
+        "plan_version": 1,
+        "approval_round": 1,
+        "round_id": "ROUND-VERIFY-A04",
+        "run_id": "RUN-VERIFY-A04",
+        "correlation_id": "CORR-VERIFY-A04",
+        "final_decision_exists": false,
+        "checker_active": true,
+        "checker_has_permission": true,
+        "provider_mode": "MOCK",
+        "submitted_at": "2026-10-01T02:00:00Z"
+      },
+      "plan_snapshot": {
+        "plan_id": "PLAN-VERIFY-A04",
+        "code": "MKT-VERIFY-A04",
+        "name": "Verify / Form và hai giá trị OCR không thống nhất",
+        "maker_id": "DEMO-MAKER-01",
+        "department_id": "DEMO-DEPT-01",
+        "checker_id": "DEMO-CHECKER-01",
+        "objective": "Đạt 1.200 lượt đăng ký quan tâm trong tháng 10 theo kế hoạch demo.",
+        "summary": "Triển khai thông tin sản phẩm mẫu trên kênh demo; theo dõi lượt đăng ký hằng tuần, kiểm tra nội dung trước phát hành và đối chiếu ngân sách.",
+        "target_audience": "Nhóm khách hàng giả lập quan tâm sản phẩm mẫu",
+        "channels": [
+          "DEMO_SOCIAL"
+        ],
+        "kpi_expected": "1.200 lượt đăng ký trước 2026-10-30",
+        "start_date": "2026-10-02",
+        "end_date": "2026-10-30",
+        "budget_vnd": 50000000,
+        "currency": "VND",
+        "notes": "Toàn bộ thông tin phục vụ kiểm thử, không phải kế hoạch thực tế.",
+        "attachments": [
+          {
+            "attachment_id": "ATT-GT-007",
+            "path": "data/fixtures/budget-conflict.png",
+            "sha256": "6f0c5dc2a9edc284c4ca3ed9dc5156dcafd69ef5e925a0911c0b3b93c258931d",
+            "mime_type": "image/png",
+            "size_bytes": 44998,
+            "upload_status": "COMPLETED"
+          }
+        ]
+      },
+      "policy_snapshot": {
+        "policy_id": "DEMO-POLICY-V2",
+        "version": "2.0",
+        "data_classification": "SYNTHETIC",
+        "approval_status": "PROPOSED_NOT_PO_SIGNED",
+        "mode": "CONTROLLED_AUTO_APPROVAL",
+        "enabled": true,
+        "effective_from": "2026-10-01T00:00:00Z",
+        "effective_to": "2026-12-31T23:59:59Z",
+        "score_threshold": 70,
+        "score_operator": ">",
+        "vlm_confidence_threshold": 0.85,
+        "media_confidence_threshold": 0.85,
+        "media_confidence_gate_status": "PROPOSED_OQ_01",
+        "strategy_confidence_threshold": 0.8,
+        "criteria_weights": {
+          "objective": 15,
+          "audience": 15,
+          "channel": 15,
+          "timeline": 15,
+          "kpi": 15,
+          "budget_efficiency": 15,
+          "risk_control": 10
+        },
+        "content_policy_ref": "DEMO-CONTENT-V2",
+        "limit_snapshot": {
+          "id": "DEMO-LIMIT-V2",
+          "version": "2.0",
+          "amount_vnd": 100000000,
+          "currency": "VND",
+          "scope_department_id": "DEMO-DEPT-01",
+          "effective_from": "2026-10-01T00:00:00Z",
+          "effective_to": "2026-12-31T23:59:59Z",
+          "data_classification": "SYNTHETIC"
+        }
+      },
+      "agent_outputs": {
+        "vlm": {
+          "status": "SUCCEEDED",
+          "confidence": 0.61,
+          "model_version": "mock-vlm-fixture-v2",
+          "agent_version": "vlm-adapter-fixture-v2",
+          "prompt_version": "not-applicable-fixture",
+          "description": "NGÂN SÁCH CẦN ĐỐI CHIẾU",
+          "objects": [],
+          "quality_flags": [
+            "LOW_CONFIDENCE"
+          ],
+          "evidence": [
+            {
+              "evidence_id": "E-GT-007",
+              "attachment_id": "ATT-GT-007",
+              "attachment_sha256": "6f0c5dc2a9edc284c4ca3ed9dc5156dcafd69ef5e925a0911c0b3b93c258931d",
+              "plan_version": 1,
+              "source_type": "IMAGE",
+              "bbox_normalized": [
+                0.02,
+                0.15,
+                0.98,
+                0.84
+              ],
+              "observed_text": "Phương án A: 120.000.000 VND | Phương án B: 180.000.000 VND | Ảnh demo có hai số tiền; không tự chọn một giá trị.",
+              "confidence": 0.61,
+              "evidence_origin": "SYNTHETIC_FIXTURE",
+              "fact_verification_status": "UNRESOLVED",
+              "factual_issue_refs": [
+                "ISSUE-GT-007-01"
+              ]
+            }
+          ]
+        },
+        "media": {
+          "status": "SUCCEEDED",
+          "result": "REVIEW_REQUIRED",
+          "confidence": 0.82,
+          "model_version": "mock-media-fixture-v2",
+          "agent_version": "media-agent-fixture-v2",
+          "prompt_version": "not-applicable-fixture",
+          "policy_version": "DEMO-CONTENT-V2",
+          "hard_violations": [],
+          "warnings": [
+            "NEEDS_REVIEW"
+          ],
+          "evidence_refs": [
+            "E-GT-007"
+          ]
+        },
+        "strategy": {
+          "status": "SUCCEEDED",
+          "score": 79,
+          "confidence": 0.82,
+          "model_version": "mock-strategy-fixture-v2",
+          "agent_version": "strategy-agent-fixture-v2",
+          "prompt_version": "not-applicable-fixture",
+          "criteria": [
+            {
+              "id": "objective",
+              "score": 79,
+              "weight": 15,
+              "reason": "Điểm đồng nhất được đặt trước để kiểm tra công thức và gate; không phải chấm nội dung thật.",
+              "evidence_refs": [
+                "plan.objective",
+                "plan.summary"
+              ]
+            },
+            {
+              "id": "audience",
+              "score": 79,
+              "weight": 15,
+              "reason": "Điểm đồng nhất được đặt trước để kiểm tra công thức và gate; không phải chấm nội dung thật.",
+              "evidence_refs": [
+                "plan.objective",
+                "plan.summary"
+              ]
+            },
+            {
+              "id": "channel",
+              "score": 79,
+              "weight": 15,
+              "reason": "Điểm đồng nhất được đặt trước để kiểm tra công thức và gate; không phải chấm nội dung thật.",
+              "evidence_refs": [
+                "plan.objective",
+                "plan.summary"
+              ]
+            },
+            {
+              "id": "timeline",
+              "score": 79,
+              "weight": 15,
+              "reason": "Điểm đồng nhất được đặt trước để kiểm tra công thức và gate; không phải chấm nội dung thật.",
+              "evidence_refs": [
+                "plan.objective",
+                "plan.summary"
+              ]
+            },
+            {
+              "id": "kpi",
+              "score": 79,
+              "weight": 15,
+              "reason": "Điểm đồng nhất được đặt trước để kiểm tra công thức và gate; không phải chấm nội dung thật.",
+              "evidence_refs": [
+                "plan.objective",
+                "plan.summary"
+              ]
+            },
+            {
+              "id": "budget_efficiency",
+              "score": 79,
+              "weight": 15,
+              "reason": "Điểm đồng nhất được đặt trước để kiểm tra công thức và gate; không phải chấm nội dung thật.",
+              "evidence_refs": [
+                "plan.objective",
+                "plan.summary"
+              ]
+            },
+            {
+              "id": "risk_control",
+              "score": 79,
+              "weight": 10,
+              "reason": "Điểm đồng nhất được đặt trước để kiểm tra công thức và gate; không phải chấm nội dung thật.",
+              "evidence_refs": [
+                "plan.objective",
+                "plan.summary"
+              ]
+            }
+          ],
+          "assumptions": [
+            "Kết quả agent được đặt trước để kiểm contract."
+          ],
+          "critical_gaps": []
+        },
+        "budget": {
+          "engine_version": "budget-rules-v2-demo",
+          "amount_vnd": 50000000,
+          "currency": "VND",
+          "limit_vnd": 100000000,
+          "limit_snapshot_id": "DEMO-LIMIT-V2",
+          "result": "IN_LIMIT",
+          "difference_vnd": -50000000,
+          "rule_ids": [
+            "BR-BUD-02"
+          ]
+        }
+      },
+      "unresolved_conflict_count": 1,
+      "policy_scope_covered": true,
+      "agent_error_count": 0,
+      "input_hash": "5a005f80e7771b34aad1d8f527ea7bbfa770392b8d37c2ff6a4bc28e2223b137",
+      "fact_verification": {
+        "schema_version": "role1.fact-verification/1.0-proposed",
+        "verification_status": "UNCERTAIN",
+        "assertion_origin": "SYNTHETIC_FIXTURE",
+        "issues": [
+          {
+            "issue_id": "ISSUE-GT-007-01",
+            "field": "budget_vnd",
+            "affected_input_pointer": "/plan_snapshot/budget_vnd",
+            "issue_type": "CONFLICTING_VALUES",
+            "status": "UNRESOLVED",
+            "verified_value": null,
+            "sources": [
+              {
+                "kind": "PLAN_FIELD",
+                "pointer": "/plan_snapshot/budget_vnd",
+                "observed_value": 50000000,
+                "normalized_value": 50000000,
+                "evidence_ref": null
+              },
+              {
+                "kind": "VLM_EVIDENCE",
+                "pointer": "/agent_outputs/vlm/evidence/0/observed_text",
+                "observed_value": "Phương án A: 120.000.000 VND",
+                "normalized_value": 120000000,
+                "evidence_ref": "E-GT-007"
+              },
+              {
+                "kind": "VLM_EVIDENCE",
+                "pointer": "/agent_outputs/vlm/evidence/0/observed_text",
+                "observed_value": "Phương án B: 180.000.000 VND",
+                "normalized_value": 180000000,
+                "evidence_ref": "E-GT-007"
+              }
+            ],
+            "evidence_refs": [
+              "E-GT-007"
+            ],
+            "rationale": "Ngân sách khai báo trong form là 50.000.000 VND, còn ảnh có hai phương án 120.000.000 và 180.000.000 VND. Chưa có bằng chứng lựa chọn phương án chính thức. Đây là xung đột giá trị budget_vnd, không phải thiếu mapping policy. Giữ form hợp lệ; không tự thay ngân sách bằng OCR.",
+            "fixture_rule_ref": "R1-FIX-CONFLICT-01"
+          }
+        ]
+      },
+      "evaluation_fixture_hash": "3a8047a76ef12cef3fafa732582b8cd1358a27cf3a9ef14acd65cb017bdaa467"
+    }
+  },
+  {
+    "id": "VERIFY-A05",
+    "source_case_id": "GT-012",
+    "data_classification": "SYNTHETIC",
+    "evaluation_layer": "DECISION_POLICY_CONTRACT",
+    "input": {
+      "context": {
+        "plan_status": "PENDING_APPROVAL",
+        "approval_round_status": "ACTIVE",
+        "plan_version": 1,
+        "approval_round": 1,
+        "round_id": "ROUND-VERIFY-A05",
+        "run_id": "RUN-VERIFY-A05",
+        "correlation_id": "CORR-VERIFY-A05",
+        "final_decision_exists": false,
+        "checker_active": true,
+        "checker_has_permission": true,
+        "provider_mode": "MOCK",
+        "submitted_at": "2026-10-01T02:00:00Z"
+      },
+      "plan_snapshot": {
+        "plan_id": "PLAN-VERIFY-A05",
+        "code": "MKT-VERIFY-A05",
+        "name": "Verify / Vượt L đúng 1 VND",
+        "maker_id": "DEMO-MAKER-01",
+        "department_id": "DEMO-DEPT-01",
+        "checker_id": "DEMO-CHECKER-01",
+        "objective": "Đạt 1.200 lượt đăng ký quan tâm trong tháng 10 theo kế hoạch demo.",
+        "summary": "Triển khai thông tin sản phẩm mẫu trên kênh demo; theo dõi lượt đăng ký hằng tuần, kiểm tra nội dung trước phát hành và đối chiếu ngân sách.",
+        "target_audience": "Nhóm khách hàng giả lập quan tâm sản phẩm mẫu",
+        "channels": [
+          "DEMO_SOCIAL"
+        ],
+        "kpi_expected": "1.200 lượt đăng ký trước 2026-10-30",
+        "start_date": "2026-10-02",
+        "end_date": "2026-10-30",
+        "budget_vnd": 100000001,
+        "currency": "VND",
+        "notes": "Toàn bộ thông tin phục vụ kiểm thử, không phải kế hoạch thực tế.",
+        "attachments": [
+          {
+            "attachment_id": "ATT-GT-012",
+            "path": "data/fixtures/creative-pass.png",
+            "sha256": "db5193a49b36567a2be1edfd16135beebe4d6144dc4442726b3163de56c47c90",
+            "mime_type": "image/png",
+            "size_bytes": 41493,
+            "upload_status": "COMPLETED"
+          }
+        ]
+      },
+      "policy_snapshot": {
+        "policy_id": "DEMO-POLICY-V2",
+        "version": "2.0",
+        "data_classification": "SYNTHETIC",
+        "approval_status": "PROPOSED_NOT_PO_SIGNED",
+        "mode": "CONTROLLED_AUTO_APPROVAL",
+        "enabled": true,
+        "effective_from": "2026-10-01T00:00:00Z",
+        "effective_to": "2026-12-31T23:59:59Z",
+        "score_threshold": 70,
+        "score_operator": ">",
+        "vlm_confidence_threshold": 0.85,
+        "media_confidence_threshold": 0.85,
+        "media_confidence_gate_status": "PROPOSED_OQ_01",
+        "strategy_confidence_threshold": 0.8,
+        "criteria_weights": {
+          "objective": 15,
+          "audience": 15,
+          "channel": 15,
+          "timeline": 15,
+          "kpi": 15,
+          "budget_efficiency": 15,
+          "risk_control": 10
+        },
+        "content_policy_ref": "DEMO-CONTENT-V2",
+        "limit_snapshot": {
+          "id": "DEMO-LIMIT-V2",
+          "version": "2.0",
+          "amount_vnd": 100000000,
+          "currency": "VND",
+          "scope_department_id": "DEMO-DEPT-01",
+          "effective_from": "2026-10-01T00:00:00Z",
+          "effective_to": "2026-12-31T23:59:59Z",
+          "data_classification": "SYNTHETIC"
+        }
+      },
+      "agent_outputs": {
+        "vlm": {
+          "status": "SUCCEEDED",
+          "confidence": 0.96,
+          "model_version": "mock-vlm-fixture-v2",
+          "agent_version": "vlm-adapter-fixture-v2",
+          "prompt_version": "not-applicable-fixture",
+          "description": "CHIẾN DỊCH DEMO",
+          "objects": [],
+          "quality_flags": [],
+          "evidence": [
+            {
+              "evidence_id": "E-GT-012",
+              "attachment_id": "ATT-GT-012",
+              "attachment_sha256": "db5193a49b36567a2be1edfd16135beebe4d6144dc4442726b3163de56c47c90",
+              "plan_version": 1,
+              "source_type": "IMAGE",
+              "bbox_normalized": [
+                0.02,
+                0.15,
+                0.98,
+                0.84
+              ],
+              "observed_text": "Giới thiệu sản phẩm mẫu | Tìm hiểu thông tin tại trang sản phẩm. | Dữ liệu tổng hợp — không dùng để quảng cáo thực tế.",
+              "confidence": 0.96,
+              "evidence_origin": "SYNTHETIC_FIXTURE"
+            }
+          ]
+        },
+        "media": {
+          "status": "SUCCEEDED",
+          "result": "PASS",
+          "confidence": 0.96,
+          "model_version": "mock-media-fixture-v2",
+          "agent_version": "media-agent-fixture-v2",
+          "prompt_version": "not-applicable-fixture",
+          "policy_version": "DEMO-CONTENT-V2",
+          "hard_violations": [],
+          "warnings": [],
+          "evidence_refs": [
+            "E-GT-012"
+          ]
+        },
+        "strategy": {
+          "status": "SUCCEEDED",
+          "score": 86,
+          "confidence": 0.9,
+          "model_version": "mock-strategy-fixture-v2",
+          "agent_version": "strategy-agent-fixture-v2",
+          "prompt_version": "not-applicable-fixture",
+          "criteria": [
+            {
+              "id": "objective",
+              "score": 86,
+              "weight": 15,
+              "reason": "Điểm đồng nhất được đặt trước để kiểm tra công thức và gate; không phải chấm nội dung thật.",
+              "evidence_refs": [
+                "plan.objective",
+                "plan.summary"
+              ]
+            },
+            {
+              "id": "audience",
+              "score": 86,
+              "weight": 15,
+              "reason": "Điểm đồng nhất được đặt trước để kiểm tra công thức và gate; không phải chấm nội dung thật.",
+              "evidence_refs": [
+                "plan.objective",
+                "plan.summary"
+              ]
+            },
+            {
+              "id": "channel",
+              "score": 86,
+              "weight": 15,
+              "reason": "Điểm đồng nhất được đặt trước để kiểm tra công thức và gate; không phải chấm nội dung thật.",
+              "evidence_refs": [
+                "plan.objective",
+                "plan.summary"
+              ]
+            },
+            {
+              "id": "timeline",
+              "score": 86,
+              "weight": 15,
+              "reason": "Điểm đồng nhất được đặt trước để kiểm tra công thức và gate; không phải chấm nội dung thật.",
+              "evidence_refs": [
+                "plan.objective",
+                "plan.summary"
+              ]
+            },
+            {
+              "id": "kpi",
+              "score": 86,
+              "weight": 15,
+              "reason": "Điểm đồng nhất được đặt trước để kiểm tra công thức và gate; không phải chấm nội dung thật.",
+              "evidence_refs": [
+                "plan.objective",
+                "plan.summary"
+              ]
+            },
+            {
+              "id": "budget_efficiency",
+              "score": 86,
+              "weight": 15,
+              "reason": "Điểm đồng nhất được đặt trước để kiểm tra công thức và gate; không phải chấm nội dung thật.",
+              "evidence_refs": [
+                "plan.objective",
+                "plan.summary"
+              ]
+            },
+            {
+              "id": "risk_control",
+              "score": 86,
+              "weight": 10,
+              "reason": "Điểm đồng nhất được đặt trước để kiểm tra công thức và gate; không phải chấm nội dung thật.",
+              "evidence_refs": [
+                "plan.objective",
+                "plan.summary"
+              ]
+            }
+          ],
+          "assumptions": [
+            "Kết quả agent được đặt trước để kiểm contract."
+          ],
+          "critical_gaps": []
+        },
+        "budget": {
+          "engine_version": "budget-rules-v2-demo",
+          "amount_vnd": 100000001,
+          "currency": "VND",
+          "limit_vnd": 100000000,
+          "limit_snapshot_id": "DEMO-LIMIT-V2",
+          "result": "EXCEEDED",
+          "difference_vnd": 1,
+          "rule_ids": [
+            "BR-BUD-02"
+          ]
+        }
+      },
+      "unresolved_conflict_count": 0,
+      "policy_scope_covered": true,
+      "agent_error_count": 0,
+      "input_hash": "1496c837b8ec03fd1de24d3de5273dcbcc97764d50e7dcdbe79b2d12ff07db61"
+    }
+  }
+]

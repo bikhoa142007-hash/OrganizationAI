@@ -178,8 +178,13 @@ def decide(plan: MarketingPlan, config: ApprovalConfiguration, raw_evaluation,
           'Complete required payload, verified snapshot and attachments, valid distinct Checker.',
           'FACT_UNCERTAIN', ev_refs)
     check('EVAL_VALID', successful, ev.status, 'Schema-valid success and known model.', 'FACT_UNCERTAIN')
+    # Review caused only by unresolved facts is not a validated policy violation.
+    # Keep independent policy/authority failures and existing category precedence.
+    factual_media = bool(ev.missing_facts or ev.evidence_conflicts) and not any(
+        f.severity == 'HARD_VIOLATION' or f.rule_id is not None for f in ev.media_findings)
+    media_category = 'FACT_UNCERTAIN' if factual_media else 'POLICY_OUT_OF_SCOPE'
     for rule, value, passed, limit, category in (
-        ('MEDIA_PASS', ev.media_result, ev.media_result == 'PASS', 'media_result = PASS', 'POLICY_OUT_OF_SCOPE'),
+        ('MEDIA_PASS', ev.media_result, ev.media_result == 'PASS', 'media_result = PASS', media_category),
         ('MEDIA_CONFIDENCE', ev.media_confidence, successful and ev.media_confidence >= .85,
          'media_confidence >= 0.85', 'FACT_UNCERTAIN'),
         ('FEASIBILITY_SCORE', ev.feasibility_score, successful and ev.feasibility_score > 70,
