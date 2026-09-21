@@ -1,0 +1,328 @@
+{
+  "entries": [
+    {
+      "source": "role1-sprint1-v2.1/00-index.md",
+      "destination": "docs/role1/v2.1/00-index.md",
+      "source_sha256": "356e55341367afffad89278bcc803449bbd7b189e39c6b578ca198196658fb8a",
+      "destination_sha256": "ac521bf81d7b5ca72fc88b9760b1be122b7b3c0d9a369377cb11ccc81f31c297",
+      "bytes_identical": false
+    },
+    {
+      "source": "role1-sprint1-v2.1/01-scope-and-process.md",
+      "destination": "docs/role1/v2.1/01-scope-and-process.md",
+      "source_sha256": "2f5f39b5069be9886414af5241b519635db04f020900759f227c544fadd93577",
+      "destination_sha256": "2f5f39b5069be9886414af5241b519635db04f020900759f227c544fadd93577",
+      "bytes_identical": true
+    },
+    {
+      "source": "role1-sprint1-v2.1/02-marketing-approval-policy.md",
+      "destination": "docs/role1/v2.1/02-marketing-approval-policy.md",
+      "source_sha256": "86ee8d49b3a60632c7edc5138f74c8a49f575c69d0422570bf205c79fa69feb6",
+      "destination_sha256": "86ee8d49b3a60632c7edc5138f74c8a49f575c69d0422570bf205c79fa69feb6",
+      "bytes_identical": true
+    },
+    {
+      "source": "role1-sprint1-v2.1/03-authority-matrix.md",
+      "destination": "docs/role1/v2.1/03-authority-matrix.md",
+      "source_sha256": "4cb6c627b33d7de4607ac6d9a2d7d8997ebda8d6566f261f639fac58180dd9c9",
+      "destination_sha256": "4cb6c627b33d7de4607ac6d9a2d7d8997ebda8d6566f261f639fac58180dd9c9",
+      "bytes_identical": true
+    },
+    {
+      "source": "role1-sprint1-v2.1/04-escalation-policy.md",
+      "destination": "docs/role1/v2.1/04-escalation-policy.md",
+      "source_sha256": "3e5ffdb895286927f823b7d3e508bf6dc09286d8a476bf197d5db23d42d72675",
+      "destination_sha256": "3e5ffdb895286927f823b7d3e508bf6dc09286d8a476bf197d5db23d42d72675",
+      "bytes_identical": true
+    },
+    {
+      "source": "role1-sprint1-v2.1/05-ground-truth-cases.md",
+      "destination": "docs/role1/v2.1/05-ground-truth-cases.md",
+      "source_sha256": "2d818ea46cb9cb2e76a7363a404aaf61a0887f13d76aa858d622541c08087078",
+      "destination_sha256": "939ebadcec793fd59b4a35d9ad0fff1a5f4a2565ed8cf058c5dbfa16c46e6dce",
+      "bytes_identical": false
+    },
+    {
+      "source": "role1-sprint1-v2.1/06-test-case-catalog.md",
+      "destination": "docs/role1/v2.1/06-test-case-catalog.md",
+      "source_sha256": "794e1166695f81de5b166134676acb0ac6c7de75cbd826cd29ccd4f039086211",
+      "destination_sha256": "794e1166695f81de5b166134676acb0ac6c7de75cbd826cd29ccd4f039086211",
+      "bytes_identical": true
+    },
+    {
+      "source": "role1-sprint1-v2.1/07-verify-cases.md",
+      "destination": "docs/role1/v2.1/07-verify-cases.md",
+      "source_sha256": "5dbfb022fa2f0538741f7d1b94e5753deeff10f5a36c658efe5bb146f0deb249",
+      "destination_sha256": "b94f4c0c6ca8d7150a96143235586831819954f0143ac6844af069d8ebde1334",
+      "bytes_identical": false
+    },
+    {
+      "source": "role1-sprint1-v2.1/08-verify-expected-results.md",
+      "destination": "docs/role1/v2.1/08-verify-expected-results.md",
+      "source_sha256": "4bf01baaa4e790b08c8b392586819f71209b708ae05bd84e6b6201faa1bea09d",
+      "destination_sha256": "a78a0452f5e941675e060903482e31699c1c64b96700328b53cea11974d06165",
+      "bytes_identical": false
+    },
+    {
+      "source": "role1-sprint1-v2.1/09-measurement-plan.md",
+      "destination": "docs/role1/v2.1/09-measurement-plan.md",
+      "source_sha256": "aecd88157ee9c3d5b9da7090fe735870e7d802767a4d9d0938a251c0ce40e2e3",
+      "destination_sha256": "aecd88157ee9c3d5b9da7090fe735870e7d802767a4d9d0938a251c0ce40e2e3",
+      "bytes_identical": true
+    },
+    {
+      "source": "role1-sprint1-v2.1/10-uat-report.md",
+      "destination": "docs/role1/v2.1/10-uat-report.md",
+      "source_sha256": "064c0d20eb07881ede99d86fa8264ef932472201cd67c1baa8961e6cbd25e05f",
+      "destination_sha256": "064c0d20eb07881ede99d86fa8264ef932472201cd67c1baa8961e6cbd25e05f",
+      "bytes_identical": true
+    },
+    {
+      "source": "role1-sprint1-v2.1/11-submission-content.md",
+      "destination": "docs/role1/v2.1/11-submission-content.md",
+      "source_sha256": "16d2a4a4ec4d5840df77a43fb17c155eaab855bd4c79d0dd8eaf287a0a96aa11",
+      "destination_sha256": "16d2a4a4ec4d5840df77a43fb17c155eaab855bd4c79d0dd8eaf287a0a96aa11",
+      "bytes_identical": true
+    },
+    {
+      "source": "role1-sprint1-v2.1/12-domain-data-dictionary.md",
+      "destination": "docs/role1/v2.1/12-domain-data-dictionary.md",
+      "source_sha256": "bb7aa6b0454a1409a5cdc3a49e78715d57731eee07b5bb6763fababc53309da1",
+      "destination_sha256": "bb7aa6b0454a1409a5cdc3a49e78715d57731eee07b5bb6763fababc53309da1",
+      "bytes_identical": true
+    },
+    {
+      "source": "role1-sprint1-v2.1/13-source-traceability.md",
+      "destination": "docs/role1/v2.1/13-source-traceability.md",
+      "source_sha256": "23efcd1bb5b773cbcac42717b05c1770094e9e950b92f7afa709827a872b059d",
+      "destination_sha256": "274ec2b2b7b09d8538321f676062e22a3612c8bf76f9239d62325fab9c7ae72d",
+      "bytes_identical": false
+    },
+    {
+      "source": "role1-sprint1-v2.1/14-sprint-backlog-and-handoff.md",
+      "destination": "docs/role1/v2.1/14-sprint-backlog-and-handoff.md",
+      "source_sha256": "9ec058269a7fa80e49ed640b4368c971c67c15a5976b89f6c3dcccc3b9b96fd1",
+      "destination_sha256": "9ec058269a7fa80e49ed640b4368c971c67c15a5976b89f6c3dcccc3b9b96fd1",
+      "bytes_identical": true
+    },
+    {
+      "source": "role1-sprint1-v2.1/15-open-decisions-and-change-log.md",
+      "destination": "docs/role1/v2.1/15-open-decisions-and-change-log.md",
+      "source_sha256": "fdf7c1f365f9172fe33197af6cb8efa294ca7bd18877706a3c41a36b620d5af6",
+      "destination_sha256": "fdf7c1f365f9172fe33197af6cb8efa294ca7bd18877706a3c41a36b620d5af6",
+      "bytes_identical": true
+    },
+    {
+      "source": "role1-sprint1-v2.1/16-ai-contract-and-review-screen.md",
+      "destination": "docs/role1/v2.1/16-ai-contract-and-review-screen.md",
+      "source_sha256": "2b199f485a5a1112f17c1df6fdf61d043ab2d43893ef879ecd2a5bf67172c371",
+      "destination_sha256": "2b199f485a5a1112f17c1df6fdf61d043ab2d43893ef879ecd2a5bf67172c371",
+      "bytes_identical": true
+    },
+    {
+      "source": "role1-sprint1-v2.1/17-demo-data-and-seed-guide.md",
+      "destination": "docs/role1/v2.1/17-demo-data-and-seed-guide.md",
+      "source_sha256": "9e5024d72b161fe7b220e890b82966467864f4364b2c426a72fc2ff308f3f7a1",
+      "destination_sha256": "e31847a5626fd1257eba1a79c1cf2f69a380a7f043a8af247d902cb1a4d65a5d",
+      "bytes_identical": false
+    },
+    {
+      "source": "role1-sprint1-v2.1/18-fact-uncertainty-correction.md",
+      "destination": "docs/role1/v2.1/18-fact-uncertainty-correction.md",
+      "source_sha256": "20917debf3c734fc3a29d7fc3aed815fb8515554698d3ff8391c0f90371c2201",
+      "destination_sha256": "20917debf3c734fc3a29d7fc3aed815fb8515554698d3ff8391c0f90371c2201",
+      "bytes_identical": true
+    },
+    {
+      "source": "role1-sprint1-v2.1/19-wp1-wp2-mapping-and-regression.md",
+      "destination": "docs/role1/v2.1/19-wp1-wp2-mapping-and-regression.md",
+      "source_sha256": "f575b551c320ca882235ee2f20139c117ee6dbbc29a6a16490ca0ffaa9172747",
+      "destination_sha256": "f575b551c320ca882235ee2f20139c117ee6dbbc29a6a16490ca0ffaa9172747",
+      "bytes_identical": true
+    },
+    {
+      "source": "role1-sprint1-v2.1/CHANGELOG-v2.1.md",
+      "destination": "docs/role1/v2.1/CHANGELOG-v2.1.md",
+      "source_sha256": "1ec4b99f01c578647fb58769017b519dd49c1a6fc7f680ee39a2876fbe7ca340",
+      "destination_sha256": "470e3b882cbcccf8901a432374c060f054a7659d9a4463ab10c7ecdd19f1c51a",
+      "bytes_identical": false
+    },
+    {
+      "source": "role1-sprint1-v2.1/package-manifest.json",
+      "destination": "docs/role1/v2.1/package-manifest.json",
+      "source_sha256": "3cefaf98665c1b123f9e2636415bb51b6f32e5d3fc2313a44d1d1a71bdea4347",
+      "destination_sha256": "3cefaf98665c1b123f9e2636415bb51b6f32e5d3fc2313a44d1d1a71bdea4347",
+      "bytes_identical": true
+    },
+    {
+      "source": "role1-sprint1-v2.1/validation-report.md",
+      "destination": "docs/role1/v2.1/validation-report.md",
+      "source_sha256": "5fc780204c65718ea8ce8c04a3a6f5dbe5d8c3bcd97c98cd4f518b65883e4e14",
+      "destination_sha256": "fd03328b0ba56b4370579a971912ea292166a88ac53ea1b0c4bebb47b706e626",
+      "bytes_identical": false
+    },
+    {
+      "source": "role1-sprint1-v2.1/data/base-policy.json",
+      "destination": "tests/fixtures/role1/v2.1/base-policy.json",
+      "source_sha256": "94ffd06c66d4df4bade1275f46ff33fe0b274e20ea5156f561144e97b66464bb",
+      "destination_sha256": "94ffd06c66d4df4bade1275f46ff33fe0b274e20ea5156f561144e97b66464bb",
+      "bytes_identical": true
+    },
+    {
+      "source": "role1-sprint1-v2.1/data/fact-verification.schema.json",
+      "destination": "tests/fixtures/role1/v2.1/fact-verification.schema.json",
+      "source_sha256": "bbf6a148c7d998400aba8e1f719ebd205f837e633eefedc9342077da80e50f38",
+      "destination_sha256": "bbf6a148c7d998400aba8e1f719ebd205f837e633eefedc9342077da80e50f38",
+      "bytes_identical": true
+    },
+    {
+      "source": "role1-sprint1-v2.1/data/fixture-manifest.json",
+      "destination": "tests/fixtures/role1/v2.1/fixture-manifest.json",
+      "source_sha256": "a9517cdcea6dd1cd40567069d9436f93839dbe00a7ab014b33b66463eef213bb",
+      "destination_sha256": "a9517cdcea6dd1cd40567069d9436f93839dbe00a7ab014b33b66463eef213bb",
+      "bytes_identical": true
+    },
+    {
+      "source": "role1-sprint1-v2.1/data/ground-truth-cases.json",
+      "destination": "tests/fixtures/role1/v2.1/ground-truth-cases.json",
+      "source_sha256": "d7ccf17e7cf974b17209569309d4e1abd3dcca321b850e74f66beb7d908c43e0",
+      "destination_sha256": "d7ccf17e7cf974b17209569309d4e1abd3dcca321b850e74f66beb7d908c43e0",
+      "bytes_identical": true
+    },
+    {
+      "source": "role1-sprint1-v2.1/data/mock-provider-modes.json",
+      "destination": "tests/fixtures/role1/v2.1/mock-provider-modes.json",
+      "source_sha256": "97a20b6c877e30af35aa7df759811ef4d47aea6063c5808dcd92d8f53f98572d",
+      "destination_sha256": "97a20b6c877e30af35aa7df759811ef4d47aea6063c5808dcd92d8f53f98572d",
+      "bytes_identical": true
+    },
+    {
+      "source": "role1-sprint1-v2.1/data/source-register.json",
+      "destination": "tests/fixtures/role1/v2.1/source-register.json",
+      "source_sha256": "d25f125b377ccbab0f1bd4d9113080ee657bcda91ea1701a9abaa93fe229c088",
+      "destination_sha256": "d25f125b377ccbab0f1bd4d9113080ee657bcda91ea1701a9abaa93fe229c088",
+      "bytes_identical": true
+    },
+    {
+      "source": "role1-sprint1-v2.1/data/verify-expected-results.json",
+      "destination": "tests/fixtures/role1/v2.1/verify-expected-results.json",
+      "source_sha256": "0e109a6c64f2fc1473076ae6083e053ef385c61ec89388500814e10d8ca123bd",
+      "destination_sha256": "0e109a6c64f2fc1473076ae6083e053ef385c61ec89388500814e10d8ca123bd",
+      "bytes_identical": true
+    },
+    {
+      "source": "role1-sprint1-v2.1/data/verify-inputs.json",
+      "destination": "tests/fixtures/role1/v2.1/verify-inputs.json",
+      "source_sha256": "9a6740620ba714383660b0438fb324529c93b95955bba73646aff16085de8b41",
+      "destination_sha256": "9a6740620ba714383660b0438fb324529c93b95955bba73646aff16085de8b41",
+      "bytes_identical": true
+    },
+    {
+      "source": "role1-sprint1-v2.1/data/fixtures/budget-conflict.png",
+      "destination": "tests/fixtures/role1/v2.1/images/budget-conflict.png",
+      "source_sha256": "6f0c5dc2a9edc284c4ca3ed9dc5156dcafd69ef5e925a0911c0b3b93c258931d",
+      "destination_sha256": "6f0c5dc2a9edc284c4ca3ed9dc5156dcafd69ef5e925a0911c0b3b93c258931d",
+      "bytes_identical": true
+    },
+    {
+      "source": "role1-sprint1-v2.1/data/fixtures/creative-low-quality.png",
+      "destination": "tests/fixtures/role1/v2.1/images/creative-low-quality.png",
+      "source_sha256": "4eb86ba25a3dcd82f00b533e3fc072d3e60b5812321a7a41f97a2416f137b1ae",
+      "destination_sha256": "4eb86ba25a3dcd82f00b533e3fc072d3e60b5812321a7a41f97a2416f137b1ae",
+      "bytes_identical": true
+    },
+    {
+      "source": "role1-sprint1-v2.1/data/fixtures/creative-pass.png",
+      "destination": "tests/fixtures/role1/v2.1/images/creative-pass.png",
+      "source_sha256": "db5193a49b36567a2be1edfd16135beebe4d6144dc4442726b3163de56c47c90",
+      "destination_sha256": "db5193a49b36567a2be1edfd16135beebe4d6144dc4442726b3163de56c47c90",
+      "bytes_identical": true
+    },
+    {
+      "source": "role1-sprint1-v2.1/data/fixtures/hard-claim-demo.png",
+      "destination": "tests/fixtures/role1/v2.1/images/hard-claim-demo.png",
+      "source_sha256": "ca08398eb4e67de272cae08982bf70814d2577019566084832f52be19a72f2e7",
+      "destination_sha256": "ca08398eb4e67de272cae08982bf70814d2577019566084832f52be19a72f2e7",
+      "bytes_identical": true
+    },
+    {
+      "source": "role1-sprint1-v2.1/data/fixtures/kpi-conflict.png",
+      "destination": "tests/fixtures/role1/v2.1/images/kpi-conflict.png",
+      "source_sha256": "13c73ad43b335d29efbe7331a10c9a18a77f031f1000ff4ca6f789559afda5dd",
+      "destination_sha256": "13c73ad43b335d29efbe7331a10c9a18a77f031f1000ff4ca6f789559afda5dd",
+      "bytes_identical": true
+    },
+    {
+      "source": "role1-sprint1-v2.1/data/fixtures/scope-missing.png",
+      "destination": "tests/fixtures/role1/v2.1/images/scope-missing.png",
+      "source_sha256": "c588d0138629b3717c0898d4eeba07d67a9510fc6cceef6c42c90fe2d2061878",
+      "destination_sha256": "c588d0138629b3717c0898d4eeba07d67a9510fc6cceef6c42c90fe2d2061878",
+      "bytes_identical": true
+    },
+    {
+      "source": "role1-sprint1-v2.1/data/fixtures/synthetic-private-demo.png",
+      "destination": "tests/fixtures/role1/v2.1/images/synthetic-private-demo.png",
+      "source_sha256": "3e87fb31cd011af3ae93626ec04d5bb98a9bb66dd79e25d05b35248bf1dfa745",
+      "destination_sha256": "3e87fb31cd011af3ae93626ec04d5bb98a9bb66dd79e25d05b35248bf1dfa745",
+      "bytes_identical": true
+    },
+    {
+      "source": "role1-sprint1-v2.1/changes/docs-v2.1.diff",
+      "destination": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "source_sha256": "f98ef4ce56e31c8f39a4c066c35b042ae9d23f0a934f0b0163399bf77255b768",
+      "destination_sha256": "f98ef4ce56e31c8f39a4c066c35b042ae9d23f0a934f0b0163399bf77255b768",
+      "bytes_identical": true
+    },
+    {
+      "source": "role1-sprint1-v2.1/data/changes-v2.1.json",
+      "destination": "docs/role1/archive/v2.1/data/changes-v2.1.json",
+      "source_sha256": "2ccfab61ecf6eee1746abbedfb7c70fb2a880fff4ebb67ec7cd889b27f086ee4",
+      "destination_sha256": "2ccfab61ecf6eee1746abbedfb7c70fb2a880fff4ebb67ec7cd889b27f086ee4",
+      "bytes_identical": true
+    },
+    {
+      "source": "role1-sprint1-v2.1/data/wp1-wp2-mapping-status.json",
+      "destination": "docs/role1/archive/v2.1/data/wp1-wp2-mapping-status.json",
+      "source_sha256": "18adbaac2a0e806f25fdaa8e447ef6ee4c5776309dd6661a7915d8895856dee5",
+      "destination_sha256": "18adbaac2a0e806f25fdaa8e447ef6ee4c5776309dd6661a7915d8895856dee5",
+      "bytes_identical": true
+    },
+    {
+      "source": "role1-sprint1-v2.1/regression-results.json",
+      "destination": "docs/role1/archive/v2.1/regression-results.json",
+      "source_sha256": "0f12ce442fd2ce9d6ab6528524cb5715e3fa1a6ecb717e071741bba992bc7942",
+      "destination_sha256": "0f12ce442fd2ce9d6ab6528524cb5715e3fa1a6ecb717e071741bba992bc7942",
+      "bytes_identical": true
+    },
+    {
+      "source": "role1-sprint1-v2.1/legacy/README.md",
+      "destination": "docs/role1/archive/v2.1/legacy/README.md",
+      "source_sha256": "89bbad074f88d96b842b24fb24c63df394a90ff9d7fc3ef57f883442db92e1c6",
+      "destination_sha256": "89bbad074f88d96b842b24fb24c63df394a90ff9d7fc3ef57f883442db92e1c6",
+      "bytes_identical": true
+    },
+    {
+      "source": "role1-sprint1-v2.1/legacy/Role1_Marketing_Escalation_Referee.pdf",
+      "destination": "docs/role1/archive/v2.1/legacy/Role1_Marketing_Escalation_Referee.pdf",
+      "source_sha256": "6e7275418014b3aaa59130f086371a4420865c9858bc45bca28b0abd82846bee",
+      "destination_sha256": "6e7275418014b3aaa59130f086371a4420865c9858bc45bca28b0abd82846bee",
+      "bytes_identical": true
+    },
+    {
+      "source": "role1-sprint1-v2.1/sources/scope-phase-1.md",
+      "destination": "docs/scope-phase-1.md",
+      "source_sha256": "c952d35596a9053a3bb5800dd3be37e1d0081293b7a3068e48bf962efbadf69f",
+      "destination_sha256": "c952d35596a9053a3bb5800dd3be37e1d0081293b7a3068e48bf962efbadf69f",
+      "bytes_identical": true
+    },
+    {
+      "source": "role1-sprint1-v2.1/sources/sprint-1-deliverables.md",
+      "destination": "docs/sprint-1-deliverables.md",
+      "source_sha256": "41e12255f316333c5649b860a2a59a109664c15e51d577f4a95641a379286d0b",
+      "destination_sha256": "41e12255f316333c5649b860a2a59a109664c15e51d577f4a95641a379286d0b",
+      "bytes_identical": true
+    }
+  ],
+  "unresolved_links": [],
+  "validator_execution_directory": "role1-sprint1-v2.1/"
+}

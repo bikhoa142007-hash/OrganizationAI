@@ -1,0 +1,243 @@
+{
+  "artifact_version": "2.1",
+  "runtime_outcome_catalog": [
+    "AUTO_APPROVED",
+    "HUMAN_REVIEW_REQUIRED"
+  ],
+  "source_zip_sha256": "096549169b53b84d4b3f68d5ce7c535c59e57355132b7d8a32b1e617fe583e43",
+  "wp_compatibility": "NOT_VERIFIED",
+  "engine_regression": "NOT_RUN",
+  "files": [
+    {
+      "path": "00-index.md",
+      "sha256": "356e55341367afffad89278bcc803449bbd7b189e39c6b578ca198196658fb8a",
+      "size_bytes": 3239
+    },
+    {
+      "path": "01-scope-and-process.md",
+      "sha256": "2f5f39b5069be9886414af5241b519635db04f020900759f227c544fadd93577",
+      "size_bytes": 9232
+    },
+    {
+      "path": "02-marketing-approval-policy.md",
+      "sha256": "86ee8d49b3a60632c7edc5138f74c8a49f575c69d0422570bf205c79fa69feb6",
+      "size_bytes": 11429
+    },
+    {
+      "path": "03-authority-matrix.md",
+      "sha256": "4cb6c627b33d7de4607ac6d9a2d7d8997ebda8d6566f261f639fac58180dd9c9",
+      "size_bytes": 6133
+    },
+    {
+      "path": "04-escalation-policy.md",
+      "sha256": "3e5ffdb895286927f823b7d3e508bf6dc09286d8a476bf197d5db23d42d72675",
+      "size_bytes": 8097
+    },
+    {
+      "path": "05-ground-truth-cases.md",
+      "sha256": "2d818ea46cb9cb2e76a7363a404aaf61a0887f13d76aa858d622541c08087078",
+      "size_bytes": 32231
+    },
+    {
+      "path": "06-test-case-catalog.md",
+      "sha256": "794e1166695f81de5b166134676acb0ac6c7de75cbd826cd29ccd4f039086211",
+      "size_bytes": 17136
+    },
+    {
+      "path": "07-verify-cases.md",
+      "sha256": "5dbfb022fa2f0538741f7d1b94e5753deeff10f5a36c658efe5bb146f0deb249",
+      "size_bytes": 4561
+    },
+    {
+      "path": "08-verify-expected-results.md",
+      "sha256": "4bf01baaa4e790b08c8b392586819f71209b708ae05bd84e6b6201faa1bea09d",
+      "size_bytes": 4087
+    },
+    {
+      "path": "09-measurement-plan.md",
+      "sha256": "aecd88157ee9c3d5b9da7090fe735870e7d802767a4d9d0938a251c0ce40e2e3",
+      "size_bytes": 7505
+    },
+    {
+      "path": "10-uat-report.md",
+      "sha256": "064c0d20eb07881ede99d86fa8264ef932472201cd67c1baa8961e6cbd25e05f",
+      "size_bytes": 7774
+    },
+    {
+      "path": "11-submission-content.md",
+      "sha256": "16d2a4a4ec4d5840df77a43fb17c155eaab855bd4c79d0dd8eaf287a0a96aa11",
+      "size_bytes": 6058
+    },
+    {
+      "path": "12-domain-data-dictionary.md",
+      "sha256": "bb7aa6b0454a1409a5cdc3a49e78715d57731eee07b5bb6763fababc53309da1",
+      "size_bytes": 12548
+    },
+    {
+      "path": "13-source-traceability.md",
+      "sha256": "23efcd1bb5b773cbcac42717b05c1770094e9e950b92f7afa709827a872b059d",
+      "size_bytes": 24484
+    },
+    {
+      "path": "14-sprint-backlog-and-handoff.md",
+      "sha256": "9ec058269a7fa80e49ed640b4368c971c67c15a5976b89f6c3dcccc3b9b96fd1",
+      "size_bytes": 6170
+    },
+    {
+      "path": "15-open-decisions-and-change-log.md",
+      "sha256": "fdf7c1f365f9172fe33197af6cb8efa294ca7bd18877706a3c41a36b620d5af6",
+      "size_bytes": 9650
+    },
+    {
+      "path": "16-ai-contract-and-review-screen.md",
+      "sha256": "2b199f485a5a1112f17c1df6fdf61d043ab2d43893ef879ecd2a5bf67172c371",
+      "size_bytes": 8917
+    },
+    {
+      "path": "17-demo-data-and-seed-guide.md",
+      "sha256": "9e5024d72b161fe7b220e890b82966467864f4364b2c426a72fc2ff308f3f7a1",
+      "size_bytes": 7893
+    },
+    {
+      "path": "18-fact-uncertainty-correction.md",
+      "sha256": "20917debf3c734fc3a29d7fc3aed815fb8515554698d3ff8391c0f90371c2201",
+      "size_bytes": 3329
+    },
+    {
+      "path": "19-wp1-wp2-mapping-and-regression.md",
+      "sha256": "f575b551c320ca882235ee2f20139c117ee6dbbc29a6a16490ca0ffaa9172747",
+      "size_bytes": 3280
+    },
+    {
+      "path": "CHANGELOG-v2.1.md",
+      "sha256": "1ec4b99f01c578647fb58769017b519dd49c1a6fc7f680ee39a2876fbe7ca340",
+      "size_bytes": 30722
+    },
+    {
+      "path": "changes/docs-v2.1.diff",
+      "sha256": "f98ef4ce56e31c8f39a4c066c35b042ae9d23f0a934f0b0163399bf77255b768",
+      "size_bytes": 359109
+    },
+    {
+      "path": "data/base-policy.json",
+      "sha256": "94ffd06c66d4df4bade1275f46ff33fe0b274e20ea5156f561144e97b66464bb",
+      "size_bytes": 1055
+    },
+    {
+      "path": "data/changes-v2.1.json",
+      "sha256": "2ccfab61ecf6eee1746abbedfb7c70fb2a880fff4ebb67ec7cd889b27f086ee4",
+      "size_bytes": 31392
+    },
+    {
+      "path": "data/fact-verification.schema.json",
+      "sha256": "bbf6a148c7d998400aba8e1f719ebd205f837e633eefedc9342077da80e50f38",
+      "size_bytes": 3797
+    },
+    {
+      "path": "data/fixture-manifest.json",
+      "sha256": "a9517cdcea6dd1cd40567069d9436f93839dbe00a7ab014b33b66463eef213bb",
+      "size_bytes": 3278
+    },
+    {
+      "path": "data/fixtures/budget-conflict.png",
+      "sha256": "6f0c5dc2a9edc284c4ca3ed9dc5156dcafd69ef5e925a0911c0b3b93c258931d",
+      "size_bytes": 44998
+    },
+    {
+      "path": "data/fixtures/creative-low-quality.png",
+      "sha256": "4eb86ba25a3dcd82f00b533e3fc072d3e60b5812321a7a41f97a2416f137b1ae",
+      "size_bytes": 108531
+    },
+    {
+      "path": "data/fixtures/creative-pass.png",
+      "sha256": "db5193a49b36567a2be1edfd16135beebe4d6144dc4442726b3163de56c47c90",
+      "size_bytes": 41493
+    },
+    {
+      "path": "data/fixtures/hard-claim-demo.png",
+      "sha256": "ca08398eb4e67de272cae08982bf70814d2577019566084832f52be19a72f2e7",
+      "size_bytes": 45850
+    },
+    {
+      "path": "data/fixtures/kpi-conflict.png",
+      "sha256": "13c73ad43b335d29efbe7331a10c9a18a77f031f1000ff4ca6f789559afda5dd",
+      "size_bytes": 48254
+    },
+    {
+      "path": "data/fixtures/scope-missing.png",
+      "sha256": "c588d0138629b3717c0898d4eeba07d67a9510fc6cceef6c42c90fe2d2061878",
+      "size_bytes": 46469
+    },
+    {
+      "path": "data/fixtures/synthetic-private-demo.png",
+      "sha256": "3e87fb31cd011af3ae93626ec04d5bb98a9bb66dd79e25d05b35248bf1dfa745",
+      "size_bytes": 43296
+    },
+    {
+      "path": "data/ground-truth-cases.json",
+      "sha256": "d7ccf17e7cf974b17209569309d4e1abd3dcca321b850e74f66beb7d908c43e0",
+      "size_bytes": 156623
+    },
+    {
+      "path": "data/mock-provider-modes.json",
+      "sha256": "97a20b6c877e30af35aa7df759811ef4d47aea6063c5808dcd92d8f53f98572d",
+      "size_bytes": 1348
+    },
+    {
+      "path": "data/source-register.json",
+      "sha256": "d25f125b377ccbab0f1bd4d9113080ee657bcda91ea1701a9abaa93fe229c088",
+      "size_bytes": 976
+    },
+    {
+      "path": "data/verify-expected-results.json",
+      "sha256": "0e109a6c64f2fc1473076ae6083e053ef385c61ec89388500814e10d8ca123bd",
+      "size_bytes": 5396
+    },
+    {
+      "path": "data/verify-inputs.json",
+      "sha256": "9a6740620ba714383660b0438fb324529c93b95955bba73646aff16085de8b41",
+      "size_bytes": 46616
+    },
+    {
+      "path": "data/wp1-wp2-mapping-status.json",
+      "sha256": "18adbaac2a0e806f25fdaa8e447ef6ee4c5776309dd6661a7915d8895856dee5",
+      "size_bytes": 1776
+    },
+    {
+      "path": "legacy/README.md",
+      "sha256": "89bbad074f88d96b842b24fb24c63df394a90ff9d7fc3ef57f883442db92e1c6",
+      "size_bytes": 289
+    },
+    {
+      "path": "legacy/Role1_Marketing_Escalation_Referee.pdf",
+      "sha256": "6e7275418014b3aaa59130f086371a4420865c9858bc45bca28b0abd82846bee",
+      "size_bytes": 97371
+    },
+    {
+      "path": "regression-results.json",
+      "sha256": "0f12ce442fd2ce9d6ab6528524cb5715e3fa1a6ecb717e071741bba992bc7942",
+      "size_bytes": 18340
+    },
+    {
+      "path": "sources/scope-phase-1.md",
+      "sha256": "c952d35596a9053a3bb5800dd3be37e1d0081293b7a3068e48bf962efbadf69f",
+      "size_bytes": 69555
+    },
+    {
+      "path": "sources/sprint-1-deliverables.md",
+      "sha256": "41e12255f316333c5649b860a2a59a109664c15e51d577f4a95641a379286d0b",
+      "size_bytes": 18372
+    },
+    {
+      "path": "tools/validate_package.py",
+      "sha256": "8a73e1704b982f8bf906e7a69063359381b1d9d3839c0d1d314419c9d2d84b6f",
+      "size_bytes": 14266
+    },
+    {
+      "path": "validation-report.md",
+      "sha256": "5fc780204c65718ea8ce8c04a3a6f5dbe5d8c3bcd97c98cd4f518b65883e4e14",
+      "size_bytes": 1942
+    }
+  ],
+  "self_excluded_from_hash_list": true
+}

@@ -120,3 +120,10 @@ class ApprovalRepository:
             audit=[json.loads(row['body']) for row in self.connection.execute(
                 'SELECT body FROM wp3_audit WHERE plan_id=? ORDER BY sequence', (plan_id,))],
         )
+
+    def list_visible_plans(self, actor, is_checker, offset, limit):
+        rows = self.connection.execute(
+            "SELECT body FROM wp3_plans WHERE json_extract(body, '$.maker_id') = ? "
+            "OR (? AND json_extract(body, '$.payload.checker_id') = ?) ORDER BY rowid DESC LIMIT ? OFFSET ?",
+            (actor, is_checker, actor, limit, offset))
+        return [json.loads(row['body']) for row in rows]

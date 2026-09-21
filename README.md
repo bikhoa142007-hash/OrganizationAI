@@ -148,50 +148,7 @@ The mock provider must support PASS, REVIEW_REQUIRED and timeout/error scenarios
 
 ## Getting started
 
-The repository stack must be inspected before final installation commands are documented. Codex must update this section after WP1 using commands verified in the actual repository.
-
-### Prerequisites
-
-To be confirmed from the repository:
-
-- Runtime and supported version.
-- Package manager.
-- Database.
-- Local VLM runtime/model.
-- Required environment variables.
-
-### Installation
-
-```text
-TBD after repository audit (WP1).
-Do not insert guessed commands here.
-```
-
-### Environment configuration
-
-Create an example environment file containing variable names and safe example values only. Never commit real credentials or secrets.
-
-```text
-TBD after repository audit (WP1).
-```
-
-### Database migration and seed
-
-```text
-TBD after repository audit (WP1).
-```
-
-### Run the application
-
-```text
-TBD after repository audit (WP1).
-```
-
-### Run tests and quality checks
-
-```text
-TBD after repository audit (WP1).
-```
+Use the verified PowerShell commands in [Demo tích hợp Role 1 – Backend – Role 3](#demo-tích-hợp-role-1--backend--role-3) below. Verified runtimes: Python 3.13.14 and Node.js 24.17.0; package managers: pip and npm; database: SQLite. The HTTP demo uses an explicitly configured mock model.
 
 ### WP3 core approval workflow (Python application service)
 
@@ -316,3 +273,87 @@ Sprint 1 is complete when:
 - A submitted plan can be traced through every AI and human decision.
 - Failed or uncertain AI processing never produces an unreviewed rejection.
 - Build, lint/type checks and relevant tests succeed, or a known pre-existing blocker is explicitly documented.
+
+### WP5 frontend and Verify harness
+
+Install dependencies, then start the demo UI:
+
+```powershell
+& '.\.venv\Scripts\python.exe' -m pip install -r requirements.txt
+& '.\.venv\Scripts\python.exe' -m streamlit run app.py
+```
+
+The Verify page runs five TEST_ONLY fixtures through the real WP3/WP4 workflow. Automated tests use MockVLMProvider and do not require an API key.
+
+## Demo tích hợp Role 1 – Backend – Role 3
+
+Backend FastAPI/SQLite và React/Vite đã nối bằng API thật. AI dùng mock công khai
+cho dữ liệu tổng hợp; không dùng cho quyết định sản xuất. Chạy tại repository root:
+
+```powershell
+& ./.venv/Scripts/python.exe -m pip install -r requirements.txt
+$env:APP_ENV = 'demo'
+$env:DEMO_DATABASE = 'runtime/demo-organization.sqlite3'
+$env:CORS_ORIGINS = 'http://127.0.0.1:5173,http://localhost:5173'
+& ./.venv/Scripts/python.exe -m src.backend.seed_demo
+& ./.venv/Scripts/python.exe -m uvicorn src.backend.api.app:app --host 127.0.0.1 --port 8010
+```
+
+Trong terminal thứ hai, từ `frontend/`:
+
+```powershell
+npm install
+$env:VITE_API_BASE_URL = 'http://127.0.0.1:8010/api'
+npm run dev -- --host 127.0.0.1 --port 5173 --strictPort
+```
+
+Frontend: http://127.0.0.1:5173. Backend health: http://127.0.0.1:8010/api/health.
+OpenAPI: http://127.0.0.1:8010/docs và http://127.0.0.1:8010/openapi.json.
+Repository constructor áp dụng migration_001.sql lặp lại an toàn; seed không xóa
+DB/audit và chỉ nhận APP_ENV=demo với tên database demo-*.sqlite3.
+
+Chọn actor trên header: DEMO-MAKER-01, DEMO-CHECKER-01, DEMO-ADMIN-01 hoặc
+DEMO-DUAL-01. Roles/assignment do server quyết định; admin không có quyền đọc mọi
+plan mặc định. Actor demo là cơ chế mô phỏng, không phải đăng nhập production.
+Ngoài APP_ENV=demo, mọi demo-auth request bị từ chối.
+
+Backend đọc environment của tiến trình, không tự nạp `.env`. Xem `.env.example` và
+`frontend/.env.example` cho giá trị an toàn; file mẫu frontend dùng http://127.0.0.1:8010/api, khớp lệnh demo. Giá trị fallback trong API client khi không đặt VITE_API_BASE_URL là
+http://127.0.0.1:8000/api; lệnh trên đặt rõ cổng 8010 vì cổng 8000 đang được tiến trình khác sử dụng. DEMO_MOCK_MODE nhận pass/review/timeout/error/malformed;
+seed có thêm factual-conflict scenario riêng. Dữ liệu HTTP demo và fixture Role 1
+có policy/version riêng; hạn mức 100 triệu VND chỉ là tổng hợp.
+
+Kiểm thử tại root:
+
+```powershell
+& ./.venv/Scripts/python.exe -m pytest -q
+& ./.venv/Scripts/python.exe -m src.verify.runner --suite ground-truth --output runtime/role1-ground-truth-actual.json
+& ./.venv/Scripts/python.exe -m src.verify.runner --suite verify --output runtime/role1-verify-actual.json
+```
+
+Tại `frontend/`:
+
+```powershell
+npm run test
+npm run build
+npx playwright install chromium
+npm run test:e2e
+```
+
+E2E tự chạy backend :8008/frontend :5178 và một database demo riêng, dùng Chromium
+riêng. Không cần chạy server demo trước E2E. Kết quả và screenshot ở frontend/test-results/;
+actual Verify ở runtime/, không ghi đè expected. Các thư mục này không commit.
+
+Giới hạn: production auth/real VLM chưa triển khai trong integration này; không
+external inference, Stop/Undo, auto-reject hay retry evaluation đã commit. Nếu đã
+submit nhưng chưa evaluate, trang chi tiết cho tiếp tục cùng round. Danh sách UI
+hiện tải 100 hồ sơ đầu; API có pagination. Verify UI giữ run trong phiên trang,
+CLI ghi báo cáo actual riêng.
+
+Tài liệu tích hợp:
+
+- [Báo cáo cuối](docs/integration/role1-role3-integration-report.md)
+- [Mapping](docs/integration/role1-contract-mapping.md)
+- [Khác biệt và quyết định mở](docs/integration/role1-conflict-report.md)
+- [Frontend/API](docs/integration/frontend-backend-gap-analysis.md)
+- [API examples](docs/integration/api-examples.md)

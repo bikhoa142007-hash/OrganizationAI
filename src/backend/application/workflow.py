@@ -358,3 +358,31 @@ class ApprovalWorkflow:
                     records=[r for r in history['records'] if r['body']['approval_round'] == number],
                     versions=[v for v in history['versions'] if v['approval_round'] == number],
                     audit=[e for e in history['audit'] if e['approval_round'] == number])
+
+    def list_plans(self, actor, *, offset=0, limit=100):
+        self._check(actor in self.principals, 'UNAUTHENTICATED', 'Authenticated principal required.', 'list-plans')
+        return self.repository.list_visible_plans(actor, 'CHECKER' in self.principals[actor], offset, limit)
+
+    def get_attachment(self, actor, plan_id, attachment_id):
+        history = self.get_plan(actor, plan_id)
+        self._check(any(a['attachment_id'] == attachment_id for a in history['plan']['attachments']),
+                    'NOT_FOUND', 'Attachment not found.', 'read-attachment')
+        row = self.repository.attachment(attachment_id)
+        self._check(row is not None and row['plan_id'] == plan_id, 'NOT_FOUND', 'Attachment not found.', 'read-attachment')
+        return row['media_type'], bytes(row['content'])
+
+    def run_evaluation(self, actor, plan_id, number, expected_revision, pipeline, *, idempotency_key, correlation_id):
+        history = self.get_plan(actor, plan_id, correlation_id=correlation_id)
+        row = next((r for r in history['rounds'] if r['number'] == number), None)
+        self._check(row is not None, 'NOT_FOUND', 'Round not found.', correlation_id)
+        key = 'http-evaluation:' + actor + ':' + idempotency_key
+        if row['decision_id']:
+            decision = self.repository.record('engine_decision', row['decision_id'])
+            raw = self.repository.record('evaluation', decision['evaluation_id'])
+            return self.evaluate_round(self.evaluator_id, plan_id, number, raw,
+                                       expected_revision=expected_revision,
+                                       expected_policy_version=row['configuration']['policy']['policy_version'],
+                                       idempotency_key=key, correlation_id=row['ticket']['correlation_id'])
+        self._revision(row['revision'], expected_revision, correlation_id)
+        submission = dict(round=row, evaluation_ticket=row['ticket'])
+        return pipeline.evaluate_submission(self.evaluator_id, plan_id, submission, idempotency_key=key)
