@@ -193,6 +193,58 @@ TBD after repository audit (WP1).
 TBD after repository audit (WP1).
 ```
 
+### WP3 core approval workflow (Python application service)
+
+WP3 provides `ApprovalWorkflow` in `src/backend/application/workflow.py` and
+`ApprovalRepository` in `src/backend/repositories/approval.py`. It uses the existing
+Python dependencies in `requirements.txt` and standard-library SQLite. Constructing
+the repository applies its repeatable `migration_001.sql` to the selected database;
+the `wp3_` tables coexist with the WP2 snapshot store. Close each repository after
+use and give each concurrent worker its own connection.
+
+The host must authenticate users and provide a trusted principal/role directory,
+an `ApprovalConfiguration`, and a registered evaluator identity. Actor IDs and roles
+must never be accepted directly from public request bodies. The semantic boundary
+supports `save_draft`, `upload_attachment`, `submit_plan`, `evaluate_round`,
+`decide_round`, `get_plan`, and `get_verify_observation`; it does not add an HTTP
+server, frontend, or model provider. Draft saves replace the complete payload and
+preserve attachments. Upload accepts private bytes for configured PNG, JPEG or
+WebP media, checks signature/size, and computes the manifest hash server-side.
+
+Mutations require a stable idempotency key, correlation ID, and expected revision.
+Draft/upload/submit use the plan revision; evaluate/decide use the round revision.
+Submit/evaluate additionally check the expected policy version. Submission commits
+the immutable version, configuration and one evaluation ticket before any pipeline
+work. The pipeline must use that ticket's evaluation/run/provider/correlation IDs
+when returning structured output to `evaluate_round`. The provider identity defaults
+to explicit `MOCK_VLM`; there is no simulated model success in the service. Invalid
+or failed evidence is normalized by WP2 and routed to Human Review. Replaying the
+same successful intent returns its original response; a different input with the
+same key conflicts. A second evaluation under a new key conflicts; manual pipeline
+retry scheduling and notifications are outside this core package.
+
+Human approval/rejection requires the assigned Checker, with rejection and override
+reasons enforced by WP2. Rejection permits revision/resubmission; final decisions
+and prior history remain immutable. Stop/undo and a separate request-changes action
+are not exposed because the frozen contracts define only human APPROVED/REJECTED
+and prohibit reopening final rounds. Revision requests use rejection with a reason.
+Evaluation audit events describe receipt/validation of structured evidence at the
+application boundary, not execution of a VLM. `get_verify_observation` returns
+persisted records for a future Verify runner without computing a synthetic pass.
+
+Verified Windows PowerShell test commands, using the repository's existing `.venv`:
+
+```powershell
+& '.\.venv\Scripts\python.exe' -m pytest -q tests/integration/test_approval_workflow.py
+& '.\.venv\Scripts\python.exe' -m pytest -q
+```
+
+These tests cover draft/submit, both engine outcomes, all three escalation categories,
+Checker decisions, resubmission, immutable history, restart/replay, independent
+SQLite connections racing to submit/decide, and injected audit failures with rollback.
+No formatter, lint, build or type-check configuration is currently present at the
+repository root; WP3 introduces no additional tooling.
+
 ## Seeded demo scenarios
 
 The completed Sprint must provide:
@@ -264,4 +316,3 @@ Sprint 1 is complete when:
 - A submitted plan can be traced through every AI and human decision.
 - Failed or uncertain AI processing never produces an unreviewed rejection.
 - Build, lint/type checks and relevant tests succeed, or a known pre-existing blocker is explicitly documented.
-
