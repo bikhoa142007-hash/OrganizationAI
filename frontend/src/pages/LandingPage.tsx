@@ -1,6 +1,8 @@
+import { useActor } from '../components/DemoActor'
 import { Link } from 'react-router-dom'
 
 export function LandingPage() {
+  const canCreate = useActor()?.roles.includes('MAKER')
   return (
     <div className="landing-page">
       <section className="landing-hero" aria-labelledby="landing-title">
@@ -12,8 +14,8 @@ export function LandingPage() {
             từ hồ sơ mới đến kết quả, Verify, Policy và lịch sử audit.
           </p>
           <div className="hero-actions">
-            <Link className="button button-primary" to="/plans/new">
-              Hồ sơ mới
+            <Link className="button button-primary" to={canCreate ? '/plans/new' : '/plans'}>
+              {canCreate ? 'Hồ sơ mới' : 'Danh sách hồ sơ'}
             </Link>
             <Link className="button button-secondary" to="/verify">
               Verify
@@ -43,7 +45,7 @@ export function LandingPage() {
             </div>
             <div>
               <dt>Điểm vào</dt>
-              <dd>Hồ sơ mới hoặc Verify</dd>
+              <dd>Danh sách hoặc Verify</dd>
             </div>
           </dl>
         </aside>
@@ -55,10 +57,10 @@ export function LandingPage() {
           <h2 id="landing-links-title">Các điểm kiểm tra chính</h2>
         </div>
         <div className="link-grid">
-          <Link className="link-card link-card-primary" to="/plans/new">
+          <Link className="link-card link-card-primary" to={canCreate ? '/plans/new' : '/plans'}>
             <span className="card-index">01</span>
             <span>
-              <strong>Hồ sơ mới</strong>
+              <strong>{canCreate ? 'Hồ sơ mới' : 'Danh sách hồ sơ'}</strong>
               <small>Tải lên kế hoạch để bắt đầu luồng xử lý.</small>
             </span>
             <span className="card-arrow" aria-hidden="true">→</span>

@@ -1,4 +1,4 @@
-import { DemoActor } from './DemoActor'
+import { DemoActor, DemoSession, useActor } from './DemoActor'
 import { NavLink, Outlet } from 'react-router-dom'
 
 const navigation = [
@@ -11,7 +11,10 @@ const navigation = [
   { label: 'Policy', to: '/policy' },
 ]
 
-export function AppShell() {
+export function AppShell() { return <DemoSession><ShellContent /></DemoSession> }
+
+function ShellContent() {
+  const actor = useActor()
   return (
     <div className="app-shell">
       <header className="topbar">
@@ -22,7 +25,7 @@ export function AppShell() {
         <DemoActor />
       </header>
       <nav className="navigation" aria-label="Điều hướng chính">
-        {navigation.map((item) => (
+        {navigation.filter(item => (item.to !== '/plans/new' || actor?.roles.includes('MAKER')) && (item.to !== '/review' || actor?.roles.includes('CHECKER'))).map((item) => (
           <NavLink key={item.to} to={item.to} end={item.to === '/'}>
             {item.label}
           </NavLink>

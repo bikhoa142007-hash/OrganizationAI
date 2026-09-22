@@ -10,13 +10,15 @@ MAKER = 'DEMO-MAKER-01'
 CHECKER = 'DEMO-CHECKER-01'
 ADMIN = 'DEMO-ADMIN-01'
 ENGINE = 'DEMO-EVALUATOR-01'
+DEPARTMENT_CHECKERS = {'DEMO-DEPT-01': (CHECKER,)}
 PRINCIPALS = {MAKER: {'MAKER'}, CHECKER: {'CHECKER'}, ADMIN: {'ADMIN'},
               'DEMO-DUAL-01': {'MAKER', 'CHECKER'}, ENGINE: {'EVALUATOR'}}
 
 
-def configuration():
+def configuration(*, auto_approval=False):
     return ApprovalConfiguration(
-        PolicySnapshot('DEMO-HTTP-POLICY', 'DEMO-HTTP-1', True, MANDATORY_FIELDS,
+        PolicySnapshot('DEMO-HTTP-AUTO-POLICY' if auto_approval else 'DEMO-HTTP-POLICY',
+                       'DEMO-HTTP-AUTO-1' if auto_approval else 'DEMO-HTTP-2', auto_approval, MANDATORY_FIELDS,
                        (Criterion('strategy', 100),), ('mock-1',),
                        ('image/png', 'image/jpeg', 'image/webp'), 5_000_000),
         (BudgetConfiguration('DEMO-HTTP-BUDGET', 'VND', 0, '100000000', 'DEMO-DEPT-01', True),),

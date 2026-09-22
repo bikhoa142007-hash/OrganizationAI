@@ -11,8 +11,25 @@ class Mutation(DTO):
     expected_revision: int = Field(ge=0)
 
 
+class DraftPayload(DTO):
+    # Drafts may be incomplete; business completeness is checked on submission.
+    title: str = ''
+    objective: str = ''
+    summary: str = ''
+    department: str = ''
+    checker_id: str = ''
+    start_date: str = ''
+    end_date: str = ''
+    budget_minor_units: str = ''
+    currency: str = ''
+    target_audience: str = ''
+    channels: list[str] = Field(default_factory=list)
+    kpi_expected: str = ''
+    notes: str = ''
+
+
 class Draft(Mutation):
-    payload: dict[str, Any]
+    payload: DraftPayload
 
 
 class Submission(Mutation):

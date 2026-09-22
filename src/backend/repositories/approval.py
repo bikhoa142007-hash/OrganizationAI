@@ -127,3 +127,11 @@ class ApprovalRepository:
             "OR (? AND json_extract(body, '$.payload.checker_id') = ?) ORDER BY rowid DESC LIMIT ? OFFSET ?",
             (actor, is_checker, actor, limit, offset))
         return [json.loads(row['body']) for row in rows]
+    def list_pending_reviews(self, actor, offset, limit):
+        rows = self.connection.execute(
+            "SELECT body FROM wp3_plans WHERE json_extract(body, '$.payload.checker_id') = ? "
+            "AND json_extract(body, '$.maker_id') != ? "
+            "AND json_extract(body, '$.state.plan_status') = 'PENDING_APPROVAL' "
+            "AND json_extract(body, '$.state.processing_stage') = 'HUMAN_REVIEW_REQUIRED' "
+            "ORDER BY rowid DESC LIMIT ? OFFSET ?", (actor, actor, limit, offset))
+        return [json.loads(row['body']) for row in rows]

@@ -38,11 +38,11 @@ def test_start_creates_and_seeds_missing_database(tmp_path):
     database = tmp_path / 'nested' / 'demo-free.sqlite3'
     assert not database.exists()
     first = initialize_demo_database(database)
-    assert len(first['created']) == 5
+    assert len(first['created']) == 8
     repo = ApprovalRepository(database)
     try:
         before = repo.connection.execute('SELECT body FROM wp3_audit ORDER BY rowid').fetchall()
-        assert repo.connection.execute('SELECT count(*) FROM wp3_plans').fetchone()[0] == 5
+        assert repo.connection.execute('SELECT count(*) FROM wp3_plans').fetchone()[0] == 8
     finally:
         repo.close()
     second = initialize_demo_database(database)
@@ -53,4 +53,4 @@ def test_start_creates_and_seeds_missing_database(tmp_path):
     finally:
         repo.close()
     database.unlink()  # Simulate loss of the temporary test-only ephemeral filesystem.
-    assert len(initialize_demo_database(database)['created']) == 5
+    assert len(initialize_demo_database(database)['created']) == 8

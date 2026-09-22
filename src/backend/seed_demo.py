@@ -8,7 +8,8 @@ from src.ai_pipeline.orchestrator import EvaluationOrchestrator
 from src.ai_pipeline.providers.mock import MockVLMProvider
 from src.backend.application.workflow import ApprovalWorkflow
 from src.backend.repositories.approval import ApprovalRepository
-from src.backend.demo import configuration, demo_database, MAKER, CHECKER, ENGINE, PRINCIPALS
+from src.backend.domain.policy import ApprovalConfiguration
+from src.backend.demo import configuration, demo_database, MAKER, CHECKER, ENGINE, PRINCIPALS, DEPARTMENT_CHECKERS
 
 IMAGE = base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aT1sAAAAASUVORK5CYII=')
 
@@ -28,24 +29,36 @@ def seed(path, app_env):
         raise ValueError('Seed requires APP_ENV=demo')
     path = demo_database(path)
     repo = ApprovalRepository(path)
-    config = configuration()
-    workflow = ApprovalWorkflow(repo, config, PRINCIPALS, evaluator_id=ENGINE)
     created, existing = [], []
     try:
         for name, mode, budget in [('auto', 'pass', '50000000'), ('budget', 'pass', '100000001'),
                                    ('review', 'review', '50000000'), ('timeout', 'timeout', '50000000'),
-                                   ('facts', 'facts', '50000000')]:
+                                   ('facts', 'facts', '50000000'), ('draft', 'draft', '50000000'),
+                                   ('approved', 'pass', '50000000'), ('rejected', 'review', '50000000')]:
+            config = configuration(auto_approval=name == 'auto')
+            workflow = ApprovalWorkflow(repo, config, PRINCIPALS, evaluator_id=ENGINE,
+                                        department_checkers=DEPARTMENT_CHECKERS)
             plan_id = 'DEMO-SEED-' + name.upper()
             previous = repo.plan(plan_id)
             if previous is not None:
                 if previous['maker_id'] != MAKER:
                     raise ValueError('Existing seed namespace belongs to another Maker')
                 existing.append(plan_id)
+                first_round = repo.round(plan_id, 1)
+                if first_round:
+                    # Replay the original seed intent across policy-version changes.
+                    # Never rewrite a previously submitted configuration or decision.
+                    config = ApprovalConfiguration.from_dict(first_round['configuration'])
+                    workflow.configuration = config
             payload = dict(title='Demo ' + name, objective='Synthetic campaign', summary='Demo-only marketing strategy',
                            department='DEMO-DEPT-01', checker_id=CHECKER, start_date='2026-10-01',
                            end_date='2026-10-31', budget_minor_units=budget, currency='VND', kpi_expected='1200')
             plan = workflow.save_draft(MAKER, plan_id, payload, expected_revision=0,
                                       idempotency_key='seed-draft', correlation_id='seed')
+            if mode == 'draft':
+                if previous is None:
+                    created.append(plan_id)
+                continue
             plan = workflow.upload_attachment(MAKER, plan_id, IMAGE, 'image/png', expected_revision=plan['revision'],
                                               idempotency_key='seed-upload', correlation_id='seed')
             submission = workflow.submit_plan(MAKER, plan_id, expected_revision=plan['revision'],
@@ -55,6 +68,12 @@ def seed(path, app_env):
             pipeline = ApprovalPipelineAdapter(workflow, EvaluationOrchestrator(provider))
             workflow.run_evaluation(MAKER, plan_id, submission['round']['number'], 0, pipeline,
                                     idempotency_key='seed-evaluate', correlation_id='seed')
+            if name in ('approved', 'rejected'):
+                workflow.decide_round(CHECKER, plan_id, 1,
+                                      'APPROVED' if name == 'approved' else 'REJECTED',
+                                      reason='Synthetic campaign reviewed.' if name == 'approved'
+                                      else 'Clarify the campaign strategy and resubmit.', override_reason=None,
+                                      expected_revision=1, idempotency_key='seed-human', correlation_id='seed')
             if previous is None:
                 created.append(plan_id)
         return {'created': created, 'existing': existing, 'database': str(path)}

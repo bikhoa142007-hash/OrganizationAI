@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 import os
 
-from src.backend.demo import PRINCIPALS, ENGINE, configuration, demo_database
+from src.backend.demo import PRINCIPALS, ENGINE, configuration, demo_database, DEPARTMENT_CHECKERS
 from src.backend.repositories.approval import ApprovalRepository
 from src.backend.application.workflow import ApprovalWorkflow
 
@@ -29,4 +29,5 @@ class Settings:
 
 def open_workflow(settings):
     repository = ApprovalRepository(demo_database(settings.database))
-    return ApprovalWorkflow(repository, configuration(), PRINCIPALS, evaluator_id=ENGINE)
+    return ApprovalWorkflow(repository, configuration(), PRINCIPALS, evaluator_id=ENGINE,
+                            department_checkers=DEPARTMENT_CHECKERS)

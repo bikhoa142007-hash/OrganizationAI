@@ -43,7 +43,7 @@ ignored for identity; response carries server-computed content_hash and byte_siz
 PNG/JPEG/WebP signatures are checked, maximum 5 MB. Read media only through the
 authorized attachment route; no permanent public URLs.
 
-Submit body: `{"expected_revision":3,"expected_policy_version":"DEMO-HTTP-1"}`.
+Submit body: `{"expected_revision":3,"expected_policy_version":"DEMO-HTTP-2"}`.
 Use actual returned plan revision. Then evaluate the returned round number with
 `{"expected_revision":0}`. Evaluation uses round revision, not plan revision.
 
@@ -75,3 +75,15 @@ CORS permits only environment-configured origins; credentials are disabled.
 `POST /api/verify/general` runs five BA Verify cases. `escalation` runs the 15
 GT regressions. These demo-only test runs use isolated in-memory repositories and
 return actual report rows; they do not alter the normal demo plan database.
+
+
+## Authorization correction
+
+`GET /api/reviews` requires CHECKER and returns only assigned, non-self plans in
+PENDING_APPROVAL/HUMAN_REVIEW_REQUIRED. Pagination matches `/api/plans`.
+Draft payloads have a typed, extra-forbidden schema; references are checked before
+a draft can grant visibility. Missing content can be saved, but cannot be submitted.
+The ordinary HTTP policy is now disabled for auto-approval; a passing evaluation
+returns a routing record, not a final human decision. Read the effective version
+from `/api/config`; never hard-code it in a caller. 401/403/409/422 retain the same
+structured error envelope. See the canonical authority matrix for all permissions.

@@ -27,7 +27,13 @@ export class ApiClient {
     const data = await response.json()
     if (!response.ok) {
       if (response.status < 500) this.pending.delete(fingerprint)
-      throw new ApiError(data.code ?? 'HTTP_ERROR', data.message ?? 'Yêu cầu thất bại.', response.status, data.correlation_id)
+      const guidance: Record<number, string> = {
+        401: 'Phiên demo không hợp lệ. Chọn lại actor demo.',
+        403: 'Actor này không có quyền thực hiện hành động trên hồ sơ.',
+        409: 'Hồ sơ đã thay đổi hoặc đã được xử lý. Tải lại trước khi tiếp tục.',
+        422: 'Kiểm tra dữ liệu và các trường bắt buộc trước khi gửi lại.',
+      }
+      throw new ApiError(data.code ?? 'HTTP_ERROR', `${guidance[response.status] ?? 'Yêu cầu thất bại.'} ${data.message ?? ''}`.trim(), response.status, data.correlation_id)
     }
     this.pending.delete(fingerprint)
     return data as T

@@ -13,7 +13,7 @@ async function fillPlan(page: Page, title: string, budget: string) {
   await page.getByLabel('Ảnh đính kèm', { exact: true }).setInputFiles(image)
 }
 
-test('Maker saves, uploads, submits and observes persisted auto approval', async ({ page, request }) => {
+test('Maker submits mock pass, then assigned Checker approves with persisted evidence', async ({ page, request }) => {
   const errors: string[] = []
   page.on('pageerror', e => errors.push(e.message))
   await fillPlan(page, 'E2E auto campaign', '50000000')
@@ -22,17 +22,34 @@ test('Maker saves, uploads, submits and observes persisted auto approval', async
   await expect(page.getByText('1 ảnh đã lưu trên backend')).toBeVisible()
   await page.getByRole('button', { name: 'Gửi duyệt', exact: true }).click()
   await expect(page).toHaveURL(/\/result$/)
-  await expect(page.getByText('APPROVED · AUTO_APPROVED')).toBeVisible()
+  await expect(page.getByText('PENDING_APPROVAL · POLICY_OUT_OF_SCOPE')).toBeVisible()
   const id = page.url().split('/').at(-2)!
   const response = await request.get(`http://127.0.0.1:8008/api/plans/${id}`, { headers: { 'X-Demo-Actor': 'DEMO-MAKER-01' } })
   const history = await response.json()
-  expect(history.plan.state.plan_status).toBe('APPROVED')
+  expect(history.plan.state.plan_status).toBe('PENDING_APPROVAL')
   expect(history.versions).toHaveLength(1)
-  expect(history.audit.some((e: { action: string }) => e.action === 'AUTO_APPROVED')).toBeTruthy()
+  expect(history.audit.some((e: { action: string }) => e.action === 'AUTO_APPROVED')).toBeFalsy()
+  expect(history.rounds[0].final_id).toBeNull()
   await page.getByRole('link', { name: 'Version / round / history' }).click()
   await expect(page.getByText('Version 1 / Round 1', { exact: true })).toBeVisible()
   await expect(page.getByRole('img')).toBeVisible()
   await page.screenshot({ path: 'test-results/auto-history.png', fullPage: true })
+  await expect(page.getByRole('link', { name: 'Review Queue' })).toHaveCount(0)
+  await page.getByLabel('Demo actor').selectOption('DEMO-CHECKER-01')
+  await expect(page.getByRole('link', { name: 'Hồ sơ mới' })).toHaveCount(0)
+  await page.getByRole('link', { name: 'Review Queue' }).click()
+  await page.getByText('E2E auto campaign', { exact: true }).click()
+  await expect(page.getByText('Khuyến nghị AI (không phải quyết định cuối)')).toBeVisible()
+  await page.locator('#review-reason').fill('Campaign evidence reviewed by the assigned Checker')
+  await page.getByRole('button', { name: 'Approve', exact: true }).click()
+  await page.getByRole('button', { name: 'Xác nhận', exact: true }).click()
+  await expect(page.getByRole('status')).toHaveText(/Quyết định đã được lưu/)
+  await page.goto(`/plans/${id}/result`)
+  await expect(page.getByRole('heading', { name: 'Quyết định cuối cùng' })).toBeVisible()
+  const finalResponse = await request.get(`http://127.0.0.1:8008/api/plans/${id}`, { headers: { 'X-Demo-Actor': 'DEMO-CHECKER-01' } })
+  const finalHistory = await finalResponse.json()
+  expect(finalHistory.plan.state.plan_status).toBe('APPROVED')
+  expect(finalHistory.audit.some((e: { action: string }) => e.action === 'HUMAN_APPROVED')).toBeTruthy()
   expect(errors).toEqual([])
 })
 
@@ -56,7 +73,7 @@ test('Human Review: Checker rejects, Maker resubmits and history preserves both 
   await page.getByLabel('Ngân sách').fill('50000000')
   await page.getByRole('button', { name: 'Gửi duyệt', exact: true }).click()
   await expect(page).toHaveURL(/\/result$/)
-  await expect(page.getByText('APPROVED · AUTO_APPROVED')).toBeVisible()
+  await expect(page.getByText('PENDING_APPROVAL · POLICY_OUT_OF_SCOPE')).toBeVisible()
   const response = await request.get(`http://127.0.0.1:8008/api/plans/${id}`, { headers: { 'X-Demo-Actor': 'DEMO-MAKER-01' } })
   const history = await response.json()
   expect(history.versions).toHaveLength(2)
@@ -67,7 +84,7 @@ test('Human Review: Checker rejects, Maker resubmits and history preserves both 
 
 test('factual evidence and real Verify results render', async ({ page }) => {
   await page.goto('/plans/DEMO-SEED-FACTS/result')
-  await expect(page.getByText('PENDING_APPROVAL · FACT_UNCERTAIN')).toBeVisible()
+  await expect(page.getByText('PENDING_APPROVAL · POLICY_OUT_OF_SCOPE')).toBeVisible()
   await expect(page.getByText(/form KPI 1200; visual evidence 12000/)).toBeVisible()
   await page.screenshot({ path: 'test-results/factual-review.png', fullPage: true })
   await page.getByRole('link', { name: 'Verify', exact: true }).click()
@@ -90,4 +107,16 @@ test('Checker approves a review with an explicit override and persisted audit', 
   const history = await response.json()
   expect(history.plan.state.plan_status).toBe('APPROVED')
   expect(history.audit.some((e: { action: string; override_reason: string }) => e.action === 'HUMAN_APPROVED' && e.override_reason === 'Manual review resolves mock recommendation')).toBeTruthy()
+})
+
+
+test('direct UI routes deny unavailable roles and unassigned Checker has an empty queue', async ({ page }) => {
+  await page.goto('/review')
+  await expect(page.getByRole('alert')).toHaveText(/Không có quyền CHECKER/)
+  await page.getByLabel('Demo actor').selectOption('DEMO-DUAL-01')
+  await page.getByRole('link', { name: 'Review Queue' }).click()
+  await expect(page.getByText('Hiện không có hồ sơ đang chờ human review.')).toBeVisible()
+  await page.getByLabel('Demo actor').selectOption('DEMO-CHECKER-01')
+  await page.goto('/plans/new')
+  await expect(page.getByRole('alert')).toHaveText(/Không có quyền MAKER/)
 })

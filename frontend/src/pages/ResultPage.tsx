@@ -51,7 +51,7 @@ function ResultContent({ result }: { result: ResultView }) {
       </div>
 
       {isError && result.error && <section className="result-section result-error-box" role="alert"><h3>Lỗi từ service</h3><p>{result.error.message}</p><small>Mã: {result.error.code}</small></section>}
-      {result.decisionSource && <section className="result-section result-primary"><h3>Decision source</h3><p>{result.decisionSource}</p></section>}
+      {result.decisionSource && <section className="result-section result-primary"><h3>Quyết định cuối cùng</h3><p>{result.decisionSource}</p></section>}
       {result.reviewDetails && <section className="result-section"><h3>Human review</h3><dl className="result-meta">{result.reviewDetails.question && <><dt>Trạng thái</dt><dd>{result.reviewDetails.question}</dd></>}{result.reviewDetails.authority && <><dt>Authority</dt><dd>{result.reviewDetails.authority}</dd></>}</dl></section>}
       <div className="result-grid">
         {(result.score != null || result.confidence != null) && <section className="result-section"><h3>Chỉ số từ service</h3><dl className="result-meta">{result.score != null && <><dt>Score</dt><dd>{result.score}</dd></>}{result.confidence != null && <><dt>Confidence</dt><dd>{result.confidence}</dd></>}</dl></section>}
@@ -69,7 +69,7 @@ function ResultContent({ result }: { result: ResultView }) {
 
 function variantLabel(variant: ResultView['variant']) {
   if (variant === 'SYSTEM_DECISION') return 'System decision'
-  if (variant === 'HUMAN_REVIEW') return 'Human review waiting'
-  if (variant === 'HUMAN_DECISION') return 'Human decision'
+  if (variant === 'HUMAN_REVIEW') return 'Chờ Checker · chưa có quyết định cuối'
+  if (variant === 'HUMAN_DECISION') return 'Quyết định của Checker'
   return 'Error'
 }

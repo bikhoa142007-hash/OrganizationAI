@@ -61,7 +61,7 @@ python -m deployment.start_backend
 The launcher permits only /tmp/organizationai/demo-*.sqlite3 for this hosted demo,
 runs seed, and execs Uvicorn on 0.0.0.0:$PORT with one worker and concurrency cap 32.
 Seed runs at startup, not during build. Existing migration_001.sql is reused.
-Missing databases receive five deterministic demo scenarios; repeated startup safely
+Missing databases receive eight deterministic demo scenarios; repeated startup safely
 replays seed intents without duplicating existing records.
 
 Frontend build with VITE_API_BASE_URL already set in Render:
@@ -101,7 +101,7 @@ After deployment, record both public URLs and the deployed commit, then:
    immutable version/round and audit. Exercise Checker review with required reasons.
 6. Run all five Verify cases: five pass, three automatic and two escalated.
 7. After restart/redeploy or idle spin-down, expect user-created plans, images and
-   audit to be lost. Verify the five seeded scenarios are available after cold start.
+   audit to be lost. Verify the eight seeded scenarios are available after cold start.
 8. Record actual results; a successful local build is not public verification.
 
 ## Persistence, rollback and limits
@@ -134,3 +134,13 @@ https://render.com/schema/render.yaml.json.
 
 Pytest discovery is restricted by pytest.ini to tests/ and excludes runtime, .venv
 and node_modules. Do not install conformance dependencies for generated vendor tests.
+
+
+### RBAC walkthrough update
+
+New submissions require an assigned Checker decision even when mock AI passes.
+Only DEMO-SEED-AUTO has an explicitly enabled auto-approval snapshot. Seeded
+DRAFT, APPROVED and REJECTED cases supplement the original five scenarios.
+See [canonical permissions](../docs/role1/v2.1/03-authority-matrix.md) and the
+[manual verification checklist](../docs/integration/rbac-workflow-validation-audit.md).
+No deployment URL, HTTPS CORS validation, free plan or ephemeral storage setting changed.

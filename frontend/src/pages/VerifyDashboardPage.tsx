@@ -67,6 +67,7 @@ export function VerifyDashboardPage() {
 
   return (
     <section className="verify-page" aria-labelledby="verify-title">
+      <p>Verify kiểm tra fixture tổng hợp trong dữ liệu riêng; PASS không phê duyệt hồ sơ đang dùng. Fixture BA v2.1 giữ policy lịch sử (có ca ngân sách 0).</p>
       <div className="verify-header">
         <div>
           <Link className="back-link" to="/">← Quay lại Landing</Link>

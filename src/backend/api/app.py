@@ -45,7 +45,7 @@ def create_app(settings=None):
     @app.exception_handler(RequestValidationError)
     async def validation_error(request, exc):
         fields = ', '.join('.'.join(str(x) for x in e['loc']) for e in exc.errors())
-        return error_response('VALIDATION_ERROR', 'Invalid request fields: ' + fields, request.state.correlation_id)
+        return error_response('VALIDATION_ERROR', 'Trường không hợp lệ hoặc không được phép: ' + fields, request.state.correlation_id)
 
     @app.exception_handler(HTTPException)
     async def http_error(request, exc):
@@ -89,14 +89,12 @@ def create_app(settings=None):
 
     @app.put('/api/plans/{plan_id}/draft', response_model=PlanResponse)
     async def draft(plan_id: str, body: Draft, auth=Depends(actor), service=Depends(workflow), meta=Depends(intent)):
-        allowed = {'title', 'objective', 'summary', 'department', 'checker_id', 'start_date', 'end_date',
-                   'budget_minor_units', 'currency', 'target_audience', 'channels', 'kpi_expected', 'notes'}
-        if not set(body.payload) <= allowed:
-            raise ApplicationError('VALIDATION_ERROR', 'Unknown or server-owned payload field.', meta['correlation_id'])
-        checker = body.payload.get('checker_id')
-        if checker and (checker != CHECKER or 'CHECKER' not in PRINCIPALS.get(checker, ())):
-            raise ApplicationError('FORBIDDEN', 'Checker is outside the configured demo assignment.', meta['correlation_id'])
-        return service.save_draft(auth, plan_id, body.payload, expected_revision=body.expected_revision, **meta)
+        return service.save_draft(auth, plan_id, body.payload.model_dump(exclude_unset=True),
+                                  expected_revision=body.expected_revision, **meta)
+
+    @app.get('/api/reviews', response_model=list[PlanResponse])
+    async def reviews(auth=Depends(actor), service=Depends(workflow), offset: int = Query(0, ge=0), limit: int = Query(100, ge=1, le=200)):
+        return service.list_reviews(auth, offset=offset, limit=limit)
 
     @app.get('/api/plans/{plan_id}', response_model=HistoryResponse)
     async def detail(plan_id: str, auth=Depends(actor), service=Depends(workflow)):
