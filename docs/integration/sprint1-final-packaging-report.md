@@ -30,7 +30,7 @@ M README.md
 ?? tests/fixtures/
 ?? tests/integration/test_demo_seed.py
 ?? tests/integration/test_http_api.py
-?? tests/integration/test_role1_regression.py
+?? tests/integration/test_ba_regression.py
 ?? tests/unit/frontend/
 ?? tests/unit/verify/
 ```
@@ -41,11 +41,11 @@ This report and sprint1-proposed-commit-files.txt are additionally untracked und
 
 - frontend/.env.example: set VITE_API_BASE_URL=http://127.0.0.1:8010/api to match the README demo backend, including the /api prefix.
 - README.md: distinguish demo example URL from the client's unchanged fallback of port 8000; no TBD remains anywhere in README.
-- docs/integration/role1-regression-results.json: refreshed from the newly executed actual reports, including timestamps and hashes.
+- docs/integration/ba-regression-results.json: refreshed from the newly executed actual reports, including timestamps and hashes.
 - docs/integration/sprint1-final-packaging-report.md and sprint1-proposed-commit-files.txt: final handoff and explicit proposed paths.
 - Ignored runtime actual reports, build output and E2E evidence refreshed by tests; none proposed for commit.
 
-All prior business-code changes are described in [integration report](role1-role3-integration-report.md). frontend/ remains at repository root. app.py, src/frontend/ and existing user changes remain present.
+All prior business-code changes are described in [integration report](ba-frontend-developer-integration-report.md). frontend/ remains at repository root. app.py, src/frontend/ and existing user changes remain present.
 
 ## Server shutdown
 
@@ -65,17 +65,17 @@ Python executable: ./.venv/Scripts/python.exe, commands at repository root. npm 
 | npm run test:e2e | 4 passed; 8.2s |
 | git diff --check | Passed after final documentation changes |
 
-E2E covers auto-approval, Checker rejection followed by V2/R2 resubmission with immutable history, factual uncertainty/real Verify, and Checker approval with override/audit. Role 1 expected files were not edited. Fresh durable results are in role1-regression-results.json; full observations remain ignored under runtime/.
+E2E covers auto-approval, Checker rejection followed by V2/R2 resubmission with immutable history, factual uncertainty/real Verify, and Checker approval with override/audit. BA expected files were not edited. Fresh durable results are in ba-regression-results.json; full observations remain ignored under runtime/.
 
 ## WP5 status
 
 PASS for the user-authorized local Sprint demo integration: real API-backed Maker/Checker flows, immutable history, evidence/confidence/categories, override/rejection reasons, real one-click five-case Verify and passing browser tests. Old Streamlit WP5 app/service/tests are preserved.
 
-The broader WP5 document's Stop/Undo and request-changes controls are intentionally not introduced: existing frozen workflow supports approve/reject and revision after rejection. This recorded scope resolution remains in role1-conflict-report.md. Public judge hosting and formal business/UAT sign-off have not been established by local automated tests. In-app notifications remain optional scope, not newly implemented here.
+The broader WP5 document's Stop/Undo and request-changes controls are intentionally not introduced: existing frozen workflow supports approve/reject and revision after rejection. This recorded scope resolution remains in ba-conflict-report.md. Public judge hosting and formal business/UAT sign-off have not been established by local automated tests. In-app notifications remain optional scope, not newly implemented here.
 
 ## WP6 status
 
-PASS for the requested local final verification and packaging. Full pytest, actual Role 1 regression, UI tests/build/E2E, status/hygiene checks and handoff are complete.
+PASS for the requested local final verification and packaging. Full pytest, actual BA regression, UI tests/build/E2E, status/hygiene checks and handoff are complete.
 
 Full WP6 Challenge-A submission remains NOT COMPLETE: no public Live URL/deployment, clean-clone execution evidence, formal reviewer/PO sign-off, final runbook/build-log submission set, exactly-five-slide deck, <=3-minute demo video or Sprint-1 tag. These are not added in this packaging-only step. Commit/push/tag remain withheld pending explicit user confirmation. Existing repository HEAD above is the baseline, not a release commit.
 
@@ -93,9 +93,9 @@ Full WP6 Challenge-A submission remains NOT COMPLETE: no public Live URL/deploym
 The linked text manifest enumerates each path; nothing is staged. Proposed grouping for approval/review:
 
 1. Preserved pre-existing WP5 work: app.py, src/frontend/, original src/verify/harness.py and package init, associated tests, README/requirements additions.
-2. Backend/Role 1 integration: three modified backend modules, API/demo/seed modules, new Verify adapter/runner/observation, integration and mapping tests, .env.example.
-3. Role 3 frontend: frontend source, package manifests/lockfile, build/test configs, E2E tests, UI_FLOW.md and safe .env.example. Keep frontend/ at root.
-4. Fixtures and documentation: tests/fixtures/role1/v2.1/, docs/integration/, docs/role1/, audit and tasks files.
+2. Backend/BA integration: three modified backend modules, API/demo/seed modules, new Verify adapter/runner/observation, integration and mapping tests, .env.example.
+3. Frontend Developer frontend: frontend source, package manifests/lockfile, build/test configs, E2E tests, UI_FLOW.md and safe .env.example. Keep frontend/ at root.
+4. Fixtures and documentation: tests/fixtures/ba/v2.1/, docs/integration/, docs/role1/, audit and tasks files.
 5. Original role1-sprint1-v2.1/ reference package: propose as a separate provenance commit because imported links/validator instructions reference it. Review this duplicated reference material explicitly; do not include its generated/runtime files. Original documents retain historical NOT_VERIFIED/NOT_RUN status.
 
 The manifest includes existing user work for a reproducible checkout; inclusion is a proposal for the user's approval, not permission already exercised. Excludes node_modules, dist, test-results/screenshots, runtime databases/reports/backups, .env and credentials. Safe .env.example files and package-lock.json are included.

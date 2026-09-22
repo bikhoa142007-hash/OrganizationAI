@@ -19,7 +19,7 @@
 | VERIFY-A04 | HUMAN_REVIEW_REQUIRED | PENDING_APPROVAL | null | FACT_UNCERTAIN | NOT_RUN |
 | VERIFY-A05 | HUMAN_REVIEW_REQUIRED | PENDING_APPROVAL | null | AUTHORITY_EXCEEDED | NOT_RUN |
 
-**Phân bổ dự kiến:** 3 auto, 2 human. Đây là nội dung expected, không phải “đã chạy đạt 3 auto/2 human”. Kết quả từng trường đầy đủ tại [verify-expected-results.json](../../../tests/fixtures/role1/v2.1/verify-expected-results.json).
+**Phân bổ dự kiến:** 3 auto, 2 human. Đây là nội dung expected, không phải “đã chạy đạt 3 auto/2 human”. Kết quả từng trường đầy đủ tại [verify-expected-results.json](../../../tests/fixtures/ba/v2.1/verify-expected-results.json).
 
 ## 2. Giải thích từng ca
 

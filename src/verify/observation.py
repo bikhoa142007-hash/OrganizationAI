@@ -30,7 +30,7 @@ def validate_observation(actual):
 def contract_result(row):
     """WP1 Verify view for cases with fully specified expected categories.
 
-The Role 1 hard-violation GT cases intentionally have no expected category, and
+The BA hard-violation GT cases intentionally have no expected category, and
 remain detailed GT regression reports rather than fabricated WP1 Verify rows.
 """
     expected, actual = row['expected'], row['actual']
@@ -57,6 +57,6 @@ remain detailed GT regression reports rather than fabricated WP1 Verify rows.
                 plan_id=d.get('plan_id'), plan_version=d.get('plan_version'), approval_round=d.get('approval_round'),
                 input_hash=d.get('input_hash'), policy_version=d.get('policy_version'), application_invoked=actual is not None,
                 application_reference=actual['application_reference'] if actual else None,
-                correlation_id=d.get('correlation_id', 'role1-run'), assertions=assertions,
+                correlation_id=d.get('correlation_id', 'ba-run'), assertions=assertions,
                 error={'code': 'VERIFY_FAILED', 'message': row['error']} if row['error'] else None,
                 **{'pass': bool(valid and row['passed'])})

@@ -4,7 +4,7 @@
       "source": "role1-sprint1-v2.1/00-index.md",
       "destination": "docs/role1/v2.1/00-index.md",
       "source_sha256": "356e55341367afffad89278bcc803449bbd7b189e39c6b578ca198196658fb8a",
-      "destination_sha256": "ac521bf81d7b5ca72fc88b9760b1be122b7b3c0d9a369377cb11ccc81f31c297",
+      "destination_sha256": "5ed157ed59dbaf11a7c7d2a21905debd073a652b2c0931b274e1f1e71c8c2c32",
       "bytes_identical": false
     },
     {
@@ -39,7 +39,7 @@
       "source": "role1-sprint1-v2.1/05-ground-truth-cases.md",
       "destination": "docs/role1/v2.1/05-ground-truth-cases.md",
       "source_sha256": "2d818ea46cb9cb2e76a7363a404aaf61a0887f13d76aa858d622541c08087078",
-      "destination_sha256": "939ebadcec793fd59b4a35d9ad0fff1a5f4a2565ed8cf058c5dbfa16c46e6dce",
+      "destination_sha256": "21b22871a79e6fdfda3c7ae386008fa8d3ce79dec482095a9171964501d0c969",
       "bytes_identical": false
     },
     {
@@ -53,14 +53,14 @@
       "source": "role1-sprint1-v2.1/07-verify-cases.md",
       "destination": "docs/role1/v2.1/07-verify-cases.md",
       "source_sha256": "5dbfb022fa2f0538741f7d1b94e5753deeff10f5a36c658efe5bb146f0deb249",
-      "destination_sha256": "b94f4c0c6ca8d7150a96143235586831819954f0143ac6844af069d8ebde1334",
+      "destination_sha256": "8750fa1308c73f60810614bde64708e8754120e19c3d0f1f4d64433626484281",
       "bytes_identical": false
     },
     {
       "source": "role1-sprint1-v2.1/08-verify-expected-results.md",
       "destination": "docs/role1/v2.1/08-verify-expected-results.md",
       "source_sha256": "4bf01baaa4e790b08c8b392586819f71209b708ae05bd84e6b6201faa1bea09d",
-      "destination_sha256": "a78a0452f5e941675e060903482e31699c1c64b96700328b53cea11974d06165",
+      "destination_sha256": "6487be19b089dc0d97f5d1dcdf68ac34f94c158f85403a8b877bf1cc250fc49a",
       "bytes_identical": false
     },
     {
@@ -123,7 +123,7 @@
       "source": "role1-sprint1-v2.1/17-demo-data-and-seed-guide.md",
       "destination": "docs/role1/v2.1/17-demo-data-and-seed-guide.md",
       "source_sha256": "9e5024d72b161fe7b220e890b82966467864f4364b2c426a72fc2ff308f3f7a1",
-      "destination_sha256": "e31847a5626fd1257eba1a79c1cf2f69a380a7f043a8af247d902cb1a4d65a5d",
+      "destination_sha256": "3b799913889b290c590cf06aa5d2a15416f6a3a29f2ea91b3643a303d9d9307a",
       "bytes_identical": false
     },
     {
@@ -163,105 +163,105 @@
     },
     {
       "source": "role1-sprint1-v2.1/data/base-policy.json",
-      "destination": "tests/fixtures/role1/v2.1/base-policy.json",
+      "destination": "tests/fixtures/ba/v2.1/base-policy.json",
       "source_sha256": "94ffd06c66d4df4bade1275f46ff33fe0b274e20ea5156f561144e97b66464bb",
       "destination_sha256": "94ffd06c66d4df4bade1275f46ff33fe0b274e20ea5156f561144e97b66464bb",
       "bytes_identical": true
     },
     {
       "source": "role1-sprint1-v2.1/data/fact-verification.schema.json",
-      "destination": "tests/fixtures/role1/v2.1/fact-verification.schema.json",
+      "destination": "tests/fixtures/ba/v2.1/fact-verification.schema.json",
       "source_sha256": "bbf6a148c7d998400aba8e1f719ebd205f837e633eefedc9342077da80e50f38",
       "destination_sha256": "bbf6a148c7d998400aba8e1f719ebd205f837e633eefedc9342077da80e50f38",
       "bytes_identical": true
     },
     {
       "source": "role1-sprint1-v2.1/data/fixture-manifest.json",
-      "destination": "tests/fixtures/role1/v2.1/fixture-manifest.json",
+      "destination": "tests/fixtures/ba/v2.1/fixture-manifest.json",
       "source_sha256": "a9517cdcea6dd1cd40567069d9436f93839dbe00a7ab014b33b66463eef213bb",
       "destination_sha256": "a9517cdcea6dd1cd40567069d9436f93839dbe00a7ab014b33b66463eef213bb",
       "bytes_identical": true
     },
     {
       "source": "role1-sprint1-v2.1/data/ground-truth-cases.json",
-      "destination": "tests/fixtures/role1/v2.1/ground-truth-cases.json",
+      "destination": "tests/fixtures/ba/v2.1/ground-truth-cases.json",
       "source_sha256": "d7ccf17e7cf974b17209569309d4e1abd3dcca321b850e74f66beb7d908c43e0",
       "destination_sha256": "d7ccf17e7cf974b17209569309d4e1abd3dcca321b850e74f66beb7d908c43e0",
       "bytes_identical": true
     },
     {
       "source": "role1-sprint1-v2.1/data/mock-provider-modes.json",
-      "destination": "tests/fixtures/role1/v2.1/mock-provider-modes.json",
+      "destination": "tests/fixtures/ba/v2.1/mock-provider-modes.json",
       "source_sha256": "97a20b6c877e30af35aa7df759811ef4d47aea6063c5808dcd92d8f53f98572d",
       "destination_sha256": "97a20b6c877e30af35aa7df759811ef4d47aea6063c5808dcd92d8f53f98572d",
       "bytes_identical": true
     },
     {
       "source": "role1-sprint1-v2.1/data/source-register.json",
-      "destination": "tests/fixtures/role1/v2.1/source-register.json",
+      "destination": "tests/fixtures/ba/v2.1/source-register.json",
       "source_sha256": "d25f125b377ccbab0f1bd4d9113080ee657bcda91ea1701a9abaa93fe229c088",
       "destination_sha256": "d25f125b377ccbab0f1bd4d9113080ee657bcda91ea1701a9abaa93fe229c088",
       "bytes_identical": true
     },
     {
       "source": "role1-sprint1-v2.1/data/verify-expected-results.json",
-      "destination": "tests/fixtures/role1/v2.1/verify-expected-results.json",
+      "destination": "tests/fixtures/ba/v2.1/verify-expected-results.json",
       "source_sha256": "0e109a6c64f2fc1473076ae6083e053ef385c61ec89388500814e10d8ca123bd",
       "destination_sha256": "0e109a6c64f2fc1473076ae6083e053ef385c61ec89388500814e10d8ca123bd",
       "bytes_identical": true
     },
     {
       "source": "role1-sprint1-v2.1/data/verify-inputs.json",
-      "destination": "tests/fixtures/role1/v2.1/verify-inputs.json",
+      "destination": "tests/fixtures/ba/v2.1/verify-inputs.json",
       "source_sha256": "9a6740620ba714383660b0438fb324529c93b95955bba73646aff16085de8b41",
       "destination_sha256": "9a6740620ba714383660b0438fb324529c93b95955bba73646aff16085de8b41",
       "bytes_identical": true
     },
     {
       "source": "role1-sprint1-v2.1/data/fixtures/budget-conflict.png",
-      "destination": "tests/fixtures/role1/v2.1/images/budget-conflict.png",
+      "destination": "tests/fixtures/ba/v2.1/images/budget-conflict.png",
       "source_sha256": "6f0c5dc2a9edc284c4ca3ed9dc5156dcafd69ef5e925a0911c0b3b93c258931d",
       "destination_sha256": "6f0c5dc2a9edc284c4ca3ed9dc5156dcafd69ef5e925a0911c0b3b93c258931d",
       "bytes_identical": true
     },
     {
       "source": "role1-sprint1-v2.1/data/fixtures/creative-low-quality.png",
-      "destination": "tests/fixtures/role1/v2.1/images/creative-low-quality.png",
+      "destination": "tests/fixtures/ba/v2.1/images/creative-low-quality.png",
       "source_sha256": "4eb86ba25a3dcd82f00b533e3fc072d3e60b5812321a7a41f97a2416f137b1ae",
       "destination_sha256": "4eb86ba25a3dcd82f00b533e3fc072d3e60b5812321a7a41f97a2416f137b1ae",
       "bytes_identical": true
     },
     {
       "source": "role1-sprint1-v2.1/data/fixtures/creative-pass.png",
-      "destination": "tests/fixtures/role1/v2.1/images/creative-pass.png",
+      "destination": "tests/fixtures/ba/v2.1/images/creative-pass.png",
       "source_sha256": "db5193a49b36567a2be1edfd16135beebe4d6144dc4442726b3163de56c47c90",
       "destination_sha256": "db5193a49b36567a2be1edfd16135beebe4d6144dc4442726b3163de56c47c90",
       "bytes_identical": true
     },
     {
       "source": "role1-sprint1-v2.1/data/fixtures/hard-claim-demo.png",
-      "destination": "tests/fixtures/role1/v2.1/images/hard-claim-demo.png",
+      "destination": "tests/fixtures/ba/v2.1/images/hard-claim-demo.png",
       "source_sha256": "ca08398eb4e67de272cae08982bf70814d2577019566084832f52be19a72f2e7",
       "destination_sha256": "ca08398eb4e67de272cae08982bf70814d2577019566084832f52be19a72f2e7",
       "bytes_identical": true
     },
     {
       "source": "role1-sprint1-v2.1/data/fixtures/kpi-conflict.png",
-      "destination": "tests/fixtures/role1/v2.1/images/kpi-conflict.png",
+      "destination": "tests/fixtures/ba/v2.1/images/kpi-conflict.png",
       "source_sha256": "13c73ad43b335d29efbe7331a10c9a18a77f031f1000ff4ca6f789559afda5dd",
       "destination_sha256": "13c73ad43b335d29efbe7331a10c9a18a77f031f1000ff4ca6f789559afda5dd",
       "bytes_identical": true
     },
     {
       "source": "role1-sprint1-v2.1/data/fixtures/scope-missing.png",
-      "destination": "tests/fixtures/role1/v2.1/images/scope-missing.png",
+      "destination": "tests/fixtures/ba/v2.1/images/scope-missing.png",
       "source_sha256": "c588d0138629b3717c0898d4eeba07d67a9510fc6cceef6c42c90fe2d2061878",
       "destination_sha256": "c588d0138629b3717c0898d4eeba07d67a9510fc6cceef6c42c90fe2d2061878",
       "bytes_identical": true
     },
     {
       "source": "role1-sprint1-v2.1/data/fixtures/synthetic-private-demo.png",
-      "destination": "tests/fixtures/role1/v2.1/images/synthetic-private-demo.png",
+      "destination": "tests/fixtures/ba/v2.1/images/synthetic-private-demo.png",
       "source_sha256": "3e87fb31cd011af3ae93626ec04d5bb98a9bb66dd79e25d05b35248bf1dfa745",
       "destination_sha256": "3e87fb31cd011af3ae93626ec04d5bb98a9bb66dd79e25d05b35248bf1dfa745",
       "bytes_identical": true
@@ -270,8 +270,8 @@
       "source": "role1-sprint1-v2.1/changes/docs-v2.1.diff",
       "destination": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
       "source_sha256": "f98ef4ce56e31c8f39a4c066c35b042ae9d23f0a934f0b0163399bf77255b768",
-      "destination_sha256": "f98ef4ce56e31c8f39a4c066c35b042ae9d23f0a934f0b0163399bf77255b768",
-      "bytes_identical": true
+      "destination_sha256": "85de39c020c12417d002e4cc18fe2188178143cc150e958d286fbbcd58e71735",
+      "bytes_identical": false
     },
     {
       "source": "role1-sprint1-v2.1/data/changes-v2.1.json",

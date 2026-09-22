@@ -1,4 +1,4 @@
-"""Execute Role 1 fixtures through WP3/WP4 before loading the assertion oracle."""
+"""Execute BA fixtures through WP3/WP4 before loading the assertion oracle."""
 import argparse
 from hashlib import sha256
 import json
@@ -13,9 +13,9 @@ from src.ai_pipeline.orchestrator import EvaluationOrchestrator
 from src.backend.application.workflow import ApprovalWorkflow
 from src.backend.repositories.approval import ApprovalRepository
 from src.shared.validation import require
-from src.verify.role1_adapter import payload_from_input, configuration_from_input, Role1MockProvider
+from src.verify.ba_adapter import payload_from_input, configuration_from_input, BAMockProvider
 
-FIXTURES = Path(__file__).resolve().parents[2] / 'tests/fixtures/role1/v2.1'
+FIXTURES = Path(__file__).resolve().parents[2] / 'tests/fixtures/ba/v2.1'
 
 
 def execute_input(data, fixture_root=FIXTURES):
@@ -27,7 +27,7 @@ def execute_input(data, fixture_root=FIXTURES):
     plan_id = 'DEMO-' + uuid4().hex
     try:
         plan = workflow.save_draft(maker, plan_id, payload, expected_revision=0,
-                                   idempotency_key='draft', correlation_id='role1-run')
+                                   idempotency_key='draft', correlation_id='ba-run')
         bindings = {}
         for item in data['plan_snapshot']['attachments']:
             # Source path is only a locator. Identity and hash come from upload.
@@ -38,12 +38,12 @@ def execute_input(data, fixture_root=FIXTURES):
                     'Fixture bytes do not match source manifest')
             plan = workflow.upload_attachment(maker, plan_id, content, item['mime_type'],
                                              expected_revision=plan['revision'], idempotency_key='upload-' + str(len(bindings)),
-                                             correlation_id='role1-run')
+                                             correlation_id='ba-run')
             bindings[item['attachment_id']] = plan['attachments'][-1]
         submission = workflow.submit_plan(maker, plan_id, expected_revision=plan['revision'],
                                           expected_policy_version=config.policy.policy_version,
-                                          idempotency_key='submit', correlation_id='role1-run')
-        pipeline = ApprovalPipelineAdapter(workflow, EvaluationOrchestrator(Role1MockProvider(data, bindings), max_retries=0))
+                                          idempotency_key='submit', correlation_id='ba-run')
+        pipeline = ApprovalPipelineAdapter(workflow, EvaluationOrchestrator(BAMockProvider(data, bindings), max_retries=0))
         pipeline.evaluate_submission(engine, plan_id, submission, idempotency_key='evaluate')
         observed = workflow.get_verify_observation(maker, plan_id, 1)
         decision = next(r['body'] for r in observed['records'] if r['kind'] == 'engine_decision')
@@ -67,7 +67,7 @@ def compare_observation(actual, expected):
               'processing_stage': actual['plan']['state']['processing_stage'],
               'final_decision': actual['final_decision'], 'decision_source': actual['decision_source']}
     errors = [f'{key}: expected {expected[key]}, observed {value}' for key, value in checks.items() if expected[key] != value]
-    # Role 1 explicitly leaves category null for hard-violation cases. WP1 requires
+    # BA explicitly leaves category null for hard-violation cases. WP1 requires
     # a non-null review category; null is unspecified here, not a runtime change.
     if expected['primary_category'] is not None and actual['decision']['escalation_category'] != expected['primary_category']:
         errors.append('Primary category mismatch')
@@ -127,7 +127,7 @@ def run_suite(suite='verify'):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--suite', choices=('verify', 'ground-truth'), default='verify')
-    parser.add_argument('--output', type=Path, default=Path('runtime/role1-actual.json'))
+    parser.add_argument('--output', type=Path, default=Path('runtime/ba-actual.json'))
     args = parser.parse_args()
     require(FIXTURES.resolve() not in args.output.resolve().parents, 'Cannot overwrite fixtures')
     rows = run_suite(args.suite)

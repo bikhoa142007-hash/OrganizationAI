@@ -76,8 +76,8 @@ npm run build --prefix frontend
 
 Publish frontend/dist. No Vite dev/preview server is deployed. The Blueprint rewrites
 /* internally to /index.html so React routes work after refresh. The service root
-must remain repository root: deployment helpers and tests/fixtures/role1/v2.1 are
-needed for build and the real Verify harness. The ignored original Role 1 package
+must remain repository root: deployment helpers and tests/fixtures/ba/v2.1 are
+needed for build and the real Verify harness. The ignored original BA package
 is not needed. Runtime pins were tested locally; availability on hosted Linux must
 be confirmed during the authenticated build.
 

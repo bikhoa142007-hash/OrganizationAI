@@ -7,7 +7,7 @@ Verify executes the real application path and compares its recorded result with 
 
 | field | type and invariant |
 |---|---|
-| case_id | nonblank ID from Role 1 case catalog |
+| case_id | nonblank ID from BA case catalog |
 | expected_action | RuntimeOutcome |
 | actual_action | RuntimeOutcome or null when application failed to produce a valid outcome |
 | expected_category | EscalationCategory or null; null iff expected_action = AUTO_APPROVED |
@@ -34,7 +34,7 @@ Verify executes the real application path and compares its recorded result with 
 
 ## Real-path execution contract
 
-Runner ownership: Role 3. Case data and expected outcomes: Role 1. Application/domain engine and validators: Role 2. Runner must use the same submit/evaluate/read-result application boundary used by the UI/service, with normal authorization, snapshotting, persistence and audit enabled. It may use MockVLMProvider through the normal orchestrator with explicit test configuration. It must never replace the Decision Engine, hard-code PASS, reproduce the rules locally to invent actual output or read expected results as the actual result.
+Runner ownership: Frontend Developer. Case data and expected outcomes: BA. Application/domain engine and validators: Role 2. Runner must use the same submit/evaluate/read-result application boundary used by the UI/service, with normal authorization, snapshotting, persistence and audit enabled. It may use MockVLMProvider through the normal orchestrator with explicit test configuration. It must never replace the Decision Engine, hard-code PASS, reproduce the rules locally to invent actual output or read expected results as the actual result.
 
 Capture the persisted decision/evaluation/questions/audit references from the application. Validate their schemas and cross-record hashes/IDs before comparison. The required generated_question property contains all emitted questions; it is empty for AUTO_APPROVED and nonempty for HUMAN_REVIEW_REQUIRED. For a primary category, at least one question has the same category. actual_category is null for AUTO_APPROVED or absent actual outcome only.
 

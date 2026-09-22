@@ -1,4 +1,4 @@
-"""Explicit synthetic demo configuration; no Role 1 expectations at runtime."""
+"""Explicit synthetic demo configuration; no BA expectations at runtime."""
 from pathlib import Path
 
 from src.backend.domain.policy import (

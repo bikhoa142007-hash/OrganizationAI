@@ -1,7 +1,7 @@
 import { test, expect, type Page } from '@playwright/test'
 import { resolve } from 'node:path'
 
-const image = resolve(import.meta.dirname, '../../tests/fixtures/role1/v2.1/images/creative-pass.png')
+const image = resolve(import.meta.dirname, '../../tests/fixtures/ba/v2.1/images/creative-pass.png')
 async function fillPlan(page: Page, title: string, budget: string) {
   await page.goto('/plans/new')
   await page.getByLabel('Tên chiến dịch').fill(title)

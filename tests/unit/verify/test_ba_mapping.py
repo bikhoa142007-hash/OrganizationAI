@@ -6,7 +6,7 @@ import shutil
 import pytest
 
 from src.shared.validation import ValidationError
-from src.verify.role1_adapter import payload_from_input, validate_input
+from src.verify.ba_adapter import payload_from_input, validate_input
 from src.verify.runner import execute_input, FIXTURES
 
 CASES = json.loads((FIXTURES / 'ground-truth-cases.json').read_text(encoding='utf-8'))

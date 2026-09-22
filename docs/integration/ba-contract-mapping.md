@@ -1,10 +1,10 @@
-# Role 1 v2.1 -> WP1/WP2 mapping
+# BA v2.1 -> WP1/WP2 mapping
 
-Implementation: src/verify/role1_adapter.py. Execution: src/verify/runner.py.
+Implementation: src/verify/ba_adapter.py. Execution: src/verify/runner.py.
 Fixture schema status: **PROPOSED_FIXTURE_SCHEMA**. The JSON proposal is not the
 official WP schema. Shared domain decoders reject missing and unknown fields.
 
-| Role 1 source | Existing backend | Handling |
+| BA source | Existing backend | Handling |
 | --- | --- | --- |
 | name | payload.title | Preserve text |
 | budget_vnd | payload.budget_minor_units | Require nonnegative integer; exact decimal string, VND precision 0 |
@@ -24,12 +24,12 @@ official WP schema. Shared domain decoders reject missing and unknown fields.
 | policy_scope_covered=false | rule-backed media finding and POLICY evidence | POLICY_SCOPE_MISSING warning with snapshot reference; source fixture media REVIEW_REQUIRED remains unchanged |
 | agent_outputs.budget result | not used for final arithmetic | Engine selects active budget snapshot and compares submitted amount itself |
 | input.context IDs/status | fresh workflow identity | New run/plan/version/round via application; fixture IDs are not trusted database identity |
-| input_hash/evaluation_fixture_hash | source provenance only | Backend recomputes WP snapshot hash; never substitutes Role 1 source hash |
+| input_hash/evaluation_fixture_hash | source provenance only | Backend recomputes WP snapshot hash; never substitutes BA source hash |
 | expected.route/category/reason | runner assertion only | Provider accepts only input, rejects whole case envelope/expected/case_id fields |
 
-## Runtime rule evidence used for Role 1 assertions
+## Runtime rule evidence used for BA assertions
 
-| Role 1 reason | Required actual evidence |
+| BA reason | Required actual evidence |
 | --- | --- |
 | MEDIA_REVIEW_REQUIRED | MEDIA_PASS check failed |
 | UNRESOLVED_CONFLICT | Persisted evidence_conflicts and failed NO_EVIDENCE_CONFLICT |
