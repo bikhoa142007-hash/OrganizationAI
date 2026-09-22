@@ -21,10 +21,30 @@ export interface History {
   rounds: Array<{ number: number; revision: number; decision_id: string | null; configuration: { policy: { policy_version: string } } }>
   records: Array<{ kind: string; body: Json }>; audit: Array<Json>
 }
-interface Config { policy: { policy: { policy_version: string; rule_ids: string[] } }; checker_id: string; department: string; currency: string }
+interface Config {
+  policy: {
+    policy: {
+      policy_version: string
+      rule_ids: string[]
+      auto_approval_policy_enabled: boolean
+      mandatory_fields: string[]
+      known_model_versions: string[]
+      allowed_media_types: string[]
+      max_attachment_bytes: number
+      feasibility_threshold: number
+      media_confidence_threshold: number
+      feasibility_confidence_threshold: number
+    }
+    budgets: Array<{ configuration_id: string; currency: string; limit_minor_units: string; department: string; active: boolean }>
+    authority: { snapshot_id: string; auto_limit_minor_units: string; checker_id: string | null; active: boolean } | null
+  }
+  checker_id: string
+  department: string
+  currency: string
+}
 const state = (v: WirePlan['state']): PlanState => ({ planStatus: v.plan_status, processingStage: v.processing_stage, approvalRoundStatus: v.approval_round_status })
 export const mapPlan = (p: WirePlan): PlanView => ({ planId: p.plan_id, title: String(p.payload.title ?? ''), payload: p.payload,
-  revision: p.revision, planVersion: p.current_round || undefined, approvalRound: p.current_round || undefined, state: state(p.state),
+  makerId: p.maker_id, revision: p.revision, planVersion: p.current_round || undefined, approvalRound: p.current_round || undefined, state: state(p.state),
   attachments: p.attachments.map(a => ({ attachmentId: a.attachment_id, mediaType: a.media_type, byteSize: a.byte_size })) })
 const currentRecords = (h: History) => h.records.filter(r => r.body.approval_round === h.plan.current_round)
 const record = <T,>(h: History, kind: string) => currentRecords(h).find(r => r.kind === kind)?.body as T | undefined
@@ -73,6 +93,11 @@ export function createApiServices(client: ApiClient = api): FrontendServices {
   const audit = (h: History): AuditEvent[] => h.audit.map(e => ({ eventId: String(e.event_id), action: String(e.action), actorId: String(e.actor_id),
     timestamp: String(e.timestamp), inputVersion: `${e.plan_version ?? 'draft'} / round ${e.approval_round ?? '—'}`,
     policyVersion: e.policy_version as string | undefined, modelVersion: e.model_version as string | undefined, reason: String(e.reason),
+    correlationId: e.correlation_id as string | undefined, runId: e.run_id as string | undefined,
+    decisionId: (e.human_decision_id ?? e.decision_id) as string | undefined,
+    outcome: e.outcome as string | undefined, humanAction: e.human_action as string | undefined,
+    overrideReason: e.override_reason as string | undefined,
+    appliedRuleIds: Array.isArray(e.applied_rule_ids) ? e.applied_rule_ids.map(String) : undefined,
     previousState: e.previous_state ? state(e.previous_state as WirePlan['state']) : null,
     newState: e.new_state ? state(e.new_state as WirePlan['state']) : null }))
   return {
@@ -123,19 +148,58 @@ export function createApiServices(client: ApiClient = api): FrontendServices {
     },
     audit: { listByPlan: async id => audit(await read(id)), listByRun: async () => { throw new Error('Chọn hồ sơ từ danh sách để xem audit.') } },
     policy: {
-      getCurrentPolicy: async () => { const c = await client.request<Config>('/config'); return { policyVersion: c.policy.policy.policy_version, policyName: 'Synthetic demo policy', dataSource: 'API', rules: c.policy.policy.rule_ids.map(ruleId => ({ ruleId })) } },
-      getPolicy: async version => { const c = await client.request<Config>('/config'); return c.policy.policy.policy_version === version ? { policyVersion: version, dataSource: 'API', rules: c.policy.policy.rule_ids.map(ruleId => ({ ruleId })) } : null },
+      getCurrentPolicy: async () => {
+        const c = await client.request<Config>('/config'), policy = c.policy.policy, budget = c.policy.budgets.find(item => item.active)
+        return {
+          policyVersion: policy.policy_version,
+          policyName: 'Marketing auto-approval policy',
+          status: policy.auto_approval_policy_enabled ? 'ENABLED' : 'DISABLED',
+          dataSource: 'API',
+          settings: [
+            { label: 'Điểm khả thi', value: `> ${policy.feasibility_threshold}` },
+            { label: 'Media confidence', value: `>= ${policy.media_confidence_threshold}` },
+            { label: 'Feasibility confidence', value: `>= ${policy.feasibility_confidence_threshold}` },
+            { label: 'Hạn mức tự động', value: budget ? `${budget.limit_minor_units} ${budget.currency}` : 'Backend không cung cấp' },
+            { label: 'Định dạng tệp', value: policy.allowed_media_types.join(', ') },
+            { label: 'Dung lượng tối đa', value: `${Math.round(policy.max_attachment_bytes / 1_000_000)} MB` },
+            { label: 'Model được biết', value: policy.known_model_versions.join(', ') },
+            { label: 'Trường bắt buộc', value: policy.mandatory_fields.join(', ') },
+          ],
+          rules: policy.rule_ids.map(ruleId => ({ ruleId })),
+        }
+      },
+      getPolicy: async version => {
+        const c = await client.request<Config>('/config'), policy = c.policy.policy
+        if (policy.policy_version !== version) return null
+        const budget = c.policy.budgets.find(item => item.active)
+        return {
+          policyVersion: version, policyName: 'Marketing auto-approval policy',
+          status: policy.auto_approval_policy_enabled ? 'ENABLED' : 'DISABLED', dataSource: 'API',
+          settings: [
+            { label: 'Điểm khả thi', value: `> ${policy.feasibility_threshold}` },
+            { label: 'Hạn mức tự động', value: budget ? `${budget.limit_minor_units} ${budget.currency}` : 'Backend không cung cấp' },
+          ],
+          rules: policy.rule_ids.map(ruleId => ({ ruleId })),
+        }
+      },
     },
     verify: {
       startRun: async suite => {
         const start = new Date().toISOString()
-        type Row = { case_id: string; passed: boolean; error: string | null; expected: { route: RuntimeOutcome; primary_category: string | null }; actual: { decision: Decision; evaluation: { completed_at: string }; questions: unknown[] } | null }
+        type Row = {
+          case_id: string; passed: boolean; error: string | null; differences: string[]
+          started_at: string; completed_at: string; duration_ms: number
+          expected: { route: RuntimeOutcome; primary_category: string | null }
+          actual: { decision: Decision; questions: unknown[] } | null
+        }
         const response = await client.request<{ run_id: string; rows: Row[] }>(`/verify/${suite}`, 'POST', {}, crypto.randomUUID())
         const rows = response.rows.map(r => ({ caseId: r.case_id, expectedAction: r.expected.route, expectedCategory: r.expected.primary_category,
           actualAction: r.actual?.decision.outcome, actualCategory: r.actual?.decision.escalation_category,
           status: r.error ? 'ERROR' as const : r.passed ? 'PASS' as const : 'FAIL' as const,
-          reason: r.error ?? r.actual?.decision.reason, appliedRuleIds: r.actual?.decision.applied_rule_ids,
-          generatedQuestion: r.actual?.questions, completedAt: r.actual?.evaluation.completed_at, pass: r.passed }))
+          reason: r.error ?? (r.differences.join('; ') || r.actual?.decision.reason),
+          appliedRuleIds: r.actual?.decision.applied_rule_ids, generatedQuestion: r.actual?.questions,
+          startedAt: r.started_at, completedAt: r.completed_at, durationMs: r.duration_ms, pass: r.passed,
+          error: r.error ? { code: 'VERIFY_FAILED', message: r.error } : null }))
         const run: VerifyRun = { runId: response.run_id, suite, status: 'COMPLETED', rows, startedAt: start, completedAt: new Date().toISOString(), dataSource: 'API',
           summary: { totalCases: rows.length, completedCases: rows.length, passedCases: rows.filter(r => r.pass).length,
             failedCases: rows.filter(r => r.status === 'FAIL').length, errorCases: rows.filter(r => r.status === 'ERROR').length, progressPercent: 100 } }
