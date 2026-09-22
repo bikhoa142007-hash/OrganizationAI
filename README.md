@@ -361,7 +361,10 @@ Tài liệu tích hợp:
 ## Public Sprint 1 Judge Demo deployment
 
 The primary hosted application is React/Vite plus FastAPI. Root `render.yaml`
-defines a static frontend and one Python service with a persistent SQLite disk.
+defines a free static frontend and one Render Free Python service with ephemeral SQLite.
+The backend spins down when idle; the next request may require a cold start.
+SQLite submissions are lost on restart, redeploy or spin-down; startup restores only
+the deterministic seed scenarios. This is acceptable only for the Sprint 1 demo.
 The legacy Streamlit command remains a separate local demo.
 
 See [deployment runbook](deployment/README.md) for authentication, environment,
