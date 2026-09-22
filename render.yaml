@@ -1,0 +1,48 @@
+# URLs are supplied in the Render dashboard; no credentials belong here.
+services:
+  - type: web
+    name: organizationai-api
+    runtime: python
+    plan: starter
+    numInstances: 1
+    autoDeployTrigger: "off"
+    buildCommand: python -m pip install -r requirements.txt && python -m pytest
+    startCommand: python -m deployment.start_backend
+    healthCheckPath: /api/health
+    disk:
+      name: organizationai-demo-data
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.13.14
+      - key: APP_ENV
+        value: demo
+      - key: DEMO_DATABASE
+        value: /var/data/demo-organization.sqlite3
+      - key: DEMO_MOCK_MODE
+        value: pass
+      - key: CORS_ORIGINS
+        sync: false
+  - type: web
+    name: organizationai-frontend
+    runtime: static
+    autoDeployTrigger: "off"
+    buildCommand: node --test deployment/validate_frontend.test.mjs && node deployment/validate_frontend.mjs && npm ci --include=dev --prefix frontend && npm run test --prefix frontend && npm run build --prefix frontend
+    staticPublishPath: frontend/dist
+    envVars:
+      - key: NODE_VERSION
+        value: 24.17.0
+      - key: VITE_API_BASE_URL
+        sync: false
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    headers:
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: Referrer-Policy
+        value: strict-origin-when-cross-origin

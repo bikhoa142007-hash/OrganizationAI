@@ -357,3 +357,13 @@ Tài liệu tích hợp:
 - [Khác biệt và quyết định mở](docs/integration/role1-conflict-report.md)
 - [Frontend/API](docs/integration/frontend-backend-gap-analysis.md)
 - [API examples](docs/integration/api-examples.md)
+
+## Public Sprint 1 Judge Demo deployment
+
+The primary hosted application is React/Vite plus FastAPI. Root `render.yaml`
+defines a static frontend and one Python service with a persistent SQLite disk.
+The legacy Streamlit command remains a separate local demo.
+
+See [deployment runbook](deployment/README.md) for authentication, environment,
+commands, verification and rollback. No public URL is claimed until deployment and
+public verification succeed. Judge Mode uses shared synthetic actors and mock AI.
