@@ -26,3 +26,11 @@ authorized synthetic demo. No external inference is enabled.
 Hard-violation category oracle completion remains a BA documentation decision;
 the original null expectations were preserved, and the tests do not claim full WP
 Verify compatibility for those two rows.
+
+## RBAC audit update — 2026-09-22
+
+The current runtime authorization matrix is [03-authority-matrix](../role1/v2.1/03-authority-matrix.md).
+See [RBAC audit](rbac-workflow-validation-audit.md) for the new shared-demo policy,
+positive-budget requirement versus frozen GT-006, and exact before/after behavior.
+Earlier integration observations above retain their provenance and are not claims
+about the revised default policy.

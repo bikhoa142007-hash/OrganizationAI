@@ -330,3 +330,15 @@ Nếu kết quả phụ thuộc ID hoặc tên case: đánh dấu lỗi **Critic
 | 4 | Audit history ở Màn 1 là toàn bộ hay theo phiên demo | Theo phiên demo hiện tại |
 | 5 | Giới hạn upload (loại tệp, dung lượng) | Lấy theo hợp đồng API của Role 2 |
 | 6 | Quy tắc hiển thị score 70 (bằng và lớn hơn) | UI chỉ hiển thị giá trị backend trả về, BA xác nhận quy tắc |
+
+
+## Authorization correction (2026-09-22)
+
+Canonical permissions: [authority matrix](../docs/role1/v2.1/03-authority-matrix.md).
+The shell waits for authenticated `/config` roles. Only Makers see creation;
+only Checkers see Review Queue. Direct routes also show role-denial messages.
+Backend `/reviews` applies assignment independently. Only owners can edit.
+New submission -> AI recommendation -> pending Checker review -> human decision.
+Result labels separate recommendation, routing and final decision. Verify runs
+isolated historical fixtures and cannot approve the current plan. Inputs use
+Vietnamese guidance, explicit VND/date formats and no prefilled business content.

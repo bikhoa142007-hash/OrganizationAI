@@ -33,7 +33,7 @@ def submitted(client, budget='50000000', plan_id='DEMO-HTTP'):
                            data={'expected_revision': 1}, files={'file': ('image.png', PNG, 'image/png')})
     assert uploaded.status_code == 200, uploaded.text
     response = client.post(f'/api/plans/{plan_id}/submit', headers=headers(),
-                           json={'expected_revision': 2, 'expected_policy_version': 'DEMO-HTTP-1'})
+                           json={'expected_revision': 2, 'expected_policy_version': 'DEMO-HTTP-2'})
     assert response.status_code == 200, response.text
     return uploaded.json()['attachments'][0]
 
@@ -42,16 +42,16 @@ def evaluate(client, plan_id='DEMO-HTTP', number=1, key=None):
     return client.post(f'/api/plans/{plan_id}/rounds/{number}/evaluate', headers=headers(key=key), json={'expected_revision': 0})
 
 
-def test_auto_approval_replay_private_media_and_locked_snapshot(client):
+def test_review_replay_private_media_and_locked_snapshot(client):
     attachment = submitted(client)
     result = evaluate(client, key='evaluate-once')
     assert result.status_code == 200, result.text
-    assert result.json()['decision']['outcome'] == 'AUTO_APPROVED'
+    assert result.json()['decision']['outcome'] == 'HUMAN_REVIEW_REQUIRED'
     assert evaluate(client, key='evaluate-once').json() == result.json()
     assert evaluate(client).status_code == 409
     history = client.get('/api/plans/DEMO-HTTP', headers=headers()).json()
     assert len(history['versions']) == 1
-    assert history['plan']['state']['plan_status'] == 'APPROVED'
+    assert history['plan']['state']['plan_status'] == 'PENDING_APPROVAL'
     response = client.put('/api/plans/DEMO-HTTP/draft', headers=headers(), json={'payload': {}, 'expected_revision': 4})
     assert response.status_code == 409
     url = '/api/plans/DEMO-HTTP/attachments/' + attachment['attachment_id']
@@ -78,7 +78,7 @@ def test_reject_revise_resubmit_approve_and_preserve_history(client):
                        json={'payload': payload('100000002'), 'expected_revision': old['plan']['revision']})
     assert draft.status_code == 200
     response = client.post('/api/plans/DEMO-HTTP/submit', headers=headers(),
-                           json={'expected_revision': draft.json()['revision'], 'expected_policy_version': 'DEMO-HTTP-1'})
+                           json={'expected_revision': draft.json()['revision'], 'expected_policy_version': 'DEMO-HTTP-2'})
     assert response.status_code == 200
     assert evaluate(client, number=2).status_code == 200
     body.update(action='APPROVED', override_reason='Checker accepts budget after review')
@@ -120,7 +120,8 @@ def test_provider_failure_does_not_rollback_submission(tmp_path, mode):
         submitted(client)
         response = evaluate(client)
         assert response.status_code == 200, response.text
-        assert response.json()['decision']['escalation_category'] == 'FACT_UNCERTAIN'
+        assert response.json()['decision']['outcome'] == 'HUMAN_REVIEW_REQUIRED'
+        assert response.json()['evaluation']['status'] != 'SUCCEEDED'
         assert client.get('/api/plans/DEMO-HTTP', headers=headers()).json()['plan']['current_round'] == 1
 
 
@@ -148,7 +149,7 @@ def test_invalid_upload_and_submission_leave_draft(client):
                            data={'expected_revision': 1}, files={'file': ('fake.png', b'not png', 'image/png')})
     assert response.status_code == 422
     response = client.post('/api/plans/DEMO-INVALID/submit', headers=headers(),
-                           json={'expected_revision': 1, 'expected_policy_version': 'DEMO-HTTP-1'})
+                           json={'expected_revision': 1, 'expected_policy_version': 'DEMO-HTTP-2'})
     assert response.status_code == 422
     history = client.get('/api/plans/DEMO-INVALID', headers=headers()).json()
     assert history['plan']['state']['plan_status'] == 'DRAFT'

@@ -24,3 +24,18 @@ describe('HTTP client', () => {
     expect(result.evidence).toEqual(expect.arrayContaining([expect.objectContaining({ value: '1200 versus 12000' }), expect.objectContaining({ value: 'Unverified text' })]))
   })
 })
+
+it.each([401, 403, 409, 422])('keeps structured HTTP %s errors with actionable Vietnamese guidance', async status => {
+  const transport = vi.fn().mockResolvedValue(new Response(JSON.stringify({ code: 'TEST_ERROR', message: 'detail', correlation_id: 'trace' }), { status }))
+  const client = new ApiClient('http://localhost/api', () => 'actor', transport)
+  const guidance = { 401: 'Chọn lại actor', 403: 'không có quyền', 409: 'Tải lại', 422: 'Kiểm tra dữ liệu' }
+  await expect(client.request('/plans')).rejects.toMatchObject({ code: 'TEST_ERROR', status, correlationId: 'trace', message: expect.stringContaining(guidance[status as keyof typeof guidance]) })
+})
+
+it('loads the review queue from the authorization-enforced backend endpoint', async () => {
+  const transport = vi.fn().mockResolvedValue(new Response('[]'))
+  const client = new ApiClient('http://localhost/api', () => 'DEMO-CHECKER-01', transport)
+  const { createApiServices } = await import('./index')
+  expect(await createApiServices(client).review.listPendingReviews()).toEqual([])
+  expect(transport.mock.calls[0][0]).toBe('http://localhost/api/reviews')
+})

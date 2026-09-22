@@ -1,3 +1,4 @@
+import { RequireRole } from '../components/DemoActor'
 import { PlansPage } from '../pages/PlansPage'
 import { PlanDetailPage } from '../pages/PlanDetailPage'
 import { Route, Routes } from 'react-router-dom'
@@ -16,12 +17,12 @@ export function AppRoutes() {
     <Routes>
       <Route element={<AppShell />}>
         <Route index element={<LandingPage />} />
-        <Route path="plans" element={<PlansPage />} /><Route path="plans/:planId" element={<PlanDetailPage />} /><Route path="plans/:planId/edit" element={<PlanFormPage key="edit" />} /><Route path="plans/new" element={<PlanFormPage key="new" />} />
+        <Route path="plans" element={<PlansPage />} /><Route path="plans/:planId" element={<PlanDetailPage />} /><Route path="plans/:planId/edit" element={<RequireRole role="MAKER"><PlanFormPage key="edit" /></RequireRole>} /><Route path="plans/new" element={<RequireRole role="MAKER"><PlanFormPage key="new" /></RequireRole>} />
         <Route path="plans/processing" element={<ProcessingPage />} />
         <Route path="plans/:planId/processing" element={<ProcessingPage />} />
         <Route path="plans/result" element={<ResultPage />} />
         <Route path="plans/:planId/result" element={<ResultPage />} />
-        <Route path="review" element={<ReviewQueuePage />} />
+        <Route path="review" element={<RequireRole role="CHECKER"><ReviewQueuePage /></RequireRole>} />
         <Route path="audit" element={<AuditTimelinePage />} />
         <Route path="verify" element={<VerifyDashboardPage />} />
         <Route path="policy" element={<PolicyPage />} />

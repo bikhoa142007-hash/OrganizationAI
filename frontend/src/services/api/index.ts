@@ -1,6 +1,6 @@
 import type { FrontendServices } from '../interfaces'
 import type { AuditEvent, PlanState, PlanView, ResultView, ReviewDetail, VerifyRun, RuntimeOutcome } from '../../types'
-import { api, ApiClient, ApiError } from './client'
+import { api, ApiClient, ApiError, demoActor } from './client'
 
 type Json = Record<string, unknown>
 export interface WirePlan {
@@ -9,7 +9,7 @@ export interface WirePlan {
 }
 interface Evaluation {
   feasibility_score: number | null; feasibility_confidence: number | null; media_confidence: number | null
-  media_result: string | null; model_version: string; evidence: Array<{ evidence_id: string; source_ref: string; observation: string }>; missing_facts: string[]
+  proposed_action?: string; media_result: string | null; model_version: string; evidence: Array<{ evidence_id: string; source_ref: string; observation: string }>; missing_facts: string[]
   evidence_conflicts: Array<{ conflict_id: string; description: string }>
 }
 interface Decision {
@@ -36,14 +36,15 @@ export function mapResult(h: History): ResultView {
   const evidence = (e?.evidence ?? []).map(v => ({ id: v.evidence_id, label: v.source_ref, value: v.observation }))
   evidence.push(...(e?.evidence_conflicts ?? []).map(v => ({ id: v.conflict_id, label: 'Factual conflict', value: v.description })))
   evidence.push(...(e?.missing_facts ?? []).map((value, i) => ({ id: `missing-${i}`, label: 'Chưa xác minh', value })))
+  if (e) evidence.push({ id: 'ai-recommendation', label: 'Khuyến nghị AI (không phải quyết định cuối)', value: String(e.proposed_action ?? 'Chưa có khuyến nghị') })
   if (e) evidence.push({ id: 'media-confidence', label: 'Media confidence', value: String(e.media_confidence) })
   const actions = [{ id: 'history', label: 'Version / round / history', href: `/plans/${h.plan.plan_id}` },
     { id: 'audit', label: 'Audit', href: `/audit?planId=${encodeURIComponent(h.plan.plan_id)}` }]
-  if (h.plan.state.plan_status === 'REJECTED') actions.push({ id: 'revise', label: 'Sửa và gửi lại', href: `/plans/${h.plan.plan_id}/edit` })
+  if (h.plan.state.plan_status === 'REJECTED' && h.plan.maker_id === demoActor()) actions.push({ id: 'revise', label: 'Sửa và gửi lại', href: `/plans/${h.plan.plan_id}/edit` })
   return { planId: h.plan.plan_id, title: String(h.plan.payload.title ?? h.plan.plan_id),
     variant: human ? 'HUMAN_DECISION' : d?.outcome === 'AUTO_APPROVED' ? 'SYSTEM_DECISION' : d ? 'HUMAN_REVIEW' : 'ERROR',
     statusLabel: `${h.plan.state.plan_status} · ${d?.escalation_category ?? d?.outcome ?? 'Chưa đánh giá'}`,
-    decisionSource: human ? 'CHECKER' : d?.outcome === 'AUTO_APPROVED' ? 'AI_AUTO_APPROVAL · MOCK_VLM' : undefined,
+    decisionSource: human ? 'CHECKER' : d?.outcome === 'AUTO_APPROVED' ? 'SYSTEM · Policy bật tự duyệt · MOCK_VLM (kịch bản seed)' : undefined,
     score: e?.feasibility_score, confidence: e?.feasibility_confidence,
     media: { status: e?.media_result ?? 'Chưa có', attachments: h.plan.attachments.map(a => a.attachment_id) },
     budget: { value: d?.budget_validation.budget_minor_units, limit: d?.budget_validation.limit_minor_units },
@@ -106,7 +107,7 @@ export function createApiServices(client: ApiClient = api): FrontendServices {
       },
     },
     review: {
-      listPendingReviews: async () => Promise.all((await list()).filter(p => p.state?.planStatus === 'PENDING_APPROVAL' && p.state.processingStage === 'HUMAN_REVIEW_REQUIRED').map(async p => mapReview(await read(p.planId)))),
+      listPendingReviews: async () => Promise.all((await client.request<WirePlan[]>('/reviews')).map(async p => mapReview(await read(p.plan_id)))),
       getReview: async id => mapReview(await read(id)),
       decide: async (id, input, meta) => {
         try {

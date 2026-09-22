@@ -35,6 +35,26 @@ flowchart TD
 - Approve, reject, revise and resubmit without losing history.
 - Preserve auditable model, policy, evidence and decision metadata.
 
+## Shared demo authorization and review
+
+The canonical [authorization matrix](docs/role1/v2.1/03-authority-matrix.md) defines
+Maker, assigned Checker, Admin and internal Evaluator. BA and Frontend Developer
+are project responsibilities, not application roles. The header shows the current
+actor and server roles. Shared actor selection is demo authentication only.
+
+New HTTP submissions use `DEMO-HTTP-2`, with auto-approval disabled. A mock PASS
+remains an AI recommendation: the assigned Checker must approve or reject.
+`DEMO-SEED-AUTO` alone demonstrates explicitly enabled controlled auto-approval
+under `DEMO-HTTP-AUTO-1`. Existing submitted policy snapshots remain immutable.
+
+Required on submission: title, objective, summary/strategy, configured department
+and Checker, valid ISO start/end dates (end >= start), positive integer VND budget,
+and at least one PNG/JPEG/WebP attachment <= 5 MB. Drafts may be incomplete.
+Known placeholder-only text is rejected; no arbitrary minimum length is imposed.
+
+See the [audit, conflicts and demo checklist](docs/integration/rbac-workflow-validation-audit.md)
+for endpoint inventory, limitations and the complete walkthrough.
+
 ## Auto-approval policy
 
 The default policy requires all conditions below:
@@ -58,8 +78,8 @@ All other cases require Human Review. Sprint 1 does not automatically reject a p
 ## Documentation
 
 - `AGENTS.md` – mandatory rules for Codex and other coding agents.
-- `docs/scope-phe-duyet-ke-hoach-marketing-phase-1.md` – authoritative business scope and rules.
-- `docs/chien-luoc-codex-sprint-1-72h.md` – implementation strategy, timeline and tests.
+- `docs/scope-phase-1.md` – authoritative business scope and rules.
+- `docs/sprint-1-deliverables.md` – implementation strategy, timeline and tests.
 
 ## Recommended repository structure
 
@@ -320,7 +340,7 @@ Ngoài APP_ENV=demo, mọi demo-auth request bị từ chối.
 Backend đọc environment của tiến trình, không tự nạp `.env`. Xem `.env.example` và
 `frontend/.env.example` cho giá trị an toàn; file mẫu frontend dùng http://127.0.0.1:8010/api, khớp lệnh demo. Giá trị fallback trong API client khi không đặt VITE_API_BASE_URL là
 http://127.0.0.1:8000/api; lệnh trên đặt rõ cổng 8010 vì cổng 8000 đang được tiến trình khác sử dụng. DEMO_MOCK_MODE nhận pass/review/timeout/error/malformed;
-seed có thêm factual-conflict scenario riêng. Dữ liệu HTTP demo và fixture BA
+seed có thêm factual-conflict, draft, human-approved và rejected scenarios. Tổng cộng 8 hồ sơ tổng hợp. Dữ liệu HTTP demo và fixture BA
 có policy/version riêng; hạn mức 100 triệu VND chỉ là tổng hợp.
 
 Kiểm thử tại root:

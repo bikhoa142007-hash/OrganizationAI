@@ -40,7 +40,11 @@ def identifier(prefix):
 
 
 class ApprovalWorkflow:
-    def __init__(self, repository, configuration, principals, *, evaluator_id, provider='MOCK_VLM'):
+    def __init__(self, repository, configuration, principals, *, evaluator_id, provider='MOCK_VLM',
+                 department_checkers=None, minimum_budget_minor_units=1):
+        if type(minimum_budget_minor_units) is not int or minimum_budget_minor_units < 0:
+            raise ValueError('Invalid minimum budget')
+        self.minimum_budget_minor_units = minimum_budget_minor_units
         self.repository = repository
         self.configuration = configuration
         self.principals = {name: frozenset(roles) for name, roles in principals.items()}
@@ -48,6 +52,8 @@ class ApprovalWorkflow:
         if provider not in ('MOCK_VLM', 'LOCAL_VLM'):
             raise ValueError('Unsupported provider identity')
         self.provider = provider
+        # A directory is distinct from auto-approval authority/budget scope.
+        self.department_checkers = dict(department_checkers) if department_checkers is not None else None
 
     @staticmethod
     def _check(condition, code, message, trace):
@@ -147,6 +153,17 @@ class ApprovalWorkflow:
             self._revision(plan['revision'], expected_revision, correlation_id)
             self._check(isinstance(payload, dict), 'VALIDATION_ERROR', 'Payload must be an object.', correlation_id)
             self._check(payload.get('maker_id', actor) == actor, 'FORBIDDEN', 'Maker identity cannot be changed.', correlation_id)
+            allowed = {'title', 'objective', 'summary', 'department', 'checker_id', 'start_date',
+                       'end_date', 'budget_minor_units', 'currency', 'target_audience', 'channels',
+                       'kpi_expected', 'notes', 'maker_id'}
+            self._check(set(payload) <= allowed, 'VALIDATION_ERROR',
+                        'Unknown or server-owned payload field.', correlation_id)
+            self._check(all(isinstance(v, str) if k != 'channels' else
+                            isinstance(v, list) and all(isinstance(item, str) for item in v)
+                            for k, v in payload.items()), 'VALIDATION_ERROR',
+                        'Expected text fields and a list of text channels.', correlation_id)
+            if self.department_checkers is not None:
+                self._validate_directory(payload, actor, correlation_id)
             plan['payload'] = {**payload, 'maker_id': actor}
             self._draft_snapshot(plan)
             plan['revision'] += 1
@@ -192,20 +209,54 @@ class ApprovalWorkflow:
             hashes.append((manifest.attachment_id, manifest.content_hash))
         return tuple(hashes)
 
+    def _validate_directory(self, payload, maker, trace):
+        # Blank references are allowed in a draft, but cannot grant record access.
+        department, checker = payload.get('department'), payload.get('checker_id')
+        if department:
+            self._check(department in self.department_checkers, 'VALIDATION_ERROR',
+                        'Phòng ban không tồn tại trong danh mục demo.', trace)
+        if checker:
+            self._check(checker != maker and 'CHECKER' in self.principals.get(checker, ()),
+                        'VALIDATION_ERROR', 'Chọn Checker hợp lệ, khác người lập kế hoạch.', trace)
+            self._check(bool(department), 'VALIDATION_ERROR',
+                        'Chọn phòng ban trước khi phân công Checker.', trace)
+            permitted = self.department_checkers.get(department, ())
+            self._check(checker in permitted, 'FORBIDDEN',
+                        'Checker không được phân công cho phòng ban này.', trace)
+        if payload.get('currency'):
+            self._check(payload['currency'] == 'VND', 'VALIDATION_ERROR', 'Demo chỉ nhận ngân sách VND.', trace)
+
     def _validate_submission(self, snapshot, trace):
         payload, policy = snapshot.payload, self.configuration.policy
         self._check(all(isinstance(payload.get(k), str) and payload[k].strip()
                         for k in policy.mandatory_fields),
-                    'VALIDATION_ERROR', 'Required submission fields are missing.', trace)
+                    'VALIDATION_ERROR', 'Điền đủ tên, mục tiêu, chiến lược, phòng ban, Checker, ngày và ngân sách.', trace)
+        placeholders = {'test', 'tbd', 'todo', 'n/a', 'na', 'null', 'undefined',
+                        'placeholder', 'lorem ipsum', 'abc', 'asdf', 'xxx', '123', 'đang cập nhật'}
+        for field in ('title', 'objective', 'summary'):
+            text = ' '.join(payload[field].split()).casefold()
+            self._check(text not in placeholders and any(c.isalpha() for c in text),
+                        'VALIDATION_ERROR', f'{field}: nhập nội dung kế hoạch cụ thể, không dùng nội dung mẫu.', trace)
         checker = payload.get('checker_id')
         self._check(checker != payload.get('maker_id') and 'CHECKER' in self.principals.get(checker, ()),
-                    'VALIDATION_ERROR', 'A valid Checker distinct from Maker is required.', trace)
-        decode(MinorUnits, payload.get('budget_minor_units'))
+                    'VALIDATION_ERROR', 'Chọn Checker hợp lệ, khác người lập kế hoạch.', trace)
+        if self.department_checkers is not None:
+            self._validate_directory(payload, payload['maker_id'], trace)
         try:
-            valid_dates = date.fromisoformat(payload['start_date']) <= date.fromisoformat(payload['end_date'])
+            decode(MinorUnits, payload.get('budget_minor_units'))
+            budget = int(payload['budget_minor_units'])
+        except ValueError as exc:
+            raise ApplicationError('VALIDATION_ERROR',
+                                   'Ngân sách phải là số nguyên VND hợp lệ, không có dấu phân cách.', trace) from exc
+        self._check(budget >= self.minimum_budget_minor_units, 'VALIDATION_ERROR',
+                    'Ngân sách phải là số nguyên VND lớn hơn 0, không có dấu phân cách.', trace)
+        try:
+            start, end = date.fromisoformat(payload['start_date']), date.fromisoformat(payload['end_date'])
+            valid_dates = (start <= end and start.isoformat() == payload['start_date']
+                           and end.isoformat() == payload['end_date'])
         except (ValueError, TypeError):
             valid_dates = False
-        self._check(valid_dates, 'VALIDATION_ERROR', 'Invalid campaign dates.', trace)
+        self._check(valid_dates, 'VALIDATION_ERROR', 'Ngày phải theo YYYY-MM-DD; ngày kết thúc không trước ngày bắt đầu.', trace)
         self._check(bool(snapshot.attachments) and all(
             a.media_type in policy.allowed_media_types and 0 < a.byte_size <= policy.max_attachment_bytes
             for a in snapshot.attachments), 'VALIDATION_ERROR', 'Valid attachment required.', trace)
@@ -315,6 +366,9 @@ class ApprovalWorkflow:
     def decide_round(self, actor, plan_id, number, action, *, reason, override_reason,
                      expected_revision, idempotency_key, correlation_id):
         def execute():
+            visible = self._plan(actor, plan_id, correlation_id)
+            self._check(actor != visible['maker_id'] and actor == visible['payload'].get('checker_id'),
+                        'FORBIDDEN', 'Only the assigned Checker may decide.', correlation_id)
             plan, row, snapshot, config = self._active(plan_id, number, expected_revision, correlation_id)
             self._check(actor != plan['maker_id'] and actor == snapshot.payload['checker_id'],
                         'FORBIDDEN', 'Only the assigned Checker may decide.', correlation_id)
@@ -362,6 +416,10 @@ class ApprovalWorkflow:
     def list_plans(self, actor, *, offset=0, limit=100):
         self._check(actor in self.principals, 'UNAUTHENTICATED', 'Authenticated principal required.', 'list-plans')
         return self.repository.list_visible_plans(actor, 'CHECKER' in self.principals[actor], offset, limit)
+
+    def list_reviews(self, actor, *, offset=0, limit=100):
+        self._authorize(actor, 'CHECKER', 'list-reviews')
+        return self.repository.list_pending_reviews(actor, offset, limit)
 
     def get_attachment(self, actor, plan_id, attachment_id):
         history = self.get_plan(actor, plan_id)

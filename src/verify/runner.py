@@ -23,7 +23,9 @@ def execute_input(data, fixture_root=FIXTURES):
     config = configuration_from_input(data)
     repo = ApprovalRepository(':memory:')
     maker, checker, engine = payload['maker_id'], payload['checker_id'], 'DEMO-EVALUATOR-01'
-    workflow = ApprovalWorkflow(repo, config, {maker: {'MAKER'}, checker: {'CHECKER'}, engine: {'EVALUATOR'}}, evaluator_id=engine)
+    # Frozen BA v2.1 permits zero budget (GT-006). This isolated in-memory runner
+    # reproduces that historical contract; public submission always requires >= 1.
+    workflow = ApprovalWorkflow(repo, config, {maker: {'MAKER'}, checker: {'CHECKER'}, engine: {'EVALUATOR'}}, evaluator_id=engine, minimum_budget_minor_units=0)
     plan_id = 'DEMO-' + uuid4().hex
     try:
         plan = workflow.save_draft(maker, plan_id, payload, expected_revision=0,
