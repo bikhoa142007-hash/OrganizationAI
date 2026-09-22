@@ -14,6 +14,32 @@ export type HumanAction = 'APPROVED' | 'REJECTED' | 'REQUEST_CHANGES'
 export type VerifySuite = 'general' | 'escalation'
 export type ProcessingStatus = 'PROCESSING' | 'STOPPED' | 'COMPLETED' | 'FAILED'
 
+export interface AppCapabilitySet {
+  stop: boolean
+  retryEvaluation: boolean
+  requestChanges: boolean
+}
+
+export interface AppActor {
+  id: string
+  roles: string[]
+}
+
+export interface AppConfig {
+  environment: string
+  actor: string
+  roles: string[]
+  actors: AppActor[]
+  checkerId: string
+  department: string
+  currency: string
+  provider: string
+  mockMode: string
+  allowedMediaTypes: string[]
+  maxAttachmentBytes: number
+  capabilities: AppCapabilitySet
+}
+
 /** UI-only input boundary. The API payload is intentionally unresolved until Role 2 confirms it. */
 export type PlanDraftPayload = Record<string, unknown>
 
@@ -31,6 +57,7 @@ export interface PlanState {
 
 export interface PlanSummary {
   planId: PlanId
+  makerId?: string
   title?: string
   state?: PlanState
   revision?: number
@@ -148,6 +175,13 @@ export interface AuditEvent {
   policyVersion?: string
   modelVersion?: string
   reason?: string
+  correlationId?: string
+  runId?: string
+  decisionId?: string
+  outcome?: string
+  humanAction?: string
+  overrideReason?: string
+  appliedRuleIds?: string[]
   previousState?: PlanState | null
   newState?: PlanState | null
 }
@@ -210,5 +244,6 @@ export interface PolicyView {
   policyName?: string
   status?: string
   dataSource?: 'MOCK' | 'API'
+  settings?: Array<{ label: string; value: string }>
   rules: PolicyRuleView[]
 }
