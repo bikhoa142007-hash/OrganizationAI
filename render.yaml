@@ -3,23 +3,19 @@ services:
   - type: web
     name: organizationai-api
     runtime: python
-    plan: starter
+    plan: free
     numInstances: 1
     autoDeployTrigger: "off"
     buildCommand: python -m pip install -r requirements.txt && python -m pytest
     startCommand: python -m deployment.start_backend
     healthCheckPath: /api/health
-    disk:
-      name: organizationai-demo-data
-      mountPath: /var/data
-      sizeGB: 1
     envVars:
       - key: PYTHON_VERSION
         value: 3.13.14
       - key: APP_ENV
         value: demo
       - key: DEMO_DATABASE
-        value: /var/data/demo-organization.sqlite3
+        value: /tmp/organizationai/demo-organization.sqlite3
       - key: DEMO_MOCK_MODE
         value: pass
       - key: CORS_ORIGINS
