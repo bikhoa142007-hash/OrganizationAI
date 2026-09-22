@@ -5,12 +5,12 @@ import pytest
 
 from src.verify.runner import execute_input, compare_observation
 
-FIXTURES = Path(__file__).parents[1] / 'fixtures/role1/v2.1'
+FIXTURES = Path(__file__).parents[1] / 'fixtures/ba/v2.1'
 CASES = json.loads((FIXTURES / 'ground-truth-cases.json').read_text(encoding='utf-8'))
 
 
 @pytest.mark.parametrize('case', CASES, ids=lambda c: c['id'])
-def test_role1_application_regression(case):
+def test_ba_application_regression(case):
     observation = execute_input(case['input'], FIXTURES)
     assert not compare_observation(observation, case['expected'])
     evaluation = observation['evaluation']

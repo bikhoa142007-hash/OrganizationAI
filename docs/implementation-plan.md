@@ -46,11 +46,11 @@ All contract field tables are normative framework-independent specifications, no
 
 This is a dependency order for later work, not execution of WP2.
 
-1. Team lead resolves the application stack/runtime/storage decision before implementation. Role 2 owns shared schema and migration design; Role 3 consumes approved contracts.
-2. Role 1 defines versioned policy/authority/budget configuration, synthetic cases and expected results. Role 2 builds authenticated Maker drafts, protected uploads and versioned transactional submission.
+1. Team lead resolves the application stack/runtime/storage decision before implementation. Role 2 owns shared schema and migration design; Frontend Developer consumes approved contracts.
+2. BA defines versioned policy/authority/budget configuration, synthetic cases and expected results. Role 2 builds authenticated Maker drafts, protected uploads and versioned transactional submission.
 3. Role 2 implements LocalVLMProvider/MockVLMProvider, schema-validating orchestration, media/feasibility evaluation and deterministic budget/authority checks.
-4. Role 2 implements guarded engine routing/auto-approval and authorized Checker decisions; Role 3 integrates Maker/Checker UI after contracts are stable.
-5. Role 3 connects Verify to the same application path, adds end-to-end checks and deployment/runbook; Role 1 evaluates actual results against independently owned expectations.
+4. Role 2 implements guarded engine routing/auto-approval and authorized Checker decisions; Frontend Developer integrates Maker/Checker UI after contracts are stable.
+5. Frontend Developer connects Verify to the same application path, adds end-to-end checks and deployment/runbook; BA evaluates actual results against independently owned expectations.
 6. Stabilize the Must scope, audit history, demo data and documented commands. Do not start Should scope until Must is stable.
 
 ## Verification plan

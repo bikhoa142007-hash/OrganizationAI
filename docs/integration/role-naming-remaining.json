@@ -1,0 +1,2885 @@
+{
+  "scope": "tracked deliverables plus legacy mapping note; pre-edit inventory/report self-references excluded",
+  "matches": [
+    {
+      "path": ".gitignore",
+      "line": 182,
+      "text": "# Original Role 1 delivery package",
+      "reason": "Original source package exclusion rule"
+    },
+    {
+      "path": ".gitignore",
+      "line": 183,
+      "text": "/role1-sprint1-v2.1/",
+      "reason": "Original source package exclusion rule"
+    },
+    {
+      "path": ".gitignore",
+      "line": 184,
+      "text": "/Role1_Sprint1_v2.1.zip",
+      "reason": "Original source package exclusion rule"
+    },
+    {
+      "path": ".gitignore",
+      "line": 185,
+      "text": "/role1-sprint1-v2.1/",
+      "reason": "Original source package exclusion rule"
+    },
+    {
+      "path": "docs/integration/ba-contract-mapping.md",
+      "line": 20,
+      "text": "| VLM/media/strategy model, prompt, agent versions and confidence | evidence provenance | Separate raw versions/confidences retained; known normalized adapter model is role1-mock-adapter-v2.1 |",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-import-manifest.json",
+      "line": 4,
+      "text": "      \"source\": \"role1-sprint1-v2.1/00-index.md\",",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-import-manifest.json",
+      "line": 5,
+      "text": "      \"destination\": \"docs/role1/v2.1/00-index.md\",",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-import-manifest.json",
+      "line": 11,
+      "text": "      \"source\": \"role1-sprint1-v2.1/01-scope-and-process.md\",",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-import-manifest.json",
+      "line": 12,
+      "text": "      \"destination\": \"docs/role1/v2.1/01-scope-and-process.md\",",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-import-manifest.json",
+      "line": 18,
+      "text": "      \"source\": \"role1-sprint1-v2.1/02-marketing-approval-policy.md\",",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-import-manifest.json",
+      "line": 19,
+      "text": "      \"destination\": \"docs/role1/v2.1/02-marketing-approval-policy.md\",",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-import-manifest.json",
+      "line": 25,
+      "text": "      \"source\": \"role1-sprint1-v2.1/03-authority-matrix.md\",",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-import-manifest.json",
+      "line": 26,
+      "text": "      \"destination\": \"docs/role1/v2.1/03-authority-matrix.md\",",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-import-manifest.json",
+      "line": 32,
+      "text": "      \"source\": \"role1-sprint1-v2.1/04-escalation-policy.md\",",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-import-manifest.json",
+      "line": 33,
+      "text": "      \"destination\": \"docs/role1/v2.1/04-escalation-policy.md\",",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-import-manifest.json",
+      "line": 39,
+      "text": "      \"source\": \"role1-sprint1-v2.1/05-ground-truth-cases.md\",",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-import-manifest.json",
+      "line": 40,
+      "text": "      \"destination\": \"docs/role1/v2.1/05-ground-truth-cases.md\",",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-import-manifest.json",
+      "line": 46,
+      "text": "      \"source\": \"role1-sprint1-v2.1/06-test-case-catalog.md\",",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-import-manifest.json",
+      "line": 47,
+      "text": "      \"destination\": \"docs/role1/v2.1/06-test-case-catalog.md\",",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-import-manifest.json",
+      "line": 53,
+      "text": "      \"source\": \"role1-sprint1-v2.1/07-verify-cases.md\",",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-import-manifest.json",
+      "line": 54,
+      "text": "      \"destination\": \"docs/role1/v2.1/07-verify-cases.md\",",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-import-manifest.json",
+      "line": 60,
+      "text": "      \"source\": \"role1-sprint1-v2.1/08-verify-expected-results.md\",",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-import-manifest.json",
+      "line": 61,
+      "text": "      \"destination\": \"docs/role1/v2.1/08-verify-expected-results.md\",",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-import-manifest.json",
+      "line": 67,
+      "text": "      \"source\": \"role1-sprint1-v2.1/09-measurement-plan.md\",",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-import-manifest.json",
+      "line": 68,
+      "text": "      \"destination\": \"docs/role1/v2.1/09-measurement-plan.md\",",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-import-manifest.json",
+      "line": 74,
+      "text": "      \"source\": \"role1-sprint1-v2.1/10-uat-report.md\",",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-import-manifest.json",
+      "line": 75,
+      "text": "      \"destination\": \"docs/role1/v2.1/10-uat-report.md\",",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-import-manifest.json",
+      "line": 81,
+      "text": "      \"source\": \"role1-sprint1-v2.1/11-submission-content.md\",",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-import-manifest.json",
+      "line": 82,
+      "text": "      \"destination\": \"docs/role1/v2.1/11-submission-content.md\",",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-import-manifest.json",
+      "line": 88,
+      "text": "      \"source\": \"role1-sprint1-v2.1/12-domain-data-dictionary.md\",",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-import-manifest.json",
+      "line": 89,
+      "text": "      \"destination\": \"docs/role1/v2.1/12-domain-data-dictionary.md\",",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-import-manifest.json",
+      "line": 95,
+      "text": "      \"source\": \"role1-sprint1-v2.1/13-source-traceability.md\",",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-import-manifest.json",
+      "line": 96,
+      "text": "      \"destination\": \"docs/role1/v2.1/13-source-traceability.md\",",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-import-manifest.json",
+      "line": 102,
+      "text": "      \"source\": \"role1-sprint1-v2.1/14-sprint-backlog-and-handoff.md\",",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-import-manifest.json",
+      "line": 103,
+      "text": "      \"destination\": \"docs/role1/v2.1/14-sprint-backlog-and-handoff.md\",",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-import-manifest.json",
+      "line": 109,
+      "text": "      \"source\": \"role1-sprint1-v2.1/15-open-decisions-and-change-log.md\",",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-import-manifest.json",
+      "line": 110,
+      "text": "      \"destination\": \"docs/role1/v2.1/15-open-decisions-and-change-log.md\",",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-import-manifest.json",
+      "line": 116,
+      "text": "      \"source\": \"role1-sprint1-v2.1/16-ai-contract-and-review-screen.md\",",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-import-manifest.json",
+      "line": 117,
+      "text": "      \"destination\": \"docs/role1/v2.1/16-ai-contract-and-review-screen.md\",",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-import-manifest.json",
+      "line": 123,
+      "text": "      \"source\": \"role1-sprint1-v2.1/17-demo-data-and-seed-guide.md\",",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-import-manifest.json",
+      "line": 124,
+      "text": "      \"destination\": \"docs/role1/v2.1/17-demo-data-and-seed-guide.md\",",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-import-manifest.json",
+      "line": 130,
+      "text": "      \"source\": \"role1-sprint1-v2.1/18-fact-uncertainty-correction.md\",",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-import-manifest.json",
+      "line": 131,
+      "text": "      \"destination\": \"docs/role1/v2.1/18-fact-uncertainty-correction.md\",",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-import-manifest.json",
+      "line": 137,
+      "text": "      \"source\": \"role1-sprint1-v2.1/19-wp1-wp2-mapping-and-regression.md\",",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-import-manifest.json",
+      "line": 138,
+      "text": "      \"destination\": \"docs/role1/v2.1/19-wp1-wp2-mapping-and-regression.md\",",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-import-manifest.json",
+      "line": 144,
+      "text": "      \"source\": \"role1-sprint1-v2.1/CHANGELOG-v2.1.md\",",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-import-manifest.json",
+      "line": 145,
+      "text": "      \"destination\": \"docs/role1/v2.1/CHANGELOG-v2.1.md\",",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-import-manifest.json",
+      "line": 151,
+      "text": "      \"source\": \"role1-sprint1-v2.1/package-manifest.json\",",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-import-manifest.json",
+      "line": 152,
+      "text": "      \"destination\": \"docs/role1/v2.1/package-manifest.json\",",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-import-manifest.json",
+      "line": 158,
+      "text": "      \"source\": \"role1-sprint1-v2.1/validation-report.md\",",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-import-manifest.json",
+      "line": 159,
+      "text": "      \"destination\": \"docs/role1/v2.1/validation-report.md\",",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-import-manifest.json",
+      "line": 165,
+      "text": "      \"source\": \"role1-sprint1-v2.1/data/base-policy.json\",",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-import-manifest.json",
+      "line": 172,
+      "text": "      \"source\": \"role1-sprint1-v2.1/data/fact-verification.schema.json\",",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-import-manifest.json",
+      "line": 179,
+      "text": "      \"source\": \"role1-sprint1-v2.1/data/fixture-manifest.json\",",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-import-manifest.json",
+      "line": 186,
+      "text": "      \"source\": \"role1-sprint1-v2.1/data/ground-truth-cases.json\",",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-import-manifest.json",
+      "line": 193,
+      "text": "      \"source\": \"role1-sprint1-v2.1/data/mock-provider-modes.json\",",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-import-manifest.json",
+      "line": 200,
+      "text": "      \"source\": \"role1-sprint1-v2.1/data/source-register.json\",",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-import-manifest.json",
+      "line": 207,
+      "text": "      \"source\": \"role1-sprint1-v2.1/data/verify-expected-results.json\",",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-import-manifest.json",
+      "line": 214,
+      "text": "      \"source\": \"role1-sprint1-v2.1/data/verify-inputs.json\",",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-import-manifest.json",
+      "line": 221,
+      "text": "      \"source\": \"role1-sprint1-v2.1/data/fixtures/budget-conflict.png\",",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-import-manifest.json",
+      "line": 228,
+      "text": "      \"source\": \"role1-sprint1-v2.1/data/fixtures/creative-low-quality.png\",",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-import-manifest.json",
+      "line": 235,
+      "text": "      \"source\": \"role1-sprint1-v2.1/data/fixtures/creative-pass.png\",",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-import-manifest.json",
+      "line": 242,
+      "text": "      \"source\": \"role1-sprint1-v2.1/data/fixtures/hard-claim-demo.png\",",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-import-manifest.json",
+      "line": 249,
+      "text": "      \"source\": \"role1-sprint1-v2.1/data/fixtures/kpi-conflict.png\",",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-import-manifest.json",
+      "line": 256,
+      "text": "      \"source\": \"role1-sprint1-v2.1/data/fixtures/scope-missing.png\",",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-import-manifest.json",
+      "line": 263,
+      "text": "      \"source\": \"role1-sprint1-v2.1/data/fixtures/synthetic-private-demo.png\",",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-import-manifest.json",
+      "line": 270,
+      "text": "      \"source\": \"role1-sprint1-v2.1/changes/docs-v2.1.diff\",",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-import-manifest.json",
+      "line": 271,
+      "text": "      \"destination\": \"docs/role1/archive/v2.1/changes/docs-v2.1.diff\",",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-import-manifest.json",
+      "line": 277,
+      "text": "      \"source\": \"role1-sprint1-v2.1/data/changes-v2.1.json\",",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-import-manifest.json",
+      "line": 278,
+      "text": "      \"destination\": \"docs/role1/archive/v2.1/data/changes-v2.1.json\",",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-import-manifest.json",
+      "line": 284,
+      "text": "      \"source\": \"role1-sprint1-v2.1/data/wp1-wp2-mapping-status.json\",",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-import-manifest.json",
+      "line": 285,
+      "text": "      \"destination\": \"docs/role1/archive/v2.1/data/wp1-wp2-mapping-status.json\",",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-import-manifest.json",
+      "line": 291,
+      "text": "      \"source\": \"role1-sprint1-v2.1/regression-results.json\",",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-import-manifest.json",
+      "line": 292,
+      "text": "      \"destination\": \"docs/role1/archive/v2.1/regression-results.json\",",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-import-manifest.json",
+      "line": 298,
+      "text": "      \"source\": \"role1-sprint1-v2.1/legacy/README.md\",",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-import-manifest.json",
+      "line": 299,
+      "text": "      \"destination\": \"docs/role1/archive/v2.1/legacy/README.md\",",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-import-manifest.json",
+      "line": 305,
+      "text": "      \"source\": \"role1-sprint1-v2.1/legacy/Role1_Marketing_Escalation_Referee.pdf\",",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-import-manifest.json",
+      "line": 306,
+      "text": "      \"destination\": \"docs/role1/archive/v2.1/legacy/Role1_Marketing_Escalation_Referee.pdf\",",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-import-manifest.json",
+      "line": 312,
+      "text": "      \"source\": \"role1-sprint1-v2.1/sources/scope-phase-1.md\",",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-import-manifest.json",
+      "line": 319,
+      "text": "      \"source\": \"role1-sprint1-v2.1/sources/sprint-1-deliverables.md\",",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-import-manifest.json",
+      "line": 327,
+      "text": "  \"validator_execution_directory\": \"role1-sprint1-v2.1/\"",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-regression-results.json",
+      "line": 12,
+      "text": "    \"source_report\": \"runtime/role1-ground-truth-actual.json\",",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-regression-results.json",
+      "line": 26,
+      "text": "    \"source_report\": \"runtime/role1-ground-truth-actual.json\",",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-regression-results.json",
+      "line": 40,
+      "text": "    \"source_report\": \"runtime/role1-ground-truth-actual.json\",",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-regression-results.json",
+      "line": 54,
+      "text": "    \"source_report\": \"runtime/role1-ground-truth-actual.json\",",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-regression-results.json",
+      "line": 68,
+      "text": "    \"source_report\": \"runtime/role1-ground-truth-actual.json\",",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-regression-results.json",
+      "line": 82,
+      "text": "    \"source_report\": \"runtime/role1-ground-truth-actual.json\",",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-regression-results.json",
+      "line": 96,
+      "text": "    \"source_report\": \"runtime/role1-ground-truth-actual.json\",",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-regression-results.json",
+      "line": 110,
+      "text": "    \"source_report\": \"runtime/role1-ground-truth-actual.json\",",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-regression-results.json",
+      "line": 124,
+      "text": "    \"source_report\": \"runtime/role1-ground-truth-actual.json\",",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-regression-results.json",
+      "line": 138,
+      "text": "    \"source_report\": \"runtime/role1-ground-truth-actual.json\",",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-regression-results.json",
+      "line": 152,
+      "text": "    \"source_report\": \"runtime/role1-ground-truth-actual.json\",",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-regression-results.json",
+      "line": 166,
+      "text": "    \"source_report\": \"runtime/role1-ground-truth-actual.json\",",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-regression-results.json",
+      "line": 180,
+      "text": "    \"source_report\": \"runtime/role1-ground-truth-actual.json\",",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-regression-results.json",
+      "line": 194,
+      "text": "    \"source_report\": \"runtime/role1-ground-truth-actual.json\",",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-regression-results.json",
+      "line": 208,
+      "text": "    \"source_report\": \"runtime/role1-ground-truth-actual.json\",",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-regression-results.json",
+      "line": 222,
+      "text": "    \"source_report\": \"runtime/role1-verify-actual.json\",",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-regression-results.json",
+      "line": 236,
+      "text": "    \"source_report\": \"runtime/role1-verify-actual.json\",",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-regression-results.json",
+      "line": 250,
+      "text": "    \"source_report\": \"runtime/role1-verify-actual.json\",",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-regression-results.json",
+      "line": 264,
+      "text": "    \"source_report\": \"runtime/role1-verify-actual.json\",",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-regression-results.json",
+      "line": 278,
+      "text": "    \"source_report\": \"runtime/role1-verify-actual.json\",",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-frontend-developer-integration-report.md",
+      "line": 7,
+      "text": "Baseline commit: `c1288c9ceb49fe16eea5887fc914a9ad50ba1e44`, originating branch `feature/wp5-frontend-verify`. Work performed on requested branch `integration/role1-role3-frontend`; no commit or staging performed.",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-frontend-developer-integration-report.md",
+      "line": 9,
+      "text": "Initial user changes: modified README.md and requirements.txt; untracked app.py, frontend/, role1-sprint1-v2.1/, src/frontend/, src/verify/, tests/unit/frontend/, tests/unit/verify/. Preserved these components, adding coherent changes to the existing files. Pre-integration copies of README, requirements and frontend source/configuration are in ignored `runtime/integration-baseline/`.",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-frontend-developer-integration-report.md",
+      "line": 17,
+      "text": "The existing extracted `role1-sprint1-v2.1/` was used without overwriting it. All numbered business documents, validation-report and package-manifest are under `docs/role1/v2.1/`. Fixture JSON and image bytes are under `tests/fixtures/ba/v2.1/`.",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-frontend-developer-integration-report.md",
+      "line": 23,
+      "text": "Diffs, changes-v2.1.json, historical regression/mapping status and legacy PDF/README are archived under `docs/role1/archive/v2.1/`, excluded from application inputs. The original validator remains in the extracted source package and must run there; relocated documents do not pretend to be its original layout. Dependencies, build outputs, runtime DBs, actual runtime reports and Playwright screenshots remain ignored. No secret or environment file was staged.",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-frontend-developer-integration-report.md",
+      "line": 82,
+      "text": "| python -m src.verify.runner --suite ground-truth --output runtime/role1-ground-truth-actual.json | 15/15 acceptance assertions |",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-frontend-developer-integration-report.md",
+      "line": 83,
+      "text": "| python -m src.verify.runner --suite verify --output runtime/role1-verify-actual.json | 5/5 |",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-frontend-developer-integration-report.md",
+      "line": 95,
+      "text": "[Durable results](ba-regression-results.json) include execution times and original actual-report hashes. Full persisted observations are in runtime/role1-ground-truth-actual.json and runtime/role1-verify-actual.json.",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/ba-frontend-developer-integration-report.md",
+      "line": 147,
+      "text": "Documentation: docs/integration/*; docs/role1/v2.1/*; docs/role1/archive/v2.1/*; docs/role-integration-audit-2026-09-21.md; tasks/plan.md; tasks/todo.md. BA imports are individually enumerated in the manifest. Existing app.py, src/frontend and their tests were preserved.",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/sprint1-final-packaging-report.md",
+      "line": 7,
+      "text": "Branch: `integration/role1-role3-frontend`.",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/sprint1-final-packaging-report.md",
+      "line": 21,
+      "text": "?? docs/role1/",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/sprint1-final-packaging-report.md",
+      "line": 23,
+      "text": "?? role1-sprint1-v2.1/",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/sprint1-final-packaging-report.md",
+      "line": 61,
+      "text": "| python -m src.verify.runner --suite ground-truth --output runtime/role1-ground-truth-actual.json | 15/15 |",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/sprint1-final-packaging-report.md",
+      "line": 62,
+      "text": "| python -m src.verify.runner --suite verify --output runtime/role1-verify-actual.json | 5/5; 3 automatic and 2 escalated |",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/sprint1-final-packaging-report.md",
+      "line": 98,
+      "text": "4. Fixtures and documentation: tests/fixtures/ba/v2.1/, docs/integration/, docs/role1/, audit and tasks files.",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/sprint1-final-packaging-report.md",
+      "line": 99,
+      "text": "5. Original role1-sprint1-v2.1/ reference package: propose as a separate provenance commit because imported links/validator instructions reference it. Review this duplicated reference material explicitly; do not include its generated/runtime files. Original documents retain historical NOT_VERIFIED/NOT_RUN status.",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 15,
+      "text": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 16,
+      "text": "docs/role1/archive/v2.1/data/changes-v2.1.json",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 17,
+      "text": "docs/role1/archive/v2.1/data/wp1-wp2-mapping-status.json",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 18,
+      "text": "docs/role1/archive/v2.1/legacy/README.md",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 19,
+      "text": "docs/role1/archive/v2.1/legacy/Role1_Marketing_Escalation_Referee.pdf",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 20,
+      "text": "docs/role1/archive/v2.1/regression-results.json",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 21,
+      "text": "docs/role1/v2.1/00-index.md",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 22,
+      "text": "docs/role1/v2.1/01-scope-and-process.md",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 23,
+      "text": "docs/role1/v2.1/02-marketing-approval-policy.md",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 24,
+      "text": "docs/role1/v2.1/03-authority-matrix.md",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 25,
+      "text": "docs/role1/v2.1/04-escalation-policy.md",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 26,
+      "text": "docs/role1/v2.1/05-ground-truth-cases.md",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 27,
+      "text": "docs/role1/v2.1/06-test-case-catalog.md",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 28,
+      "text": "docs/role1/v2.1/07-verify-cases.md",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 29,
+      "text": "docs/role1/v2.1/08-verify-expected-results.md",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 30,
+      "text": "docs/role1/v2.1/09-measurement-plan.md",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 31,
+      "text": "docs/role1/v2.1/10-uat-report.md",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 32,
+      "text": "docs/role1/v2.1/11-submission-content.md",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 33,
+      "text": "docs/role1/v2.1/12-domain-data-dictionary.md",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 34,
+      "text": "docs/role1/v2.1/13-source-traceability.md",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 35,
+      "text": "docs/role1/v2.1/14-sprint-backlog-and-handoff.md",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 36,
+      "text": "docs/role1/v2.1/15-open-decisions-and-change-log.md",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 37,
+      "text": "docs/role1/v2.1/16-ai-contract-and-review-screen.md",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 38,
+      "text": "docs/role1/v2.1/17-demo-data-and-seed-guide.md",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 39,
+      "text": "docs/role1/v2.1/18-fact-uncertainty-correction.md",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 40,
+      "text": "docs/role1/v2.1/19-wp1-wp2-mapping-and-regression.md",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 41,
+      "text": "docs/role1/v2.1/CHANGELOG-v2.1.md",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 42,
+      "text": "docs/role1/v2.1/package-manifest.json",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 43,
+      "text": "docs/role1/v2.1/validation-report.md",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 97,
+      "text": "role1-sprint1-v2.1/00-index.md",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 98,
+      "text": "role1-sprint1-v2.1/01-scope-and-process.md",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 99,
+      "text": "role1-sprint1-v2.1/02-marketing-approval-policy.md",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 100,
+      "text": "role1-sprint1-v2.1/03-authority-matrix.md",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 101,
+      "text": "role1-sprint1-v2.1/04-escalation-policy.md",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 102,
+      "text": "role1-sprint1-v2.1/05-ground-truth-cases.md",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 103,
+      "text": "role1-sprint1-v2.1/06-test-case-catalog.md",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 104,
+      "text": "role1-sprint1-v2.1/07-verify-cases.md",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 105,
+      "text": "role1-sprint1-v2.1/08-verify-expected-results.md",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 106,
+      "text": "role1-sprint1-v2.1/09-measurement-plan.md",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 107,
+      "text": "role1-sprint1-v2.1/10-uat-report.md",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 108,
+      "text": "role1-sprint1-v2.1/11-submission-content.md",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 109,
+      "text": "role1-sprint1-v2.1/12-domain-data-dictionary.md",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 110,
+      "text": "role1-sprint1-v2.1/13-source-traceability.md",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 111,
+      "text": "role1-sprint1-v2.1/14-sprint-backlog-and-handoff.md",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 112,
+      "text": "role1-sprint1-v2.1/15-open-decisions-and-change-log.md",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 113,
+      "text": "role1-sprint1-v2.1/16-ai-contract-and-review-screen.md",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 114,
+      "text": "role1-sprint1-v2.1/17-demo-data-and-seed-guide.md",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 115,
+      "text": "role1-sprint1-v2.1/18-fact-uncertainty-correction.md",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 116,
+      "text": "role1-sprint1-v2.1/19-wp1-wp2-mapping-and-regression.md",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 117,
+      "text": "role1-sprint1-v2.1/CHANGELOG-v2.1.md",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 118,
+      "text": "role1-sprint1-v2.1/changes/docs-v2.1.diff",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 119,
+      "text": "role1-sprint1-v2.1/data/base-policy.json",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 120,
+      "text": "role1-sprint1-v2.1/data/changes-v2.1.json",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 121,
+      "text": "role1-sprint1-v2.1/data/fact-verification.schema.json",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 122,
+      "text": "role1-sprint1-v2.1/data/fixture-manifest.json",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 123,
+      "text": "role1-sprint1-v2.1/data/fixtures/budget-conflict.png",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 124,
+      "text": "role1-sprint1-v2.1/data/fixtures/creative-low-quality.png",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 125,
+      "text": "role1-sprint1-v2.1/data/fixtures/creative-pass.png",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 126,
+      "text": "role1-sprint1-v2.1/data/fixtures/hard-claim-demo.png",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 127,
+      "text": "role1-sprint1-v2.1/data/fixtures/kpi-conflict.png",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 128,
+      "text": "role1-sprint1-v2.1/data/fixtures/scope-missing.png",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 129,
+      "text": "role1-sprint1-v2.1/data/fixtures/synthetic-private-demo.png",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 130,
+      "text": "role1-sprint1-v2.1/data/ground-truth-cases.json",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 131,
+      "text": "role1-sprint1-v2.1/data/mock-provider-modes.json",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 132,
+      "text": "role1-sprint1-v2.1/data/source-register.json",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 133,
+      "text": "role1-sprint1-v2.1/data/verify-expected-results.json",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 134,
+      "text": "role1-sprint1-v2.1/data/verify-inputs.json",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 135,
+      "text": "role1-sprint1-v2.1/data/wp1-wp2-mapping-status.json",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 136,
+      "text": "role1-sprint1-v2.1/legacy/README.md",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 137,
+      "text": "role1-sprint1-v2.1/legacy/Role1_Marketing_Escalation_Referee.pdf",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 138,
+      "text": "role1-sprint1-v2.1/package-manifest.json",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 139,
+      "text": "role1-sprint1-v2.1/regression-results.json",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 140,
+      "text": "role1-sprint1-v2.1/sources/scope-phase-1.md",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 141,
+      "text": "role1-sprint1-v2.1/sources/sprint-1-deliverables.md",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 142,
+      "text": "role1-sprint1-v2.1/tools/validate_package.py",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 143,
+      "text": "role1-sprint1-v2.1/validation-report.md",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/role-integration-audit-2026-09-21.md",
+      "line": 11,
+      "text": "- BA: extracted `role1-sprint1-v2.1/` package found; no matching BA ZIP",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/role-integration-audit-2026-09-21.md",
+      "line": 19,
+      "text": "  frontend/, role1-sprint1-v2.1/, src/frontend/, src/verify/,",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/role-integration-audit-2026-09-21.md",
+      "line": 58,
+      "text": "| role1-sprint1-v2.1 | `& ../.venv/Scripts/python.exe tools/validate_package.py` | 192/192 artifact checks passed; eight negative mutation controls; WP compatibility NOT_VERIFIED and engine regression NOT_RUN |",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 6,
+      "text": "-> Bộ Role 1 · Bản 2.0 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 11,
+      "text": "-**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 13,
+      "text": "-## 1. Mục tiêu Role 1",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 17,
+      "text": "-Role 1 sở hữu nghiệp vụ/nhãn kỳ vọng; đội triển khai sở hữu code. Khi khác nhau, mở defect hoặc yêu cầu đổi policy có lý do, không sửa expected chỉ để có kết quả xanh.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 21,
+      "text": "-| Hạng mục | Phase 1 | Sprint 1 | Bàn giao từ Role 1 |",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 109,
+      "text": "+> Bộ Role 1 · Bản 2.1 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 114,
+      "text": "+**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 116,
+      "text": "+## 1. Mục tiêu Role 1",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 120,
+      "text": "+Role 1 sở hữu nghiệp vụ/nhãn kỳ vọng; đội triển khai sở hữu code. Khi khác nhau, mở defect hoặc yêu cầu đổi policy có lý do, không sửa expected chỉ để có kết quả xanh.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 124,
+      "text": "+| Hạng mục | Phase 1 | Sprint 1 | Bàn giao từ Role 1 |",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 215,
+      "text": "-> Bộ Role 1 · Bản 2.0 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 220,
+      "text": "-**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 268,
+      "text": "-Rubric đề xuất: 0 = không có bằng chứng/không đánh giá được; 25 = rất thiếu; 50 = có nội dung nhưng thiếu chứng cứ quan trọng; 75 = hợp lý, có căn cứ, còn khoảng trống nhỏ; 100 = đầy đủ, nhất quán với rubric. Đây không phải phương pháp đã hiệu chuẩn; cần Role 1/PO chấm mẫu cùng nhau. Với thiếu chứng cứ phải ghi assumption/gap thay vì dựng số liệu thị trường.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 326,
+      "text": "+> Bộ Role 1 · Bản 2.1 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 331,
+      "text": "+**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 379,
+      "text": "+Rubric đề xuất: 0 = không có bằng chứng/không đánh giá được; 25 = rất thiếu; 50 = có nội dung nhưng thiếu chứng cứ quan trọng; 75 = hợp lý, có căn cứ, còn khoảng trống nhỏ; 100 = đầy đủ, nhất quán với rubric. Đây không phải phương pháp đã hiệu chuẩn; cần Role 1/PO chấm mẫu cùng nhau. Với thiếu chứng cứ phải ghi assumption/gap thay vì dựng số liệu thị trường.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 446,
+      "text": "-> Bộ Role 1 · Bản 2.0 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 451,
+      "text": "-**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 512,
+      "text": "+> Bộ Role 1 · Bản 2.1 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 517,
+      "text": "+**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 581,
+      "text": "-> Bộ Role 1 · Bản 2.0 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 584,
+      "text": "-**Căn cứ:** Scope UC_MKT_11, BR-AI-05/10/13, BR-BUD; Sprint §§3–4, 13; taxonomy kế thừa bộ Role 1 cũ.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 586,
+      "text": "-**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 592,
+      "text": "-Ba category `FACT_UNCERTAIN`, `POLICY_OUT_OF_SCOPE`, `AUTHORITY_EXCEEDED` kế thừa bộ Role 1 trước, không được nêu như enum bắt buộc trong hai nguồn mới. Giữ làm metadata giải thích, tuyệt đối không ép mọi lý do vào một category sai nghĩa.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 657,
+      "text": "+> Bộ Role 1 · Bản 2.1 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 660,
+      "text": "+**Căn cứ:** Scope UC_MKT_11, BR-AI-05/10/13, BR-BUD; Sprint §§3–4, 13; taxonomy kế thừa bộ Role 1 cũ.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 662,
+      "text": "+**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 668,
+      "text": "+Ba category `FACT_UNCERTAIN`, `POLICY_OUT_OF_SCOPE`, `AUTHORITY_EXCEEDED` kế thừa bộ Role 1 trước, không được nêu như enum bắt buộc trong hai nguồn mới. Giữ làm metadata giải thích, tuyệt đối không ép mọi lý do vào một category sai nghĩa.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 745,
+      "text": "-> Bộ Role 1 · Bản 2.0 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 748,
+      "text": "-**Căn cứ:** Gate theo Scope/Sprint; số lượng và phân nhóm kế thừa gói Role 1 cũ. Toàn bộ dữ liệu là tổng hợp.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 750,
+      "text": "-**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 1138,
+      "text": "+> Bộ Role 1 · Bản 2.1 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 1141,
+      "text": "+**Căn cứ:** Gate theo Scope/Sprint; số lượng và phân nhóm kế thừa gói Role 1 cũ. Toàn bộ dữ liệu là tổng hợp.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 1143,
+      "text": "+**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 1330,
+      "text": "+  \"schema_version\": \"role1.fact-verification/1.0-proposed\",",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 1403,
+      "text": "+  \"schema_version\": \"role1.fact-verification/1.0-proposed\",",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 1469,
+      "text": "+  \"schema_version\": \"role1.fact-verification/1.0-proposed\",",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 1658,
+      "text": "-> Bộ Role 1 · Bản 2.0 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 1663,
+      "text": "-**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 1882,
+      "text": "-- **NEW-01:** tạo kế hoạch đủ required, budget 73.456.789 VND, tên/kênh/ảnh mới không có case_id. Trước khi chạy, Role 1 khóa policy; nếu dùng fixture đủ gate thì expected AUTO_APPROVE; nếu model local sinh score/confidence khác thì expected route tính từ output đã xác minh, không ép model chấm theo tên case.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 1883,
+      "text": "-- **NEW-02:** kế hoạch hợp lệ về form nhưng ảnh có phần chữ không đọc chắc. Mock cấu hình VLM 0.62, media REVIEW_REQUIRED; expected HUMAN_REVIEW_REQUIRED và FACT_UNCERTAIN. Với provider thật, Role 1 phải xem ảnh/bằng chứng và gán nhãn trước khi xem quyết định hệ thống.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 1892,
+      "text": "+> Bộ Role 1 · Bản 2.1 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 1897,
+      "text": "+**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 2116,
+      "text": "+- **NEW-01:** tạo kế hoạch đủ required, budget 73.456.789 VND, tên/kênh/ảnh mới không có case_id. Trước khi chạy, Role 1 khóa policy; nếu dùng fixture đủ gate thì expected AUTO_APPROVED; nếu model local sinh score/confidence khác thì expected route tính từ output đã xác minh, không ép model chấm theo tên case.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 2117,
+      "text": "+- **NEW-02:** kế hoạch hợp lệ về form nhưng ảnh có phần chữ không đọc chắc. Mock cấu hình VLM 0.62, media REVIEW_REQUIRED; expected HUMAN_REVIEW_REQUIRED và FACT_UNCERTAIN. Với provider thật, Role 1 phải xem ảnh/bằng chứng và gán nhãn trước khi xem quyết định hệ thống.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 2148,
+      "text": "-> Bộ Role 1 · Bản 2.0 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 2151,
+      "text": "-**Căn cứ:** Số lượng/ý tưởng Verify kế thừa Role 1 cũ; gate và workflow cập nhật theo Sprint.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 2153,
+      "text": "-**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 2192,
+      "text": "+> Bộ Role 1 · Bản 2.1 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 2195,
+      "text": "+**Căn cứ:** Số lượng/ý tưởng Verify kế thừa Role 1 cũ; gate và workflow cập nhật theo Sprint.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 2197,
+      "text": "+**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 2243,
+      "text": "-> Bộ Role 1 · Bản 2.0 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 2248,
+      "text": "-**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 2278,
+      "text": "-Role 1 giữ nhãn; thay đổi cần version + lý do + nguồn + ca ảnh hưởng. Đội triển khai không đổi nhãn để khớp bug. Nếu phát hiện expected sai nguồn thì Role 1 sửa có changelog rồi rerun; không cố giữ expected sai. File JSON `actual:null`, `execution_status:NOT_RUN` chỉ được dùng làm trạng thái khởi đầu; report thực thi lưu nơi khác.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 2283,
+      "text": "+> Bộ Role 1 · Bản 2.1 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 2288,
+      "text": "+**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 2318,
+      "text": "+Role 1 giữ nhãn; thay đổi cần version + lý do + nguồn + ca ảnh hưởng. Đội triển khai không đổi nhãn để khớp bug. Nếu phát hiện expected sai nguồn thì Role 1 sửa có changelog rồi rerun; không cố giữ expected sai. File JSON `actual:null`, `execution_status:NOT_RUN` chỉ được dùng làm trạng thái khởi đầu; report thực thi lưu nơi khác.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 2324,
+      "text": "-> Bộ Role 1 · Bản 2.0 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 2327,
+      "text": "-**Căn cứ:** Scope AI-10, §18; Sprint §§9–10; đề mục measurement kế thừa Role 1 cũ.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 2329,
+      "text": "-**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 2373,
+      "text": "-Đề xuất đạt 5/5; Role 1 ghi chấm và nhận xét. Câu chữ được phép khác expected nếu giữ đủ ý và không thêm kết luận sai.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 2394,
+      "text": "+> Bộ Role 1 · Bản 2.1 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 2397,
+      "text": "+**Căn cứ:** Scope AI-10, §18; Sprint §§9–10; đề mục measurement kế thừa Role 1 cũ.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 2399,
+      "text": "+**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 2443,
+      "text": "+Đề xuất đạt 5/5; Role 1 ghi chấm và nhận xét. Câu chữ được phép khác expected nếu giữ đủ ý và không thêm kết luận sai.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 2473,
+      "text": "-> Bộ Role 1 · Bản 2.0 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 2476,
+      "text": "-**Căn cứ:** Sprint §§9–10, 13; Scope §18; kế thừa đề mục UAT Role 1.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 2478,
+      "text": "-**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 2491,
+      "text": "-| Tester / reviewer | Role 1 / đại diện PO, tên thực chưa được cung cấp |",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 2492,
+      "text": "-| Dataset | ROLE1-DEMO-V2, GT-001..015, VERIFY-A01..A05 |",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 2502,
+      "text": "-2. Role 1 đối chiếu config thực với profile demo; ghi mọi khác biệt trước khi chạy, không đổi dataset ngầm.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 2558,
+      "text": "-| Role 1 | Expected, coverage, các defect nghiệp vụ | Chưa ký |",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 2565,
+      "text": "+> Bộ Role 1 · Bản 2.1 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 2568,
+      "text": "+**Căn cứ:** Sprint §§9–10, 13; Scope §18; kế thừa đề mục UAT Role 1.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 2570,
+      "text": "+**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 2583,
+      "text": "+| Tester / reviewer | Role 1 / đại diện PO, tên thực chưa được cung cấp |",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 2584,
+      "text": "+| Dataset | ROLE1-DEMO-V2, GT-001..015, VERIFY-A01..A05 |",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 2594,
+      "text": "+2. Role 1 đối chiếu config thực với profile demo; ghi mọi khác biệt trước khi chạy, không đổi dataset ngầm.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 2650,
+      "text": "+| Role 1 | Expected, coverage, các defect nghiệp vụ | Chưa ký |",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 2671,
+      "text": "-> Bộ Role 1 · Bản 2.0 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 2674,
+      "text": "-**Căn cứ:** Sprint §§1, 8, 10, 13–14; nội dung submission kế thừa bộ Role 1 cũ.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 2676,
+      "text": "-**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 2730,
+      "text": "-| Chưa chạy | Chưa có | Chưa triển khai app trong task này | Đây là bộ tài liệu Role 1 | NOT_RUN | Chưa có |",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 2739,
+      "text": "+> Bộ Role 1 · Bản 2.1 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 2742,
+      "text": "+**Căn cứ:** Sprint §§1, 8, 10, 13–14; nội dung submission kế thừa bộ Role 1 cũ.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 2744,
+      "text": "+**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 2798,
+      "text": "+| Chưa chạy | Chưa có | Chưa triển khai app trong task này | Đây là bộ tài liệu Role 1 | NOT_RUN | Chưa có |",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 2814,
+      "text": "-> Bộ Role 1 · Bản 2.0 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 2819,
+      "text": "-**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 2942,
+      "text": "+> Bộ Role 1 · Bản 2.1 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 2947,
+      "text": "+**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3080,
+      "text": "-> Bộ Role 1 · Bản 2.0 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3083,
+      "text": "-**Căn cứ:** Hai file người dùng vừa gửi đã đọc theo thứ tự Scope → Sprint; đối chiếu bộ Role 1 trước sau đó.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3085,
+      "text": "-**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3096,
+      "text": "-File `role-1-role-3-task-allocation (1).md` không còn ở đường dẫn người dùng gửi trước đây. Đã tìm trong các thư mục liên quan được đọc; chưa có bản gốc để đọc lại nguyên văn. Bộ `outputs/role1-package` và bản sao trong Downloads/zip là tài liệu assistant tạo trước, chỉ dùng khôi phục đề mục, không coi là yêu cầu mới được PO xác nhận. Người dùng xác nhận muốn làm Role 1 nhưng chưa cung cấp đường dẫn mới.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3098,
+      "text": "-Do đó, bộ này có độ phủ đầy đủ **các đề mục Role 1 đang còn trong gói cũ** và quy tắc Scope/Sprint đọc được; chưa thể chứng nhận khớp từng dòng của file phân công Role nguyên bản. Đây là giới hạn nguồn cụ thể, không phải phần yêu cầu bị tự ý bỏ qua.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3100,
+      "text": "-## 2. Ma trận đề mục Role 1 kế thừa",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3117,
+      "text": "-File 13–17 bổ trợ nguồn, handoff, quyết định mở, contract và seed để app dễ tích hợp. Không chuyển công việc triển khai code của vai trò khác thành tuyên bố Role 1 đã hoàn tất.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3240,
+      "text": "+> Bộ Role 1 · Bản 2.1 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3243,
+      "text": "+**Căn cứ:** Hai file người dùng vừa gửi đã đọc theo thứ tự Scope → Sprint; đối chiếu bộ Role 1 trước sau đó.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3245,
+      "text": "+**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3256,
+      "text": "+File `role-1-role-3-task-allocation (1).md` không còn ở đường dẫn người dùng gửi trước đây. Đã tìm trong các thư mục liên quan được đọc; chưa có bản gốc để đọc lại nguyên văn. Bộ `outputs/role1-package` và bản sao trong Downloads/zip là tài liệu assistant tạo trước, chỉ dùng khôi phục đề mục, không coi là yêu cầu mới được PO xác nhận. Người dùng xác nhận muốn làm Role 1 nhưng chưa cung cấp đường dẫn mới.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3258,
+      "text": "+Do đó, bộ này có độ phủ đầy đủ **các đề mục Role 1 đang còn trong gói cũ** và quy tắc Scope/Sprint đọc được; chưa thể chứng nhận khớp từng dòng của file phân công Role nguyên bản. Đây là giới hạn nguồn cụ thể, không phải phần yêu cầu bị tự ý bỏ qua.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3260,
+      "text": "+## 2. Ma trận đề mục Role 1 kế thừa",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3277,
+      "text": "+File 13–17 bổ trợ nguồn, handoff, quyết định mở, contract và seed để app dễ tích hợp. Không chuyển công việc triển khai code của vai trò khác thành tuyên bố Role 1 đã hoàn tất.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3407,
+      "text": "-# 14 · Backlog Role 1 và bàn giao cho đội triển khai",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3409,
+      "text": "-> Bộ Role 1 · Bản 2.0 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3412,
+      "text": "-**Căn cứ:** Sprint §§7–11; thứ tự đề mục kế thừa bộ Role 1 cũ, chưa xác minh lại phân công Role gốc.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3414,
+      "text": "-**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3418,
+      "text": "-Trong task này Role 1 tạo baseline nghiệp vụ, nhãn expected và tiêu chí nghiệm thu. Không chạy triển khai 72 giờ, không khẳng định đã hoàn thành WP1–WP6. Nội dung “dừng xác nhận trước triển khai” ở master prompt Sprint là hướng dẫn cho một yêu cầu triển khai riêng, không buộc dừng việc soạn tài liệu hiện tại.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3420,
+      "text": "-Tên người/Role 2/Role 3 và ownership nguyên văn cần đối chiếu lại file phân công khi có. Các cột “đội triển khai/PO” dưới là nhóm trách nhiệm đề xuất, không phải danh sách nhân sự đã được giao chính thức.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3424,
+      "text": "-| WP | Việc Role 1 cung cấp | Việc đội triển khai làm | Điều kiện để Role 1 review |",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3459,
+      "text": "-- [ ] Role 1 khóa expected version trước UAT; actual/evidence ghi riêng.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3465,
+      "text": "+# 14 · Backlog Role 1 và bàn giao cho đội triển khai",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3467,
+      "text": "+> Bộ Role 1 · Bản 2.1 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3470,
+      "text": "+**Căn cứ:** Sprint §§7–11; thứ tự đề mục kế thừa bộ Role 1 cũ, chưa xác minh lại phân công Role gốc.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3472,
+      "text": "+**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3476,
+      "text": "+Trong task này Role 1 tạo baseline nghiệp vụ, nhãn expected và tiêu chí nghiệm thu. Không chạy triển khai 72 giờ, không khẳng định đã hoàn thành WP1–WP6. Nội dung “dừng xác nhận trước triển khai” ở master prompt Sprint là hướng dẫn cho một yêu cầu triển khai riêng, không buộc dừng việc soạn tài liệu hiện tại.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3478,
+      "text": "+Tên người/Role 2/Role 3 và ownership nguyên văn cần đối chiếu lại file phân công khi có. Các cột “đội triển khai/PO” dưới là nhóm trách nhiệm đề xuất, không phải danh sách nhân sự đã được giao chính thức.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3482,
+      "text": "+| WP | Việc Role 1 cung cấp | Việc đội triển khai làm | Điều kiện để Role 1 review |",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3517,
+      "text": "+- [ ] Role 1 khóa expected version trước UAT; actual/evidence ghi riêng.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3532,
+      "text": "-# 15 · Quyết định còn mở và thay đổi so với bộ Role 1 cũ",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3534,
+      "text": "-> Bộ Role 1 · Bản 2.0 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3537,
+      "text": "-**Căn cứ:** Đối chiếu hai nguồn mới với outputs/role1-package, không coi tài liệu assistant cũ là nguồn có thẩm quyền.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3539,
+      "text": "-**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3557,
+      "text": "-| OQ-09 | Critical gaps và rubric chấm score | Scope yêu cầu output gaps, trọng số; chưa có rubric chi tiết/cách block | Role 1 + PO + AI | Rubric và gap blocking là đề xuất; case nền dùng gaps rỗng | Chốt từng tiêu chí, calibration, rounding và human disagreement | OPEN |",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3561,
+      "text": "-| OQ-13 | File phân công Role nguyên văn | Đường dẫn role-1-role-3-task-allocation (1).md không còn | Người cung cấp tài liệu | Kế thừa danh sách đầu việc từ gói Role 1 cũ; chưa xác minh nguyên văn | Đối chiếu lại số case/định dạng submission/ownership khi có file | OPEN |",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3590,
+      "text": "+# 15 · Quyết định còn mở và thay đổi so với bộ Role 1 cũ",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3592,
+      "text": "+> Bộ Role 1 · Bản 2.1 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3595,
+      "text": "+**Căn cứ:** Đối chiếu hai nguồn mới với outputs/role1-package, không coi tài liệu assistant cũ là nguồn có thẩm quyền.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3597,
+      "text": "+**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3615,
+      "text": "+| OQ-09 | Critical gaps và rubric chấm score | Scope yêu cầu output gaps, trọng số; chưa có rubric chi tiết/cách block | Role 1 + PO + AI | Rubric và gap blocking là đề xuất; case nền dùng gaps rỗng | Chốt từng tiêu chí, calibration, rounding và human disagreement | OPEN |",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3619,
+      "text": "+| OQ-13 | File phân công Role nguyên văn | Đường dẫn role-1-role-3-task-allocation (1).md không còn | Người cung cấp tài liệu | Kế thừa danh sách đầu việc từ gói Role 1 cũ; chưa xác minh nguyên văn | Đối chiếu lại số case/định dạng submission/ownership khi có file | OPEN |",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3659,
+      "text": "-> Bộ Role 1 · Bản 2.0 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3664,
+      "text": "-**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3682,
+      "text": "-  \"schema_version\": \"ROLE1-CONTRACT-2.0\",",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3775,
+      "text": "+> Bộ Role 1 · Bản 2.1 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3780,
+      "text": "+**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3798,
+      "text": "+  \"schema_version\": \"ROLE1-CONTRACT-2.0\",",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3898,
+      "text": "-> Bộ Role 1 · Bản 2.0 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3903,
+      "text": "-**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3925,
+      "text": "-- Dataset version ROLE1-DEMO-V2; policy DEMO-POLICY-V2; currency VND; scope DEMO-DEPT-01.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3977,
+      "text": "+> Bộ Role 1 · Bản 2.1 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3982,
+      "text": "+**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 4004,
+      "text": "+- Dataset version ROLE1-DEMO-V2; policy DEMO-POLICY-V2; currency VND; scope DEMO-DEPT-01.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 4063,
+      "text": "-# Báo cáo kiểm tra artifact — Role 1 Sprint 1 v2",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 4084,
+      "text": "+# Kiểm tra gói Role 1 Sprint 1 v2.1",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 0,
+      "text": "retained path",
+      "reason": "Imported archive/source location retained for provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/data/changes-v2.1.json",
+      "line": 3,
+      "text": "  \"baseline_archive\": \"Role1_Sprint1_v2.zip\",",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/data/changes-v2.1.json",
+      "line": 37,
+      "text": "          \"before\": \"ROLE1-DEMO-V2\",",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/data/changes-v2.1.json",
+      "line": 38,
+      "text": "          \"after\": \"ROLE1-DEMO-V2.1\"",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/data/changes-v2.1.json",
+      "line": 213,
+      "text": "            \"schema_version\": \"role1.fact-verification/1.0-proposed\",",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/data/changes-v2.1.json",
+      "line": 346,
+      "text": "            \"schema_version\": \"role1.fact-verification/1.0-proposed\",",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/data/changes-v2.1.json",
+      "line": 472,
+      "text": "            \"schema_version\": \"role1.fact-verification/1.0-proposed\",",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/data/changes-v2.1.json",
+      "line": 693,
+      "text": "            \"schema_version\": \"role1.fact-verification/1.0-proposed\",",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/data/changes-v2.1.json",
+      "line": 762,
+      "text": "    \"from\": \"Role1_Marketing_Escalation_Referee.pdf\",",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/data/changes-v2.1.json",
+      "line": 763,
+      "text": "    \"to\": \"legacy/Role1_Marketing_Escalation_Referee.pdf\",",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/data/changes-v2.1.json",
+      "line": 0,
+      "text": "retained path",
+      "reason": "Imported archive/source location retained for provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/data/wp1-wp2-mapping-status.json",
+      "line": 9,
+      "text": "  \"proposal_schema\": \"role1.fact-verification/1.0-proposed\",",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/data/wp1-wp2-mapping-status.json",
+      "line": 0,
+      "text": "retained path",
+      "reason": "Imported archive/source location retained for provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/legacy/README.md",
+      "line": 0,
+      "text": "retained path",
+      "reason": "Imported archive/source location retained for provenance"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/regression-results.json",
+      "line": 0,
+      "text": "retained path",
+      "reason": "Imported archive/source location retained for provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/00-index.md",
+      "line": 1,
+      "text": "# Role 1 Sprint 1 v2.1 — sửa factual uncertainty",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/00-index.md",
+      "line": 0,
+      "text": "retained path",
+      "reason": "Imported archive/source location retained for provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/01-scope-and-process.md",
+      "line": 3,
+      "text": "> Bộ Role 1 · Bản 2.1 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/01-scope-and-process.md",
+      "line": 8,
+      "text": "**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/01-scope-and-process.md",
+      "line": 10,
+      "text": "## 1. Mục tiêu Role 1",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/01-scope-and-process.md",
+      "line": 14,
+      "text": "Role 1 sở hữu nghiệp vụ/nhãn kỳ vọng; đội triển khai sở hữu code. Khi khác nhau, mở defect hoặc yêu cầu đổi policy có lý do, không sửa expected chỉ để có kết quả xanh.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/01-scope-and-process.md",
+      "line": 18,
+      "text": "| Hạng mục | Phase 1 | Sprint 1 | Bàn giao từ Role 1 |",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/01-scope-and-process.md",
+      "line": 0,
+      "text": "retained path",
+      "reason": "Imported archive/source location retained for provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/02-marketing-approval-policy.md",
+      "line": 5,
+      "text": "> Bộ Role 1 · Bản 2.1 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/02-marketing-approval-policy.md",
+      "line": 10,
+      "text": "**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/02-marketing-approval-policy.md",
+      "line": 58,
+      "text": "Rubric đề xuất: 0 = không có bằng chứng/không đánh giá được; 25 = rất thiếu; 50 = có nội dung nhưng thiếu chứng cứ quan trọng; 75 = hợp lý, có căn cứ, còn khoảng trống nhỏ; 100 = đầy đủ, nhất quán với rubric. Đây không phải phương pháp đã hiệu chuẩn; cần Role 1/PO chấm mẫu cùng nhau. Với thiếu chứng cứ phải ghi assumption/gap thay vì dựng số liệu thị trường.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/02-marketing-approval-policy.md",
+      "line": 0,
+      "text": "retained path",
+      "reason": "Imported archive/source location retained for provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/03-authority-matrix.md",
+      "line": 3,
+      "text": "> Bộ Role 1 · Bản 2.1 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/03-authority-matrix.md",
+      "line": 8,
+      "text": "**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/03-authority-matrix.md",
+      "line": 0,
+      "text": "retained path",
+      "reason": "Imported archive/source location retained for provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/04-escalation-policy.md",
+      "line": 5,
+      "text": "> Bộ Role 1 · Bản 2.1 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/04-escalation-policy.md",
+      "line": 8,
+      "text": "**Căn cứ:** Scope UC_MKT_11, BR-AI-05/10/13, BR-BUD; Sprint §§3–4, 13; taxonomy kế thừa bộ Role 1 cũ.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/04-escalation-policy.md",
+      "line": 10,
+      "text": "**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/04-escalation-policy.md",
+      "line": 16,
+      "text": "Ba category `FACT_UNCERTAIN`, `POLICY_OUT_OF_SCOPE`, `AUTHORITY_EXCEEDED` kế thừa bộ Role 1 trước, không được nêu như enum bắt buộc trong hai nguồn mới. Giữ làm metadata giải thích, tuyệt đối không ép mọi lý do vào một category sai nghĩa.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/04-escalation-policy.md",
+      "line": 0,
+      "text": "retained path",
+      "reason": "Imported archive/source location retained for provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/05-ground-truth-cases.md",
+      "line": 5,
+      "text": "> Bộ Role 1 · Bản 2.1 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/05-ground-truth-cases.md",
+      "line": 8,
+      "text": "**Căn cứ:** Gate theo Scope/Sprint; số lượng và phân nhóm kế thừa gói Role 1 cũ. Toàn bộ dữ liệu là tổng hợp.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/05-ground-truth-cases.md",
+      "line": 10,
+      "text": "**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/05-ground-truth-cases.md",
+      "line": 197,
+      "text": "  \"schema_version\": \"role1.fact-verification/1.0-proposed\",",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/05-ground-truth-cases.md",
+      "line": 270,
+      "text": "  \"schema_version\": \"role1.fact-verification/1.0-proposed\",",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/05-ground-truth-cases.md",
+      "line": 336,
+      "text": "  \"schema_version\": \"role1.fact-verification/1.0-proposed\",",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/05-ground-truth-cases.md",
+      "line": 0,
+      "text": "retained path",
+      "reason": "Imported archive/source location retained for provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/06-test-case-catalog.md",
+      "line": 3,
+      "text": "> Bộ Role 1 · Bản 2.1 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/06-test-case-catalog.md",
+      "line": 8,
+      "text": "**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/06-test-case-catalog.md",
+      "line": 227,
+      "text": "- **NEW-01:** tạo kế hoạch đủ required, budget 73.456.789 VND, tên/kênh/ảnh mới không có case_id. Trước khi chạy, Role 1 khóa policy; nếu dùng fixture đủ gate thì expected AUTO_APPROVED; nếu model local sinh score/confidence khác thì expected route tính từ output đã xác minh, không ép model chấm theo tên case.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/06-test-case-catalog.md",
+      "line": 228,
+      "text": "- **NEW-02:** kế hoạch hợp lệ về form nhưng ảnh có phần chữ không đọc chắc. Mock cấu hình VLM 0.62, media REVIEW_REQUIRED; expected HUMAN_REVIEW_REQUIRED và FACT_UNCERTAIN. Với provider thật, Role 1 phải xem ảnh/bằng chứng và gán nhãn trước khi xem quyết định hệ thống.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/06-test-case-catalog.md",
+      "line": 0,
+      "text": "retained path",
+      "reason": "Imported archive/source location retained for provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/07-verify-cases.md",
+      "line": 5,
+      "text": "> Bộ Role 1 · Bản 2.1 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/07-verify-cases.md",
+      "line": 8,
+      "text": "**Căn cứ:** Số lượng/ý tưởng Verify kế thừa Role 1 cũ; gate và workflow cập nhật theo Sprint.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/07-verify-cases.md",
+      "line": 10,
+      "text": "**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/07-verify-cases.md",
+      "line": 0,
+      "text": "retained path",
+      "reason": "Imported archive/source location retained for provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/08-verify-expected-results.md",
+      "line": 5,
+      "text": "> Bộ Role 1 · Bản 2.1 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/08-verify-expected-results.md",
+      "line": 10,
+      "text": "**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/08-verify-expected-results.md",
+      "line": 40,
+      "text": "Role 1 giữ nhãn; thay đổi cần version + lý do + nguồn + ca ảnh hưởng. Đội triển khai không đổi nhãn để khớp bug. Nếu phát hiện expected sai nguồn thì Role 1 sửa có changelog rồi rerun; không cố giữ expected sai. File JSON `actual:null`, `execution_status:NOT_RUN` chỉ được dùng làm trạng thái khởi đầu; report thực thi lưu nơi khác.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/08-verify-expected-results.md",
+      "line": 0,
+      "text": "retained path",
+      "reason": "Imported archive/source location retained for provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/09-measurement-plan.md",
+      "line": 3,
+      "text": "> Bộ Role 1 · Bản 2.1 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/09-measurement-plan.md",
+      "line": 6,
+      "text": "**Căn cứ:** Scope AI-10, §18; Sprint §§9–10; đề mục measurement kế thừa Role 1 cũ.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/09-measurement-plan.md",
+      "line": 8,
+      "text": "**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/09-measurement-plan.md",
+      "line": 52,
+      "text": "Đề xuất đạt 5/5; Role 1 ghi chấm và nhận xét. Câu chữ được phép khác expected nếu giữ đủ ý và không thêm kết luận sai.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/09-measurement-plan.md",
+      "line": 0,
+      "text": "retained path",
+      "reason": "Imported archive/source location retained for provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/10-uat-report.md",
+      "line": 3,
+      "text": "> Bộ Role 1 · Bản 2.1 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/10-uat-report.md",
+      "line": 6,
+      "text": "**Căn cứ:** Sprint §§9–10, 13; Scope §18; kế thừa đề mục UAT Role 1.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/10-uat-report.md",
+      "line": 8,
+      "text": "**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/10-uat-report.md",
+      "line": 21,
+      "text": "| Tester / reviewer | Role 1 / đại diện PO, tên thực chưa được cung cấp |",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/10-uat-report.md",
+      "line": 22,
+      "text": "| Dataset | ROLE1-DEMO-V2, GT-001..015, VERIFY-A01..A05 |",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/10-uat-report.md",
+      "line": 32,
+      "text": "2. Role 1 đối chiếu config thực với profile demo; ghi mọi khác biệt trước khi chạy, không đổi dataset ngầm.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/10-uat-report.md",
+      "line": 88,
+      "text": "| Role 1 | Expected, coverage, các defect nghiệp vụ | Chưa ký |",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/10-uat-report.md",
+      "line": 0,
+      "text": "retained path",
+      "reason": "Imported archive/source location retained for provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/11-submission-content.md",
+      "line": 3,
+      "text": "> Bộ Role 1 · Bản 2.1 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/11-submission-content.md",
+      "line": 6,
+      "text": "**Căn cứ:** Sprint §§1, 8, 10, 13–14; nội dung submission kế thừa bộ Role 1 cũ.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/11-submission-content.md",
+      "line": 8,
+      "text": "**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/11-submission-content.md",
+      "line": 62,
+      "text": "| Chưa chạy | Chưa có | Chưa triển khai app trong task này | Đây là bộ tài liệu Role 1 | NOT_RUN | Chưa có |",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/11-submission-content.md",
+      "line": 0,
+      "text": "retained path",
+      "reason": "Imported archive/source location retained for provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/12-domain-data-dictionary.md",
+      "line": 5,
+      "text": "> Bộ Role 1 · Bản 2.1 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/12-domain-data-dictionary.md",
+      "line": 10,
+      "text": "**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/12-domain-data-dictionary.md",
+      "line": 0,
+      "text": "retained path",
+      "reason": "Imported archive/source location retained for provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/13-source-traceability.md",
+      "line": 3,
+      "text": "> Bộ Role 1 · Bản 2.1 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/13-source-traceability.md",
+      "line": 6,
+      "text": "**Căn cứ:** Hai file người dùng vừa gửi đã đọc theo thứ tự Scope → Sprint; đối chiếu bộ Role 1 trước sau đó.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/13-source-traceability.md",
+      "line": 8,
+      "text": "**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/13-source-traceability.md",
+      "line": 19,
+      "text": "File `role-1-role-3-task-allocation (1).md` không còn ở đường dẫn người dùng gửi trước đây. Đã tìm trong các thư mục liên quan được đọc; chưa có bản gốc để đọc lại nguyên văn. Bộ `outputs/role1-package` và bản sao trong Downloads/zip là tài liệu assistant tạo trước, chỉ dùng khôi phục đề mục, không coi là yêu cầu mới được PO xác nhận. Người dùng xác nhận muốn làm Role 1 nhưng chưa cung cấp đường dẫn mới.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/13-source-traceability.md",
+      "line": 21,
+      "text": "Do đó, bộ này có độ phủ đầy đủ **các đề mục Role 1 đang còn trong gói cũ** và quy tắc Scope/Sprint đọc được; chưa thể chứng nhận khớp từng dòng của file phân công Role nguyên bản. Đây là giới hạn nguồn cụ thể, không phải phần yêu cầu bị tự ý bỏ qua.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/13-source-traceability.md",
+      "line": 23,
+      "text": "## 2. Ma trận đề mục Role 1 kế thừa",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/13-source-traceability.md",
+      "line": 40,
+      "text": "File 13–17 bổ trợ nguồn, handoff, quyết định mở, contract và seed để app dễ tích hợp. Không chuyển công việc triển khai code của vai trò khác thành tuyên bố Role 1 đã hoàn tất.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/13-source-traceability.md",
+      "line": 0,
+      "text": "retained path",
+      "reason": "Imported archive/source location retained for provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/14-sprint-backlog-and-handoff.md",
+      "line": 1,
+      "text": "# 14 · Backlog Role 1 và bàn giao cho đội triển khai",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/14-sprint-backlog-and-handoff.md",
+      "line": 3,
+      "text": "> Bộ Role 1 · Bản 2.1 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/14-sprint-backlog-and-handoff.md",
+      "line": 6,
+      "text": "**Căn cứ:** Sprint §§7–11; thứ tự đề mục kế thừa bộ Role 1 cũ, chưa xác minh lại phân công Role gốc.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/14-sprint-backlog-and-handoff.md",
+      "line": 8,
+      "text": "**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/14-sprint-backlog-and-handoff.md",
+      "line": 12,
+      "text": "Trong task này Role 1 tạo baseline nghiệp vụ, nhãn expected và tiêu chí nghiệm thu. Không chạy triển khai 72 giờ, không khẳng định đã hoàn thành WP1–WP6. Nội dung “dừng xác nhận trước triển khai” ở master prompt Sprint là hướng dẫn cho một yêu cầu triển khai riêng, không buộc dừng việc soạn tài liệu hiện tại.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/14-sprint-backlog-and-handoff.md",
+      "line": 14,
+      "text": "Tên người/Role 2/Role 3 và ownership nguyên văn cần đối chiếu lại file phân công khi có. Các cột “đội triển khai/PO” dưới là nhóm trách nhiệm đề xuất, không phải danh sách nhân sự đã được giao chính thức.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/14-sprint-backlog-and-handoff.md",
+      "line": 18,
+      "text": "| WP | Việc Role 1 cung cấp | Việc đội triển khai làm | Điều kiện để Role 1 review |",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/14-sprint-backlog-and-handoff.md",
+      "line": 53,
+      "text": "- [ ] Role 1 khóa expected version trước UAT; actual/evidence ghi riêng.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/14-sprint-backlog-and-handoff.md",
+      "line": 0,
+      "text": "retained path",
+      "reason": "Imported archive/source location retained for provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/15-open-decisions-and-change-log.md",
+      "line": 1,
+      "text": "# 15 · Quyết định còn mở và thay đổi so với bộ Role 1 cũ",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/15-open-decisions-and-change-log.md",
+      "line": 3,
+      "text": "> Bộ Role 1 · Bản 2.1 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/15-open-decisions-and-change-log.md",
+      "line": 6,
+      "text": "**Căn cứ:** Đối chiếu hai nguồn mới với outputs/role1-package, không coi tài liệu assistant cũ là nguồn có thẩm quyền.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/15-open-decisions-and-change-log.md",
+      "line": 8,
+      "text": "**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/15-open-decisions-and-change-log.md",
+      "line": 26,
+      "text": "| OQ-09 | Critical gaps và rubric chấm score | Scope yêu cầu output gaps, trọng số; chưa có rubric chi tiết/cách block | Role 1 + PO + AI | Rubric và gap blocking là đề xuất; case nền dùng gaps rỗng | Chốt từng tiêu chí, calibration, rounding và human disagreement | OPEN |",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/15-open-decisions-and-change-log.md",
+      "line": 30,
+      "text": "| OQ-13 | File phân công Role nguyên văn | Đường dẫn role-1-role-3-task-allocation (1).md không còn | Người cung cấp tài liệu | Kế thừa danh sách đầu việc từ gói Role 1 cũ; chưa xác minh nguyên văn | Đối chiếu lại số case/định dạng submission/ownership khi có file | OPEN |",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/15-open-decisions-and-change-log.md",
+      "line": 0,
+      "text": "retained path",
+      "reason": "Imported archive/source location retained for provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/16-ai-contract-and-review-screen.md",
+      "line": 5,
+      "text": "> Bộ Role 1 · Bản 2.1 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/16-ai-contract-and-review-screen.md",
+      "line": 10,
+      "text": "**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/16-ai-contract-and-review-screen.md",
+      "line": 28,
+      "text": "  \"schema_version\": \"ROLE1-CONTRACT-2.0\",",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/16-ai-contract-and-review-screen.md",
+      "line": 0,
+      "text": "retained path",
+      "reason": "Imported archive/source location retained for provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/17-demo-data-and-seed-guide.md",
+      "line": 3,
+      "text": "> Bộ Role 1 · Bản 2.1 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/17-demo-data-and-seed-guide.md",
+      "line": 8,
+      "text": "**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/17-demo-data-and-seed-guide.md",
+      "line": 30,
+      "text": "- Dataset version ROLE1-DEMO-V2; policy DEMO-POLICY-V2; currency VND; scope DEMO-DEPT-01.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/17-demo-data-and-seed-guide.md",
+      "line": 0,
+      "text": "retained path",
+      "reason": "Imported archive/source location retained for provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/18-fact-uncertainty-correction.md",
+      "line": 32,
+      "text": "Tham chiếu sản phẩm: Scope BR-AI-10; Sprint §4 về unresolved conflicts và §9.10 về VLM confidence; taxonomy FACT_UNCERTAIN trong Role 1. Không giả định ID R1-FIX-* có trong runtime.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/18-fact-uncertainty-correction.md",
+      "line": 0,
+      "text": "retained path",
+      "reason": "Imported archive/source location retained for provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/19-wp1-wp2-mapping-and-regression.md",
+      "line": 0,
+      "text": "retained path",
+      "reason": "Imported archive/source location retained for provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/CHANGELOG-v2.1.md",
+      "line": 3,
+      "text": "Baseline: Role1_Sprint1_v2.zip tại Downloads, SHA-256: 096549169b53b84d4b3f68d5ce7c535c59e57355132b7d8a32b1e617fe583e43.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/CHANGELOG-v2.1.md",
+      "line": 37,
+      "text": "| replace | /dataset_version | \"ROLE1-DEMO-V2\" | \"ROLE1-DEMO-V2.1\" |",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/CHANGELOG-v2.1.md",
+      "line": 73,
+      "text": "| add | /6/input/fact_verification/schema_version | ABSENT | \"role1.fact-verification/1.0-proposed\" |",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/CHANGELOG-v2.1.md",
+      "line": 125,
+      "text": "| add | /7/input/fact_verification/schema_version | ABSENT | \"role1.fact-verification/1.0-proposed\" |",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/CHANGELOG-v2.1.md",
+      "line": 172,
+      "text": "| add | /8/input/fact_verification/schema_version | ABSENT | \"role1.fact-verification/1.0-proposed\" |",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/CHANGELOG-v2.1.md",
+      "line": 241,
+      "text": "| add | /3/input/fact_verification/schema_version | ABSENT | \"role1.fact-verification/1.0-proposed\" |",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/CHANGELOG-v2.1.md",
+      "line": 0,
+      "text": "retained path",
+      "reason": "Imported archive/source location retained for provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/package-manifest.json",
+      "line": 212,
+      "text": "      \"path\": \"legacy/Role1_Marketing_Escalation_Referee.pdf\",",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/package-manifest.json",
+      "line": 0,
+      "text": "retained path",
+      "reason": "Imported archive/source location retained for provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/validation-report.md",
+      "line": 1,
+      "text": "# Kiểm tra gói Role 1 Sprint 1 v2.1",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/validation-report.md",
+      "line": 16,
+      "text": "Code để chạy lại: [tools/validate_package.py](../../../role1-sprint1-v2.1/tools/validate_package.py).",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/validation-report.md",
+      "line": 37,
+      "text": "Integration note: run the command above from the original `role1-sprint1-v2.1/` directory. Its validator relies on the original package layout; this imported documentation directory is not an executable package copy.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/v2.1/validation-report.md",
+      "line": 0,
+      "text": "retained path",
+      "reason": "Imported archive/source location retained for provenance"
+    },
+    {
+      "path": "src/verify/ba_adapter.py",
+      "line": 19,
+      "text": "MODEL = 'role1-mock-adapter-v2.1'",
+      "reason": "Retained schema/model version compatibility"
+    },
+    {
+      "path": "src/verify/ba_adapter.py",
+      "line": 66,
+      "text": "        require(facts['schema_version'] == 'role1.fact-verification/1.0-proposed'",
+      "reason": "Retained schema/model version compatibility"
+    },
+    {
+      "path": "tasks/plan.md",
+      "line": 5,
+      "text": "integration/role1-role3-frontend. Preserve initial uncommitted work.",
+      "reason": "Historical branch, source package, archive location or recorded execution evidence"
+    },
+    {
+      "path": "tests/fixtures/ba/v2.1/README.md",
+      "line": 3,
+      "text": "Source: extracted role1-sprint1-v2.1 package. JSON and image bytes are preserved.",
+      "reason": "Immutable fixture schema/dataset/source identity"
+    },
+    {
+      "path": "tests/fixtures/ba/v2.1/fact-verification.schema.json",
+      "line": 3,
+      "text": "  \"$id\": \"urn:role1:fixture:fact-verification:1.0-proposed\",",
+      "reason": "Immutable fixture schema/dataset/source identity"
+    },
+    {
+      "path": "tests/fixtures/ba/v2.1/fact-verification.schema.json",
+      "line": 15,
+      "text": "      \"const\": \"role1.fact-verification/1.0-proposed\"",
+      "reason": "Immutable fixture schema/dataset/source identity"
+    },
+    {
+      "path": "tests/fixtures/ba/v2.1/fixture-manifest.json",
+      "line": 2,
+      "text": "  \"dataset_version\": \"ROLE1-DEMO-V2.1\",",
+      "reason": "Immutable fixture schema/dataset/source identity"
+    },
+    {
+      "path": "tests/fixtures/ba/v2.1/ground-truth-cases.json",
+      "line": 1743,
+      "text": "        \"schema_version\": \"role1.fact-verification/1.0-proposed\",",
+      "reason": "Immutable fixture schema/dataset/source identity"
+    },
+    {
+      "path": "tests/fixtures/ba/v2.1/ground-truth-cases.json",
+      "line": 2086,
+      "text": "        \"schema_version\": \"role1.fact-verification/1.0-proposed\",",
+      "reason": "Immutable fixture schema/dataset/source identity"
+    },
+    {
+      "path": "tests/fixtures/ba/v2.1/ground-truth-cases.json",
+      "line": 2426,
+      "text": "        \"schema_version\": \"role1.fact-verification/1.0-proposed\",",
+      "reason": "Immutable fixture schema/dataset/source identity"
+    },
+    {
+      "path": "tests/fixtures/ba/v2.1/source-register.json",
+      "line": 23,
+      "text": "  \"prior_role_package\": \"outputs/role1-package\",",
+      "reason": "Immutable fixture schema/dataset/source identity"
+    },
+    {
+      "path": "tests/fixtures/ba/v2.1/verify-inputs.json",
+      "line": 937,
+      "text": "        \"schema_version\": \"role1.fact-verification/1.0-proposed\",",
+      "reason": "Immutable fixture schema/dataset/source identity"
+    },
+    {
+      "path": "docs/role1/README.md",
+      "line": 3,
+      "text": "Legacy Role1 = BA; Legacy Role3 = Frontend Developer.",
+      "reason": "Imported/archive source wording and provenance"
+    },
+    {
+      "path": "docs/role1/README.md",
+      "line": 0,
+      "text": "retained path",
+      "reason": "Imported archive/source location retained for provenance"
+    }
+  ]
+}

@@ -1,8 +1,8 @@
-# UI FLOW — Luồng hoạt động giao diện (Role 3)
+# UI FLOW — Luồng hoạt động giao diện (Frontend Developer)
 
 > Phạm vi: mô tả toàn bộ màn hình, luồng thao tác, trạng thái và lỗi của UI để thiết kế và dựng frontend.
-> Nguồn: mục 3 (Role 3), mục 4, mục 5 và mục 6 trong tài liệu nhiệm vụ tổng quát.
-> Đề xuất đặt file tại `src/frontend/UI_FLOW.md` (thuộc quyền sở hữu của Role 3).
+> Nguồn: mục 3 (Frontend Developer), mục 4, mục 5 và mục 6 trong tài liệu nhiệm vụ tổng quát.
+> Đề xuất đặt file tại `src/frontend/UI_FLOW.md` (thuộc quyền sở hữu của Frontend Developer).
 > Tên trạng thái và tên trường API lấy theo hợp đồng API của Role 2; file này chỉ mô tả cách UI thể hiện.
 
 ---
@@ -240,7 +240,7 @@ Yêu cầu:
 
 ### Màn 8: Policy (chỉ đọc)
 
-- Hiển thị bộ quy định do Role 1 sở hữu; Role 3 chỉ hiển thị.
+- Hiển thị bộ quy định do BA sở hữu; Frontend Developer chỉ hiển thị.
 - Mỗi rule có neo theo rule ID để Màn 4 nhảy tới đúng chỗ.
 
 ---
@@ -329,4 +329,4 @@ Nếu kết quả phụ thuộc ID hoặc tên case: đánh dấu lỗi **Critic
 | 3 | Người xử lý ở Review Queue khi không có đăng nhập | Bộ chọn vai trò mô phỏng, có nhãn |
 | 4 | Audit history ở Màn 1 là toàn bộ hay theo phiên demo | Theo phiên demo hiện tại |
 | 5 | Giới hạn upload (loại tệp, dung lượng) | Lấy theo hợp đồng API của Role 2 |
-| 6 | Quy tắc hiển thị score 70 (bằng và lớn hơn) | UI chỉ hiển thị giá trị backend trả về, Role 1 xác nhận quy tắc |
+| 6 | Quy tắc hiển thị score 70 (bằng và lớn hơn) | UI chỉ hiển thị giá trị backend trả về, BA xác nhận quy tắc |

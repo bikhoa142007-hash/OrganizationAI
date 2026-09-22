@@ -1,4 +1,4 @@
-"""SYNTHETIC input-only Role 1 adapter. Never accepts a case envelope/oracle.
+"""SYNTHETIC input-only BA adapter. Never accepts a case envelope/oracle.
 
 The proposed fixture schema is not a WP contract. Only existing WP fields cross
 the provider boundary; opaque source IDs are trace references, never predicates.
@@ -27,7 +27,7 @@ PLAN_FIELDS = {'plan_id', 'code', 'name', 'maker_id', 'department_id', 'checker_
 
 def exact(value, keys, optional=()):
     require(isinstance(value, dict) and set(keys) <= set(value)
-            and set(value) <= set(keys) | set(optional), 'Missing or unknown Role 1 fields')
+            and set(value) <= set(keys) | set(optional), 'Missing or unknown BA fields')
 
 
 def amount(value):
@@ -127,7 +127,7 @@ def configuration_from_input(data):
     )
 
 
-class Role1MockProvider(VisualModelProvider):
+class BAMockProvider(VisualModelProvider):
     def __init__(self, data, attachment_bindings):
         validate_input(data)
         self.data = deepcopy(data)

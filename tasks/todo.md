@@ -1,7 +1,7 @@
 # Integration checkpoints
 
 - [x] Import references/fixtures without overwriting; preserve hashes.
-- [x] Map Role 1 into existing schema; all 15 GT and 5 Verify execute application.
+- [x] Map BA into existing schema; all 15 GT and 5 Verify execute application.
 - [x] Factual uncertainty regressions and old backend tests pass.
 - [x] API draft/upload/submit/decision/reads/auth/error tests pass.
 - [x] Seed is repeatable and demo-only.

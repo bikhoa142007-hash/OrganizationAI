@@ -1,0 +1,4052 @@
+{
+  "phase": "pre-edit inventory",
+  "categories": {
+    "a": "active documentation/UI",
+    "b": "active code/test paths",
+    "c": "imported/archive provenance; retain original content identifiers",
+    "d": "Git/history/URLs preserved within any category"
+  },
+  "matches": [
+    {
+      "path": ".gitignore",
+      "line": 182,
+      "category": "c",
+      "text": "# Original Role 1 delivery package"
+    },
+    {
+      "path": ".gitignore",
+      "line": 183,
+      "category": "c",
+      "text": "/role1-sprint1-v2.1/"
+    },
+    {
+      "path": ".gitignore",
+      "line": 184,
+      "category": "c",
+      "text": "/Role1_Sprint1_v2.1.zip"
+    },
+    {
+      "path": ".gitignore",
+      "line": 185,
+      "category": "c",
+      "text": "/role1-sprint1-v2.1/"
+    },
+    {
+      "path": "README.md",
+      "line": 151,
+      "category": "a",
+      "text": "Use the verified PowerShell commands in [Demo tích hợp Role 1 – Backend – Role 3](#demo-tích-hợp-role-1--backend--role-3) below. Verified runtimes: Python 3.13.14 and Node.js 24.17.0; package managers: pip and npm; database: SQLite. The HTTP demo uses an explicitly configured mock model."
+    },
+    {
+      "path": "README.md",
+      "line": 288,
+      "category": "a",
+      "text": "## Demo tích hợp Role 1 – Backend – Role 3"
+    },
+    {
+      "path": "README.md",
+      "line": 323,
+      "category": "a",
+      "text": "seed có thêm factual-conflict scenario riêng. Dữ liệu HTTP demo và fixture Role 1"
+    },
+    {
+      "path": "README.md",
+      "line": 330,
+      "category": "a",
+      "text": "& ./.venv/Scripts/python.exe -m src.verify.runner --suite ground-truth --output runtime/role1-ground-truth-actual.json"
+    },
+    {
+      "path": "README.md",
+      "line": 331,
+      "category": "a",
+      "text": "& ./.venv/Scripts/python.exe -m src.verify.runner --suite verify --output runtime/role1-verify-actual.json"
+    },
+    {
+      "path": "README.md",
+      "line": 355,
+      "category": "a",
+      "text": "- [Báo cáo cuối](docs/integration/role1-role3-integration-report.md)"
+    },
+    {
+      "path": "README.md",
+      "line": 356,
+      "category": "a",
+      "text": "- [Mapping](docs/integration/role1-contract-mapping.md)"
+    },
+    {
+      "path": "README.md",
+      "line": 357,
+      "category": "a",
+      "text": "- [Khác biệt và quyết định mở](docs/integration/role1-conflict-report.md)"
+    },
+    {
+      "path": "deployment/README.md",
+      "line": 79,
+      "category": "a",
+      "text": "must remain repository root: deployment helpers and tests/fixtures/role1/v2.1 are"
+    },
+    {
+      "path": "deployment/README.md",
+      "line": 80,
+      "category": "a",
+      "text": "needed for build and the real Verify harness. The ignored original Role 1 package"
+    },
+    {
+      "path": "docs/contracts/verify-result-schema.md",
+      "line": 10,
+      "category": "a",
+      "text": "| case_id | nonblank ID from Role 1 case catalog |"
+    },
+    {
+      "path": "docs/contracts/verify-result-schema.md",
+      "line": 37,
+      "category": "a",
+      "text": "Runner ownership: Role 3. Case data and expected outcomes: Role 1. Application/domain engine and validators: Role 2. Runner must use the same submit/evaluate/read-result application boundary used by the UI/service, with normal authorization, snapshotting, persistence and audit enabled. It may use MockVLMProvider through the normal orchestrator with explicit test configuration. It must never replace the Decision Engine, hard-code PASS, reproduce the rules locally to invent actual output or read expected results as the actual result."
+    },
+    {
+      "path": "docs/implementation-plan.md",
+      "line": 49,
+      "category": "a",
+      "text": "1. Team lead resolves the application stack/runtime/storage decision before implementation. Role 2 owns shared schema and migration design; Role 3 consumes approved contracts."
+    },
+    {
+      "path": "docs/implementation-plan.md",
+      "line": 50,
+      "category": "a",
+      "text": "2. Role 1 defines versioned policy/authority/budget configuration, synthetic cases and expected results. Role 2 builds authenticated Maker drafts, protected uploads and versioned transactional submission."
+    },
+    {
+      "path": "docs/implementation-plan.md",
+      "line": 52,
+      "category": "a",
+      "text": "4. Role 2 implements guarded engine routing/auto-approval and authorized Checker decisions; Role 3 integrates Maker/Checker UI after contracts are stable."
+    },
+    {
+      "path": "docs/implementation-plan.md",
+      "line": 53,
+      "category": "a",
+      "text": "5. Role 3 connects Verify to the same application path, adds end-to-end checks and deployment/runbook; Role 1 evaluates actual results against independently owned expectations."
+    },
+    {
+      "path": "docs/integration/api-examples.md",
+      "line": 75,
+      "category": "a",
+      "text": "`POST /api/verify/general` runs five Role 1 Verify cases. `escalation` runs the 15"
+    },
+    {
+      "path": "docs/integration/frontend-backend-gap-analysis.md",
+      "line": 1,
+      "category": "a",
+      "text": "# Role 3 frontend / backend integration"
+    },
+    {
+      "path": "docs/integration/role1-conflict-report.md",
+      "line": 1,
+      "category": "a",
+      "text": "# Role 1 / WP contract differences"
+    },
+    {
+      "path": "docs/integration/role1-conflict-report.md",
+      "line": 9,
+      "category": "a",
+      "text": "| Role 1 fact_verification is proposed | Treat as PROPOSED_FIXTURE_SCHEMA, validate strictly, map into existing missing_facts/evidence_conflicts/evidence. No WP schema extension or migration. |"
+    },
+    {
+      "path": "docs/integration/role1-conflict-report.md",
+      "line": 11,
+      "category": "a",
+      "text": "| GT-014/015 expected category is null on Human Review | Role 1 does not specify a category for these hard cases; WP runtime emits POLICY_OUT_OF_SCOPE. Test route, pending state, absence of final decision, hard-rule evidence and questions. Do not emit a WP Verify row with invalid null expected category; retain the GT regression report. Expected files unchanged. |"
+    },
+    {
+      "path": "docs/integration/role1-conflict-report.md",
+      "line": 12,
+      "category": "a",
+      "text": "| Role 1 reason codes differ from runtime rule IDs | Map assertions to persisted checks/evidence; do not add new engine outcome/rule IDs just to mirror fixture vocabulary. |"
+    },
+    {
+      "path": "docs/integration/role1-conflict-report.md",
+      "line": 13,
+      "category": "a",
+      "text": "| Role 1 VLM confidence vs frozen media confidence gate (OQ-01) | Preserve both confidence values separately in evidence. Do not introduce another production gate. Cases with low VLM confidence already have unresolved facts and/or low media confidence. |"
+    },
+    {
+      "path": "docs/integration/role1-conflict-report.md",
+      "line": 14,
+      "category": "a",
+      "text": "| Role 1 100m VND vs old WP5 10000 VND demo | Separate configurations: old Streamlit demo untouched; HTTP demo has explicit DEMO-HTTP-1 with 100m; Role 1 test adapter uses the fixture's own policy/criteria. No company limit is inferred. |"
+    },
+    {
+      "path": "docs/integration/role1-conflict-report.md",
+      "line": 22,
+      "category": "a",
+      "text": "VLM-only confidence gate, kill switch behavior and the Role 1 proposed policy"
+    },
+    {
+      "path": "docs/integration/role1-conflict-report.md",
+      "line": 26,
+      "category": "a",
+      "text": "Hard-violation category oracle completion remains a Role 1 documentation decision;"
+    },
+    {
+      "path": "docs/integration/role1-conflict-report.md",
+      "line": 0,
+      "category": "a",
+      "text": "filename/path match"
+    },
+    {
+      "path": "docs/integration/role1-contract-mapping.md",
+      "line": 1,
+      "category": "a",
+      "text": "# Role 1 v2.1 -> WP1/WP2 mapping"
+    },
+    {
+      "path": "docs/integration/role1-contract-mapping.md",
+      "line": 3,
+      "category": "a",
+      "text": "Implementation: src/verify/role1_adapter.py. Execution: src/verify/runner.py."
+    },
+    {
+      "path": "docs/integration/role1-contract-mapping.md",
+      "line": 7,
+      "category": "a",
+      "text": "| Role 1 source | Existing backend | Handling |"
+    },
+    {
+      "path": "docs/integration/role1-contract-mapping.md",
+      "line": 20,
+      "category": "a",
+      "text": "| VLM/media/strategy model, prompt, agent versions and confidence | evidence provenance | Separate raw versions/confidences retained; known normalized adapter model is role1-mock-adapter-v2.1 |"
+    },
+    {
+      "path": "docs/integration/role1-contract-mapping.md",
+      "line": 27,
+      "category": "a",
+      "text": "| input_hash/evaluation_fixture_hash | source provenance only | Backend recomputes WP snapshot hash; never substitutes Role 1 source hash |"
+    },
+    {
+      "path": "docs/integration/role1-contract-mapping.md",
+      "line": 30,
+      "category": "a",
+      "text": "## Runtime rule evidence used for Role 1 assertions"
+    },
+    {
+      "path": "docs/integration/role1-contract-mapping.md",
+      "line": 32,
+      "category": "a",
+      "text": "| Role 1 reason | Required actual evidence |"
+    },
+    {
+      "path": "docs/integration/role1-contract-mapping.md",
+      "line": 0,
+      "category": "a",
+      "text": "filename/path match"
+    },
+    {
+      "path": "docs/integration/role1-import-manifest.json",
+      "line": 4,
+      "category": "a",
+      "text": "      \"source\": \"role1-sprint1-v2.1/00-index.md\","
+    },
+    {
+      "path": "docs/integration/role1-import-manifest.json",
+      "line": 5,
+      "category": "a",
+      "text": "      \"destination\": \"docs/role1/v2.1/00-index.md\","
+    },
+    {
+      "path": "docs/integration/role1-import-manifest.json",
+      "line": 11,
+      "category": "a",
+      "text": "      \"source\": \"role1-sprint1-v2.1/01-scope-and-process.md\","
+    },
+    {
+      "path": "docs/integration/role1-import-manifest.json",
+      "line": 12,
+      "category": "a",
+      "text": "      \"destination\": \"docs/role1/v2.1/01-scope-and-process.md\","
+    },
+    {
+      "path": "docs/integration/role1-import-manifest.json",
+      "line": 18,
+      "category": "a",
+      "text": "      \"source\": \"role1-sprint1-v2.1/02-marketing-approval-policy.md\","
+    },
+    {
+      "path": "docs/integration/role1-import-manifest.json",
+      "line": 19,
+      "category": "a",
+      "text": "      \"destination\": \"docs/role1/v2.1/02-marketing-approval-policy.md\","
+    },
+    {
+      "path": "docs/integration/role1-import-manifest.json",
+      "line": 25,
+      "category": "a",
+      "text": "      \"source\": \"role1-sprint1-v2.1/03-authority-matrix.md\","
+    },
+    {
+      "path": "docs/integration/role1-import-manifest.json",
+      "line": 26,
+      "category": "a",
+      "text": "      \"destination\": \"docs/role1/v2.1/03-authority-matrix.md\","
+    },
+    {
+      "path": "docs/integration/role1-import-manifest.json",
+      "line": 32,
+      "category": "a",
+      "text": "      \"source\": \"role1-sprint1-v2.1/04-escalation-policy.md\","
+    },
+    {
+      "path": "docs/integration/role1-import-manifest.json",
+      "line": 33,
+      "category": "a",
+      "text": "      \"destination\": \"docs/role1/v2.1/04-escalation-policy.md\","
+    },
+    {
+      "path": "docs/integration/role1-import-manifest.json",
+      "line": 39,
+      "category": "a",
+      "text": "      \"source\": \"role1-sprint1-v2.1/05-ground-truth-cases.md\","
+    },
+    {
+      "path": "docs/integration/role1-import-manifest.json",
+      "line": 40,
+      "category": "a",
+      "text": "      \"destination\": \"docs/role1/v2.1/05-ground-truth-cases.md\","
+    },
+    {
+      "path": "docs/integration/role1-import-manifest.json",
+      "line": 46,
+      "category": "a",
+      "text": "      \"source\": \"role1-sprint1-v2.1/06-test-case-catalog.md\","
+    },
+    {
+      "path": "docs/integration/role1-import-manifest.json",
+      "line": 47,
+      "category": "a",
+      "text": "      \"destination\": \"docs/role1/v2.1/06-test-case-catalog.md\","
+    },
+    {
+      "path": "docs/integration/role1-import-manifest.json",
+      "line": 53,
+      "category": "a",
+      "text": "      \"source\": \"role1-sprint1-v2.1/07-verify-cases.md\","
+    },
+    {
+      "path": "docs/integration/role1-import-manifest.json",
+      "line": 54,
+      "category": "a",
+      "text": "      \"destination\": \"docs/role1/v2.1/07-verify-cases.md\","
+    },
+    {
+      "path": "docs/integration/role1-import-manifest.json",
+      "line": 60,
+      "category": "a",
+      "text": "      \"source\": \"role1-sprint1-v2.1/08-verify-expected-results.md\","
+    },
+    {
+      "path": "docs/integration/role1-import-manifest.json",
+      "line": 61,
+      "category": "a",
+      "text": "      \"destination\": \"docs/role1/v2.1/08-verify-expected-results.md\","
+    },
+    {
+      "path": "docs/integration/role1-import-manifest.json",
+      "line": 67,
+      "category": "a",
+      "text": "      \"source\": \"role1-sprint1-v2.1/09-measurement-plan.md\","
+    },
+    {
+      "path": "docs/integration/role1-import-manifest.json",
+      "line": 68,
+      "category": "a",
+      "text": "      \"destination\": \"docs/role1/v2.1/09-measurement-plan.md\","
+    },
+    {
+      "path": "docs/integration/role1-import-manifest.json",
+      "line": 74,
+      "category": "a",
+      "text": "      \"source\": \"role1-sprint1-v2.1/10-uat-report.md\","
+    },
+    {
+      "path": "docs/integration/role1-import-manifest.json",
+      "line": 75,
+      "category": "a",
+      "text": "      \"destination\": \"docs/role1/v2.1/10-uat-report.md\","
+    },
+    {
+      "path": "docs/integration/role1-import-manifest.json",
+      "line": 81,
+      "category": "a",
+      "text": "      \"source\": \"role1-sprint1-v2.1/11-submission-content.md\","
+    },
+    {
+      "path": "docs/integration/role1-import-manifest.json",
+      "line": 82,
+      "category": "a",
+      "text": "      \"destination\": \"docs/role1/v2.1/11-submission-content.md\","
+    },
+    {
+      "path": "docs/integration/role1-import-manifest.json",
+      "line": 88,
+      "category": "a",
+      "text": "      \"source\": \"role1-sprint1-v2.1/12-domain-data-dictionary.md\","
+    },
+    {
+      "path": "docs/integration/role1-import-manifest.json",
+      "line": 89,
+      "category": "a",
+      "text": "      \"destination\": \"docs/role1/v2.1/12-domain-data-dictionary.md\","
+    },
+    {
+      "path": "docs/integration/role1-import-manifest.json",
+      "line": 95,
+      "category": "a",
+      "text": "      \"source\": \"role1-sprint1-v2.1/13-source-traceability.md\","
+    },
+    {
+      "path": "docs/integration/role1-import-manifest.json",
+      "line": 96,
+      "category": "a",
+      "text": "      \"destination\": \"docs/role1/v2.1/13-source-traceability.md\","
+    },
+    {
+      "path": "docs/integration/role1-import-manifest.json",
+      "line": 102,
+      "category": "a",
+      "text": "      \"source\": \"role1-sprint1-v2.1/14-sprint-backlog-and-handoff.md\","
+    },
+    {
+      "path": "docs/integration/role1-import-manifest.json",
+      "line": 103,
+      "category": "a",
+      "text": "      \"destination\": \"docs/role1/v2.1/14-sprint-backlog-and-handoff.md\","
+    },
+    {
+      "path": "docs/integration/role1-import-manifest.json",
+      "line": 109,
+      "category": "a",
+      "text": "      \"source\": \"role1-sprint1-v2.1/15-open-decisions-and-change-log.md\","
+    },
+    {
+      "path": "docs/integration/role1-import-manifest.json",
+      "line": 110,
+      "category": "a",
+      "text": "      \"destination\": \"docs/role1/v2.1/15-open-decisions-and-change-log.md\","
+    },
+    {
+      "path": "docs/integration/role1-import-manifest.json",
+      "line": 116,
+      "category": "a",
+      "text": "      \"source\": \"role1-sprint1-v2.1/16-ai-contract-and-review-screen.md\","
+    },
+    {
+      "path": "docs/integration/role1-import-manifest.json",
+      "line": 117,
+      "category": "a",
+      "text": "      \"destination\": \"docs/role1/v2.1/16-ai-contract-and-review-screen.md\","
+    },
+    {
+      "path": "docs/integration/role1-import-manifest.json",
+      "line": 123,
+      "category": "a",
+      "text": "      \"source\": \"role1-sprint1-v2.1/17-demo-data-and-seed-guide.md\","
+    },
+    {
+      "path": "docs/integration/role1-import-manifest.json",
+      "line": 124,
+      "category": "a",
+      "text": "      \"destination\": \"docs/role1/v2.1/17-demo-data-and-seed-guide.md\","
+    },
+    {
+      "path": "docs/integration/role1-import-manifest.json",
+      "line": 130,
+      "category": "a",
+      "text": "      \"source\": \"role1-sprint1-v2.1/18-fact-uncertainty-correction.md\","
+    },
+    {
+      "path": "docs/integration/role1-import-manifest.json",
+      "line": 131,
+      "category": "a",
+      "text": "      \"destination\": \"docs/role1/v2.1/18-fact-uncertainty-correction.md\","
+    },
+    {
+      "path": "docs/integration/role1-import-manifest.json",
+      "line": 137,
+      "category": "a",
+      "text": "      \"source\": \"role1-sprint1-v2.1/19-wp1-wp2-mapping-and-regression.md\","
+    },
+    {
+      "path": "docs/integration/role1-import-manifest.json",
+      "line": 138,
+      "category": "a",
+      "text": "      \"destination\": \"docs/role1/v2.1/19-wp1-wp2-mapping-and-regression.md\","
+    },
+    {
+      "path": "docs/integration/role1-import-manifest.json",
+      "line": 144,
+      "category": "a",
+      "text": "      \"source\": \"role1-sprint1-v2.1/CHANGELOG-v2.1.md\","
+    },
+    {
+      "path": "docs/integration/role1-import-manifest.json",
+      "line": 145,
+      "category": "a",
+      "text": "      \"destination\": \"docs/role1/v2.1/CHANGELOG-v2.1.md\","
+    },
+    {
+      "path": "docs/integration/role1-import-manifest.json",
+      "line": 151,
+      "category": "a",
+      "text": "      \"source\": \"role1-sprint1-v2.1/package-manifest.json\","
+    },
+    {
+      "path": "docs/integration/role1-import-manifest.json",
+      "line": 152,
+      "category": "a",
+      "text": "      \"destination\": \"docs/role1/v2.1/package-manifest.json\","
+    },
+    {
+      "path": "docs/integration/role1-import-manifest.json",
+      "line": 158,
+      "category": "a",
+      "text": "      \"source\": \"role1-sprint1-v2.1/validation-report.md\","
+    },
+    {
+      "path": "docs/integration/role1-import-manifest.json",
+      "line": 159,
+      "category": "a",
+      "text": "      \"destination\": \"docs/role1/v2.1/validation-report.md\","
+    },
+    {
+      "path": "docs/integration/role1-import-manifest.json",
+      "line": 165,
+      "category": "a",
+      "text": "      \"source\": \"role1-sprint1-v2.1/data/base-policy.json\","
+    },
+    {
+      "path": "docs/integration/role1-import-manifest.json",
+      "line": 166,
+      "category": "a",
+      "text": "      \"destination\": \"tests/fixtures/role1/v2.1/base-policy.json\","
+    },
+    {
+      "path": "docs/integration/role1-import-manifest.json",
+      "line": 172,
+      "category": "a",
+      "text": "      \"source\": \"role1-sprint1-v2.1/data/fact-verification.schema.json\","
+    },
+    {
+      "path": "docs/integration/role1-import-manifest.json",
+      "line": 173,
+      "category": "a",
+      "text": "      \"destination\": \"tests/fixtures/role1/v2.1/fact-verification.schema.json\","
+    },
+    {
+      "path": "docs/integration/role1-import-manifest.json",
+      "line": 179,
+      "category": "a",
+      "text": "      \"source\": \"role1-sprint1-v2.1/data/fixture-manifest.json\","
+    },
+    {
+      "path": "docs/integration/role1-import-manifest.json",
+      "line": 180,
+      "category": "a",
+      "text": "      \"destination\": \"tests/fixtures/role1/v2.1/fixture-manifest.json\","
+    },
+    {
+      "path": "docs/integration/role1-import-manifest.json",
+      "line": 186,
+      "category": "a",
+      "text": "      \"source\": \"role1-sprint1-v2.1/data/ground-truth-cases.json\","
+    },
+    {
+      "path": "docs/integration/role1-import-manifest.json",
+      "line": 187,
+      "category": "a",
+      "text": "      \"destination\": \"tests/fixtures/role1/v2.1/ground-truth-cases.json\","
+    },
+    {
+      "path": "docs/integration/role1-import-manifest.json",
+      "line": 193,
+      "category": "a",
+      "text": "      \"source\": \"role1-sprint1-v2.1/data/mock-provider-modes.json\","
+    },
+    {
+      "path": "docs/integration/role1-import-manifest.json",
+      "line": 194,
+      "category": "a",
+      "text": "      \"destination\": \"tests/fixtures/role1/v2.1/mock-provider-modes.json\","
+    },
+    {
+      "path": "docs/integration/role1-import-manifest.json",
+      "line": 200,
+      "category": "a",
+      "text": "      \"source\": \"role1-sprint1-v2.1/data/source-register.json\","
+    },
+    {
+      "path": "docs/integration/role1-import-manifest.json",
+      "line": 201,
+      "category": "a",
+      "text": "      \"destination\": \"tests/fixtures/role1/v2.1/source-register.json\","
+    },
+    {
+      "path": "docs/integration/role1-import-manifest.json",
+      "line": 207,
+      "category": "a",
+      "text": "      \"source\": \"role1-sprint1-v2.1/data/verify-expected-results.json\","
+    },
+    {
+      "path": "docs/integration/role1-import-manifest.json",
+      "line": 208,
+      "category": "a",
+      "text": "      \"destination\": \"tests/fixtures/role1/v2.1/verify-expected-results.json\","
+    },
+    {
+      "path": "docs/integration/role1-import-manifest.json",
+      "line": 214,
+      "category": "a",
+      "text": "      \"source\": \"role1-sprint1-v2.1/data/verify-inputs.json\","
+    },
+    {
+      "path": "docs/integration/role1-import-manifest.json",
+      "line": 215,
+      "category": "a",
+      "text": "      \"destination\": \"tests/fixtures/role1/v2.1/verify-inputs.json\","
+    },
+    {
+      "path": "docs/integration/role1-import-manifest.json",
+      "line": 221,
+      "category": "a",
+      "text": "      \"source\": \"role1-sprint1-v2.1/data/fixtures/budget-conflict.png\","
+    },
+    {
+      "path": "docs/integration/role1-import-manifest.json",
+      "line": 222,
+      "category": "a",
+      "text": "      \"destination\": \"tests/fixtures/role1/v2.1/images/budget-conflict.png\","
+    },
+    {
+      "path": "docs/integration/role1-import-manifest.json",
+      "line": 228,
+      "category": "a",
+      "text": "      \"source\": \"role1-sprint1-v2.1/data/fixtures/creative-low-quality.png\","
+    },
+    {
+      "path": "docs/integration/role1-import-manifest.json",
+      "line": 229,
+      "category": "a",
+      "text": "      \"destination\": \"tests/fixtures/role1/v2.1/images/creative-low-quality.png\","
+    },
+    {
+      "path": "docs/integration/role1-import-manifest.json",
+      "line": 235,
+      "category": "a",
+      "text": "      \"source\": \"role1-sprint1-v2.1/data/fixtures/creative-pass.png\","
+    },
+    {
+      "path": "docs/integration/role1-import-manifest.json",
+      "line": 236,
+      "category": "a",
+      "text": "      \"destination\": \"tests/fixtures/role1/v2.1/images/creative-pass.png\","
+    },
+    {
+      "path": "docs/integration/role1-import-manifest.json",
+      "line": 242,
+      "category": "a",
+      "text": "      \"source\": \"role1-sprint1-v2.1/data/fixtures/hard-claim-demo.png\","
+    },
+    {
+      "path": "docs/integration/role1-import-manifest.json",
+      "line": 243,
+      "category": "a",
+      "text": "      \"destination\": \"tests/fixtures/role1/v2.1/images/hard-claim-demo.png\","
+    },
+    {
+      "path": "docs/integration/role1-import-manifest.json",
+      "line": 249,
+      "category": "a",
+      "text": "      \"source\": \"role1-sprint1-v2.1/data/fixtures/kpi-conflict.png\","
+    },
+    {
+      "path": "docs/integration/role1-import-manifest.json",
+      "line": 250,
+      "category": "a",
+      "text": "      \"destination\": \"tests/fixtures/role1/v2.1/images/kpi-conflict.png\","
+    },
+    {
+      "path": "docs/integration/role1-import-manifest.json",
+      "line": 256,
+      "category": "a",
+      "text": "      \"source\": \"role1-sprint1-v2.1/data/fixtures/scope-missing.png\","
+    },
+    {
+      "path": "docs/integration/role1-import-manifest.json",
+      "line": 257,
+      "category": "a",
+      "text": "      \"destination\": \"tests/fixtures/role1/v2.1/images/scope-missing.png\","
+    },
+    {
+      "path": "docs/integration/role1-import-manifest.json",
+      "line": 263,
+      "category": "a",
+      "text": "      \"source\": \"role1-sprint1-v2.1/data/fixtures/synthetic-private-demo.png\","
+    },
+    {
+      "path": "docs/integration/role1-import-manifest.json",
+      "line": 264,
+      "category": "a",
+      "text": "      \"destination\": \"tests/fixtures/role1/v2.1/images/synthetic-private-demo.png\","
+    },
+    {
+      "path": "docs/integration/role1-import-manifest.json",
+      "line": 270,
+      "category": "a",
+      "text": "      \"source\": \"role1-sprint1-v2.1/changes/docs-v2.1.diff\","
+    },
+    {
+      "path": "docs/integration/role1-import-manifest.json",
+      "line": 271,
+      "category": "a",
+      "text": "      \"destination\": \"docs/role1/archive/v2.1/changes/docs-v2.1.diff\","
+    },
+    {
+      "path": "docs/integration/role1-import-manifest.json",
+      "line": 277,
+      "category": "a",
+      "text": "      \"source\": \"role1-sprint1-v2.1/data/changes-v2.1.json\","
+    },
+    {
+      "path": "docs/integration/role1-import-manifest.json",
+      "line": 278,
+      "category": "a",
+      "text": "      \"destination\": \"docs/role1/archive/v2.1/data/changes-v2.1.json\","
+    },
+    {
+      "path": "docs/integration/role1-import-manifest.json",
+      "line": 284,
+      "category": "a",
+      "text": "      \"source\": \"role1-sprint1-v2.1/data/wp1-wp2-mapping-status.json\","
+    },
+    {
+      "path": "docs/integration/role1-import-manifest.json",
+      "line": 285,
+      "category": "a",
+      "text": "      \"destination\": \"docs/role1/archive/v2.1/data/wp1-wp2-mapping-status.json\","
+    },
+    {
+      "path": "docs/integration/role1-import-manifest.json",
+      "line": 291,
+      "category": "a",
+      "text": "      \"source\": \"role1-sprint1-v2.1/regression-results.json\","
+    },
+    {
+      "path": "docs/integration/role1-import-manifest.json",
+      "line": 292,
+      "category": "a",
+      "text": "      \"destination\": \"docs/role1/archive/v2.1/regression-results.json\","
+    },
+    {
+      "path": "docs/integration/role1-import-manifest.json",
+      "line": 298,
+      "category": "a",
+      "text": "      \"source\": \"role1-sprint1-v2.1/legacy/README.md\","
+    },
+    {
+      "path": "docs/integration/role1-import-manifest.json",
+      "line": 299,
+      "category": "a",
+      "text": "      \"destination\": \"docs/role1/archive/v2.1/legacy/README.md\","
+    },
+    {
+      "path": "docs/integration/role1-import-manifest.json",
+      "line": 305,
+      "category": "a",
+      "text": "      \"source\": \"role1-sprint1-v2.1/legacy/Role1_Marketing_Escalation_Referee.pdf\","
+    },
+    {
+      "path": "docs/integration/role1-import-manifest.json",
+      "line": 306,
+      "category": "a",
+      "text": "      \"destination\": \"docs/role1/archive/v2.1/legacy/Role1_Marketing_Escalation_Referee.pdf\","
+    },
+    {
+      "path": "docs/integration/role1-import-manifest.json",
+      "line": 312,
+      "category": "a",
+      "text": "      \"source\": \"role1-sprint1-v2.1/sources/scope-phase-1.md\","
+    },
+    {
+      "path": "docs/integration/role1-import-manifest.json",
+      "line": 319,
+      "category": "a",
+      "text": "      \"source\": \"role1-sprint1-v2.1/sources/sprint-1-deliverables.md\","
+    },
+    {
+      "path": "docs/integration/role1-import-manifest.json",
+      "line": 327,
+      "category": "a",
+      "text": "  \"validator_execution_directory\": \"role1-sprint1-v2.1/\""
+    },
+    {
+      "path": "docs/integration/role1-import-manifest.json",
+      "line": 0,
+      "category": "a",
+      "text": "filename/path match"
+    },
+    {
+      "path": "docs/integration/role1-regression-results.json",
+      "line": 12,
+      "category": "a",
+      "text": "    \"source_report\": \"runtime/role1-ground-truth-actual.json\","
+    },
+    {
+      "path": "docs/integration/role1-regression-results.json",
+      "line": 26,
+      "category": "a",
+      "text": "    \"source_report\": \"runtime/role1-ground-truth-actual.json\","
+    },
+    {
+      "path": "docs/integration/role1-regression-results.json",
+      "line": 40,
+      "category": "a",
+      "text": "    \"source_report\": \"runtime/role1-ground-truth-actual.json\","
+    },
+    {
+      "path": "docs/integration/role1-regression-results.json",
+      "line": 54,
+      "category": "a",
+      "text": "    \"source_report\": \"runtime/role1-ground-truth-actual.json\","
+    },
+    {
+      "path": "docs/integration/role1-regression-results.json",
+      "line": 68,
+      "category": "a",
+      "text": "    \"source_report\": \"runtime/role1-ground-truth-actual.json\","
+    },
+    {
+      "path": "docs/integration/role1-regression-results.json",
+      "line": 82,
+      "category": "a",
+      "text": "    \"source_report\": \"runtime/role1-ground-truth-actual.json\","
+    },
+    {
+      "path": "docs/integration/role1-regression-results.json",
+      "line": 96,
+      "category": "a",
+      "text": "    \"source_report\": \"runtime/role1-ground-truth-actual.json\","
+    },
+    {
+      "path": "docs/integration/role1-regression-results.json",
+      "line": 110,
+      "category": "a",
+      "text": "    \"source_report\": \"runtime/role1-ground-truth-actual.json\","
+    },
+    {
+      "path": "docs/integration/role1-regression-results.json",
+      "line": 124,
+      "category": "a",
+      "text": "    \"source_report\": \"runtime/role1-ground-truth-actual.json\","
+    },
+    {
+      "path": "docs/integration/role1-regression-results.json",
+      "line": 138,
+      "category": "a",
+      "text": "    \"source_report\": \"runtime/role1-ground-truth-actual.json\","
+    },
+    {
+      "path": "docs/integration/role1-regression-results.json",
+      "line": 152,
+      "category": "a",
+      "text": "    \"source_report\": \"runtime/role1-ground-truth-actual.json\","
+    },
+    {
+      "path": "docs/integration/role1-regression-results.json",
+      "line": 166,
+      "category": "a",
+      "text": "    \"source_report\": \"runtime/role1-ground-truth-actual.json\","
+    },
+    {
+      "path": "docs/integration/role1-regression-results.json",
+      "line": 180,
+      "category": "a",
+      "text": "    \"source_report\": \"runtime/role1-ground-truth-actual.json\","
+    },
+    {
+      "path": "docs/integration/role1-regression-results.json",
+      "line": 194,
+      "category": "a",
+      "text": "    \"source_report\": \"runtime/role1-ground-truth-actual.json\","
+    },
+    {
+      "path": "docs/integration/role1-regression-results.json",
+      "line": 208,
+      "category": "a",
+      "text": "    \"source_report\": \"runtime/role1-ground-truth-actual.json\","
+    },
+    {
+      "path": "docs/integration/role1-regression-results.json",
+      "line": 222,
+      "category": "a",
+      "text": "    \"source_report\": \"runtime/role1-verify-actual.json\","
+    },
+    {
+      "path": "docs/integration/role1-regression-results.json",
+      "line": 236,
+      "category": "a",
+      "text": "    \"source_report\": \"runtime/role1-verify-actual.json\","
+    },
+    {
+      "path": "docs/integration/role1-regression-results.json",
+      "line": 250,
+      "category": "a",
+      "text": "    \"source_report\": \"runtime/role1-verify-actual.json\","
+    },
+    {
+      "path": "docs/integration/role1-regression-results.json",
+      "line": 264,
+      "category": "a",
+      "text": "    \"source_report\": \"runtime/role1-verify-actual.json\","
+    },
+    {
+      "path": "docs/integration/role1-regression-results.json",
+      "line": 278,
+      "category": "a",
+      "text": "    \"source_report\": \"runtime/role1-verify-actual.json\","
+    },
+    {
+      "path": "docs/integration/role1-regression-results.json",
+      "line": 0,
+      "category": "a",
+      "text": "filename/path match"
+    },
+    {
+      "path": "docs/integration/role1-role3-integration-report.md",
+      "line": 1,
+      "category": "a",
+      "text": "# Role 1 – Backend – Role 3 integration report"
+    },
+    {
+      "path": "docs/integration/role1-role3-integration-report.md",
+      "line": 7,
+      "category": "a",
+      "text": "Baseline commit: `c1288c9ceb49fe16eea5887fc914a9ad50ba1e44`, originating branch `feature/wp5-frontend-verify`. Work performed on requested branch `integration/role1-role3-frontend`; no commit or staging performed."
+    },
+    {
+      "path": "docs/integration/role1-role3-integration-report.md",
+      "line": 9,
+      "category": "a",
+      "text": "Initial user changes: modified README.md and requirements.txt; untracked app.py, frontend/, role1-sprint1-v2.1/, src/frontend/, src/verify/, tests/unit/frontend/, tests/unit/verify/. Preserved these components, adding coherent changes to the existing files. Pre-integration copies of README, requirements and frontend source/configuration are in ignored `runtime/integration-baseline/`."
+    },
+    {
+      "path": "docs/integration/role1-role3-integration-report.md",
+      "line": 15,
+      "category": "a",
+      "text": "## 2. Imported Role 1 files"
+    },
+    {
+      "path": "docs/integration/role1-role3-integration-report.md",
+      "line": 17,
+      "category": "a",
+      "text": "The existing extracted `role1-sprint1-v2.1/` was used without overwriting it. All numbered business documents, validation-report and package-manifest are under `docs/role1/v2.1/`. Fixture JSON and image bytes are under `tests/fixtures/role1/v2.1/`."
+    },
+    {
+      "path": "docs/integration/role1-role3-integration-report.md",
+      "line": 19,
+      "category": "a",
+      "text": "The [46-entry import manifest](role1-import-manifest.json) lists every source, destination and both SHA-256 hashes. Fixtures and expected results are byte-identical. Imported Markdown has relative links rebased where necessary; differing document hashes are explicit. Existing scope-phase-1.md, sprint-1-deliverables.md and docs/contracts/* were not overwritten."
+    },
+    {
+      "path": "docs/integration/role1-role3-integration-report.md",
+      "line": 23,
+      "category": "a",
+      "text": "Diffs, changes-v2.1.json, historical regression/mapping status and legacy PDF/README are archived under `docs/role1/archive/v2.1/`, excluded from application inputs. The original validator remains in the extracted source package and must run there; relocated documents do not pretend to be its original layout. Dependencies, build outputs, runtime DBs, actual runtime reports and Playwright screenshots remain ignored. No secret or environment file was staged."
+    },
+    {
+      "path": "docs/integration/role1-role3-integration-report.md",
+      "line": 29,
+      "category": "a",
+      "text": "Detailed [mapping matrix](role1-contract-mapping.md) and [conflict report](role1-conflict-report.md) describe each translation. VND uses exact integer minor units; attachment identity/hash comes from backend-uploaded bytes; agent evidence retains source and issue provenance. Weighted strategy criteria use Decimal. Proposed fact_verification maps into existing missing_facts/evidence_conflicts/evidence, with strict unknown/missing field rejection. No frozen contract or outcome catalog was extended."
+    },
+    {
+      "path": "docs/integration/role1-role3-integration-report.md",
+      "line": 68,
+      "category": "a",
+      "text": "Seed command `python -m src.backend.seed_demo` is restricted to APP_ENV=demo and demo-*.sqlite3. Synthetic actors: DEMO-MAKER-01, DEMO-CHECKER-01, DEMO-ADMIN-01, DEMO-DUAL-01, plus internal evaluator. DEMO-HTTP-1 policy uses synthetic 100m VND limit, separate from Role 1 and old Streamlit demo policy. Five scenarios: AUTO, BUDGET, REVIEW, TIMEOUT, FACTS. Running twice produced five new records then zero new/five existing, without deleting records."
+    },
+    {
+      "path": "docs/integration/role1-role3-integration-report.md",
+      "line": 78,
+      "category": "a",
+      "text": "| python tools/validate_package.py (original Role 1 directory) | 192/192 artifact checks |"
+    },
+    {
+      "path": "docs/integration/role1-role3-integration-report.md",
+      "line": 82,
+      "category": "a",
+      "text": "| python -m src.verify.runner --suite ground-truth --output runtime/role1-ground-truth-actual.json | 15/15 acceptance assertions |"
+    },
+    {
+      "path": "docs/integration/role1-role3-integration-report.md",
+      "line": 83,
+      "category": "a",
+      "text": "| python -m src.verify.runner --suite verify --output runtime/role1-verify-actual.json | 5/5 |"
+    },
+    {
+      "path": "docs/integration/role1-role3-integration-report.md",
+      "line": 95,
+      "category": "a",
+      "text": "[Durable results](role1-regression-results.json) include execution times and original actual-report hashes. Full persisted observations are in runtime/role1-ground-truth-actual.json and runtime/role1-verify-actual.json."
+    },
+    {
+      "path": "docs/integration/role1-role3-integration-report.md",
+      "line": 124,
+      "category": "a",
+      "text": "Production identity provider, real company limits/policy, actual local VLM deployment, a VLM-only confidence gate, kill-switch semantics and other Role 1 proposed policy questions remain owner decisions. They do not block the explicitly authorized synthetic demo. Completion of the GT-014/015 category oracle remains with Role 1; no category was invented on its behalf."
+    },
+    {
+      "path": "docs/integration/role1-role3-integration-report.md",
+      "line": 141,
+      "category": "a",
+      "text": "New Verify: src/verify/role1_adapter.py, runner.py, observation.py. Existing src/verify modules preserved."
+    },
+    {
+      "path": "docs/integration/role1-role3-integration-report.md",
+      "line": 145,
+      "category": "a",
+      "text": "Tests added: tests/integration/test_http_api.py, test_demo_seed.py, test_role1_regression.py; tests/unit/verify/test_role1_mapping.py; tests/fixtures/role1/v2.1/*."
+    },
+    {
+      "path": "docs/integration/role1-role3-integration-report.md",
+      "line": 147,
+      "category": "a",
+      "text": "Documentation: docs/integration/*; docs/role1/v2.1/*; docs/role1/archive/v2.1/*; docs/role-integration-audit-2026-09-21.md; tasks/plan.md; tasks/todo.md. Role 1 imports are individually enumerated in the manifest. Existing app.py, src/frontend and their tests were preserved."
+    },
+    {
+      "path": "docs/integration/role1-role3-integration-report.md",
+      "line": 0,
+      "category": "a",
+      "text": "filename/path match"
+    },
+    {
+      "path": "docs/integration/sprint1-final-packaging-report.md",
+      "line": 7,
+      "category": "a",
+      "text": "Branch: `integration/role1-role3-frontend`."
+    },
+    {
+      "path": "docs/integration/sprint1-final-packaging-report.md",
+      "line": 21,
+      "category": "a",
+      "text": "?? docs/role1/"
+    },
+    {
+      "path": "docs/integration/sprint1-final-packaging-report.md",
+      "line": 23,
+      "category": "a",
+      "text": "?? role1-sprint1-v2.1/"
+    },
+    {
+      "path": "docs/integration/sprint1-final-packaging-report.md",
+      "line": 33,
+      "category": "a",
+      "text": "?? tests/integration/test_role1_regression.py"
+    },
+    {
+      "path": "docs/integration/sprint1-final-packaging-report.md",
+      "line": 44,
+      "category": "a",
+      "text": "- docs/integration/role1-regression-results.json: refreshed from the newly executed actual reports, including timestamps and hashes."
+    },
+    {
+      "path": "docs/integration/sprint1-final-packaging-report.md",
+      "line": 48,
+      "category": "a",
+      "text": "All prior business-code changes are described in [integration report](role1-role3-integration-report.md). frontend/ remains at repository root. app.py, src/frontend/ and existing user changes remain present."
+    },
+    {
+      "path": "docs/integration/sprint1-final-packaging-report.md",
+      "line": 61,
+      "category": "a",
+      "text": "| python -m src.verify.runner --suite ground-truth --output runtime/role1-ground-truth-actual.json | 15/15 |"
+    },
+    {
+      "path": "docs/integration/sprint1-final-packaging-report.md",
+      "line": 62,
+      "category": "a",
+      "text": "| python -m src.verify.runner --suite verify --output runtime/role1-verify-actual.json | 5/5; 3 automatic and 2 escalated |"
+    },
+    {
+      "path": "docs/integration/sprint1-final-packaging-report.md",
+      "line": 68,
+      "category": "a",
+      "text": "E2E covers auto-approval, Checker rejection followed by V2/R2 resubmission with immutable history, factual uncertainty/real Verify, and Checker approval with override/audit. Role 1 expected files were not edited. Fresh durable results are in role1-regression-results.json; full observations remain ignored under runtime/."
+    },
+    {
+      "path": "docs/integration/sprint1-final-packaging-report.md",
+      "line": 74,
+      "category": "a",
+      "text": "The broader WP5 document's Stop/Undo and request-changes controls are intentionally not introduced: existing frozen workflow supports approve/reject and revision after rejection. This recorded scope resolution remains in role1-conflict-report.md. Public judge hosting and formal business/UAT sign-off have not been established by local automated tests. In-app notifications remain optional scope, not newly implemented here."
+    },
+    {
+      "path": "docs/integration/sprint1-final-packaging-report.md",
+      "line": 78,
+      "category": "a",
+      "text": "PASS for the requested local final verification and packaging. Full pytest, actual Role 1 regression, UI tests/build/E2E, status/hygiene checks and handoff are complete."
+    },
+    {
+      "path": "docs/integration/sprint1-final-packaging-report.md",
+      "line": 96,
+      "category": "a",
+      "text": "2. Backend/Role 1 integration: three modified backend modules, API/demo/seed modules, new Verify adapter/runner/observation, integration and mapping tests, .env.example."
+    },
+    {
+      "path": "docs/integration/sprint1-final-packaging-report.md",
+      "line": 97,
+      "category": "a",
+      "text": "3. Role 3 frontend: frontend source, package manifests/lockfile, build/test configs, E2E tests, UI_FLOW.md and safe .env.example. Keep frontend/ at root."
+    },
+    {
+      "path": "docs/integration/sprint1-final-packaging-report.md",
+      "line": 98,
+      "category": "a",
+      "text": "4. Fixtures and documentation: tests/fixtures/role1/v2.1/, docs/integration/, docs/role1/, audit and tasks files."
+    },
+    {
+      "path": "docs/integration/sprint1-final-packaging-report.md",
+      "line": 99,
+      "category": "a",
+      "text": "5. Original role1-sprint1-v2.1/ reference package: propose as a separate provenance commit because imported links/validator instructions reference it. Review this duplicated reference material explicitly; do not include its generated/runtime files. Original documents retain historical NOT_VERIFIED/NOT_RUN status."
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 7,
+      "category": "a",
+      "text": "docs/integration/role1-conflict-report.md"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 8,
+      "category": "a",
+      "text": "docs/integration/role1-contract-mapping.md"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 9,
+      "category": "a",
+      "text": "docs/integration/role1-import-manifest.json"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 10,
+      "category": "a",
+      "text": "docs/integration/role1-regression-results.json"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 11,
+      "category": "a",
+      "text": "docs/integration/role1-role3-integration-report.md"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 15,
+      "category": "a",
+      "text": "docs/role1/archive/v2.1/changes/docs-v2.1.diff"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 16,
+      "category": "a",
+      "text": "docs/role1/archive/v2.1/data/changes-v2.1.json"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 17,
+      "category": "a",
+      "text": "docs/role1/archive/v2.1/data/wp1-wp2-mapping-status.json"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 18,
+      "category": "a",
+      "text": "docs/role1/archive/v2.1/legacy/README.md"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 19,
+      "category": "a",
+      "text": "docs/role1/archive/v2.1/legacy/Role1_Marketing_Escalation_Referee.pdf"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 20,
+      "category": "a",
+      "text": "docs/role1/archive/v2.1/regression-results.json"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 21,
+      "category": "a",
+      "text": "docs/role1/v2.1/00-index.md"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 22,
+      "category": "a",
+      "text": "docs/role1/v2.1/01-scope-and-process.md"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 23,
+      "category": "a",
+      "text": "docs/role1/v2.1/02-marketing-approval-policy.md"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 24,
+      "category": "a",
+      "text": "docs/role1/v2.1/03-authority-matrix.md"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 25,
+      "category": "a",
+      "text": "docs/role1/v2.1/04-escalation-policy.md"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 26,
+      "category": "a",
+      "text": "docs/role1/v2.1/05-ground-truth-cases.md"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 27,
+      "category": "a",
+      "text": "docs/role1/v2.1/06-test-case-catalog.md"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 28,
+      "category": "a",
+      "text": "docs/role1/v2.1/07-verify-cases.md"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 29,
+      "category": "a",
+      "text": "docs/role1/v2.1/08-verify-expected-results.md"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 30,
+      "category": "a",
+      "text": "docs/role1/v2.1/09-measurement-plan.md"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 31,
+      "category": "a",
+      "text": "docs/role1/v2.1/10-uat-report.md"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 32,
+      "category": "a",
+      "text": "docs/role1/v2.1/11-submission-content.md"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 33,
+      "category": "a",
+      "text": "docs/role1/v2.1/12-domain-data-dictionary.md"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 34,
+      "category": "a",
+      "text": "docs/role1/v2.1/13-source-traceability.md"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 35,
+      "category": "a",
+      "text": "docs/role1/v2.1/14-sprint-backlog-and-handoff.md"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 36,
+      "category": "a",
+      "text": "docs/role1/v2.1/15-open-decisions-and-change-log.md"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 37,
+      "category": "a",
+      "text": "docs/role1/v2.1/16-ai-contract-and-review-screen.md"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 38,
+      "category": "a",
+      "text": "docs/role1/v2.1/17-demo-data-and-seed-guide.md"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 39,
+      "category": "a",
+      "text": "docs/role1/v2.1/18-fact-uncertainty-correction.md"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 40,
+      "category": "a",
+      "text": "docs/role1/v2.1/19-wp1-wp2-mapping-and-regression.md"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 41,
+      "category": "a",
+      "text": "docs/role1/v2.1/CHANGELOG-v2.1.md"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 42,
+      "category": "a",
+      "text": "docs/role1/v2.1/package-manifest.json"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 43,
+      "category": "a",
+      "text": "docs/role1/v2.1/validation-report.md"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 97,
+      "category": "a",
+      "text": "role1-sprint1-v2.1/00-index.md"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 98,
+      "category": "a",
+      "text": "role1-sprint1-v2.1/01-scope-and-process.md"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 99,
+      "category": "a",
+      "text": "role1-sprint1-v2.1/02-marketing-approval-policy.md"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 100,
+      "category": "a",
+      "text": "role1-sprint1-v2.1/03-authority-matrix.md"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 101,
+      "category": "a",
+      "text": "role1-sprint1-v2.1/04-escalation-policy.md"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 102,
+      "category": "a",
+      "text": "role1-sprint1-v2.1/05-ground-truth-cases.md"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 103,
+      "category": "a",
+      "text": "role1-sprint1-v2.1/06-test-case-catalog.md"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 104,
+      "category": "a",
+      "text": "role1-sprint1-v2.1/07-verify-cases.md"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 105,
+      "category": "a",
+      "text": "role1-sprint1-v2.1/08-verify-expected-results.md"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 106,
+      "category": "a",
+      "text": "role1-sprint1-v2.1/09-measurement-plan.md"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 107,
+      "category": "a",
+      "text": "role1-sprint1-v2.1/10-uat-report.md"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 108,
+      "category": "a",
+      "text": "role1-sprint1-v2.1/11-submission-content.md"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 109,
+      "category": "a",
+      "text": "role1-sprint1-v2.1/12-domain-data-dictionary.md"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 110,
+      "category": "a",
+      "text": "role1-sprint1-v2.1/13-source-traceability.md"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 111,
+      "category": "a",
+      "text": "role1-sprint1-v2.1/14-sprint-backlog-and-handoff.md"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 112,
+      "category": "a",
+      "text": "role1-sprint1-v2.1/15-open-decisions-and-change-log.md"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 113,
+      "category": "a",
+      "text": "role1-sprint1-v2.1/16-ai-contract-and-review-screen.md"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 114,
+      "category": "a",
+      "text": "role1-sprint1-v2.1/17-demo-data-and-seed-guide.md"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 115,
+      "category": "a",
+      "text": "role1-sprint1-v2.1/18-fact-uncertainty-correction.md"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 116,
+      "category": "a",
+      "text": "role1-sprint1-v2.1/19-wp1-wp2-mapping-and-regression.md"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 117,
+      "category": "a",
+      "text": "role1-sprint1-v2.1/CHANGELOG-v2.1.md"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 118,
+      "category": "a",
+      "text": "role1-sprint1-v2.1/changes/docs-v2.1.diff"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 119,
+      "category": "a",
+      "text": "role1-sprint1-v2.1/data/base-policy.json"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 120,
+      "category": "a",
+      "text": "role1-sprint1-v2.1/data/changes-v2.1.json"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 121,
+      "category": "a",
+      "text": "role1-sprint1-v2.1/data/fact-verification.schema.json"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 122,
+      "category": "a",
+      "text": "role1-sprint1-v2.1/data/fixture-manifest.json"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 123,
+      "category": "a",
+      "text": "role1-sprint1-v2.1/data/fixtures/budget-conflict.png"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 124,
+      "category": "a",
+      "text": "role1-sprint1-v2.1/data/fixtures/creative-low-quality.png"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 125,
+      "category": "a",
+      "text": "role1-sprint1-v2.1/data/fixtures/creative-pass.png"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 126,
+      "category": "a",
+      "text": "role1-sprint1-v2.1/data/fixtures/hard-claim-demo.png"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 127,
+      "category": "a",
+      "text": "role1-sprint1-v2.1/data/fixtures/kpi-conflict.png"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 128,
+      "category": "a",
+      "text": "role1-sprint1-v2.1/data/fixtures/scope-missing.png"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 129,
+      "category": "a",
+      "text": "role1-sprint1-v2.1/data/fixtures/synthetic-private-demo.png"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 130,
+      "category": "a",
+      "text": "role1-sprint1-v2.1/data/ground-truth-cases.json"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 131,
+      "category": "a",
+      "text": "role1-sprint1-v2.1/data/mock-provider-modes.json"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 132,
+      "category": "a",
+      "text": "role1-sprint1-v2.1/data/source-register.json"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 133,
+      "category": "a",
+      "text": "role1-sprint1-v2.1/data/verify-expected-results.json"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 134,
+      "category": "a",
+      "text": "role1-sprint1-v2.1/data/verify-inputs.json"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 135,
+      "category": "a",
+      "text": "role1-sprint1-v2.1/data/wp1-wp2-mapping-status.json"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 136,
+      "category": "a",
+      "text": "role1-sprint1-v2.1/legacy/README.md"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 137,
+      "category": "a",
+      "text": "role1-sprint1-v2.1/legacy/Role1_Marketing_Escalation_Referee.pdf"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 138,
+      "category": "a",
+      "text": "role1-sprint1-v2.1/package-manifest.json"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 139,
+      "category": "a",
+      "text": "role1-sprint1-v2.1/regression-results.json"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 140,
+      "category": "a",
+      "text": "role1-sprint1-v2.1/sources/scope-phase-1.md"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 141,
+      "category": "a",
+      "text": "role1-sprint1-v2.1/sources/sprint-1-deliverables.md"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 142,
+      "category": "a",
+      "text": "role1-sprint1-v2.1/tools/validate_package.py"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 143,
+      "category": "a",
+      "text": "role1-sprint1-v2.1/validation-report.md"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 158,
+      "category": "a",
+      "text": "src/verify/role1_adapter.py"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 162,
+      "category": "a",
+      "text": "tests/fixtures/role1/v2.1/README.md"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 163,
+      "category": "a",
+      "text": "tests/fixtures/role1/v2.1/base-policy.json"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 164,
+      "category": "a",
+      "text": "tests/fixtures/role1/v2.1/fact-verification.schema.json"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 165,
+      "category": "a",
+      "text": "tests/fixtures/role1/v2.1/fixture-manifest.json"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 166,
+      "category": "a",
+      "text": "tests/fixtures/role1/v2.1/ground-truth-cases.json"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 167,
+      "category": "a",
+      "text": "tests/fixtures/role1/v2.1/images/budget-conflict.png"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 168,
+      "category": "a",
+      "text": "tests/fixtures/role1/v2.1/images/creative-low-quality.png"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 169,
+      "category": "a",
+      "text": "tests/fixtures/role1/v2.1/images/creative-pass.png"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 170,
+      "category": "a",
+      "text": "tests/fixtures/role1/v2.1/images/hard-claim-demo.png"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 171,
+      "category": "a",
+      "text": "tests/fixtures/role1/v2.1/images/kpi-conflict.png"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 172,
+      "category": "a",
+      "text": "tests/fixtures/role1/v2.1/images/scope-missing.png"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 173,
+      "category": "a",
+      "text": "tests/fixtures/role1/v2.1/images/synthetic-private-demo.png"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 174,
+      "category": "a",
+      "text": "tests/fixtures/role1/v2.1/mock-provider-modes.json"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 175,
+      "category": "a",
+      "text": "tests/fixtures/role1/v2.1/source-register.json"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 176,
+      "category": "a",
+      "text": "tests/fixtures/role1/v2.1/verify-expected-results.json"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 177,
+      "category": "a",
+      "text": "tests/fixtures/role1/v2.1/verify-inputs.json"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 180,
+      "category": "a",
+      "text": "tests/integration/test_role1_regression.py"
+    },
+    {
+      "path": "docs/integration/sprint1-proposed-commit-files.txt",
+      "line": 183,
+      "category": "a",
+      "text": "tests/unit/verify/test_role1_mapping.py"
+    },
+    {
+      "path": "docs/role-integration-audit-2026-09-21.md",
+      "line": 1,
+      "category": "a",
+      "text": "# Role 1 / Backend / Role 3 integration audit"
+    },
+    {
+      "path": "docs/role-integration-audit-2026-09-21.md",
+      "line": 11,
+      "category": "a",
+      "text": "- Role 1: extracted `role1-sprint1-v2.1/` package found; no matching Role1 ZIP"
+    },
+    {
+      "path": "docs/role-integration-audit-2026-09-21.md",
+      "line": 19,
+      "category": "a",
+      "text": "  frontend/, role1-sprint1-v2.1/, src/frontend/, src/verify/,"
+    },
+    {
+      "path": "docs/role-integration-audit-2026-09-21.md",
+      "line": 35,
+      "category": "a",
+      "text": "| Role 3 UI | React + TypeScript + Vite; AppShell, routes, plan form, processing, result, review, audit, policy and Verify pages |"
+    },
+    {
+      "path": "docs/role-integration-audit-2026-09-21.md",
+      "line": 37,
+      "category": "a",
+      "text": "| Verify/seeds | src/verify/harness.py contains five TEST_ONLY scenarios and demo configuration; Role 1 has separate 15 GT and five Verify datasets with fixtures |"
+    },
+    {
+      "path": "docs/role-integration-audit-2026-09-21.md",
+      "line": 47,
+      "category": "a",
+      "text": "uploads. Role 1 documents a separate 100m demo limit. These configurations must not"
+    },
+    {
+      "path": "docs/role-integration-audit-2026-09-21.md",
+      "line": 58,
+      "category": "a",
+      "text": "| role1-sprint1-v2.1 | `& ../.venv/Scripts/python.exe tools/validate_package.py` | 192/192 artifact checks passed; eight negative mutation controls; WP compatibility NOT_VERIFIED and engine regression NOT_RUN |"
+    },
+    {
+      "path": "docs/role-integration-audit-2026-09-21.md",
+      "line": 78,
+      "category": "a",
+      "text": "3. Role 3 exposes REQUEST_CHANGES and Stop/retry processing actions. Existing"
+    },
+    {
+      "path": "docs/role-integration-audit-2026-09-21.md",
+      "line": 85,
+      "category": "a",
+      "text": "5. Role 1 fact_verification is explicitly a fixture extension proposal. Its"
+    },
+    {
+      "path": "docs/role-integration-audit-2026-09-21.md",
+      "line": 89,
+      "category": "a",
+      "text": "6. Existing TEST_ONLY Verify cases are not the Role 1 dataset. Their successful"
+    },
+    {
+      "path": "docs/role-integration-audit-2026-09-21.md",
+      "line": 90,
+      "category": "a",
+      "text": "   tests must not be reported as Role 1 engine acceptance."
+    },
+    {
+      "path": "docs/role-integration-audit-2026-09-21.md",
+      "line": 98,
+      "category": "a",
+      "text": "2. Add a Role 1 dataset adapter and actual regression tests without changing"
+    },
+    {
+      "path": "docs/role-integration-audit-2026-09-21.md",
+      "line": 102,
+      "category": "a",
+      "text": "4. Implement Role 3 API services through existing interfaces; connect forms,"
+    },
+    {
+      "path": "docs/role-integration-audit-2026-09-21.md",
+      "line": 112,
+      "category": "a",
+      "text": "Expected change areas: new HTTP adapter and tests, Role 1 integration adapter and"
+    },
+    {
+      "path": "docs/role-integration-audit-2026-09-21.md",
+      "line": 124,
+      "category": "a",
+      "text": "- Limitations: no API/frontend integration delivered; no Role 1 engine regression"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 6,
+      "category": "c",
+      "text": "-> Bộ Role 1 · Bản 2.0 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 11,
+      "category": "c",
+      "text": "-**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 13,
+      "category": "c",
+      "text": "-## 1. Mục tiêu Role 1"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 17,
+      "category": "c",
+      "text": "-Role 1 sở hữu nghiệp vụ/nhãn kỳ vọng; đội triển khai sở hữu code. Khi khác nhau, mở defect hoặc yêu cầu đổi policy có lý do, không sửa expected chỉ để có kết quả xanh."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 21,
+      "category": "c",
+      "text": "-| Hạng mục | Phase 1 | Sprint 1 | Bàn giao từ Role 1 |"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 109,
+      "category": "c",
+      "text": "+> Bộ Role 1 · Bản 2.1 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 114,
+      "category": "c",
+      "text": "+**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 116,
+      "category": "c",
+      "text": "+## 1. Mục tiêu Role 1"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 120,
+      "category": "c",
+      "text": "+Role 1 sở hữu nghiệp vụ/nhãn kỳ vọng; đội triển khai sở hữu code. Khi khác nhau, mở defect hoặc yêu cầu đổi policy có lý do, không sửa expected chỉ để có kết quả xanh."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 124,
+      "category": "c",
+      "text": "+| Hạng mục | Phase 1 | Sprint 1 | Bàn giao từ Role 1 |"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 215,
+      "category": "c",
+      "text": "-> Bộ Role 1 · Bản 2.0 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 220,
+      "category": "c",
+      "text": "-**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 268,
+      "category": "c",
+      "text": "-Rubric đề xuất: 0 = không có bằng chứng/không đánh giá được; 25 = rất thiếu; 50 = có nội dung nhưng thiếu chứng cứ quan trọng; 75 = hợp lý, có căn cứ, còn khoảng trống nhỏ; 100 = đầy đủ, nhất quán với rubric. Đây không phải phương pháp đã hiệu chuẩn; cần Role 1/PO chấm mẫu cùng nhau. Với thiếu chứng cứ phải ghi assumption/gap thay vì dựng số liệu thị trường."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 326,
+      "category": "c",
+      "text": "+> Bộ Role 1 · Bản 2.1 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 331,
+      "category": "c",
+      "text": "+**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 379,
+      "category": "c",
+      "text": "+Rubric đề xuất: 0 = không có bằng chứng/không đánh giá được; 25 = rất thiếu; 50 = có nội dung nhưng thiếu chứng cứ quan trọng; 75 = hợp lý, có căn cứ, còn khoảng trống nhỏ; 100 = đầy đủ, nhất quán với rubric. Đây không phải phương pháp đã hiệu chuẩn; cần Role 1/PO chấm mẫu cùng nhau. Với thiếu chứng cứ phải ghi assumption/gap thay vì dựng số liệu thị trường."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 446,
+      "category": "c",
+      "text": "-> Bộ Role 1 · Bản 2.0 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 451,
+      "category": "c",
+      "text": "-**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 512,
+      "category": "c",
+      "text": "+> Bộ Role 1 · Bản 2.1 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 517,
+      "category": "c",
+      "text": "+**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 581,
+      "category": "c",
+      "text": "-> Bộ Role 1 · Bản 2.0 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 584,
+      "category": "c",
+      "text": "-**Căn cứ:** Scope UC_MKT_11, BR-AI-05/10/13, BR-BUD; Sprint §§3–4, 13; taxonomy kế thừa bộ Role 1 cũ."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 586,
+      "category": "c",
+      "text": "-**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 592,
+      "category": "c",
+      "text": "-Ba category `FACT_UNCERTAIN`, `POLICY_OUT_OF_SCOPE`, `AUTHORITY_EXCEEDED` kế thừa bộ Role 1 trước, không được nêu như enum bắt buộc trong hai nguồn mới. Giữ làm metadata giải thích, tuyệt đối không ép mọi lý do vào một category sai nghĩa."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 657,
+      "category": "c",
+      "text": "+> Bộ Role 1 · Bản 2.1 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 660,
+      "category": "c",
+      "text": "+**Căn cứ:** Scope UC_MKT_11, BR-AI-05/10/13, BR-BUD; Sprint §§3–4, 13; taxonomy kế thừa bộ Role 1 cũ."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 662,
+      "category": "c",
+      "text": "+**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 668,
+      "category": "c",
+      "text": "+Ba category `FACT_UNCERTAIN`, `POLICY_OUT_OF_SCOPE`, `AUTHORITY_EXCEEDED` kế thừa bộ Role 1 trước, không được nêu như enum bắt buộc trong hai nguồn mới. Giữ làm metadata giải thích, tuyệt đối không ép mọi lý do vào một category sai nghĩa."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 745,
+      "category": "c",
+      "text": "-> Bộ Role 1 · Bản 2.0 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 748,
+      "category": "c",
+      "text": "-**Căn cứ:** Gate theo Scope/Sprint; số lượng và phân nhóm kế thừa gói Role 1 cũ. Toàn bộ dữ liệu là tổng hợp."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 750,
+      "category": "c",
+      "text": "-**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 1138,
+      "category": "c",
+      "text": "+> Bộ Role 1 · Bản 2.1 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 1141,
+      "category": "c",
+      "text": "+**Căn cứ:** Gate theo Scope/Sprint; số lượng và phân nhóm kế thừa gói Role 1 cũ. Toàn bộ dữ liệu là tổng hợp."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 1143,
+      "category": "c",
+      "text": "+**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 1330,
+      "category": "c",
+      "text": "+  \"schema_version\": \"role1.fact-verification/1.0-proposed\","
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 1403,
+      "category": "c",
+      "text": "+  \"schema_version\": \"role1.fact-verification/1.0-proposed\","
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 1469,
+      "category": "c",
+      "text": "+  \"schema_version\": \"role1.fact-verification/1.0-proposed\","
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 1658,
+      "category": "c",
+      "text": "-> Bộ Role 1 · Bản 2.0 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 1663,
+      "category": "c",
+      "text": "-**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 1882,
+      "category": "c",
+      "text": "-- **NEW-01:** tạo kế hoạch đủ required, budget 73.456.789 VND, tên/kênh/ảnh mới không có case_id. Trước khi chạy, Role 1 khóa policy; nếu dùng fixture đủ gate thì expected AUTO_APPROVE; nếu model local sinh score/confidence khác thì expected route tính từ output đã xác minh, không ép model chấm theo tên case."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 1883,
+      "category": "c",
+      "text": "-- **NEW-02:** kế hoạch hợp lệ về form nhưng ảnh có phần chữ không đọc chắc. Mock cấu hình VLM 0.62, media REVIEW_REQUIRED; expected HUMAN_REVIEW_REQUIRED và FACT_UNCERTAIN. Với provider thật, Role 1 phải xem ảnh/bằng chứng và gán nhãn trước khi xem quyết định hệ thống."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 1892,
+      "category": "c",
+      "text": "+> Bộ Role 1 · Bản 2.1 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 1897,
+      "category": "c",
+      "text": "+**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 2116,
+      "category": "c",
+      "text": "+- **NEW-01:** tạo kế hoạch đủ required, budget 73.456.789 VND, tên/kênh/ảnh mới không có case_id. Trước khi chạy, Role 1 khóa policy; nếu dùng fixture đủ gate thì expected AUTO_APPROVED; nếu model local sinh score/confidence khác thì expected route tính từ output đã xác minh, không ép model chấm theo tên case."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 2117,
+      "category": "c",
+      "text": "+- **NEW-02:** kế hoạch hợp lệ về form nhưng ảnh có phần chữ không đọc chắc. Mock cấu hình VLM 0.62, media REVIEW_REQUIRED; expected HUMAN_REVIEW_REQUIRED và FACT_UNCERTAIN. Với provider thật, Role 1 phải xem ảnh/bằng chứng và gán nhãn trước khi xem quyết định hệ thống."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 2148,
+      "category": "c",
+      "text": "-> Bộ Role 1 · Bản 2.0 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 2151,
+      "category": "c",
+      "text": "-**Căn cứ:** Số lượng/ý tưởng Verify kế thừa Role 1 cũ; gate và workflow cập nhật theo Sprint."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 2153,
+      "category": "c",
+      "text": "-**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 2192,
+      "category": "c",
+      "text": "+> Bộ Role 1 · Bản 2.1 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 2195,
+      "category": "c",
+      "text": "+**Căn cứ:** Số lượng/ý tưởng Verify kế thừa Role 1 cũ; gate và workflow cập nhật theo Sprint."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 2197,
+      "category": "c",
+      "text": "+**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 2243,
+      "category": "c",
+      "text": "-> Bộ Role 1 · Bản 2.0 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 2248,
+      "category": "c",
+      "text": "-**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 2278,
+      "category": "c",
+      "text": "-Role 1 giữ nhãn; thay đổi cần version + lý do + nguồn + ca ảnh hưởng. Đội triển khai không đổi nhãn để khớp bug. Nếu phát hiện expected sai nguồn thì Role 1 sửa có changelog rồi rerun; không cố giữ expected sai. File JSON `actual:null`, `execution_status:NOT_RUN` chỉ được dùng làm trạng thái khởi đầu; report thực thi lưu nơi khác."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 2283,
+      "category": "c",
+      "text": "+> Bộ Role 1 · Bản 2.1 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 2288,
+      "category": "c",
+      "text": "+**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 2318,
+      "category": "c",
+      "text": "+Role 1 giữ nhãn; thay đổi cần version + lý do + nguồn + ca ảnh hưởng. Đội triển khai không đổi nhãn để khớp bug. Nếu phát hiện expected sai nguồn thì Role 1 sửa có changelog rồi rerun; không cố giữ expected sai. File JSON `actual:null`, `execution_status:NOT_RUN` chỉ được dùng làm trạng thái khởi đầu; report thực thi lưu nơi khác."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 2324,
+      "category": "c",
+      "text": "-> Bộ Role 1 · Bản 2.0 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 2327,
+      "category": "c",
+      "text": "-**Căn cứ:** Scope AI-10, §18; Sprint §§9–10; đề mục measurement kế thừa Role 1 cũ."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 2329,
+      "category": "c",
+      "text": "-**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 2373,
+      "category": "c",
+      "text": "-Đề xuất đạt 5/5; Role 1 ghi chấm và nhận xét. Câu chữ được phép khác expected nếu giữ đủ ý và không thêm kết luận sai."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 2394,
+      "category": "c",
+      "text": "+> Bộ Role 1 · Bản 2.1 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 2397,
+      "category": "c",
+      "text": "+**Căn cứ:** Scope AI-10, §18; Sprint §§9–10; đề mục measurement kế thừa Role 1 cũ."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 2399,
+      "category": "c",
+      "text": "+**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 2443,
+      "category": "c",
+      "text": "+Đề xuất đạt 5/5; Role 1 ghi chấm và nhận xét. Câu chữ được phép khác expected nếu giữ đủ ý và không thêm kết luận sai."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 2473,
+      "category": "c",
+      "text": "-> Bộ Role 1 · Bản 2.0 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 2476,
+      "category": "c",
+      "text": "-**Căn cứ:** Sprint §§9–10, 13; Scope §18; kế thừa đề mục UAT Role 1."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 2478,
+      "category": "c",
+      "text": "-**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 2491,
+      "category": "c",
+      "text": "-| Tester / reviewer | Role 1 / đại diện PO, tên thực chưa được cung cấp |"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 2492,
+      "category": "c",
+      "text": "-| Dataset | ROLE1-DEMO-V2, GT-001..015, VERIFY-A01..A05 |"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 2502,
+      "category": "c",
+      "text": "-2. Role 1 đối chiếu config thực với profile demo; ghi mọi khác biệt trước khi chạy, không đổi dataset ngầm."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 2558,
+      "category": "c",
+      "text": "-| Role 1 | Expected, coverage, các defect nghiệp vụ | Chưa ký |"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 2565,
+      "category": "c",
+      "text": "+> Bộ Role 1 · Bản 2.1 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 2568,
+      "category": "c",
+      "text": "+**Căn cứ:** Sprint §§9–10, 13; Scope §18; kế thừa đề mục UAT Role 1."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 2570,
+      "category": "c",
+      "text": "+**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 2583,
+      "category": "c",
+      "text": "+| Tester / reviewer | Role 1 / đại diện PO, tên thực chưa được cung cấp |"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 2584,
+      "category": "c",
+      "text": "+| Dataset | ROLE1-DEMO-V2, GT-001..015, VERIFY-A01..A05 |"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 2594,
+      "category": "c",
+      "text": "+2. Role 1 đối chiếu config thực với profile demo; ghi mọi khác biệt trước khi chạy, không đổi dataset ngầm."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 2650,
+      "category": "c",
+      "text": "+| Role 1 | Expected, coverage, các defect nghiệp vụ | Chưa ký |"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 2671,
+      "category": "c",
+      "text": "-> Bộ Role 1 · Bản 2.0 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 2674,
+      "category": "c",
+      "text": "-**Căn cứ:** Sprint §§1, 8, 10, 13–14; nội dung submission kế thừa bộ Role 1 cũ."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 2676,
+      "category": "c",
+      "text": "-**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 2730,
+      "category": "c",
+      "text": "-| Chưa chạy | Chưa có | Chưa triển khai app trong task này | Đây là bộ tài liệu Role 1 | NOT_RUN | Chưa có |"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 2739,
+      "category": "c",
+      "text": "+> Bộ Role 1 · Bản 2.1 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 2742,
+      "category": "c",
+      "text": "+**Căn cứ:** Sprint §§1, 8, 10, 13–14; nội dung submission kế thừa bộ Role 1 cũ."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 2744,
+      "category": "c",
+      "text": "+**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 2798,
+      "category": "c",
+      "text": "+| Chưa chạy | Chưa có | Chưa triển khai app trong task này | Đây là bộ tài liệu Role 1 | NOT_RUN | Chưa có |"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 2814,
+      "category": "c",
+      "text": "-> Bộ Role 1 · Bản 2.0 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 2819,
+      "category": "c",
+      "text": "-**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 2942,
+      "category": "c",
+      "text": "+> Bộ Role 1 · Bản 2.1 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 2947,
+      "category": "c",
+      "text": "+**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3080,
+      "category": "c",
+      "text": "-> Bộ Role 1 · Bản 2.0 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3083,
+      "category": "c",
+      "text": "-**Căn cứ:** Hai file người dùng vừa gửi đã đọc theo thứ tự Scope → Sprint; đối chiếu bộ Role 1 trước sau đó."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3085,
+      "category": "c",
+      "text": "-**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3096,
+      "category": "c",
+      "text": "-File `role-1-role-3-task-allocation (1).md` không còn ở đường dẫn người dùng gửi trước đây. Đã tìm trong các thư mục liên quan được đọc; chưa có bản gốc để đọc lại nguyên văn. Bộ `outputs/role1-package` và bản sao trong Downloads/zip là tài liệu assistant tạo trước, chỉ dùng khôi phục đề mục, không coi là yêu cầu mới được PO xác nhận. Người dùng xác nhận muốn làm Role 1 nhưng chưa cung cấp đường dẫn mới."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3098,
+      "category": "c",
+      "text": "-Do đó, bộ này có độ phủ đầy đủ **các đề mục Role 1 đang còn trong gói cũ** và quy tắc Scope/Sprint đọc được; chưa thể chứng nhận khớp từng dòng của file phân công Role nguyên bản. Đây là giới hạn nguồn cụ thể, không phải phần yêu cầu bị tự ý bỏ qua."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3100,
+      "category": "c",
+      "text": "-## 2. Ma trận đề mục Role 1 kế thừa"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3117,
+      "category": "c",
+      "text": "-File 13–17 bổ trợ nguồn, handoff, quyết định mở, contract và seed để app dễ tích hợp. Không chuyển công việc triển khai code của vai trò khác thành tuyên bố Role 1 đã hoàn tất."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3240,
+      "category": "c",
+      "text": "+> Bộ Role 1 · Bản 2.1 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3243,
+      "category": "c",
+      "text": "+**Căn cứ:** Hai file người dùng vừa gửi đã đọc theo thứ tự Scope → Sprint; đối chiếu bộ Role 1 trước sau đó."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3245,
+      "category": "c",
+      "text": "+**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3256,
+      "category": "c",
+      "text": "+File `role-1-role-3-task-allocation (1).md` không còn ở đường dẫn người dùng gửi trước đây. Đã tìm trong các thư mục liên quan được đọc; chưa có bản gốc để đọc lại nguyên văn. Bộ `outputs/role1-package` và bản sao trong Downloads/zip là tài liệu assistant tạo trước, chỉ dùng khôi phục đề mục, không coi là yêu cầu mới được PO xác nhận. Người dùng xác nhận muốn làm Role 1 nhưng chưa cung cấp đường dẫn mới."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3258,
+      "category": "c",
+      "text": "+Do đó, bộ này có độ phủ đầy đủ **các đề mục Role 1 đang còn trong gói cũ** và quy tắc Scope/Sprint đọc được; chưa thể chứng nhận khớp từng dòng của file phân công Role nguyên bản. Đây là giới hạn nguồn cụ thể, không phải phần yêu cầu bị tự ý bỏ qua."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3260,
+      "category": "c",
+      "text": "+## 2. Ma trận đề mục Role 1 kế thừa"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3277,
+      "category": "c",
+      "text": "+File 13–17 bổ trợ nguồn, handoff, quyết định mở, contract và seed để app dễ tích hợp. Không chuyển công việc triển khai code của vai trò khác thành tuyên bố Role 1 đã hoàn tất."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3407,
+      "category": "c",
+      "text": "-# 14 · Backlog Role 1 và bàn giao cho đội triển khai"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3409,
+      "category": "c",
+      "text": "-> Bộ Role 1 · Bản 2.0 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3412,
+      "category": "c",
+      "text": "-**Căn cứ:** Sprint §§7–11; thứ tự đề mục kế thừa bộ Role 1 cũ, chưa xác minh lại phân công Role gốc."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3414,
+      "category": "c",
+      "text": "-**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3418,
+      "category": "c",
+      "text": "-Trong task này Role 1 tạo baseline nghiệp vụ, nhãn expected và tiêu chí nghiệm thu. Không chạy triển khai 72 giờ, không khẳng định đã hoàn thành WP1–WP6. Nội dung “dừng xác nhận trước triển khai” ở master prompt Sprint là hướng dẫn cho một yêu cầu triển khai riêng, không buộc dừng việc soạn tài liệu hiện tại."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3420,
+      "category": "c",
+      "text": "-Tên người/Role 2/Role 3 và ownership nguyên văn cần đối chiếu lại file phân công khi có. Các cột “đội triển khai/PO” dưới là nhóm trách nhiệm đề xuất, không phải danh sách nhân sự đã được giao chính thức."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3424,
+      "category": "c",
+      "text": "-| WP | Việc Role 1 cung cấp | Việc đội triển khai làm | Điều kiện để Role 1 review |"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3459,
+      "category": "c",
+      "text": "-- [ ] Role 1 khóa expected version trước UAT; actual/evidence ghi riêng."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3465,
+      "category": "c",
+      "text": "+# 14 · Backlog Role 1 và bàn giao cho đội triển khai"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3467,
+      "category": "c",
+      "text": "+> Bộ Role 1 · Bản 2.1 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3470,
+      "category": "c",
+      "text": "+**Căn cứ:** Sprint §§7–11; thứ tự đề mục kế thừa bộ Role 1 cũ, chưa xác minh lại phân công Role gốc."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3472,
+      "category": "c",
+      "text": "+**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3476,
+      "category": "c",
+      "text": "+Trong task này Role 1 tạo baseline nghiệp vụ, nhãn expected và tiêu chí nghiệm thu. Không chạy triển khai 72 giờ, không khẳng định đã hoàn thành WP1–WP6. Nội dung “dừng xác nhận trước triển khai” ở master prompt Sprint là hướng dẫn cho một yêu cầu triển khai riêng, không buộc dừng việc soạn tài liệu hiện tại."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3478,
+      "category": "c",
+      "text": "+Tên người/Role 2/Role 3 và ownership nguyên văn cần đối chiếu lại file phân công khi có. Các cột “đội triển khai/PO” dưới là nhóm trách nhiệm đề xuất, không phải danh sách nhân sự đã được giao chính thức."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3482,
+      "category": "c",
+      "text": "+| WP | Việc Role 1 cung cấp | Việc đội triển khai làm | Điều kiện để Role 1 review |"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3517,
+      "category": "c",
+      "text": "+- [ ] Role 1 khóa expected version trước UAT; actual/evidence ghi riêng."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3532,
+      "category": "c",
+      "text": "-# 15 · Quyết định còn mở và thay đổi so với bộ Role 1 cũ"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3534,
+      "category": "c",
+      "text": "-> Bộ Role 1 · Bản 2.0 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3537,
+      "category": "c",
+      "text": "-**Căn cứ:** Đối chiếu hai nguồn mới với outputs/role1-package, không coi tài liệu assistant cũ là nguồn có thẩm quyền."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3539,
+      "category": "c",
+      "text": "-**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3557,
+      "category": "c",
+      "text": "-| OQ-09 | Critical gaps và rubric chấm score | Scope yêu cầu output gaps, trọng số; chưa có rubric chi tiết/cách block | Role 1 + PO + AI | Rubric và gap blocking là đề xuất; case nền dùng gaps rỗng | Chốt từng tiêu chí, calibration, rounding và human disagreement | OPEN |"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3561,
+      "category": "c",
+      "text": "-| OQ-13 | File phân công Role nguyên văn | Đường dẫn role-1-role-3-task-allocation (1).md không còn | Người cung cấp tài liệu | Kế thừa danh sách đầu việc từ gói Role 1 cũ; chưa xác minh nguyên văn | Đối chiếu lại số case/định dạng submission/ownership khi có file | OPEN |"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3590,
+      "category": "c",
+      "text": "+# 15 · Quyết định còn mở và thay đổi so với bộ Role 1 cũ"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3592,
+      "category": "c",
+      "text": "+> Bộ Role 1 · Bản 2.1 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3595,
+      "category": "c",
+      "text": "+**Căn cứ:** Đối chiếu hai nguồn mới với outputs/role1-package, không coi tài liệu assistant cũ là nguồn có thẩm quyền."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3597,
+      "category": "c",
+      "text": "+**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3615,
+      "category": "c",
+      "text": "+| OQ-09 | Critical gaps và rubric chấm score | Scope yêu cầu output gaps, trọng số; chưa có rubric chi tiết/cách block | Role 1 + PO + AI | Rubric và gap blocking là đề xuất; case nền dùng gaps rỗng | Chốt từng tiêu chí, calibration, rounding và human disagreement | OPEN |"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3619,
+      "category": "c",
+      "text": "+| OQ-13 | File phân công Role nguyên văn | Đường dẫn role-1-role-3-task-allocation (1).md không còn | Người cung cấp tài liệu | Kế thừa danh sách đầu việc từ gói Role 1 cũ; chưa xác minh nguyên văn | Đối chiếu lại số case/định dạng submission/ownership khi có file | OPEN |"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3659,
+      "category": "c",
+      "text": "-> Bộ Role 1 · Bản 2.0 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3664,
+      "category": "c",
+      "text": "-**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3682,
+      "category": "c",
+      "text": "-  \"schema_version\": \"ROLE1-CONTRACT-2.0\","
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3775,
+      "category": "c",
+      "text": "+> Bộ Role 1 · Bản 2.1 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3780,
+      "category": "c",
+      "text": "+**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3798,
+      "category": "c",
+      "text": "+  \"schema_version\": \"ROLE1-CONTRACT-2.0\","
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3898,
+      "category": "c",
+      "text": "-> Bộ Role 1 · Bản 2.0 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3903,
+      "category": "c",
+      "text": "-**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3925,
+      "category": "c",
+      "text": "-- Dataset version ROLE1-DEMO-V2; policy DEMO-POLICY-V2; currency VND; scope DEMO-DEPT-01."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3977,
+      "category": "c",
+      "text": "+> Bộ Role 1 · Bản 2.1 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 3982,
+      "category": "c",
+      "text": "+**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 4004,
+      "category": "c",
+      "text": "+- Dataset version ROLE1-DEMO-V2; policy DEMO-POLICY-V2; currency VND; scope DEMO-DEPT-01."
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 4063,
+      "category": "c",
+      "text": "-# Báo cáo kiểm tra artifact — Role 1 Sprint 1 v2"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 4084,
+      "category": "c",
+      "text": "+# Kiểm tra gói Role 1 Sprint 1 v2.1"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/changes/docs-v2.1.diff",
+      "line": 0,
+      "category": "c",
+      "text": "filename/path match"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/data/changes-v2.1.json",
+      "line": 3,
+      "category": "c",
+      "text": "  \"baseline_archive\": \"Role1_Sprint1_v2.zip\","
+    },
+    {
+      "path": "docs/role1/archive/v2.1/data/changes-v2.1.json",
+      "line": 37,
+      "category": "c",
+      "text": "          \"before\": \"ROLE1-DEMO-V2\","
+    },
+    {
+      "path": "docs/role1/archive/v2.1/data/changes-v2.1.json",
+      "line": 38,
+      "category": "c",
+      "text": "          \"after\": \"ROLE1-DEMO-V2.1\""
+    },
+    {
+      "path": "docs/role1/archive/v2.1/data/changes-v2.1.json",
+      "line": 213,
+      "category": "c",
+      "text": "            \"schema_version\": \"role1.fact-verification/1.0-proposed\","
+    },
+    {
+      "path": "docs/role1/archive/v2.1/data/changes-v2.1.json",
+      "line": 346,
+      "category": "c",
+      "text": "            \"schema_version\": \"role1.fact-verification/1.0-proposed\","
+    },
+    {
+      "path": "docs/role1/archive/v2.1/data/changes-v2.1.json",
+      "line": 472,
+      "category": "c",
+      "text": "            \"schema_version\": \"role1.fact-verification/1.0-proposed\","
+    },
+    {
+      "path": "docs/role1/archive/v2.1/data/changes-v2.1.json",
+      "line": 693,
+      "category": "c",
+      "text": "            \"schema_version\": \"role1.fact-verification/1.0-proposed\","
+    },
+    {
+      "path": "docs/role1/archive/v2.1/data/changes-v2.1.json",
+      "line": 762,
+      "category": "c",
+      "text": "    \"from\": \"Role1_Marketing_Escalation_Referee.pdf\","
+    },
+    {
+      "path": "docs/role1/archive/v2.1/data/changes-v2.1.json",
+      "line": 763,
+      "category": "c",
+      "text": "    \"to\": \"legacy/Role1_Marketing_Escalation_Referee.pdf\","
+    },
+    {
+      "path": "docs/role1/archive/v2.1/data/changes-v2.1.json",
+      "line": 0,
+      "category": "c",
+      "text": "filename/path match"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/data/wp1-wp2-mapping-status.json",
+      "line": 9,
+      "category": "c",
+      "text": "  \"proposal_schema\": \"role1.fact-verification/1.0-proposed\","
+    },
+    {
+      "path": "docs/role1/archive/v2.1/data/wp1-wp2-mapping-status.json",
+      "line": 0,
+      "category": "c",
+      "text": "filename/path match"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/legacy/README.md",
+      "line": 0,
+      "category": "c",
+      "text": "filename/path match"
+    },
+    {
+      "path": "docs/role1/archive/v2.1/regression-results.json",
+      "line": 0,
+      "category": "c",
+      "text": "filename/path match"
+    },
+    {
+      "path": "docs/role1/v2.1/00-index.md",
+      "line": 1,
+      "category": "c",
+      "text": "# Role 1 Sprint 1 v2.1 — sửa factual uncertainty"
+    },
+    {
+      "path": "docs/role1/v2.1/00-index.md",
+      "line": 16,
+      "category": "c",
+      "text": "- [15 GT](../../../tests/fixtures/role1/v2.1/ground-truth-cases.json), [5 Verify inputs](../../../tests/fixtures/role1/v2.1/verify-inputs.json), [Verify expected](../../../tests/fixtures/role1/v2.1/verify-expected-results.json)."
+    },
+    {
+      "path": "docs/role1/v2.1/00-index.md",
+      "line": 20,
+      "category": "c",
+      "text": "- [Diff machine-readable](../archive/v2.1/data/changes-v2.1.json); [schema proposal](../../../tests/fixtures/role1/v2.1/fact-verification.schema.json); [mapping status](../archive/v2.1/data/wp1-wp2-mapping-status.json)."
+    },
+    {
+      "path": "docs/role1/v2.1/00-index.md",
+      "line": 0,
+      "category": "c",
+      "text": "filename/path match"
+    },
+    {
+      "path": "docs/role1/v2.1/01-scope-and-process.md",
+      "line": 3,
+      "category": "c",
+      "text": "> Bộ Role 1 · Bản 2.1 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1."
+    },
+    {
+      "path": "docs/role1/v2.1/01-scope-and-process.md",
+      "line": 8,
+      "category": "c",
+      "text": "**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây."
+    },
+    {
+      "path": "docs/role1/v2.1/01-scope-and-process.md",
+      "line": 10,
+      "category": "c",
+      "text": "## 1. Mục tiêu Role 1"
+    },
+    {
+      "path": "docs/role1/v2.1/01-scope-and-process.md",
+      "line": 14,
+      "category": "c",
+      "text": "Role 1 sở hữu nghiệp vụ/nhãn kỳ vọng; đội triển khai sở hữu code. Khi khác nhau, mở defect hoặc yêu cầu đổi policy có lý do, không sửa expected chỉ để có kết quả xanh."
+    },
+    {
+      "path": "docs/role1/v2.1/01-scope-and-process.md",
+      "line": 18,
+      "category": "c",
+      "text": "| Hạng mục | Phase 1 | Sprint 1 | Bàn giao từ Role 1 |"
+    },
+    {
+      "path": "docs/role1/v2.1/01-scope-and-process.md",
+      "line": 0,
+      "category": "c",
+      "text": "filename/path match"
+    },
+    {
+      "path": "docs/role1/v2.1/02-marketing-approval-policy.md",
+      "line": 5,
+      "category": "c",
+      "text": "> Bộ Role 1 · Bản 2.1 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1."
+    },
+    {
+      "path": "docs/role1/v2.1/02-marketing-approval-policy.md",
+      "line": 10,
+      "category": "c",
+      "text": "**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây."
+    },
+    {
+      "path": "docs/role1/v2.1/02-marketing-approval-policy.md",
+      "line": 58,
+      "category": "c",
+      "text": "Rubric đề xuất: 0 = không có bằng chứng/không đánh giá được; 25 = rất thiếu; 50 = có nội dung nhưng thiếu chứng cứ quan trọng; 75 = hợp lý, có căn cứ, còn khoảng trống nhỏ; 100 = đầy đủ, nhất quán với rubric. Đây không phải phương pháp đã hiệu chuẩn; cần Role 1/PO chấm mẫu cùng nhau. Với thiếu chứng cứ phải ghi assumption/gap thay vì dựng số liệu thị trường."
+    },
+    {
+      "path": "docs/role1/v2.1/02-marketing-approval-policy.md",
+      "line": 0,
+      "category": "c",
+      "text": "filename/path match"
+    },
+    {
+      "path": "docs/role1/v2.1/03-authority-matrix.md",
+      "line": 3,
+      "category": "c",
+      "text": "> Bộ Role 1 · Bản 2.1 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1."
+    },
+    {
+      "path": "docs/role1/v2.1/03-authority-matrix.md",
+      "line": 8,
+      "category": "c",
+      "text": "**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây."
+    },
+    {
+      "path": "docs/role1/v2.1/03-authority-matrix.md",
+      "line": 0,
+      "category": "c",
+      "text": "filename/path match"
+    },
+    {
+      "path": "docs/role1/v2.1/04-escalation-policy.md",
+      "line": 5,
+      "category": "c",
+      "text": "> Bộ Role 1 · Bản 2.1 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1."
+    },
+    {
+      "path": "docs/role1/v2.1/04-escalation-policy.md",
+      "line": 8,
+      "category": "c",
+      "text": "**Căn cứ:** Scope UC_MKT_11, BR-AI-05/10/13, BR-BUD; Sprint §§3–4, 13; taxonomy kế thừa bộ Role 1 cũ."
+    },
+    {
+      "path": "docs/role1/v2.1/04-escalation-policy.md",
+      "line": 10,
+      "category": "c",
+      "text": "**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây."
+    },
+    {
+      "path": "docs/role1/v2.1/04-escalation-policy.md",
+      "line": 16,
+      "category": "c",
+      "text": "Ba category `FACT_UNCERTAIN`, `POLICY_OUT_OF_SCOPE`, `AUTHORITY_EXCEEDED` kế thừa bộ Role 1 trước, không được nêu như enum bắt buộc trong hai nguồn mới. Giữ làm metadata giải thích, tuyệt đối không ép mọi lý do vào một category sai nghĩa."
+    },
+    {
+      "path": "docs/role1/v2.1/04-escalation-policy.md",
+      "line": 0,
+      "category": "c",
+      "text": "filename/path match"
+    },
+    {
+      "path": "docs/role1/v2.1/05-ground-truth-cases.md",
+      "line": 5,
+      "category": "c",
+      "text": "> Bộ Role 1 · Bản 2.1 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1."
+    },
+    {
+      "path": "docs/role1/v2.1/05-ground-truth-cases.md",
+      "line": 8,
+      "category": "c",
+      "text": "**Căn cứ:** Gate theo Scope/Sprint; số lượng và phân nhóm kế thừa gói Role 1 cũ. Toàn bộ dữ liệu là tổng hợp."
+    },
+    {
+      "path": "docs/role1/v2.1/05-ground-truth-cases.md",
+      "line": 10,
+      "category": "c",
+      "text": "**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây."
+    },
+    {
+      "path": "docs/role1/v2.1/05-ground-truth-cases.md",
+      "line": 39,
+      "category": "c",
+      "text": "| Ảnh | [creative-pass.png](../../../tests/fixtures/role1/v2.1/images/creative-pass.png) |"
+    },
+    {
+      "path": "docs/role1/v2.1/05-ground-truth-cases.md",
+      "line": 46,
+      "category": "c",
+      "text": "**Cách chạy:** dùng đầy đủ context, plan snapshot, policy và agent outputs của GT-001 trong [ground-truth-cases.json](../../../tests/fixtures/role1/v2.1/ground-truth-cases.json); gọi decision evaluator qua test harness của app. Sau đó kiểm state/decision/audit phù hợp layer được chạy."
+    },
+    {
+      "path": "docs/role1/v2.1/05-ground-truth-cases.md",
+      "line": 63,
+      "category": "c",
+      "text": "| Ảnh | [creative-pass.png](../../../tests/fixtures/role1/v2.1/images/creative-pass.png) |"
+    },
+    {
+      "path": "docs/role1/v2.1/05-ground-truth-cases.md",
+      "line": 70,
+      "category": "c",
+      "text": "**Cách chạy:** dùng đầy đủ context, plan snapshot, policy và agent outputs của GT-002 trong [ground-truth-cases.json](../../../tests/fixtures/role1/v2.1/ground-truth-cases.json); gọi decision evaluator qua test harness của app. Sau đó kiểm state/decision/audit phù hợp layer được chạy."
+    },
+    {
+      "path": "docs/role1/v2.1/05-ground-truth-cases.md",
+      "line": 87,
+      "category": "c",
+      "text": "| Ảnh | [creative-pass.png](../../../tests/fixtures/role1/v2.1/images/creative-pass.png) |"
+    },
+    {
+      "path": "docs/role1/v2.1/05-ground-truth-cases.md",
+      "line": 94,
+      "category": "c",
+      "text": "**Cách chạy:** dùng đầy đủ context, plan snapshot, policy và agent outputs của GT-003 trong [ground-truth-cases.json](../../../tests/fixtures/role1/v2.1/ground-truth-cases.json); gọi decision evaluator qua test harness của app. Sau đó kiểm state/decision/audit phù hợp layer được chạy."
+    },
+    {
+      "path": "docs/role1/v2.1/05-ground-truth-cases.md",
+      "line": 111,
+      "category": "c",
+      "text": "| Ảnh | [creative-pass.png](../../../tests/fixtures/role1/v2.1/images/creative-pass.png) |"
+    },
+    {
+      "path": "docs/role1/v2.1/05-ground-truth-cases.md",
+      "line": 118,
+      "category": "c",
+      "text": "**Cách chạy:** dùng đầy đủ context, plan snapshot, policy và agent outputs của GT-004 trong [ground-truth-cases.json](../../../tests/fixtures/role1/v2.1/ground-truth-cases.json); gọi decision evaluator qua test harness của app. Sau đó kiểm state/decision/audit phù hợp layer được chạy."
+    },
+    {
+      "path": "docs/role1/v2.1/05-ground-truth-cases.md",
+      "line": 135,
+      "category": "c",
+      "text": "| Ảnh | [creative-pass.png](../../../tests/fixtures/role1/v2.1/images/creative-pass.png) |"
+    },
+    {
+      "path": "docs/role1/v2.1/05-ground-truth-cases.md",
+      "line": 142,
+      "category": "c",
+      "text": "**Cách chạy:** dùng đầy đủ context, plan snapshot, policy và agent outputs của GT-005 trong [ground-truth-cases.json](../../../tests/fixtures/role1/v2.1/ground-truth-cases.json); gọi decision evaluator qua test harness của app. Sau đó kiểm state/decision/audit phù hợp layer được chạy."
+    },
+    {
+      "path": "docs/role1/v2.1/05-ground-truth-cases.md",
+      "line": 159,
+      "category": "c",
+      "text": "| Ảnh | [creative-pass.png](../../../tests/fixtures/role1/v2.1/images/creative-pass.png) |"
+    },
+    {
+      "path": "docs/role1/v2.1/05-ground-truth-cases.md",
+      "line": 166,
+      "category": "c",
+      "text": "**Cách chạy:** dùng đầy đủ context, plan snapshot, policy và agent outputs của GT-006 trong [ground-truth-cases.json](../../../tests/fixtures/role1/v2.1/ground-truth-cases.json); gọi decision evaluator qua test harness của app. Sau đó kiểm state/decision/audit phù hợp layer được chạy."
+    },
+    {
+      "path": "docs/role1/v2.1/05-ground-truth-cases.md",
+      "line": 197,
+      "category": "c",
+      "text": "  \"schema_version\": \"role1.fact-verification/1.0-proposed\","
+    },
+    {
+      "path": "docs/role1/v2.1/05-ground-truth-cases.md",
+      "line": 243,
+      "category": "c",
+      "text": "**Cách chạy:** dùng JSON đầy đủ tại [ground-truth-cases.json](../../../tests/fixtures/role1/v2.1/ground-truth-cases.json). Validate fixture → xác nhận WP mapping → capture input sau adapter → gọi engine thật → kiểm route/category/reason/evidence và state/audit. Không nạp expected vào engine."
+    },
+    {
+      "path": "docs/role1/v2.1/05-ground-truth-cases.md",
+      "line": 270,
+      "category": "c",
+      "text": "  \"schema_version\": \"role1.fact-verification/1.0-proposed\","
+    },
+    {
+      "path": "docs/role1/v2.1/05-ground-truth-cases.md",
+      "line": 309,
+      "category": "c",
+      "text": "**Cách chạy:** dùng JSON đầy đủ tại [ground-truth-cases.json](../../../tests/fixtures/role1/v2.1/ground-truth-cases.json). Validate fixture → xác nhận WP mapping → capture input sau adapter → gọi engine thật → kiểm route/category/reason/evidence và state/audit. Không nạp expected vào engine."
+    },
+    {
+      "path": "docs/role1/v2.1/05-ground-truth-cases.md",
+      "line": 336,
+      "category": "c",
+      "text": "  \"schema_version\": \"role1.fact-verification/1.0-proposed\","
+    },
+    {
+      "path": "docs/role1/v2.1/05-ground-truth-cases.md",
+      "line": 368,
+      "category": "c",
+      "text": "**Cách chạy:** dùng JSON đầy đủ tại [ground-truth-cases.json](../../../tests/fixtures/role1/v2.1/ground-truth-cases.json). Validate fixture → xác nhận WP mapping → capture input sau adapter → gọi engine thật → kiểm route/category/reason/evidence và state/audit. Không nạp expected vào engine."
+    },
+    {
+      "path": "docs/role1/v2.1/05-ground-truth-cases.md",
+      "line": 381,
+      "category": "c",
+      "text": "| Ảnh | [scope-missing.png](../../../tests/fixtures/role1/v2.1/images/scope-missing.png) |"
+    },
+    {
+      "path": "docs/role1/v2.1/05-ground-truth-cases.md",
+      "line": 388,
+      "category": "c",
+      "text": "**Cách chạy:** dùng đầy đủ context, plan snapshot, policy và agent outputs của GT-010 trong [ground-truth-cases.json](../../../tests/fixtures/role1/v2.1/ground-truth-cases.json); gọi decision evaluator qua test harness của app. Sau đó kiểm state/decision/audit phù hợp layer được chạy."
+    },
+    {
+      "path": "docs/role1/v2.1/05-ground-truth-cases.md",
+      "line": 405,
+      "category": "c",
+      "text": "| Ảnh | [scope-missing.png](../../../tests/fixtures/role1/v2.1/images/scope-missing.png) |"
+    },
+    {
+      "path": "docs/role1/v2.1/05-ground-truth-cases.md",
+      "line": 412,
+      "category": "c",
+      "text": "**Cách chạy:** dùng đầy đủ context, plan snapshot, policy và agent outputs của GT-011 trong [ground-truth-cases.json](../../../tests/fixtures/role1/v2.1/ground-truth-cases.json); gọi decision evaluator qua test harness của app. Sau đó kiểm state/decision/audit phù hợp layer được chạy."
+    },
+    {
+      "path": "docs/role1/v2.1/05-ground-truth-cases.md",
+      "line": 429,
+      "category": "c",
+      "text": "| Ảnh | [creative-pass.png](../../../tests/fixtures/role1/v2.1/images/creative-pass.png) |"
+    },
+    {
+      "path": "docs/role1/v2.1/05-ground-truth-cases.md",
+      "line": 436,
+      "category": "c",
+      "text": "**Cách chạy:** dùng đầy đủ context, plan snapshot, policy và agent outputs của GT-012 trong [ground-truth-cases.json](../../../tests/fixtures/role1/v2.1/ground-truth-cases.json); gọi decision evaluator qua test harness của app. Sau đó kiểm state/decision/audit phù hợp layer được chạy."
+    },
+    {
+      "path": "docs/role1/v2.1/05-ground-truth-cases.md",
+      "line": 453,
+      "category": "c",
+      "text": "| Ảnh | [creative-pass.png](../../../tests/fixtures/role1/v2.1/images/creative-pass.png) |"
+    },
+    {
+      "path": "docs/role1/v2.1/05-ground-truth-cases.md",
+      "line": 460,
+      "category": "c",
+      "text": "**Cách chạy:** dùng đầy đủ context, plan snapshot, policy và agent outputs của GT-013 trong [ground-truth-cases.json](../../../tests/fixtures/role1/v2.1/ground-truth-cases.json); gọi decision evaluator qua test harness của app. Sau đó kiểm state/decision/audit phù hợp layer được chạy."
+    },
+    {
+      "path": "docs/role1/v2.1/05-ground-truth-cases.md",
+      "line": 477,
+      "category": "c",
+      "text": "| Ảnh | [hard-claim-demo.png](../../../tests/fixtures/role1/v2.1/images/hard-claim-demo.png) |"
+    },
+    {
+      "path": "docs/role1/v2.1/05-ground-truth-cases.md",
+      "line": 484,
+      "category": "c",
+      "text": "**Cách chạy:** dùng đầy đủ context, plan snapshot, policy và agent outputs của GT-014 trong [ground-truth-cases.json](../../../tests/fixtures/role1/v2.1/ground-truth-cases.json); gọi decision evaluator qua test harness của app. Sau đó kiểm state/decision/audit phù hợp layer được chạy."
+    },
+    {
+      "path": "docs/role1/v2.1/05-ground-truth-cases.md",
+      "line": 501,
+      "category": "c",
+      "text": "| Ảnh | [synthetic-private-demo.png](../../../tests/fixtures/role1/v2.1/images/synthetic-private-demo.png) |"
+    },
+    {
+      "path": "docs/role1/v2.1/05-ground-truth-cases.md",
+      "line": 508,
+      "category": "c",
+      "text": "**Cách chạy:** dùng đầy đủ context, plan snapshot, policy và agent outputs của GT-015 trong [ground-truth-cases.json](../../../tests/fixtures/role1/v2.1/ground-truth-cases.json); gọi decision evaluator qua test harness của app. Sau đó kiểm state/decision/audit phù hợp layer được chạy."
+    },
+    {
+      "path": "docs/role1/v2.1/05-ground-truth-cases.md",
+      "line": 0,
+      "category": "c",
+      "text": "filename/path match"
+    },
+    {
+      "path": "docs/role1/v2.1/06-test-case-catalog.md",
+      "line": 3,
+      "category": "c",
+      "text": "> Bộ Role 1 · Bản 2.1 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1."
+    },
+    {
+      "path": "docs/role1/v2.1/06-test-case-catalog.md",
+      "line": 8,
+      "category": "c",
+      "text": "**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây."
+    },
+    {
+      "path": "docs/role1/v2.1/06-test-case-catalog.md",
+      "line": 227,
+      "category": "c",
+      "text": "- **NEW-01:** tạo kế hoạch đủ required, budget 73.456.789 VND, tên/kênh/ảnh mới không có case_id. Trước khi chạy, Role 1 khóa policy; nếu dùng fixture đủ gate thì expected AUTO_APPROVED; nếu model local sinh score/confidence khác thì expected route tính từ output đã xác minh, không ép model chấm theo tên case."
+    },
+    {
+      "path": "docs/role1/v2.1/06-test-case-catalog.md",
+      "line": 228,
+      "category": "c",
+      "text": "- **NEW-02:** kế hoạch hợp lệ về form nhưng ảnh có phần chữ không đọc chắc. Mock cấu hình VLM 0.62, media REVIEW_REQUIRED; expected HUMAN_REVIEW_REQUIRED và FACT_UNCERTAIN. Với provider thật, Role 1 phải xem ảnh/bằng chứng và gán nhãn trước khi xem quyết định hệ thống."
+    },
+    {
+      "path": "docs/role1/v2.1/06-test-case-catalog.md",
+      "line": 0,
+      "category": "c",
+      "text": "filename/path match"
+    },
+    {
+      "path": "docs/role1/v2.1/07-verify-cases.md",
+      "line": 5,
+      "category": "c",
+      "text": "> Bộ Role 1 · Bản 2.1 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1."
+    },
+    {
+      "path": "docs/role1/v2.1/07-verify-cases.md",
+      "line": 8,
+      "category": "c",
+      "text": "**Căn cứ:** Số lượng/ý tưởng Verify kế thừa Role 1 cũ; gate và workflow cập nhật theo Sprint."
+    },
+    {
+      "path": "docs/role1/v2.1/07-verify-cases.md",
+      "line": 10,
+      "category": "c",
+      "text": "**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây."
+    },
+    {
+      "path": "docs/role1/v2.1/07-verify-cases.md",
+      "line": 26,
+      "category": "c",
+      "text": "[verify-inputs.json](../../../tests/fixtures/role1/v2.1/verify-inputs.json) có 5 input đầy đủ; [base-policy.json](../../../tests/fixtures/role1/v2.1/base-policy.json) là cấu hình demo tương ứng. Actual chưa có. Input giữ loại trường của file 12/16: context + plan_snapshot + policy_snapshot + agent_outputs + conflict/error metadata + input_hash."
+    },
+    {
+      "path": "docs/role1/v2.1/07-verify-cases.md",
+      "line": 0,
+      "category": "c",
+      "text": "filename/path match"
+    },
+    {
+      "path": "docs/role1/v2.1/08-verify-expected-results.md",
+      "line": 5,
+      "category": "c",
+      "text": "> Bộ Role 1 · Bản 2.1 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1."
+    },
+    {
+      "path": "docs/role1/v2.1/08-verify-expected-results.md",
+      "line": 10,
+      "category": "c",
+      "text": "**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây."
+    },
+    {
+      "path": "docs/role1/v2.1/08-verify-expected-results.md",
+      "line": 22,
+      "category": "c",
+      "text": "**Phân bổ dự kiến:** 3 auto, 2 human. Đây là nội dung expected, không phải “đã chạy đạt 3 auto/2 human”. Kết quả từng trường đầy đủ tại [verify-expected-results.json](../../../tests/fixtures/role1/v2.1/verify-expected-results.json)."
+    },
+    {
+      "path": "docs/role1/v2.1/08-verify-expected-results.md",
+      "line": 40,
+      "category": "c",
+      "text": "Role 1 giữ nhãn; thay đổi cần version + lý do + nguồn + ca ảnh hưởng. Đội triển khai không đổi nhãn để khớp bug. Nếu phát hiện expected sai nguồn thì Role 1 sửa có changelog rồi rerun; không cố giữ expected sai. File JSON `actual:null`, `execution_status:NOT_RUN` chỉ được dùng làm trạng thái khởi đầu; report thực thi lưu nơi khác."
+    },
+    {
+      "path": "docs/role1/v2.1/08-verify-expected-results.md",
+      "line": 0,
+      "category": "c",
+      "text": "filename/path match"
+    },
+    {
+      "path": "docs/role1/v2.1/09-measurement-plan.md",
+      "line": 3,
+      "category": "c",
+      "text": "> Bộ Role 1 · Bản 2.1 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1."
+    },
+    {
+      "path": "docs/role1/v2.1/09-measurement-plan.md",
+      "line": 6,
+      "category": "c",
+      "text": "**Căn cứ:** Scope AI-10, §18; Sprint §§9–10; đề mục measurement kế thừa Role 1 cũ."
+    },
+    {
+      "path": "docs/role1/v2.1/09-measurement-plan.md",
+      "line": 8,
+      "category": "c",
+      "text": "**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây."
+    },
+    {
+      "path": "docs/role1/v2.1/09-measurement-plan.md",
+      "line": 52,
+      "category": "c",
+      "text": "Đề xuất đạt 5/5; Role 1 ghi chấm và nhận xét. Câu chữ được phép khác expected nếu giữ đủ ý và không thêm kết luận sai."
+    },
+    {
+      "path": "docs/role1/v2.1/09-measurement-plan.md",
+      "line": 0,
+      "category": "c",
+      "text": "filename/path match"
+    },
+    {
+      "path": "docs/role1/v2.1/10-uat-report.md",
+      "line": 3,
+      "category": "c",
+      "text": "> Bộ Role 1 · Bản 2.1 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1."
+    },
+    {
+      "path": "docs/role1/v2.1/10-uat-report.md",
+      "line": 6,
+      "category": "c",
+      "text": "**Căn cứ:** Sprint §§9–10, 13; Scope §18; kế thừa đề mục UAT Role 1."
+    },
+    {
+      "path": "docs/role1/v2.1/10-uat-report.md",
+      "line": 8,
+      "category": "c",
+      "text": "**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây."
+    },
+    {
+      "path": "docs/role1/v2.1/10-uat-report.md",
+      "line": 21,
+      "category": "c",
+      "text": "| Tester / reviewer | Role 1 / đại diện PO, tên thực chưa được cung cấp |"
+    },
+    {
+      "path": "docs/role1/v2.1/10-uat-report.md",
+      "line": 22,
+      "category": "c",
+      "text": "| Dataset | ROLE1-DEMO-V2, GT-001..015, VERIFY-A01..A05 |"
+    },
+    {
+      "path": "docs/role1/v2.1/10-uat-report.md",
+      "line": 32,
+      "category": "c",
+      "text": "2. Role 1 đối chiếu config thực với profile demo; ghi mọi khác biệt trước khi chạy, không đổi dataset ngầm."
+    },
+    {
+      "path": "docs/role1/v2.1/10-uat-report.md",
+      "line": 88,
+      "category": "c",
+      "text": "| Role 1 | Expected, coverage, các defect nghiệp vụ | Chưa ký |"
+    },
+    {
+      "path": "docs/role1/v2.1/10-uat-report.md",
+      "line": 0,
+      "category": "c",
+      "text": "filename/path match"
+    },
+    {
+      "path": "docs/role1/v2.1/11-submission-content.md",
+      "line": 3,
+      "category": "c",
+      "text": "> Bộ Role 1 · Bản 2.1 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1."
+    },
+    {
+      "path": "docs/role1/v2.1/11-submission-content.md",
+      "line": 6,
+      "category": "c",
+      "text": "**Căn cứ:** Sprint §§1, 8, 10, 13–14; nội dung submission kế thừa bộ Role 1 cũ."
+    },
+    {
+      "path": "docs/role1/v2.1/11-submission-content.md",
+      "line": 8,
+      "category": "c",
+      "text": "**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây."
+    },
+    {
+      "path": "docs/role1/v2.1/11-submission-content.md",
+      "line": 62,
+      "category": "c",
+      "text": "| Chưa chạy | Chưa có | Chưa triển khai app trong task này | Đây là bộ tài liệu Role 1 | NOT_RUN | Chưa có |"
+    },
+    {
+      "path": "docs/role1/v2.1/11-submission-content.md",
+      "line": 0,
+      "category": "c",
+      "text": "filename/path match"
+    },
+    {
+      "path": "docs/role1/v2.1/12-domain-data-dictionary.md",
+      "line": 5,
+      "category": "c",
+      "text": "> Bộ Role 1 · Bản 2.1 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1."
+    },
+    {
+      "path": "docs/role1/v2.1/12-domain-data-dictionary.md",
+      "line": 10,
+      "category": "c",
+      "text": "**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây."
+    },
+    {
+      "path": "docs/role1/v2.1/12-domain-data-dictionary.md",
+      "line": 0,
+      "category": "c",
+      "text": "filename/path match"
+    },
+    {
+      "path": "docs/role1/v2.1/13-source-traceability.md",
+      "line": 3,
+      "category": "c",
+      "text": "> Bộ Role 1 · Bản 2.1 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1."
+    },
+    {
+      "path": "docs/role1/v2.1/13-source-traceability.md",
+      "line": 6,
+      "category": "c",
+      "text": "**Căn cứ:** Hai file người dùng vừa gửi đã đọc theo thứ tự Scope → Sprint; đối chiếu bộ Role 1 trước sau đó."
+    },
+    {
+      "path": "docs/role1/v2.1/13-source-traceability.md",
+      "line": 8,
+      "category": "c",
+      "text": "**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây."
+    },
+    {
+      "path": "docs/role1/v2.1/13-source-traceability.md",
+      "line": 19,
+      "category": "c",
+      "text": "File `role-1-role-3-task-allocation (1).md` không còn ở đường dẫn người dùng gửi trước đây. Đã tìm trong các thư mục liên quan được đọc; chưa có bản gốc để đọc lại nguyên văn. Bộ `outputs/role1-package` và bản sao trong Downloads/zip là tài liệu assistant tạo trước, chỉ dùng khôi phục đề mục, không coi là yêu cầu mới được PO xác nhận. Người dùng xác nhận muốn làm Role 1 nhưng chưa cung cấp đường dẫn mới."
+    },
+    {
+      "path": "docs/role1/v2.1/13-source-traceability.md",
+      "line": 21,
+      "category": "c",
+      "text": "Do đó, bộ này có độ phủ đầy đủ **các đề mục Role 1 đang còn trong gói cũ** và quy tắc Scope/Sprint đọc được; chưa thể chứng nhận khớp từng dòng của file phân công Role nguyên bản. Đây là giới hạn nguồn cụ thể, không phải phần yêu cầu bị tự ý bỏ qua."
+    },
+    {
+      "path": "docs/role1/v2.1/13-source-traceability.md",
+      "line": 23,
+      "category": "c",
+      "text": "## 2. Ma trận đề mục Role 1 kế thừa"
+    },
+    {
+      "path": "docs/role1/v2.1/13-source-traceability.md",
+      "line": 40,
+      "category": "c",
+      "text": "File 13–17 bổ trợ nguồn, handoff, quyết định mở, contract và seed để app dễ tích hợp. Không chuyển công việc triển khai code của vai trò khác thành tuyên bố Role 1 đã hoàn tất."
+    },
+    {
+      "path": "docs/role1/v2.1/13-source-traceability.md",
+      "line": 0,
+      "category": "c",
+      "text": "filename/path match"
+    },
+    {
+      "path": "docs/role1/v2.1/14-sprint-backlog-and-handoff.md",
+      "line": 1,
+      "category": "c",
+      "text": "# 14 · Backlog Role 1 và bàn giao cho đội triển khai"
+    },
+    {
+      "path": "docs/role1/v2.1/14-sprint-backlog-and-handoff.md",
+      "line": 3,
+      "category": "c",
+      "text": "> Bộ Role 1 · Bản 2.1 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1."
+    },
+    {
+      "path": "docs/role1/v2.1/14-sprint-backlog-and-handoff.md",
+      "line": 6,
+      "category": "c",
+      "text": "**Căn cứ:** Sprint §§7–11; thứ tự đề mục kế thừa bộ Role 1 cũ, chưa xác minh lại phân công Role gốc."
+    },
+    {
+      "path": "docs/role1/v2.1/14-sprint-backlog-and-handoff.md",
+      "line": 8,
+      "category": "c",
+      "text": "**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây."
+    },
+    {
+      "path": "docs/role1/v2.1/14-sprint-backlog-and-handoff.md",
+      "line": 12,
+      "category": "c",
+      "text": "Trong task này Role 1 tạo baseline nghiệp vụ, nhãn expected và tiêu chí nghiệm thu. Không chạy triển khai 72 giờ, không khẳng định đã hoàn thành WP1–WP6. Nội dung “dừng xác nhận trước triển khai” ở master prompt Sprint là hướng dẫn cho một yêu cầu triển khai riêng, không buộc dừng việc soạn tài liệu hiện tại."
+    },
+    {
+      "path": "docs/role1/v2.1/14-sprint-backlog-and-handoff.md",
+      "line": 14,
+      "category": "c",
+      "text": "Tên người/Role 2/Role 3 và ownership nguyên văn cần đối chiếu lại file phân công khi có. Các cột “đội triển khai/PO” dưới là nhóm trách nhiệm đề xuất, không phải danh sách nhân sự đã được giao chính thức."
+    },
+    {
+      "path": "docs/role1/v2.1/14-sprint-backlog-and-handoff.md",
+      "line": 18,
+      "category": "c",
+      "text": "| WP | Việc Role 1 cung cấp | Việc đội triển khai làm | Điều kiện để Role 1 review |"
+    },
+    {
+      "path": "docs/role1/v2.1/14-sprint-backlog-and-handoff.md",
+      "line": 53,
+      "category": "c",
+      "text": "- [ ] Role 1 khóa expected version trước UAT; actual/evidence ghi riêng."
+    },
+    {
+      "path": "docs/role1/v2.1/14-sprint-backlog-and-handoff.md",
+      "line": 0,
+      "category": "c",
+      "text": "filename/path match"
+    },
+    {
+      "path": "docs/role1/v2.1/15-open-decisions-and-change-log.md",
+      "line": 1,
+      "category": "c",
+      "text": "# 15 · Quyết định còn mở và thay đổi so với bộ Role 1 cũ"
+    },
+    {
+      "path": "docs/role1/v2.1/15-open-decisions-and-change-log.md",
+      "line": 3,
+      "category": "c",
+      "text": "> Bộ Role 1 · Bản 2.1 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1."
+    },
+    {
+      "path": "docs/role1/v2.1/15-open-decisions-and-change-log.md",
+      "line": 6,
+      "category": "c",
+      "text": "**Căn cứ:** Đối chiếu hai nguồn mới với outputs/role1-package, không coi tài liệu assistant cũ là nguồn có thẩm quyền."
+    },
+    {
+      "path": "docs/role1/v2.1/15-open-decisions-and-change-log.md",
+      "line": 8,
+      "category": "c",
+      "text": "**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây."
+    },
+    {
+      "path": "docs/role1/v2.1/15-open-decisions-and-change-log.md",
+      "line": 26,
+      "category": "c",
+      "text": "| OQ-09 | Critical gaps và rubric chấm score | Scope yêu cầu output gaps, trọng số; chưa có rubric chi tiết/cách block | Role 1 + PO + AI | Rubric và gap blocking là đề xuất; case nền dùng gaps rỗng | Chốt từng tiêu chí, calibration, rounding và human disagreement | OPEN |"
+    },
+    {
+      "path": "docs/role1/v2.1/15-open-decisions-and-change-log.md",
+      "line": 30,
+      "category": "c",
+      "text": "| OQ-13 | File phân công Role nguyên văn | Đường dẫn role-1-role-3-task-allocation (1).md không còn | Người cung cấp tài liệu | Kế thừa danh sách đầu việc từ gói Role 1 cũ; chưa xác minh nguyên văn | Đối chiếu lại số case/định dạng submission/ownership khi có file | OPEN |"
+    },
+    {
+      "path": "docs/role1/v2.1/15-open-decisions-and-change-log.md",
+      "line": 0,
+      "category": "c",
+      "text": "filename/path match"
+    },
+    {
+      "path": "docs/role1/v2.1/16-ai-contract-and-review-screen.md",
+      "line": 5,
+      "category": "c",
+      "text": "> Bộ Role 1 · Bản 2.1 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1."
+    },
+    {
+      "path": "docs/role1/v2.1/16-ai-contract-and-review-screen.md",
+      "line": 10,
+      "category": "c",
+      "text": "**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây."
+    },
+    {
+      "path": "docs/role1/v2.1/16-ai-contract-and-review-screen.md",
+      "line": 28,
+      "category": "c",
+      "text": "  \"schema_version\": \"ROLE1-CONTRACT-2.0\","
+    },
+    {
+      "path": "docs/role1/v2.1/16-ai-contract-and-review-screen.md",
+      "line": 0,
+      "category": "c",
+      "text": "filename/path match"
+    },
+    {
+      "path": "docs/role1/v2.1/17-demo-data-and-seed-guide.md",
+      "line": 3,
+      "category": "c",
+      "text": "> Bộ Role 1 · Bản 2.1 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1."
+    },
+    {
+      "path": "docs/role1/v2.1/17-demo-data-and-seed-guide.md",
+      "line": 8,
+      "category": "c",
+      "text": "**Quy ước:** `[NGUỒN]` = yêu cầu đọc được trong hai file mới; `[ĐỀ XUẤT]` = thiết kế bổ sung cần chốt; `[DEMO]` = dữ liệu tổng hợp; `[CHƯA CHẠY]` = chưa có kết quả thực thi. Danh sách đầu việc Role 1 kế thừa bộ cũ; chưa đối chiếu lại được nguyên văn file phân công Role đã không còn tại đường dẫn trước đây."
+    },
+    {
+      "path": "docs/role1/v2.1/17-demo-data-and-seed-guide.md",
+      "line": 14,
+      "category": "c",
+      "text": "| [base-policy.json](../../../tests/fixtures/role1/v2.1/base-policy.json) | Ngưỡng, trọng số, mode, limit demo | Seed profile v2 cần review OQ-01 |"
+    },
+    {
+      "path": "docs/role1/v2.1/17-demo-data-and-seed-guide.md",
+      "line": 15,
+      "category": "c",
+      "text": "| [ground-truth-cases.json](../../../tests/fixtures/role1/v2.1/ground-truth-cases.json) | 15 input đầy đủ + expected + actual null | Policy contract tests |"
+    },
+    {
+      "path": "docs/role1/v2.1/17-demo-data-and-seed-guide.md",
+      "line": 16,
+      "category": "c",
+      "text": "| [verify-inputs.json](../../../tests/fixtures/role1/v2.1/verify-inputs.json) | 5 input độc lập expected | Runner Verify |"
+    },
+    {
+      "path": "docs/role1/v2.1/17-demo-data-and-seed-guide.md",
+      "line": 17,
+      "category": "c",
+      "text": "| [verify-expected-results.json](../../../tests/fixtures/role1/v2.1/verify-expected-results.json) | Nhãn Verify riêng | Không gửi oracle vào engine |"
+    },
+    {
+      "path": "docs/role1/v2.1/17-demo-data-and-seed-guide.md",
+      "line": 18,
+      "category": "c",
+      "text": "| [fixture-manifest.json](../../../tests/fixtures/role1/v2.1/fixture-manifest.json) | SHA-256 của file dữ liệu/ảnh | Kiểm toàn vẹn artifact seed |"
+    },
+    {
+      "path": "docs/role1/v2.1/17-demo-data-and-seed-guide.md",
+      "line": 19,
+      "category": "c",
+      "text": "| [mock-provider-modes.json](../../../tests/fixtures/role1/v2.1/mock-provider-modes.json) | PASS, low confidence, timeout, invalid output | Mock VLM/fault injection test |"
+    },
+    {
+      "path": "docs/role1/v2.1/17-demo-data-and-seed-guide.md",
+      "line": 30,
+      "category": "c",
+      "text": "- Dataset version ROLE1-DEMO-V2; policy DEMO-POLICY-V2; currency VND; scope DEMO-DEPT-01."
+    },
+    {
+      "path": "docs/role1/v2.1/17-demo-data-and-seed-guide.md",
+      "line": 51,
+      "category": "c",
+      "text": "| [creative-pass.png](../../../tests/fixtures/role1/v2.1/images/creative-pass.png) | CHIẾN DỊCH DEMO | db5193a49b36567a… |"
+    },
+    {
+      "path": "docs/role1/v2.1/17-demo-data-and-seed-guide.md",
+      "line": 52,
+      "category": "c",
+      "text": "| [budget-conflict.png](../../../tests/fixtures/role1/v2.1/images/budget-conflict.png) | NGÂN SÁCH CẦN ĐỐI CHIẾU | 6f0c5dc2a9edc284… |"
+    },
+    {
+      "path": "docs/role1/v2.1/17-demo-data-and-seed-guide.md",
+      "line": 53,
+      "category": "c",
+      "text": "| [kpi-conflict.png](../../../tests/fixtures/role1/v2.1/images/kpi-conflict.png) | KPI TRONG ẢNH DEMO | 13c73ad43b335d29… |"
+    },
+    {
+      "path": "docs/role1/v2.1/17-demo-data-and-seed-guide.md",
+      "line": 54,
+      "category": "c",
+      "text": "| [creative-low-quality.png](../../../tests/fixtures/role1/v2.1/images/creative-low-quality.png) | ẢNH DEMO CHẤT LƯỢNG THẤP | 4eb86ba25a3dcd82… |"
+    },
+    {
+      "path": "docs/role1/v2.1/17-demo-data-and-seed-guide.md",
+      "line": 55,
+      "category": "c",
+      "text": "| [scope-missing.png](../../../tests/fixtures/role1/v2.1/images/scope-missing.png) | PHẠM VI DEMO CHƯA CÓ POLICY | c588d0138629b371… |"
+    },
+    {
+      "path": "docs/role1/v2.1/17-demo-data-and-seed-guide.md",
+      "line": 56,
+      "category": "c",
+      "text": "| [hard-claim-demo.png](../../../tests/fixtures/role1/v2.1/images/hard-claim-demo.png) | VI PHẠM QUY TẮC DEMO | ca08398eb4e67de2… |"
+    },
+    {
+      "path": "docs/role1/v2.1/17-demo-data-and-seed-guide.md",
+      "line": 57,
+      "category": "c",
+      "text": "| [synthetic-private-demo.png](../../../tests/fixtures/role1/v2.1/images/synthetic-private-demo.png) | THÔNG TIN KHÁCH HÀNG GIẢ LẬP | 3e87fb31cd011af3… |"
+    },
+    {
+      "path": "docs/role1/v2.1/17-demo-data-and-seed-guide.md",
+      "line": 0,
+      "category": "c",
+      "text": "filename/path match"
+    },
+    {
+      "path": "docs/role1/v2.1/18-fact-uncertainty-correction.md",
+      "line": 32,
+      "category": "c",
+      "text": "Tham chiếu sản phẩm: Scope BR-AI-10; Sprint §4 về unresolved conflicts và §9.10 về VLM confidence; taxonomy FACT_UNCERTAIN trong Role 1. Không giả định ID R1-FIX-* có trong runtime."
+    },
+    {
+      "path": "docs/role1/v2.1/18-fact-uncertainty-correction.md",
+      "line": 0,
+      "category": "c",
+      "text": "filename/path match"
+    },
+    {
+      "path": "docs/role1/v2.1/19-wp1-wp2-mapping-and-regression.md",
+      "line": 0,
+      "category": "c",
+      "text": "filename/path match"
+    },
+    {
+      "path": "docs/role1/v2.1/CHANGELOG-v2.1.md",
+      "line": 3,
+      "category": "c",
+      "text": "Baseline: Role1_Sprint1_v2.zip tại Downloads, SHA-256: 096549169b53b84d4b3f68d5ce7c535c59e57355132b7d8a32b1e617fe583e43."
+    },
+    {
+      "path": "docs/role1/v2.1/CHANGELOG-v2.1.md",
+      "line": 37,
+      "category": "c",
+      "text": "| replace | /dataset_version | \"ROLE1-DEMO-V2\" | \"ROLE1-DEMO-V2.1\" |"
+    },
+    {
+      "path": "docs/role1/v2.1/CHANGELOG-v2.1.md",
+      "line": 73,
+      "category": "c",
+      "text": "| add | /6/input/fact_verification/schema_version | ABSENT | \"role1.fact-verification/1.0-proposed\" |"
+    },
+    {
+      "path": "docs/role1/v2.1/CHANGELOG-v2.1.md",
+      "line": 125,
+      "category": "c",
+      "text": "| add | /7/input/fact_verification/schema_version | ABSENT | \"role1.fact-verification/1.0-proposed\" |"
+    },
+    {
+      "path": "docs/role1/v2.1/CHANGELOG-v2.1.md",
+      "line": 172,
+      "category": "c",
+      "text": "| add | /8/input/fact_verification/schema_version | ABSENT | \"role1.fact-verification/1.0-proposed\" |"
+    },
+    {
+      "path": "docs/role1/v2.1/CHANGELOG-v2.1.md",
+      "line": 241,
+      "category": "c",
+      "text": "| add | /3/input/fact_verification/schema_version | ABSENT | \"role1.fact-verification/1.0-proposed\" |"
+    },
+    {
+      "path": "docs/role1/v2.1/CHANGELOG-v2.1.md",
+      "line": 0,
+      "category": "c",
+      "text": "filename/path match"
+    },
+    {
+      "path": "docs/role1/v2.1/package-manifest.json",
+      "line": 212,
+      "category": "c",
+      "text": "      \"path\": \"legacy/Role1_Marketing_Escalation_Referee.pdf\","
+    },
+    {
+      "path": "docs/role1/v2.1/package-manifest.json",
+      "line": 0,
+      "category": "c",
+      "text": "filename/path match"
+    },
+    {
+      "path": "docs/role1/v2.1/validation-report.md",
+      "line": 1,
+      "category": "c",
+      "text": "# Kiểm tra gói Role 1 Sprint 1 v2.1"
+    },
+    {
+      "path": "docs/role1/v2.1/validation-report.md",
+      "line": 16,
+      "category": "c",
+      "text": "Code để chạy lại: [tools/validate_package.py](../../../role1-sprint1-v2.1/tools/validate_package.py)."
+    },
+    {
+      "path": "docs/role1/v2.1/validation-report.md",
+      "line": 37,
+      "category": "c",
+      "text": "Integration note: run the command above from the original `role1-sprint1-v2.1/` directory. Its validator relies on the original package layout; this imported documentation directory is not an executable package copy."
+    },
+    {
+      "path": "docs/role1/v2.1/validation-report.md",
+      "line": 0,
+      "category": "c",
+      "text": "filename/path match"
+    },
+    {
+      "path": "frontend/UI_FLOW.md",
+      "line": 1,
+      "category": "a",
+      "text": "# UI FLOW — Luồng hoạt động giao diện (Role 3)"
+    },
+    {
+      "path": "frontend/UI_FLOW.md",
+      "line": 4,
+      "category": "a",
+      "text": "> Nguồn: mục 3 (Role 3), mục 4, mục 5 và mục 6 trong tài liệu nhiệm vụ tổng quát."
+    },
+    {
+      "path": "frontend/UI_FLOW.md",
+      "line": 5,
+      "category": "a",
+      "text": "> Đề xuất đặt file tại `src/frontend/UI_FLOW.md` (thuộc quyền sở hữu của Role 3)."
+    },
+    {
+      "path": "frontend/UI_FLOW.md",
+      "line": 243,
+      "category": "a",
+      "text": "- Hiển thị bộ quy định do Role 1 sở hữu; Role 3 chỉ hiển thị."
+    },
+    {
+      "path": "frontend/UI_FLOW.md",
+      "line": 332,
+      "category": "a",
+      "text": "| 6 | Quy tắc hiển thị score 70 (bằng và lớn hơn) | UI chỉ hiển thị giá trị backend trả về, Role 1 xác nhận quy tắc |"
+    },
+    {
+      "path": "frontend/e2e/workflow.spec.ts",
+      "line": 4,
+      "category": "b",
+      "text": "const image = resolve(import.meta.dirname, '../../tests/fixtures/role1/v2.1/images/creative-pass.png')"
+    },
+    {
+      "path": "frontend/src/mocks/index.ts",
+      "line": 1,
+      "category": "a",
+      "text": "/** Mock scenarios are intentionally empty until Role 1/Role 2 confirm contract fixtures. */"
+    },
+    {
+      "path": "src/backend/demo.py",
+      "line": 1,
+      "category": "b",
+      "text": "\"\"\"Explicit synthetic demo configuration; no Role 1 expectations at runtime.\"\"\""
+    },
+    {
+      "path": "src/verify/observation.py",
+      "line": 33,
+      "category": "b",
+      "text": "The Role 1 hard-violation GT cases intentionally have no expected category, and"
+    },
+    {
+      "path": "src/verify/observation.py",
+      "line": 60,
+      "category": "b",
+      "text": "                correlation_id=d.get('correlation_id', 'role1-run'), assertions=assertions,"
+    },
+    {
+      "path": "src/verify/role1_adapter.py",
+      "line": 1,
+      "category": "b",
+      "text": "\"\"\"SYNTHETIC input-only Role 1 adapter. Never accepts a case envelope/oracle."
+    },
+    {
+      "path": "src/verify/role1_adapter.py",
+      "line": 19,
+      "category": "b",
+      "text": "MODEL = 'role1-mock-adapter-v2.1'"
+    },
+    {
+      "path": "src/verify/role1_adapter.py",
+      "line": 30,
+      "category": "b",
+      "text": "            and set(value) <= set(keys) | set(optional), 'Missing or unknown Role 1 fields')"
+    },
+    {
+      "path": "src/verify/role1_adapter.py",
+      "line": 66,
+      "category": "b",
+      "text": "        require(facts['schema_version'] == 'role1.fact-verification/1.0-proposed'"
+    },
+    {
+      "path": "src/verify/role1_adapter.py",
+      "line": 130,
+      "category": "b",
+      "text": "class Role1MockProvider(VisualModelProvider):"
+    },
+    {
+      "path": "src/verify/role1_adapter.py",
+      "line": 0,
+      "category": "b",
+      "text": "filename/path match"
+    },
+    {
+      "path": "src/verify/runner.py",
+      "line": 1,
+      "category": "b",
+      "text": "\"\"\"Execute Role 1 fixtures through WP3/WP4 before loading the assertion oracle.\"\"\""
+    },
+    {
+      "path": "src/verify/runner.py",
+      "line": 16,
+      "category": "b",
+      "text": "from src.verify.role1_adapter import payload_from_input, configuration_from_input, Role1MockProvider"
+    },
+    {
+      "path": "src/verify/runner.py",
+      "line": 18,
+      "category": "b",
+      "text": "FIXTURES = Path(__file__).resolve().parents[2] / 'tests/fixtures/role1/v2.1'"
+    },
+    {
+      "path": "src/verify/runner.py",
+      "line": 30,
+      "category": "b",
+      "text": "                                   idempotency_key='draft', correlation_id='role1-run')"
+    },
+    {
+      "path": "src/verify/runner.py",
+      "line": 41,
+      "category": "b",
+      "text": "                                             correlation_id='role1-run')"
+    },
+    {
+      "path": "src/verify/runner.py",
+      "line": 45,
+      "category": "b",
+      "text": "                                          idempotency_key='submit', correlation_id='role1-run')"
+    },
+    {
+      "path": "src/verify/runner.py",
+      "line": 46,
+      "category": "b",
+      "text": "        pipeline = ApprovalPipelineAdapter(workflow, EvaluationOrchestrator(Role1MockProvider(data, bindings), max_retries=0))"
+    },
+    {
+      "path": "src/verify/runner.py",
+      "line": 70,
+      "category": "b",
+      "text": "    # Role 1 explicitly leaves category null for hard-violation cases. WP1 requires"
+    },
+    {
+      "path": "src/verify/runner.py",
+      "line": 130,
+      "category": "b",
+      "text": "    parser.add_argument('--output', type=Path, default=Path('runtime/role1-actual.json'))"
+    },
+    {
+      "path": "tasks/plan.md",
+      "line": 5,
+      "category": "a",
+      "text": "integration/role1-role3-frontend. Preserve initial uncommitted work."
+    },
+    {
+      "path": "tasks/plan.md",
+      "line": 7,
+      "category": "a",
+      "text": "1. Import immutable Role 1 references and fixture copies; strict input-only"
+    },
+    {
+      "path": "tasks/plan.md",
+      "line": 22,
+      "category": "a",
+      "text": "Open Role 1 proposals remain proposals and do not change production policy."
+    },
+    {
+      "path": "tasks/todo.md",
+      "line": 4,
+      "category": "a",
+      "text": "- [x] Map Role 1 into existing schema; all 15 GT and 5 Verify execute application."
+    },
+    {
+      "path": "tests/fixtures/role1/v2.1/README.md",
+      "line": 1,
+      "category": "c",
+      "text": "# Role 1 synthetic test fixtures"
+    },
+    {
+      "path": "tests/fixtures/role1/v2.1/README.md",
+      "line": 3,
+      "category": "c",
+      "text": "Source: extracted role1-sprint1-v2.1 package. JSON and image bytes are preserved."
+    },
+    {
+      "path": "tests/fixtures/role1/v2.1/README.md",
+      "line": 12,
+      "category": "c",
+      "text": "See docs/integration/role1-contract-mapping.md and role1-import-manifest.json for"
+    },
+    {
+      "path": "tests/fixtures/role1/v2.1/README.md",
+      "line": 0,
+      "category": "c",
+      "text": "filename/path match"
+    },
+    {
+      "path": "tests/fixtures/role1/v2.1/base-policy.json",
+      "line": 0,
+      "category": "c",
+      "text": "filename/path match"
+    },
+    {
+      "path": "tests/fixtures/role1/v2.1/fact-verification.schema.json",
+      "line": 3,
+      "category": "c",
+      "text": "  \"$id\": \"urn:role1:fixture:fact-verification:1.0-proposed\","
+    },
+    {
+      "path": "tests/fixtures/role1/v2.1/fact-verification.schema.json",
+      "line": 15,
+      "category": "c",
+      "text": "      \"const\": \"role1.fact-verification/1.0-proposed\""
+    },
+    {
+      "path": "tests/fixtures/role1/v2.1/fact-verification.schema.json",
+      "line": 0,
+      "category": "c",
+      "text": "filename/path match"
+    },
+    {
+      "path": "tests/fixtures/role1/v2.1/fixture-manifest.json",
+      "line": 2,
+      "category": "c",
+      "text": "  \"dataset_version\": \"ROLE1-DEMO-V2.1\","
+    },
+    {
+      "path": "tests/fixtures/role1/v2.1/fixture-manifest.json",
+      "line": 0,
+      "category": "c",
+      "text": "filename/path match"
+    },
+    {
+      "path": "tests/fixtures/role1/v2.1/ground-truth-cases.json",
+      "line": 1743,
+      "category": "c",
+      "text": "        \"schema_version\": \"role1.fact-verification/1.0-proposed\","
+    },
+    {
+      "path": "tests/fixtures/role1/v2.1/ground-truth-cases.json",
+      "line": 2086,
+      "category": "c",
+      "text": "        \"schema_version\": \"role1.fact-verification/1.0-proposed\","
+    },
+    {
+      "path": "tests/fixtures/role1/v2.1/ground-truth-cases.json",
+      "line": 2426,
+      "category": "c",
+      "text": "        \"schema_version\": \"role1.fact-verification/1.0-proposed\","
+    },
+    {
+      "path": "tests/fixtures/role1/v2.1/ground-truth-cases.json",
+      "line": 0,
+      "category": "c",
+      "text": "filename/path match"
+    },
+    {
+      "path": "tests/fixtures/role1/v2.1/mock-provider-modes.json",
+      "line": 0,
+      "category": "c",
+      "text": "filename/path match"
+    },
+    {
+      "path": "tests/fixtures/role1/v2.1/source-register.json",
+      "line": 23,
+      "category": "c",
+      "text": "  \"prior_role_package\": \"outputs/role1-package\","
+    },
+    {
+      "path": "tests/fixtures/role1/v2.1/source-register.json",
+      "line": 0,
+      "category": "c",
+      "text": "filename/path match"
+    },
+    {
+      "path": "tests/fixtures/role1/v2.1/verify-expected-results.json",
+      "line": 0,
+      "category": "c",
+      "text": "filename/path match"
+    },
+    {
+      "path": "tests/fixtures/role1/v2.1/verify-inputs.json",
+      "line": 937,
+      "category": "c",
+      "text": "        \"schema_version\": \"role1.fact-verification/1.0-proposed\","
+    },
+    {
+      "path": "tests/fixtures/role1/v2.1/verify-inputs.json",
+      "line": 0,
+      "category": "c",
+      "text": "filename/path match"
+    },
+    {
+      "path": "tests/integration/test_role1_regression.py",
+      "line": 8,
+      "category": "b",
+      "text": "FIXTURES = Path(__file__).parents[1] / 'fixtures/role1/v2.1'"
+    },
+    {
+      "path": "tests/integration/test_role1_regression.py",
+      "line": 13,
+      "category": "b",
+      "text": "def test_role1_application_regression(case):"
+    },
+    {
+      "path": "tests/integration/test_role1_regression.py",
+      "line": 0,
+      "category": "b",
+      "text": "filename/path match"
+    },
+    {
+      "path": "tests/unit/verify/test_role1_mapping.py",
+      "line": 9,
+      "category": "b",
+      "text": "from src.verify.role1_adapter import payload_from_input, validate_input"
+    },
+    {
+      "path": "tests/unit/verify/test_role1_mapping.py",
+      "line": 0,
+      "category": "b",
+      "text": "filename/path match"
+    }
+  ],
+  "renames": {
+    "docs/integration/role1-conflict-report.md": "docs/integration/ba-conflict-report.md",
+    "docs/integration/role1-contract-mapping.md": "docs/integration/ba-contract-mapping.md",
+    "docs/integration/role1-import-manifest.json": "docs/integration/ba-import-manifest.json",
+    "docs/integration/role1-regression-results.json": "docs/integration/ba-regression-results.json",
+    "docs/integration/role1-role3-integration-report.md": "docs/integration/ba-frontend-developer-integration-report.md",
+    "src/verify/role1_adapter.py": "src/verify/ba_adapter.py",
+    "tests/fixtures/role1/v2.1/README.md": "tests/fixtures/ba/v2.1/README.md",
+    "tests/fixtures/role1/v2.1/base-policy.json": "tests/fixtures/ba/v2.1/base-policy.json",
+    "tests/fixtures/role1/v2.1/fact-verification.schema.json": "tests/fixtures/ba/v2.1/fact-verification.schema.json",
+    "tests/fixtures/role1/v2.1/fixture-manifest.json": "tests/fixtures/ba/v2.1/fixture-manifest.json",
+    "tests/fixtures/role1/v2.1/ground-truth-cases.json": "tests/fixtures/ba/v2.1/ground-truth-cases.json",
+    "tests/fixtures/role1/v2.1/images/budget-conflict.png": "tests/fixtures/ba/v2.1/images/budget-conflict.png",
+    "tests/fixtures/role1/v2.1/images/creative-low-quality.png": "tests/fixtures/ba/v2.1/images/creative-low-quality.png",
+    "tests/fixtures/role1/v2.1/images/creative-pass.png": "tests/fixtures/ba/v2.1/images/creative-pass.png",
+    "tests/fixtures/role1/v2.1/images/hard-claim-demo.png": "tests/fixtures/ba/v2.1/images/hard-claim-demo.png",
+    "tests/fixtures/role1/v2.1/images/kpi-conflict.png": "tests/fixtures/ba/v2.1/images/kpi-conflict.png",
+    "tests/fixtures/role1/v2.1/images/scope-missing.png": "tests/fixtures/ba/v2.1/images/scope-missing.png",
+    "tests/fixtures/role1/v2.1/images/synthetic-private-demo.png": "tests/fixtures/ba/v2.1/images/synthetic-private-demo.png",
+    "tests/fixtures/role1/v2.1/mock-provider-modes.json": "tests/fixtures/ba/v2.1/mock-provider-modes.json",
+    "tests/fixtures/role1/v2.1/source-register.json": "tests/fixtures/ba/v2.1/source-register.json",
+    "tests/fixtures/role1/v2.1/verify-expected-results.json": "tests/fixtures/ba/v2.1/verify-expected-results.json",
+    "tests/fixtures/role1/v2.1/verify-inputs.json": "tests/fixtures/ba/v2.1/verify-inputs.json",
+    "tests/integration/test_role1_regression.py": "tests/integration/test_ba_regression.py",
+    "tests/unit/verify/test_role1_mapping.py": "tests/unit/verify/test_ba_mapping.py"
+  },
+  "collisions": []
+}

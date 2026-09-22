@@ -23,7 +23,7 @@ Verify là bộ 5 input nhỏ để kiểm nhất quán của decision engine; h
 
 ## 2. Dữ liệu đầu vào
 
-[verify-inputs.json](../../../tests/fixtures/role1/v2.1/verify-inputs.json) có 5 input đầy đủ; [base-policy.json](../../../tests/fixtures/role1/v2.1/base-policy.json) là cấu hình demo tương ứng. Actual chưa có. Input giữ loại trường của file 12/16: context + plan_snapshot + policy_snapshot + agent_outputs + conflict/error metadata + input_hash.
+[verify-inputs.json](../../../tests/fixtures/ba/v2.1/verify-inputs.json) có 5 input đầy đủ; [base-policy.json](../../../tests/fixtures/ba/v2.1/base-policy.json) là cấu hình demo tương ứng. Actual chưa có. Input giữ loại trường của file 12/16: context + plan_snapshot + policy_snapshot + agent_outputs + conflict/error metadata + input_hash.
 
 VERIFY-A04 form budget 50.000.000 VND, ảnh chứa 120m và 180m, confidence 0.61; đây là uncertainty sau submit, không phải thiếu required field. VERIFY-A05 budget 100.000.001 VND vượt limit 100.000.000 VND; không liên quan chức danh.
 

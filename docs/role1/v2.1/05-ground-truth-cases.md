@@ -36,14 +36,14 @@ File JSON chứa **đầy đủ input của từng ca**, không chỉ patch; dù
 | Score / Strategy confidence | 84 / 0.91 |
 | VLM / Media confidence | 0.96 / 0.94 |
 | Media / hard violations / conflicts | PASS / 0 / 0 |
-| Ảnh | [creative-pass.png](../../../tests/fixtures/role1/v2.1/images/creative-pass.png) |
+| Ảnh | [creative-pass.png](../../../tests/fixtures/ba/v2.1/images/creative-pass.png) |
 | Route | AUTO_APPROVED |
 | Business / processing | APPROVED / AI_AUTO_APPROVED |
 | Final decision / source | APPROVED / AI_AUTO_APPROVAL |
 | Category | null — xem reason code |
 | Reason bắt buộc | Không có blocker; phải lưu mọi gate đạt |
 
-**Cách chạy:** dùng đầy đủ context, plan snapshot, policy và agent outputs của GT-001 trong [ground-truth-cases.json](../../../tests/fixtures/role1/v2.1/ground-truth-cases.json); gọi decision evaluator qua test harness của app. Sau đó kiểm state/decision/audit phù hợp layer được chạy.
+**Cách chạy:** dùng đầy đủ context, plan snapshot, policy và agent outputs của GT-001 trong [ground-truth-cases.json](../../../tests/fixtures/ba/v2.1/ground-truth-cases.json); gọi decision evaluator qua test harness của app. Sau đó kiểm state/decision/audit phù hợp layer được chạy.
 
 **Giải thích/câu hỏi:** Mọi điều kiện đủ; ghi actor System, policy version và gate summary. Không cần câu hỏi Checker để hoàn tất quyết định tự động.
 
@@ -60,14 +60,14 @@ File JSON chứa **đầy đủ input của từng ca**, không chỉ patch; dù
 | Score / Strategy confidence | 82.5 / 0.86 |
 | VLM / Media confidence | 0.93 / 0.93 |
 | Media / hard violations / conflicts | PASS / 0 / 0 |
-| Ảnh | [creative-pass.png](../../../tests/fixtures/role1/v2.1/images/creative-pass.png) |
+| Ảnh | [creative-pass.png](../../../tests/fixtures/ba/v2.1/images/creative-pass.png) |
 | Route | AUTO_APPROVED |
 | Business / processing | APPROVED / AI_AUTO_APPROVED |
 | Final decision / source | APPROVED / AI_AUTO_APPROVAL |
 | Category | null — xem reason code |
 | Reason bắt buộc | Không có blocker; phải lưu mọi gate đạt |
 
-**Cách chạy:** dùng đầy đủ context, plan snapshot, policy và agent outputs của GT-002 trong [ground-truth-cases.json](../../../tests/fixtures/role1/v2.1/ground-truth-cases.json); gọi decision evaluator qua test harness của app. Sau đó kiểm state/decision/audit phù hợp layer được chạy.
+**Cách chạy:** dùng đầy đủ context, plan snapshot, policy và agent outputs của GT-002 trong [ground-truth-cases.json](../../../tests/fixtures/ba/v2.1/ground-truth-cases.json); gọi decision evaluator qua test harness của app. Sau đó kiểm state/decision/audit phù hợp layer được chạy.
 
 **Giải thích/câu hỏi:** Mọi điều kiện đủ; ghi actor System, policy version và gate summary. Không cần câu hỏi Checker để hoàn tất quyết định tự động.
 
@@ -84,14 +84,14 @@ File JSON chứa **đầy đủ input của từng ca**, không chỉ patch; dù
 | Score / Strategy confidence | 78 / 0.8 |
 | VLM / Media confidence | 0.85 / 0.85 |
 | Media / hard violations / conflicts | PASS / 0 / 0 |
-| Ảnh | [creative-pass.png](../../../tests/fixtures/role1/v2.1/images/creative-pass.png) |
+| Ảnh | [creative-pass.png](../../../tests/fixtures/ba/v2.1/images/creative-pass.png) |
 | Route | AUTO_APPROVED |
 | Business / processing | APPROVED / AI_AUTO_APPROVED |
 | Final decision / source | APPROVED / AI_AUTO_APPROVAL |
 | Category | null — xem reason code |
 | Reason bắt buộc | Không có blocker; phải lưu mọi gate đạt |
 
-**Cách chạy:** dùng đầy đủ context, plan snapshot, policy và agent outputs của GT-003 trong [ground-truth-cases.json](../../../tests/fixtures/role1/v2.1/ground-truth-cases.json); gọi decision evaluator qua test harness của app. Sau đó kiểm state/decision/audit phù hợp layer được chạy.
+**Cách chạy:** dùng đầy đủ context, plan snapshot, policy và agent outputs của GT-003 trong [ground-truth-cases.json](../../../tests/fixtures/ba/v2.1/ground-truth-cases.json); gọi decision evaluator qua test harness của app. Sau đó kiểm state/decision/audit phù hợp layer được chạy.
 
 **Giải thích/câu hỏi:** Mọi điều kiện đủ; ghi actor System, policy version và gate summary. Không cần câu hỏi Checker để hoàn tất quyết định tự động.
 
@@ -108,14 +108,14 @@ File JSON chứa **đầy đủ input của từng ca**, không chỉ patch; dù
 | Score / Strategy confidence | 70.1 / 0.81 |
 | VLM / Media confidence | 0.89 / 0.9 |
 | Media / hard violations / conflicts | PASS / 0 / 0 |
-| Ảnh | [creative-pass.png](../../../tests/fixtures/role1/v2.1/images/creative-pass.png) |
+| Ảnh | [creative-pass.png](../../../tests/fixtures/ba/v2.1/images/creative-pass.png) |
 | Route | AUTO_APPROVED |
 | Business / processing | APPROVED / AI_AUTO_APPROVED |
 | Final decision / source | APPROVED / AI_AUTO_APPROVAL |
 | Category | null — xem reason code |
 | Reason bắt buộc | Không có blocker; phải lưu mọi gate đạt |
 
-**Cách chạy:** dùng đầy đủ context, plan snapshot, policy và agent outputs của GT-004 trong [ground-truth-cases.json](../../../tests/fixtures/role1/v2.1/ground-truth-cases.json); gọi decision evaluator qua test harness của app. Sau đó kiểm state/decision/audit phù hợp layer được chạy.
+**Cách chạy:** dùng đầy đủ context, plan snapshot, policy và agent outputs của GT-004 trong [ground-truth-cases.json](../../../tests/fixtures/ba/v2.1/ground-truth-cases.json); gọi decision evaluator qua test harness của app. Sau đó kiểm state/decision/audit phù hợp layer được chạy.
 
 **Giải thích/câu hỏi:** Mọi điều kiện đủ; ghi actor System, policy version và gate summary. Không cần câu hỏi Checker để hoàn tất quyết định tự động.
 
@@ -132,14 +132,14 @@ File JSON chứa **đầy đủ input của từng ca**, không chỉ patch; dù
 | Score / Strategy confidence | 88 / 0.9 |
 | VLM / Media confidence | 0.95 / 0.95 |
 | Media / hard violations / conflicts | PASS / 0 / 0 |
-| Ảnh | [creative-pass.png](../../../tests/fixtures/role1/v2.1/images/creative-pass.png) |
+| Ảnh | [creative-pass.png](../../../tests/fixtures/ba/v2.1/images/creative-pass.png) |
 | Route | AUTO_APPROVED |
 | Business / processing | APPROVED / AI_AUTO_APPROVED |
 | Final decision / source | APPROVED / AI_AUTO_APPROVAL |
 | Category | null — xem reason code |
 | Reason bắt buộc | Không có blocker; phải lưu mọi gate đạt |
 
-**Cách chạy:** dùng đầy đủ context, plan snapshot, policy và agent outputs của GT-005 trong [ground-truth-cases.json](../../../tests/fixtures/role1/v2.1/ground-truth-cases.json); gọi decision evaluator qua test harness của app. Sau đó kiểm state/decision/audit phù hợp layer được chạy.
+**Cách chạy:** dùng đầy đủ context, plan snapshot, policy và agent outputs của GT-005 trong [ground-truth-cases.json](../../../tests/fixtures/ba/v2.1/ground-truth-cases.json); gọi decision evaluator qua test harness của app. Sau đó kiểm state/decision/audit phù hợp layer được chạy.
 
 **Giải thích/câu hỏi:** Mọi điều kiện đủ; ghi actor System, policy version và gate summary. Không cần câu hỏi Checker để hoàn tất quyết định tự động.
 
@@ -156,14 +156,14 @@ File JSON chứa **đầy đủ input của từng ca**, không chỉ patch; dù
 | Score / Strategy confidence | 76 / 0.83 |
 | VLM / Media confidence | 0.97 / 0.95 |
 | Media / hard violations / conflicts | PASS / 0 / 0 |
-| Ảnh | [creative-pass.png](../../../tests/fixtures/role1/v2.1/images/creative-pass.png) |
+| Ảnh | [creative-pass.png](../../../tests/fixtures/ba/v2.1/images/creative-pass.png) |
 | Route | AUTO_APPROVED |
 | Business / processing | APPROVED / AI_AUTO_APPROVED |
 | Final decision / source | APPROVED / AI_AUTO_APPROVAL |
 | Category | null — xem reason code |
 | Reason bắt buộc | Không có blocker; phải lưu mọi gate đạt |
 
-**Cách chạy:** dùng đầy đủ context, plan snapshot, policy và agent outputs của GT-006 trong [ground-truth-cases.json](../../../tests/fixtures/role1/v2.1/ground-truth-cases.json); gọi decision evaluator qua test harness của app. Sau đó kiểm state/decision/audit phù hợp layer được chạy.
+**Cách chạy:** dùng đầy đủ context, plan snapshot, policy và agent outputs của GT-006 trong [ground-truth-cases.json](../../../tests/fixtures/ba/v2.1/ground-truth-cases.json); gọi decision evaluator qua test harness của app. Sau đó kiểm state/decision/audit phù hợp layer được chạy.
 
 **Giải thích/câu hỏi:** Mọi điều kiện đủ; ghi actor System, policy version và gate summary. Không cần câu hỏi Checker để hoàn tất quyết định tự động.
 
@@ -240,7 +240,7 @@ File JSON chứa **đầy đủ input của từng ca**, không chỉ patch; dù
 
 **Reason/gate:** VLM_LOW_CONFIDENCE, UNRESOLVED_CONFLICT là các tên kế thừa fixture, cần map mã thực của engine. Không còn bắt buộc MEDIA_REVIEW_REQUIRED như bằng chứng cho factual uncertainty. explanation_requirements buộc nêu field, conflict/thiếu trích xuất, evidence và unresolved status; không chỉ kiểm category hoặc câu chữ chung.
 
-**Cách chạy:** dùng JSON đầy đủ tại [ground-truth-cases.json](../../../tests/fixtures/role1/v2.1/ground-truth-cases.json). Validate fixture → xác nhận WP mapping → capture input sau adapter → gọi engine thật → kiểm route/category/reason/evidence và state/audit. Không nạp expected vào engine.
+**Cách chạy:** dùng JSON đầy đủ tại [ground-truth-cases.json](../../../tests/fixtures/ba/v2.1/ground-truth-cases.json). Validate fixture → xác nhận WP mapping → capture input sau adapter → gọi engine thật → kiểm route/category/reason/evidence và state/audit. Không nạp expected vào engine.
 
 ### GT-008 · KPI form và ảnh mâu thuẫn
 
@@ -306,7 +306,7 @@ File JSON chứa **đầy đủ input của từng ca**, không chỉ patch; dù
 
 **Reason/gate:** UNRESOLVED_CONFLICT là các tên kế thừa fixture, cần map mã thực của engine. Không còn bắt buộc MEDIA_REVIEW_REQUIRED như bằng chứng cho factual uncertainty. explanation_requirements buộc nêu field, conflict/thiếu trích xuất, evidence và unresolved status; không chỉ kiểm category hoặc câu chữ chung.
 
-**Cách chạy:** dùng JSON đầy đủ tại [ground-truth-cases.json](../../../tests/fixtures/role1/v2.1/ground-truth-cases.json). Validate fixture → xác nhận WP mapping → capture input sau adapter → gọi engine thật → kiểm route/category/reason/evidence và state/audit. Không nạp expected vào engine.
+**Cách chạy:** dùng JSON đầy đủ tại [ground-truth-cases.json](../../../tests/fixtures/ba/v2.1/ground-truth-cases.json). Validate fixture → xác nhận WP mapping → capture input sau adapter → gọi engine thật → kiểm route/category/reason/evidence và state/audit. Không nạp expected vào engine.
 
 ### GT-009 · Ảnh chất lượng thấp, cần người đọc lại
 
@@ -365,7 +365,7 @@ File JSON chứa **đầy đủ input của từng ca**, không chỉ patch; dù
 
 **Reason/gate:** VLM_LOW_CONFIDENCE là các tên kế thừa fixture, cần map mã thực của engine. Không còn bắt buộc MEDIA_REVIEW_REQUIRED như bằng chứng cho factual uncertainty. explanation_requirements buộc nêu field, conflict/thiếu trích xuất, evidence và unresolved status; không chỉ kiểm category hoặc câu chữ chung.
 
-**Cách chạy:** dùng JSON đầy đủ tại [ground-truth-cases.json](../../../tests/fixtures/role1/v2.1/ground-truth-cases.json). Validate fixture → xác nhận WP mapping → capture input sau adapter → gọi engine thật → kiểm route/category/reason/evidence và state/audit. Không nạp expected vào engine.
+**Cách chạy:** dùng JSON đầy đủ tại [ground-truth-cases.json](../../../tests/fixtures/ba/v2.1/ground-truth-cases.json). Validate fixture → xác nhận WP mapping → capture input sau adapter → gọi engine thật → kiểm route/category/reason/evidence và state/audit. Không nạp expected vào engine.
 
 ### GT-010 · Chưa có policy cho phạm vi nội dung
 
@@ -378,14 +378,14 @@ File JSON chứa **đầy đủ input của từng ca**, không chỉ patch; dù
 | Score / Strategy confidence | 83 / 0.88 |
 | VLM / Media confidence | 0.94 / 0.94 |
 | Media / hard violations / conflicts | REVIEW_REQUIRED / 0 / 0 |
-| Ảnh | [scope-missing.png](../../../tests/fixtures/role1/v2.1/images/scope-missing.png) |
+| Ảnh | [scope-missing.png](../../../tests/fixtures/ba/v2.1/images/scope-missing.png) |
 | Route | HUMAN_REVIEW_REQUIRED |
 | Business / processing | PENDING_APPROVAL / HUMAN_REVIEW_REQUIRED |
 | Final decision / source | null / null |
 | Category | POLICY_OUT_OF_SCOPE |
 | Reason bắt buộc | MEDIA_REVIEW_REQUIRED, POLICY_SCOPE_MISSING |
 
-**Cách chạy:** dùng đầy đủ context, plan snapshot, policy và agent outputs của GT-010 trong [ground-truth-cases.json](../../../tests/fixtures/role1/v2.1/ground-truth-cases.json); gọi decision evaluator qua test harness của app. Sau đó kiểm state/decision/audit phù hợp layer được chạy.
+**Cách chạy:** dùng đầy đủ context, plan snapshot, policy và agent outputs của GT-010 trong [ground-truth-cases.json](../../../tests/fixtures/ba/v2.1/ground-truth-cases.json); gọi decision evaluator qua test harness của app. Sau đó kiểm state/decision/audit phù hợp layer được chạy.
 
 **Giải thích/câu hỏi:** Chưa có content policy cho DEMO-SPECIAL-DOMAIN. Vui lòng xác định chính sách/căn cứ xử lý, không tự duyệt khi thiếu mapping.
 
@@ -402,14 +402,14 @@ File JSON chứa **đầy đủ input của từng ca**, không chỉ patch; dù
 | Score / Strategy confidence | 77 / 0.84 |
 | VLM / Media confidence | 0.92 / 0.92 |
 | Media / hard violations / conflicts | REVIEW_REQUIRED / 0 / 0 |
-| Ảnh | [scope-missing.png](../../../tests/fixtures/role1/v2.1/images/scope-missing.png) |
+| Ảnh | [scope-missing.png](../../../tests/fixtures/ba/v2.1/images/scope-missing.png) |
 | Route | HUMAN_REVIEW_REQUIRED |
 | Business / processing | PENDING_APPROVAL / HUMAN_REVIEW_REQUIRED |
 | Final decision / source | null / null |
 | Category | POLICY_OUT_OF_SCOPE |
 | Reason bắt buộc | MEDIA_REVIEW_REQUIRED, POLICY_SCOPE_MISSING |
 
-**Cách chạy:** dùng đầy đủ context, plan snapshot, policy và agent outputs của GT-011 trong [ground-truth-cases.json](../../../tests/fixtures/role1/v2.1/ground-truth-cases.json); gọi decision evaluator qua test harness của app. Sau đó kiểm state/decision/audit phù hợp layer được chạy.
+**Cách chạy:** dùng đầy đủ context, plan snapshot, policy và agent outputs của GT-011 trong [ground-truth-cases.json](../../../tests/fixtures/ba/v2.1/ground-truth-cases.json); gọi decision evaluator qua test harness của app. Sau đó kiểm state/decision/audit phù hợp layer được chạy.
 
 **Giải thích/câu hỏi:** Chưa có content policy cho NewLiveChannel. Vui lòng xác định căn cứ áp dụng và thẩm định thủ công.
 
@@ -426,14 +426,14 @@ File JSON chứa **đầy đủ input của từng ca**, không chỉ patch; dù
 | Score / Strategy confidence | 86 / 0.9 |
 | VLM / Media confidence | 0.96 / 0.96 |
 | Media / hard violations / conflicts | PASS / 0 / 0 |
-| Ảnh | [creative-pass.png](../../../tests/fixtures/role1/v2.1/images/creative-pass.png) |
+| Ảnh | [creative-pass.png](../../../tests/fixtures/ba/v2.1/images/creative-pass.png) |
 | Route | HUMAN_REVIEW_REQUIRED |
 | Business / processing | PENDING_APPROVAL / HUMAN_REVIEW_REQUIRED |
 | Final decision / source | null / null |
 | Category | AUTHORITY_EXCEEDED |
 | Reason bắt buộc | BUDGET_LIMIT_EXCEEDED |
 
-**Cách chạy:** dùng đầy đủ context, plan snapshot, policy và agent outputs của GT-012 trong [ground-truth-cases.json](../../../tests/fixtures/role1/v2.1/ground-truth-cases.json); gọi decision evaluator qua test harness của app. Sau đó kiểm state/decision/audit phù hợp layer được chạy.
+**Cách chạy:** dùng đầy đủ context, plan snapshot, policy và agent outputs của GT-012 trong [ground-truth-cases.json](../../../tests/fixtures/ba/v2.1/ground-truth-cases.json); gọi decision evaluator qua test harness của app. Sau đó kiểm state/decision/audit phù hợp layer được chạy.
 
 **Giải thích/câu hỏi:** 100.000.001 VND vượt hạn mức tự động 100.000.000 VND đúng 1 VND. Checker được giao vui lòng thẩm định theo quyền hiện có.
 
@@ -450,14 +450,14 @@ File JSON chứa **đầy đủ input của từng ca**, không chỉ patch; dù
 | Score / Strategy confidence | 91 / 0.92 |
 | VLM / Media confidence | 0.95 / 0.95 |
 | Media / hard violations / conflicts | PASS / 0 / 0 |
-| Ảnh | [creative-pass.png](../../../tests/fixtures/role1/v2.1/images/creative-pass.png) |
+| Ảnh | [creative-pass.png](../../../tests/fixtures/ba/v2.1/images/creative-pass.png) |
 | Route | HUMAN_REVIEW_REQUIRED |
 | Business / processing | PENDING_APPROVAL / HUMAN_REVIEW_REQUIRED |
 | Final decision / source | null / null |
 | Category | AUTHORITY_EXCEEDED |
 | Reason bắt buộc | BUDGET_LIMIT_EXCEEDED |
 
-**Cách chạy:** dùng đầy đủ context, plan snapshot, policy và agent outputs của GT-013 trong [ground-truth-cases.json](../../../tests/fixtures/role1/v2.1/ground-truth-cases.json); gọi decision evaluator qua test harness của app. Sau đó kiểm state/decision/audit phù hợp layer được chạy.
+**Cách chạy:** dùng đầy đủ context, plan snapshot, policy và agent outputs của GT-013 trong [ground-truth-cases.json](../../../tests/fixtures/ba/v2.1/ground-truth-cases.json); gọi decision evaluator qua test harness của app. Sau đó kiểm state/decision/audit phù hợp layer được chạy.
 
 **Giải thích/câu hỏi:** 1.200.000.000 VND vượt hạn mức tự động 100.000.000 VND. Vui lòng thẩm định thủ công; hệ thống không tự tạo thêm cấp duyệt.
 
@@ -474,14 +474,14 @@ File JSON chứa **đầy đủ input của từng ca**, không chỉ patch; dù
 | Score / Strategy confidence | 85 / 0.9 |
 | VLM / Media confidence | 0.97 / 0.97 |
 | Media / hard violations / conflicts | REVIEW_REQUIRED / 1 / 0 |
-| Ảnh | [hard-claim-demo.png](../../../tests/fixtures/role1/v2.1/images/hard-claim-demo.png) |
+| Ảnh | [hard-claim-demo.png](../../../tests/fixtures/ba/v2.1/images/hard-claim-demo.png) |
 | Route | HUMAN_REVIEW_REQUIRED |
 | Business / processing | PENDING_APPROVAL / HUMAN_REVIEW_REQUIRED |
 | Final decision / source | null / null |
 | Category | null — xem reason code |
 | Reason bắt buộc | MEDIA_REVIEW_REQUIRED, HARD_VIOLATION |
 
-**Cách chạy:** dùng đầy đủ context, plan snapshot, policy và agent outputs của GT-014 trong [ground-truth-cases.json](../../../tests/fixtures/role1/v2.1/ground-truth-cases.json); gọi decision evaluator qua test harness của app. Sau đó kiểm state/decision/audit phù hợp layer được chạy.
+**Cách chạy:** dùng đầy đủ context, plan snapshot, policy và agent outputs của GT-014 trong [ground-truth-cases.json](../../../tests/fixtures/ba/v2.1/ground-truth-cases.json); gọi decision evaluator qua test harness của app. Sau đó kiểm state/decision/audit phù hợp layer được chạy.
 
 **Giải thích/câu hỏi:** Token CAM KẾT DEMO TUYỆT ĐỐI bị HV-DEMO-01 đánh dấu. Vui lòng kiểm tra ảnh/rule demo trước khi quyết định; đây chưa phải quyết định từ chối.
 
@@ -498,14 +498,14 @@ File JSON chứa **đầy đủ input của từng ca**, không chỉ patch; dù
 | Score / Strategy confidence | 80 / 0.85 |
 | VLM / Media confidence | 0.95 / 0.95 |
 | Media / hard violations / conflicts | REVIEW_REQUIRED / 1 / 0 |
-| Ảnh | [synthetic-private-demo.png](../../../tests/fixtures/role1/v2.1/images/synthetic-private-demo.png) |
+| Ảnh | [synthetic-private-demo.png](../../../tests/fixtures/ba/v2.1/images/synthetic-private-demo.png) |
 | Route | HUMAN_REVIEW_REQUIRED |
 | Business / processing | PENDING_APPROVAL / HUMAN_REVIEW_REQUIRED |
 | Final decision / source | null / null |
 | Category | null — xem reason code |
 | Reason bắt buộc | MEDIA_REVIEW_REQUIRED, HARD_VIOLATION |
 
-**Cách chạy:** dùng đầy đủ context, plan snapshot, policy và agent outputs của GT-015 trong [ground-truth-cases.json](../../../tests/fixtures/role1/v2.1/ground-truth-cases.json); gọi decision evaluator qua test harness của app. Sau đó kiểm state/decision/audit phù hợp layer được chạy.
+**Cách chạy:** dùng đầy đủ context, plan snapshot, policy và agent outputs của GT-015 trong [ground-truth-cases.json](../../../tests/fixtures/ba/v2.1/ground-truth-cases.json); gọi decision evaluator qua test harness của app. Sau đó kiểm state/decision/audit phù hợp layer được chạy.
 
 **Giải thích/câu hỏi:** Token khách hàng giả lập DEMO-0001 bị HV-DEMO-02 đánh dấu. Vui lòng xem bằng chứng và rule demo trước khi quyết định; ảnh không chứa dữ liệu cá nhân thật.
 

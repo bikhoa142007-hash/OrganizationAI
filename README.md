@@ -148,7 +148,7 @@ The mock provider must support PASS, REVIEW_REQUIRED and timeout/error scenarios
 
 ## Getting started
 
-Use the verified PowerShell commands in [Demo tích hợp Role 1 – Backend – Role 3](#demo-tích-hợp-role-1--backend--role-3) below. Verified runtimes: Python 3.13.14 and Node.js 24.17.0; package managers: pip and npm; database: SQLite. The HTTP demo uses an explicitly configured mock model.
+Use the verified PowerShell commands in [Demo tích hợp BA – Backend – Frontend Developer](#demo-tích-hợp-ba--backend--frontend-developer) below. Verified runtimes: Python 3.13.14 and Node.js 24.17.0; package managers: pip and npm; database: SQLite. The HTTP demo uses an explicitly configured mock model.
 
 ### WP3 core approval workflow (Python application service)
 
@@ -285,7 +285,7 @@ Install dependencies, then start the demo UI:
 
 The Verify page runs five TEST_ONLY fixtures through the real WP3/WP4 workflow. Automated tests use MockVLMProvider and do not require an API key.
 
-## Demo tích hợp Role 1 – Backend – Role 3
+## Demo tích hợp BA – Backend – Frontend Developer
 
 Backend FastAPI/SQLite và React/Vite đã nối bằng API thật. AI dùng mock công khai
 cho dữ liệu tổng hợp; không dùng cho quyết định sản xuất. Chạy tại repository root:
@@ -320,15 +320,15 @@ Ngoài APP_ENV=demo, mọi demo-auth request bị từ chối.
 Backend đọc environment của tiến trình, không tự nạp `.env`. Xem `.env.example` và
 `frontend/.env.example` cho giá trị an toàn; file mẫu frontend dùng http://127.0.0.1:8010/api, khớp lệnh demo. Giá trị fallback trong API client khi không đặt VITE_API_BASE_URL là
 http://127.0.0.1:8000/api; lệnh trên đặt rõ cổng 8010 vì cổng 8000 đang được tiến trình khác sử dụng. DEMO_MOCK_MODE nhận pass/review/timeout/error/malformed;
-seed có thêm factual-conflict scenario riêng. Dữ liệu HTTP demo và fixture Role 1
+seed có thêm factual-conflict scenario riêng. Dữ liệu HTTP demo và fixture BA
 có policy/version riêng; hạn mức 100 triệu VND chỉ là tổng hợp.
 
 Kiểm thử tại root:
 
 ```powershell
 & ./.venv/Scripts/python.exe -m pytest -q
-& ./.venv/Scripts/python.exe -m src.verify.runner --suite ground-truth --output runtime/role1-ground-truth-actual.json
-& ./.venv/Scripts/python.exe -m src.verify.runner --suite verify --output runtime/role1-verify-actual.json
+& ./.venv/Scripts/python.exe -m src.verify.runner --suite ground-truth --output runtime/ba-ground-truth-actual.json
+& ./.venv/Scripts/python.exe -m src.verify.runner --suite verify --output runtime/ba-verify-actual.json
 ```
 
 Tại `frontend/`:
@@ -352,9 +352,9 @@ CLI ghi báo cáo actual riêng.
 
 Tài liệu tích hợp:
 
-- [Báo cáo cuối](docs/integration/role1-role3-integration-report.md)
-- [Mapping](docs/integration/role1-contract-mapping.md)
-- [Khác biệt và quyết định mở](docs/integration/role1-conflict-report.md)
+- [Báo cáo cuối](docs/integration/ba-frontend-developer-integration-report.md)
+- [Mapping](docs/integration/ba-contract-mapping.md)
+- [Khác biệt và quyết định mở](docs/integration/ba-conflict-report.md)
 - [Frontend/API](docs/integration/frontend-backend-gap-analysis.md)
 - [API examples](docs/integration/api-examples.md)
 

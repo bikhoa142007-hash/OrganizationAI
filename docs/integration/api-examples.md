@@ -72,6 +72,6 @@ Codes: validation 422, unauthenticated 401, forbidden 403, missing resource 404,
 conflict 409, unavailable 503. Error responses do not contain traceback or raw input.
 CORS permits only environment-configured origins; credentials are disabled.
 
-`POST /api/verify/general` runs five Role 1 Verify cases. `escalation` runs the 15
+`POST /api/verify/general` runs five BA Verify cases. `escalation` runs the 15
 GT regressions. These demo-only test runs use isolated in-memory repositories and
 return actual report rows; they do not alter the normal demo plan database.

@@ -11,12 +11,12 @@
 
 | Artifact | Nội dung | Mục đích |
 |---|---|---|
-| [base-policy.json](../../../tests/fixtures/role1/v2.1/base-policy.json) | Ngưỡng, trọng số, mode, limit demo | Seed profile v2 cần review OQ-01 |
-| [ground-truth-cases.json](../../../tests/fixtures/role1/v2.1/ground-truth-cases.json) | 15 input đầy đủ + expected + actual null | Policy contract tests |
-| [verify-inputs.json](../../../tests/fixtures/role1/v2.1/verify-inputs.json) | 5 input độc lập expected | Runner Verify |
-| [verify-expected-results.json](../../../tests/fixtures/role1/v2.1/verify-expected-results.json) | Nhãn Verify riêng | Không gửi oracle vào engine |
-| [fixture-manifest.json](../../../tests/fixtures/role1/v2.1/fixture-manifest.json) | SHA-256 của file dữ liệu/ảnh | Kiểm toàn vẹn artifact seed |
-| [mock-provider-modes.json](../../../tests/fixtures/role1/v2.1/mock-provider-modes.json) | PASS, low confidence, timeout, invalid output | Mock VLM/fault injection test |
+| [base-policy.json](../../../tests/fixtures/ba/v2.1/base-policy.json) | Ngưỡng, trọng số, mode, limit demo | Seed profile v2 cần review OQ-01 |
+| [ground-truth-cases.json](../../../tests/fixtures/ba/v2.1/ground-truth-cases.json) | 15 input đầy đủ + expected + actual null | Policy contract tests |
+| [verify-inputs.json](../../../tests/fixtures/ba/v2.1/verify-inputs.json) | 5 input độc lập expected | Runner Verify |
+| [verify-expected-results.json](../../../tests/fixtures/ba/v2.1/verify-expected-results.json) | Nhãn Verify riêng | Không gửi oracle vào engine |
+| [fixture-manifest.json](../../../tests/fixtures/ba/v2.1/fixture-manifest.json) | SHA-256 của file dữ liệu/ảnh | Kiểm toàn vẹn artifact seed |
+| [mock-provider-modes.json](../../../tests/fixtures/ba/v2.1/mock-provider-modes.json) | PASS, low confidence, timeout, invalid output | Mock VLM/fault injection test |
 | fixtures/ | 7 PNG chữ tổng hợp, 1280×720 | Upload/demo có ảnh thật trên đĩa |
 
 Các JSON là **fixture**, không phải migration hay code app. Cần map vào schema repo, seed auth bằng cơ chế dự án và nối test harness; không chỉ copy JSON vào production là có ứng dụng chạy.
@@ -48,13 +48,13 @@ Dùng DEMO-MAKER-01, DEMO-CHECKER-01, DEMO-ADMIN-01, DEMO-DUAL-01 như file 03. 
 
 | File | Nội dung | SHA-256 rút gọn |
 |---|---|---|
-| [creative-pass.png](../../../tests/fixtures/role1/v2.1/images/creative-pass.png) | CHIẾN DỊCH DEMO | db5193a49b36567a… |
-| [budget-conflict.png](../../../tests/fixtures/role1/v2.1/images/budget-conflict.png) | NGÂN SÁCH CẦN ĐỐI CHIẾU | 6f0c5dc2a9edc284… |
-| [kpi-conflict.png](../../../tests/fixtures/role1/v2.1/images/kpi-conflict.png) | KPI TRONG ẢNH DEMO | 13c73ad43b335d29… |
-| [creative-low-quality.png](../../../tests/fixtures/role1/v2.1/images/creative-low-quality.png) | ẢNH DEMO CHẤT LƯỢNG THẤP | 4eb86ba25a3dcd82… |
-| [scope-missing.png](../../../tests/fixtures/role1/v2.1/images/scope-missing.png) | PHẠM VI DEMO CHƯA CÓ POLICY | c588d0138629b371… |
-| [hard-claim-demo.png](../../../tests/fixtures/role1/v2.1/images/hard-claim-demo.png) | VI PHẠM QUY TẮC DEMO | ca08398eb4e67de2… |
-| [synthetic-private-demo.png](../../../tests/fixtures/role1/v2.1/images/synthetic-private-demo.png) | THÔNG TIN KHÁCH HÀNG GIẢ LẬP | 3e87fb31cd011af3… |
+| [creative-pass.png](../../../tests/fixtures/ba/v2.1/images/creative-pass.png) | CHIẾN DỊCH DEMO | db5193a49b36567a… |
+| [budget-conflict.png](../../../tests/fixtures/ba/v2.1/images/budget-conflict.png) | NGÂN SÁCH CẦN ĐỐI CHIẾU | 6f0c5dc2a9edc284… |
+| [kpi-conflict.png](../../../tests/fixtures/ba/v2.1/images/kpi-conflict.png) | KPI TRONG ẢNH DEMO | 13c73ad43b335d29… |
+| [creative-low-quality.png](../../../tests/fixtures/ba/v2.1/images/creative-low-quality.png) | ẢNH DEMO CHẤT LƯỢNG THẤP | 4eb86ba25a3dcd82… |
+| [scope-missing.png](../../../tests/fixtures/ba/v2.1/images/scope-missing.png) | PHẠM VI DEMO CHƯA CÓ POLICY | c588d0138629b371… |
+| [hard-claim-demo.png](../../../tests/fixtures/ba/v2.1/images/hard-claim-demo.png) | VI PHẠM QUY TẮC DEMO | ca08398eb4e67de2… |
+| [synthetic-private-demo.png](../../../tests/fixtures/ba/v2.1/images/synthetic-private-demo.png) | THÔNG TIN KHÁCH HÀNG GIẢ LẬP | 3e87fb31cd011af3… |
 
 Hash đầy đủ nằm trong manifest và từng attachment fixture. Evidence bbox bao phủ vùng chữ chính của ảnh; observed_text lấy đúng chuỗi tạo ảnh. Confidence là số định trước trong mock, không phải confidence đã đo bằng Local VLM. Không có bộ ảnh tự nhiên/ground-truth OCR độc lập trong gói.
 

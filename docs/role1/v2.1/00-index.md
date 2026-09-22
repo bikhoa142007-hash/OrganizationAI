@@ -13,11 +13,11 @@
 
 ## Dataset hiện hành
 
-- [15 GT](../../../tests/fixtures/role1/v2.1/ground-truth-cases.json), [5 Verify inputs](../../../tests/fixtures/role1/v2.1/verify-inputs.json), [Verify expected](../../../tests/fixtures/role1/v2.1/verify-expected-results.json).
+- [15 GT](../../../tests/fixtures/ba/v2.1/ground-truth-cases.json), [5 Verify inputs](../../../tests/fixtures/ba/v2.1/verify-inputs.json), [Verify expected](../../../tests/fixtures/ba/v2.1/verify-expected-results.json).
 - VERIFY-A04 được materialize từ GT-007; expected đồng nhất hoàn toàn.
 - Runtime outcomes chỉ AUTO_APPROVED và HUMAN_REVIEW_REQUIRED. Không thêm deterministic rejection.
 - Scores, confidence, limit, base policy và ảnh giữ nguyên; GT-009 sửa mock OCR thành partial response rõ ràng.
-- [Diff machine-readable](../archive/v2.1/data/changes-v2.1.json); [schema proposal](../../../tests/fixtures/role1/v2.1/fact-verification.schema.json); [mapping status](../archive/v2.1/data/wp1-wp2-mapping-status.json).
+- [Diff machine-readable](../archive/v2.1/data/changes-v2.1.json); [schema proposal](../../../tests/fixtures/ba/v2.1/fact-verification.schema.json); [mapping status](../archive/v2.1/data/wp1-wp2-mapping-status.json).
 
 ## Tài liệu nghiệp vụ
 

@@ -1,4 +1,4 @@
-# Role 3 frontend / backend integration
+# Frontend Developer frontend / backend integration
 
 Baseline: one React/TypeScript/Vite package, npm lockfile, React Router, local
 component state and ServicesProvider. App instantiated mock services, no HTTP
