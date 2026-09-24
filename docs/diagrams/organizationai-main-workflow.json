@@ -1,0 +1,271 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "Luồng xử lý phê duyệt OrganizationAI",
+    "quality_profile": "showcase",
+    "views": [
+      {
+        "id": "maker-submit",
+        "label": "Lập và gửi",
+        "focus": [
+          "draft",
+          "upload",
+          "submit",
+          "commit"
+        ]
+      },
+      {
+        "id": "ai-routing",
+        "label": "AI và định tuyến",
+        "focus": [
+          "commit",
+          "evaluate",
+          "decision",
+          "auto",
+          "review"
+        ]
+      },
+      {
+        "id": "checker-resubmit",
+        "label": "Checker và gửi lại",
+        "focus": [
+          "review",
+          "human_approved",
+          "revise"
+        ]
+      }
+    ]
+  },
+  "lanes": [
+    {
+      "label": "Maker",
+      "id": "maker"
+    },
+    {
+      "label": "React UI · FastAPI · SQLite",
+      "id": "app"
+    },
+    {
+      "label": "AI evaluation pipeline",
+      "id": "pipeline"
+    },
+    {
+      "label": "Assigned Checker",
+      "id": "checker"
+    }
+  ],
+  "phases": [
+    {
+      "id": "prepare",
+      "fromCol": 0,
+      "toCol": 1,
+      "label": "Draft + media"
+    },
+    {
+      "id": "submit-evaluate",
+      "fromCol": 2,
+      "variant": "emphasis",
+      "toCol": 3,
+      "label": "Submit + evaluate"
+    },
+    {
+      "id": "decision",
+      "fromCol": 4,
+      "toCol": 5,
+      "label": "Decision + routing"
+    }
+  ],
+  "mainPath": [
+    "draft",
+    "upload",
+    "submit",
+    "commit",
+    "evaluate",
+    "decision"
+  ],
+  "nodes": [
+    {
+      "id": "draft",
+      "lane": "maker",
+      "col": 0,
+      "type": "external",
+      "label": "Save draft",
+      "sublabel": "Incomplete OK",
+      "tag": "CODE"
+    },
+    {
+      "id": "upload",
+      "lane": "maker",
+      "col": 1,
+      "type": "external",
+      "label": "Upload media",
+      "sublabel": "PNG/JPEG/WebP",
+      "tag": "CODE"
+    },
+    {
+      "id": "submit",
+      "lane": "app",
+      "col": 2,
+      "type": "frontend",
+      "label": "Submit",
+      "sublabel": "UI evaluates next",
+      "tag": "CODE"
+    },
+    {
+      "id": "commit",
+      "lane": "app",
+      "col": 3,
+      "type": "backend",
+      "label": "Save version",
+      "sublabel": "Round + eval ticket",
+      "tag": "CODE"
+    },
+    {
+      "id": "evaluate",
+      "lane": "pipeline",
+      "col": 4,
+      "type": "backend",
+      "label": "Evaluate",
+      "sublabel": "MockVLM in HTTP",
+      "tag": "CODE"
+    },
+    {
+      "id": "decision",
+      "lane": "app",
+      "col": 5,
+      "type": "backend",
+      "label": "Rule decision",
+      "sublabel": "Budget + policy",
+      "tag": "CODE"
+    },
+    {
+      "id": "auto",
+      "lane": "pipeline",
+      "col": 5,
+      "type": "backend",
+      "label": "Auto-approved",
+      "sublabel": "Seed policy only",
+      "tag": "CODE · seeded"
+    },
+    {
+      "id": "review",
+      "lane": "checker",
+      "col": 4,
+      "type": "security",
+      "label": "Human review",
+      "sublabel": "Reject needs reason",
+      "tag": "CODE"
+    },
+    {
+      "id": "human_approved",
+      "lane": "checker",
+      "col": 5,
+      "type": "database",
+      "label": "Human-approved",
+      "sublabel": "Decision + audit",
+      "tag": "CODE"
+    },
+    {
+      "id": "revise",
+      "lane": "maker",
+      "col": 5,
+      "type": "external",
+      "label": "Sửa / gửi lại",
+      "sublabel": "Next V / round",
+      "tag": "CODE"
+    }
+  ],
+  "edges": [
+    {
+      "to": "upload",
+      "from": "draft",
+      "label": "add attachment",
+      "variant": "emphasis",
+      "role": "main"
+    },
+    {
+      "to": "submit",
+      "from": "upload",
+      "label": "Maker submits",
+      "variant": "emphasis",
+      "role": "main"
+    },
+    {
+      "to": "commit",
+      "from": "submit",
+      "label": "validate + persist",
+      "variant": "emphasis",
+      "role": "main"
+    },
+    {
+      "to": "evaluate",
+      "from": "commit",
+      "label": "ticket + snapshot",
+      "variant": "emphasis",
+      "role": "main"
+    },
+    {
+      "to": "decision",
+      "from": "evaluate",
+      "label": "structured result",
+      "variant": "emphasis",
+      "role": "main"
+    },
+    {
+      "to": "review",
+      "from": "evaluate",
+      "label": "timeout / error / invalid schema → human review",
+      "variant": "security",
+      "role": "error"
+    },
+    {
+      "to": "auto",
+      "from": "decision",
+      "label": "all auto-approval gates pass",
+      "variant": "emphasis",
+      "role": "branch"
+    },
+    {
+      "to": "review",
+      "from": "decision",
+      "label": "any gate fails or is unknown",
+      "variant": "security",
+      "role": "branch"
+    },
+    {
+      "to": "human_approved",
+      "from": "review",
+      "label": "approve",
+      "variant": "emphasis",
+      "role": "branch"
+    },
+    {
+      "to": "revise",
+      "from": "review",
+      "label": "reject with reason; Maker revises",
+      "variant": "security",
+      "role": "branch"
+    }
+  ],
+  "cards": [
+    {
+      "items": [
+        "submit_plan stores immutable snapshot, version, round and evaluation ticket before evaluation; Maker draft/upload use API.",
+        "HTTP path uses MockVLMProvider. Timeout/error/malformed output routes to review; the rules engine validates evidence/schema and budget deterministically.",
+        "Checker decision requires assignment; rejection needs a reason. Resubmission creates a new version/round. HTTP auto-approval is off by default; seed enables a scenario.",
+        "Code: src/backend/api/app.py · src/backend/application/workflow.py · src/backend/rules/decision.py · src/ai_pipeline/orchestrator.py · src/backend/seed_demo.py"
+      ],
+      "title": "CODE · HTTP demo",
+      "dot": "emerald"
+    },
+    {
+      "items": [
+        "README/scope describe Local VLM plus dedicated Media Compliance and Strategy Feasibility agents; HTTP currently uses MockVLMProvider, and LocalVLM inference is not configured.",
+        "Production authentication is not implemented. Sources: README.md · docs/scope-phase-1.md · src/ai_pipeline/providers/openai_provider.py"
+      ],
+      "title": "DOC · not separate runtime steps",
+      "dot": "amber"
+    }
+  ]
+}
