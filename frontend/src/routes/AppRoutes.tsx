@@ -4,18 +4,20 @@ import { AppShell } from '../components/AppShell'
 import { StatePanel } from '../components/ui'
 import { AuditTimelinePage } from '../pages/AuditTimelinePage'
 import { LandingPage } from '../pages/LandingPage'
+import { LoginPage } from '../pages/LoginPage'
 import { PlanDetailPage } from '../pages/PlanDetailPage'
 import { PlanFormPage } from '../pages/PlanFormPage'
 import { PlansPage } from '../pages/PlansPage'
 import { PolicyPage } from '../pages/PolicyPage'
 import { ProcessingPage } from '../pages/ProcessingPage'
+import { RegisterPage } from '../pages/RegisterPage'
 import { ResultPage } from '../pages/ResultPage'
 import { ReviewQueuePage } from '../pages/ReviewQueuePage'
 import { VerifyDashboardPage } from '../pages/VerifyDashboardPage'
 import { useSession } from '../services/SessionProvider'
 
 export function AppRoutes() {
-  return <Routes><Route element={<AppShell />}>
+  return <Routes><Route path="/login" element={<LoginPage />} /><Route path="/register" element={<RegisterPage />} /><Route element={<AppShell />}>
     <Route index element={<LandingPage />} />
     <Route path="plans" element={<PlansPage />} />
     <Route path="plans/:planId" element={<PlanDetailPage />} />
