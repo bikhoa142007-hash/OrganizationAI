@@ -73,7 +73,7 @@ it('redirects unauthenticated visitors from the protected account page to login'
   vi.spyOn(authService, 'me').mockRejectedValue(new AuthApiError(401, 'Authentication is required.'))
   renderAuthApp('/account')
 
-  expect(await screen.findByRole('heading', { name: 'Đăng nhập' })).toBeVisible()
+  expect(await screen.findByRole('heading', { name: 'Chào mừng trở lại' })).toBeVisible()
   expect(screen.getByLabelText('Tên đăng nhập, mã người dùng hoặc email')).toBeVisible()
 })
 
@@ -104,11 +104,11 @@ it('registers an account through the backend and directs the new Maker to login'
   await user.type(await screen.findByLabelText('Tên đăng nhập'), 'new.maker')
   await user.type(screen.getByLabelText('Email hoặc số điện thoại quốc tế'), 'new@example.com')
   await user.type(screen.getByLabelText('Mật khẩu'), 'New-local-password-123')
-  await user.type(screen.getByLabelText('Xác nhận mật khẩu'), 'New-local-password-123')
+  await user.type(screen.getByLabelText('Nhập lại mật khẩu'), 'New-local-password-123')
   await user.click(screen.getByRole('button', { name: 'Đăng ký' }))
 
   expect(register).toHaveBeenCalledWith('new.maker', 'new@example.com', 'New-local-password-123')
-  expect(await screen.findByRole('heading', { name: 'Đăng nhập' })).toBeVisible()
+  expect(await screen.findByRole('heading', { name: 'Chào mừng trở lại' })).toBeVisible()
   expect(screen.getByRole('status')).toHaveTextContent('Tạo tài khoản thành công')
 })
 
@@ -121,9 +121,10 @@ it('rejects mismatched password confirmation before making a registration reques
   await user.type(await screen.findByLabelText('Tên đăng nhập'), 'new.maker')
   await user.type(screen.getByLabelText('Email hoặc số điện thoại quốc tế'), 'new@example.com')
   await user.type(screen.getByLabelText('Mật khẩu'), 'New-local-password-123')
-  await user.type(screen.getByLabelText('Xác nhận mật khẩu'), 'different-password')
+  await user.type(screen.getByLabelText('Nhập lại mật khẩu'), 'different-password')
   await user.click(screen.getByRole('button', { name: 'Đăng ký' }))
 
-  expect(await screen.findByRole('alert')).toHaveTextContent('Mật khẩu xác nhận chưa khớp.')
+  expect(await screen.findByText('Mật khẩu nhập lại chưa khớp.')).toBeVisible()
+  expect(screen.getByLabelText('Nhập lại mật khẩu')).toHaveAttribute('aria-invalid', 'true')
   expect(register).not.toHaveBeenCalled()
 })
