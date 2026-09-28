@@ -13,8 +13,10 @@ export function AuthenticatedAccountPage() {
     <p>Liên hệ: {user?.email ?? user?.phone}</p>
     <p>Vai trò: {roles.length ? roles.join(', ') : 'Chưa có vai trò'}</p>
     <p>Trạng thái: {user?.status === 'ACTIVE' ? 'Đang hoạt động' : 'Đã vô hiệu hóa'}</p>
-    <p>Đăng nhập này chưa kết nối với hồ sơ demo. Luồng demo dùng actor tổng hợp riêng.</p>
     <button type="button" onClick={() => { void logout() }}>Đăng xuất</button>
+    {roles.includes('MAKER') && <p><Link to="/workflow/plans">Mở workflow PostgreSQL của Maker</Link></p>}
+    {roles.includes('CHECKER') && <p><Link to="/workflow/reviews">Mở hàng chờ Checker</Link></p>}
+    <p>Workflow Auth lưu dữ liệu trong PostgreSQL. Judge Demo bên dưới giữ actor tổng hợp riêng.</p>
     <p><Link to="/">Mở luồng marketing demo</Link></p>
   </main>
 }

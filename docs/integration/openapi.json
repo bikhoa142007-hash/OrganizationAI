@@ -1,1 +1,3924 @@
-{"openapi":"3.1.0","info":{"title":"OrganizationAI demo API","description":"Synthetic demo authentication only. Production requests fail closed.","version":"1.0"},"paths":{"/api/health":{"get":{"summary":"Health","operationId":"health_api_health_get","responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{}}}},"401":{"description":"Unauthorized","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorResponse"}}}},"403":{"description":"Forbidden","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorResponse"}}}},"404":{"description":"Not Found","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorResponse"}}}},"409":{"description":"Conflict","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorResponse"}}}},"422":{"description":"Unprocessable Content","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorResponse"}}}},"503":{"description":"Service Unavailable","content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorResponse"}}}}}}},"/api/config":{"get":{"summary":"Config","operationId":"config_api_config_get","parameters":[{"name":"x-demo-actor","in":"header","required":false,"schema":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"X-Demo-Actor"}}],"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{}}}},"401":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorResponse"}}},"description":"Unauthorized"},"403":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorResponse"}}},"description":"Forbidden"},"404":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorResponse"}}},"description":"Not Found"},"409":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorResponse"}}},"description":"Conflict"},"422":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorResponse"}}},"description":"Unprocessable Content"},"503":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorResponse"}}},"description":"Service Unavailable"}}}},"/api/plans":{"get":{"summary":"Plans","operationId":"plans_api_plans_get","parameters":[{"name":"offset","in":"query","required":false,"schema":{"type":"integer","minimum":0,"default":0,"title":"Offset"}},{"name":"limit","in":"query","required":false,"schema":{"type":"integer","maximum":200,"minimum":1,"default":100,"title":"Limit"}},{"name":"x-demo-actor","in":"header","required":false,"schema":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"X-Demo-Actor"}}],"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"type":"array","items":{"$ref":"#/components/schemas/PlanResponse"},"title":"Response Plans Api Plans Get"}}}},"401":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorResponse"}}},"description":"Unauthorized"},"403":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorResponse"}}},"description":"Forbidden"},"404":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorResponse"}}},"description":"Not Found"},"409":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorResponse"}}},"description":"Conflict"},"422":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorResponse"}}},"description":"Unprocessable Content"},"503":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorResponse"}}},"description":"Service Unavailable"}}}},"/api/plans/{plan_id}/draft":{"put":{"summary":"Draft","operationId":"draft_api_plans__plan_id__draft_put","parameters":[{"name":"plan_id","in":"path","required":true,"schema":{"type":"string","title":"Plan Id"}},{"name":"x-demo-actor","in":"header","required":false,"schema":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"X-Demo-Actor"}},{"name":"idempotency-key","in":"header","required":true,"schema":{"type":"string","minLength":1,"maxLength":200,"title":"Idempotency-Key"}}],"requestBody":{"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/Draft"}}}},"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/PlanResponse"}}}},"401":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorResponse"}}},"description":"Unauthorized"},"403":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorResponse"}}},"description":"Forbidden"},"404":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorResponse"}}},"description":"Not Found"},"409":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorResponse"}}},"description":"Conflict"},"422":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorResponse"}}},"description":"Unprocessable Content"},"503":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorResponse"}}},"description":"Service Unavailable"}}}},"/api/reviews":{"get":{"summary":"Reviews","operationId":"reviews_api_reviews_get","parameters":[{"name":"offset","in":"query","required":false,"schema":{"type":"integer","minimum":0,"default":0,"title":"Offset"}},{"name":"limit","in":"query","required":false,"schema":{"type":"integer","maximum":200,"minimum":1,"default":100,"title":"Limit"}},{"name":"x-demo-actor","in":"header","required":false,"schema":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"X-Demo-Actor"}}],"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"type":"array","items":{"$ref":"#/components/schemas/PlanResponse"},"title":"Response Reviews Api Reviews Get"}}}},"401":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorResponse"}}},"description":"Unauthorized"},"403":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorResponse"}}},"description":"Forbidden"},"404":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorResponse"}}},"description":"Not Found"},"409":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorResponse"}}},"description":"Conflict"},"422":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorResponse"}}},"description":"Unprocessable Content"},"503":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorResponse"}}},"description":"Service Unavailable"}}}},"/api/plans/{plan_id}":{"get":{"summary":"Detail","operationId":"detail_api_plans__plan_id__get","parameters":[{"name":"plan_id","in":"path","required":true,"schema":{"type":"string","title":"Plan Id"}},{"name":"x-demo-actor","in":"header","required":false,"schema":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"X-Demo-Actor"}}],"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/HistoryResponse"}}}},"401":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorResponse"}}},"description":"Unauthorized"},"403":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorResponse"}}},"description":"Forbidden"},"404":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorResponse"}}},"description":"Not Found"},"409":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorResponse"}}},"description":"Conflict"},"422":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorResponse"}}},"description":"Unprocessable Content"},"503":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorResponse"}}},"description":"Service Unavailable"}}}},"/api/plans/{plan_id}/attachments":{"post":{"summary":"Upload","operationId":"upload_api_plans__plan_id__attachments_post","parameters":[{"name":"plan_id","in":"path","required":true,"schema":{"type":"string","title":"Plan Id"}},{"name":"x-demo-actor","in":"header","required":false,"schema":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"X-Demo-Actor"}},{"name":"idempotency-key","in":"header","required":true,"schema":{"type":"string","minLength":1,"maxLength":200,"title":"Idempotency-Key"}}],"requestBody":{"required":true,"content":{"multipart/form-data":{"schema":{"$ref":"#/components/schemas/Body_upload_api_plans__plan_id__attachments_post"}}}},"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/PlanResponse"}}}},"401":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorResponse"}}},"description":"Unauthorized"},"403":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorResponse"}}},"description":"Forbidden"},"404":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorResponse"}}},"description":"Not Found"},"409":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorResponse"}}},"description":"Conflict"},"422":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorResponse"}}},"description":"Unprocessable Content"},"503":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorResponse"}}},"description":"Service Unavailable"}}}},"/api/plans/{plan_id}/attachments/{attachment_id}":{"get":{"summary":"Attachment","operationId":"attachment_api_plans__plan_id__attachments__attachment_id__get","parameters":[{"name":"plan_id","in":"path","required":true,"schema":{"type":"string","title":"Plan Id"}},{"name":"attachment_id","in":"path","required":true,"schema":{"type":"string","title":"Attachment Id"}},{"name":"x-demo-actor","in":"header","required":false,"schema":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"X-Demo-Actor"}}],"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{}}}},"401":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorResponse"}}},"description":"Unauthorized"},"403":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorResponse"}}},"description":"Forbidden"},"404":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorResponse"}}},"description":"Not Found"},"409":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorResponse"}}},"description":"Conflict"},"422":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorResponse"}}},"description":"Unprocessable Content"},"503":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorResponse"}}},"description":"Service Unavailable"}}}},"/api/plans/{plan_id}/submit":{"post":{"summary":"Submit","operationId":"submit_api_plans__plan_id__submit_post","parameters":[{"name":"plan_id","in":"path","required":true,"schema":{"type":"string","title":"Plan Id"}},{"name":"x-demo-actor","in":"header","required":false,"schema":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"X-Demo-Actor"}},{"name":"idempotency-key","in":"header","required":true,"schema":{"type":"string","minLength":1,"maxLength":200,"title":"Idempotency-Key"}}],"requestBody":{"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/Submission"}}}},"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/SubmissionResponse"}}}},"401":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorResponse"}}},"description":"Unauthorized"},"403":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorResponse"}}},"description":"Forbidden"},"404":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorResponse"}}},"description":"Not Found"},"409":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorResponse"}}},"description":"Conflict"},"422":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorResponse"}}},"description":"Unprocessable Content"},"503":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorResponse"}}},"description":"Service Unavailable"}}}},"/api/plans/{plan_id}/rounds/{number}/evaluate":{"post":{"summary":"Evaluate","operationId":"evaluate_api_plans__plan_id__rounds__number__evaluate_post","parameters":[{"name":"plan_id","in":"path","required":true,"schema":{"type":"string","title":"Plan Id"}},{"name":"number","in":"path","required":true,"schema":{"type":"integer","title":"Number"}},{"name":"x-demo-actor","in":"header","required":false,"schema":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"X-Demo-Actor"}},{"name":"idempotency-key","in":"header","required":true,"schema":{"type":"string","minLength":1,"maxLength":200,"title":"Idempotency-Key"}}],"requestBody":{"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/Mutation"}}}},"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/EvaluationResponse"}}}},"401":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorResponse"}}},"description":"Unauthorized"},"403":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorResponse"}}},"description":"Forbidden"},"404":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorResponse"}}},"description":"Not Found"},"409":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorResponse"}}},"description":"Conflict"},"422":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorResponse"}}},"description":"Unprocessable Content"},"503":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorResponse"}}},"description":"Service Unavailable"}}}},"/api/plans/{plan_id}/rounds/{number}/decision":{"post":{"summary":"Human Decision","operationId":"human_decision_api_plans__plan_id__rounds__number__decision_post","parameters":[{"name":"plan_id","in":"path","required":true,"schema":{"type":"string","title":"Plan Id"}},{"name":"number","in":"path","required":true,"schema":{"type":"integer","title":"Number"}},{"name":"x-demo-actor","in":"header","required":false,"schema":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"X-Demo-Actor"}},{"name":"idempotency-key","in":"header","required":true,"schema":{"type":"string","minLength":1,"maxLength":200,"title":"Idempotency-Key"}}],"requestBody":{"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/HumanDecisionRequest"}}}},"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{}}}},"401":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorResponse"}}},"description":"Unauthorized"},"403":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorResponse"}}},"description":"Forbidden"},"404":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorResponse"}}},"description":"Not Found"},"409":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorResponse"}}},"description":"Conflict"},"422":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorResponse"}}},"description":"Unprocessable Content"},"503":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorResponse"}}},"description":"Service Unavailable"}}}},"/api/plans/{plan_id}/rounds/{number}/observation":{"get":{"summary":"Observation","operationId":"observation_api_plans__plan_id__rounds__number__observation_get","parameters":[{"name":"plan_id","in":"path","required":true,"schema":{"type":"string","title":"Plan Id"}},{"name":"number","in":"path","required":true,"schema":{"type":"integer","title":"Number"}},{"name":"x-demo-actor","in":"header","required":false,"schema":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"X-Demo-Actor"}}],"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{}}}},"401":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorResponse"}}},"description":"Unauthorized"},"403":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorResponse"}}},"description":"Forbidden"},"404":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorResponse"}}},"description":"Not Found"},"409":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorResponse"}}},"description":"Conflict"},"422":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorResponse"}}},"description":"Unprocessable Content"},"503":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorResponse"}}},"description":"Service Unavailable"}}}},"/api/verify/{suite}":{"post":{"summary":"Verify","operationId":"verify_api_verify__suite__post","parameters":[{"name":"suite","in":"path","required":true,"schema":{"type":"string","title":"Suite"}},{"name":"x-demo-actor","in":"header","required":false,"schema":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"X-Demo-Actor"}},{"name":"idempotency-key","in":"header","required":true,"schema":{"type":"string","minLength":1,"maxLength":200,"title":"Idempotency-Key"}}],"requestBody":{"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/DTO"}}}},"responses":{"200":{"description":"Successful Response","content":{"application/json":{"schema":{"$ref":"#/components/schemas/VerifyResponse"}}}},"401":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorResponse"}}},"description":"Unauthorized"},"403":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorResponse"}}},"description":"Forbidden"},"404":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorResponse"}}},"description":"Not Found"},"409":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorResponse"}}},"description":"Conflict"},"422":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorResponse"}}},"description":"Unprocessable Content"},"503":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ErrorResponse"}}},"description":"Service Unavailable"}}}}},"components":{"schemas":{"Body_upload_api_plans__plan_id__attachments_post":{"properties":{"file":{"type":"string","contentMediaType":"application/octet-stream","title":"File"},"expected_revision":{"type":"integer","minimum":0.0,"title":"Expected Revision"}},"type":"object","required":["file","expected_revision"],"title":"Body_upload_api_plans__plan_id__attachments_post"},"DTO":{"properties":{},"additionalProperties":false,"type":"object","title":"DTO"},"Draft":{"properties":{"expected_revision":{"type":"integer","minimum":0.0,"title":"Expected Revision"},"payload":{"$ref":"#/components/schemas/DraftPayload"}},"additionalProperties":false,"type":"object","required":["expected_revision","payload"],"title":"Draft"},"DraftPayload":{"properties":{"title":{"type":"string","title":"Title","default":""},"objective":{"type":"string","title":"Objective","default":""},"summary":{"type":"string","title":"Summary","default":""},"department":{"type":"string","title":"Department","default":""},"checker_id":{"type":"string","title":"Checker Id","default":""},"start_date":{"type":"string","title":"Start Date","default":""},"end_date":{"type":"string","title":"End Date","default":""},"budget_minor_units":{"type":"string","title":"Budget Minor Units","default":""},"currency":{"type":"string","title":"Currency","default":""},"target_audience":{"type":"string","title":"Target Audience","default":""},"channels":{"items":{"type":"string"},"type":"array","title":"Channels"},"kpi_expected":{"type":"string","title":"Kpi Expected","default":""},"notes":{"type":"string","title":"Notes","default":""}},"additionalProperties":false,"type":"object","title":"DraftPayload"},"ErrorResponse":{"properties":{"code":{"type":"string","title":"Code"},"message":{"type":"string","title":"Message"},"correlation_id":{"type":"string","title":"Correlation Id"},"http_status":{"type":"integer","title":"Http Status"}},"additionalProperties":false,"type":"object","required":["code","message","correlation_id","http_status"],"title":"ErrorResponse"},"EvaluationResponse":{"properties":{"evaluation":{"additionalProperties":true,"type":"object","title":"Evaluation"},"decision":{"additionalProperties":true,"type":"object","title":"Decision"},"questions":{"items":{"additionalProperties":true,"type":"object"},"type":"array","title":"Questions"}},"additionalProperties":false,"type":"object","required":["evaluation","decision","questions"],"title":"EvaluationResponse"},"HistoryResponse":{"properties":{"plan":{"$ref":"#/components/schemas/PlanResponse"},"versions":{"items":{"additionalProperties":true,"type":"object"},"type":"array","title":"Versions"},"rounds":{"items":{"additionalProperties":true,"type":"object"},"type":"array","title":"Rounds"},"records":{"items":{"additionalProperties":true,"type":"object"},"type":"array","title":"Records"},"audit":{"items":{"additionalProperties":true,"type":"object"},"type":"array","title":"Audit"}},"additionalProperties":false,"type":"object","required":["plan","versions","rounds","records","audit"],"title":"HistoryResponse"},"HumanDecisionRequest":{"properties":{"expected_revision":{"type":"integer","minimum":0.0,"title":"Expected Revision"},"action":{"type":"string","enum":["APPROVED","REJECTED"],"title":"Action"},"reason":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Reason"},"override_reason":{"anyOf":[{"type":"string"},{"type":"null"}],"title":"Override Reason"}},"additionalProperties":false,"type":"object","required":["expected_revision","action"],"title":"HumanDecisionRequest"},"Mutation":{"properties":{"expected_revision":{"type":"integer","minimum":0.0,"title":"Expected Revision"}},"additionalProperties":false,"type":"object","required":["expected_revision"],"title":"Mutation"},"PlanResponse":{"properties":{"plan_id":{"type":"string","title":"Plan Id"},"maker_id":{"type":"string","title":"Maker Id"},"payload":{"additionalProperties":true,"type":"object","title":"Payload"},"attachments":{"items":{"additionalProperties":true,"type":"object"},"type":"array","title":"Attachments"},"revision":{"type":"integer","title":"Revision"},"current_round":{"type":"integer","title":"Current Round"},"state":{"additionalProperties":true,"type":"object","title":"State"}},"additionalProperties":false,"type":"object","required":["plan_id","maker_id","payload","attachments","revision","current_round","state"],"title":"PlanResponse"},"Submission":{"properties":{"expected_revision":{"type":"integer","minimum":0.0,"title":"Expected Revision"},"expected_policy_version":{"type":"string","minLength":1,"title":"Expected Policy Version"}},"additionalProperties":false,"type":"object","required":["expected_revision","expected_policy_version"],"title":"Submission"},"SubmissionResponse":{"properties":{"snapshot":{"additionalProperties":true,"type":"object","title":"Snapshot"},"input_hash":{"type":"string","title":"Input Hash"},"round":{"additionalProperties":true,"type":"object","title":"Round"},"evaluation_ticket":{"additionalProperties":true,"type":"object","title":"Evaluation Ticket"}},"additionalProperties":false,"type":"object","required":["snapshot","input_hash","round","evaluation_ticket"],"title":"SubmissionResponse"},"VerifyResponse":{"properties":{"run_id":{"type":"string","title":"Run Id"},"suite":{"type":"string","title":"Suite"},"rows":{"items":{"additionalProperties":true,"type":"object"},"type":"array","title":"Rows"}},"additionalProperties":false,"type":"object","required":["run_id","suite","rows"],"title":"VerifyResponse"}}}}
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "OrganizationAI API",
+    "description": "PostgreSQL authentication and authenticated Maker-Checker workflow, plus a separate SQLite synthetic approval demo. Demo-actor routes are available only in APP_ENV=demo.",
+    "version": "1.0"
+  },
+  "paths": {
+    "/api/auth/login": {
+      "post": {
+        "tags": [
+          "authentication"
+        ],
+        "summary": "Login",
+        "operationId": "login_api_auth_login_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/register": {
+      "post": {
+        "tags": [
+          "authentication"
+        ],
+        "summary": "Register",
+        "operationId": "register_api_auth_register_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/me": {
+      "get": {
+        "tags": [
+          "authentication"
+        ],
+        "summary": "Me",
+        "operationId": "me_api_auth_me_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/logout": {
+      "post": {
+        "tags": [
+          "authentication"
+        ],
+        "summary": "Logout",
+        "operationId": "logout_api_auth_logout_post",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/workflow/checkers": {
+      "get": {
+        "tags": [
+          "authenticated workflow"
+        ],
+        "summary": "Checkers",
+        "operationId": "checkers_api_workflow_checkers_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/WorkflowCheckerResponse"
+                  },
+                  "type": "array",
+                  "title": "Response Checkers Api Workflow Checkers Get"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/workflow/plans": {
+      "get": {
+        "tags": [
+          "authenticated workflow"
+        ],
+        "summary": "Plans",
+        "operationId": "plans_api_workflow_plans_get",
+        "parameters": [
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 100,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/WorkflowPlanResponse"
+                  },
+                  "title": "Response Plans Api Workflow Plans Get"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "authenticated workflow"
+        ],
+        "summary": "Create Plan",
+        "operationId": "create_plan_api_workflow_plans_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateWorkflowPlanRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowPlanResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
+    "/api/workflow/reviews": {
+      "get": {
+        "tags": [
+          "authenticated workflow"
+        ],
+        "summary": "Reviews",
+        "operationId": "reviews_api_workflow_reviews_get",
+        "parameters": [
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 100,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/WorkflowPlanResponse"
+                  },
+                  "title": "Response Reviews Api Workflow Reviews Get"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
+    "/api/workflow/plans/{plan_id}": {
+      "get": {
+        "tags": [
+          "authenticated workflow"
+        ],
+        "summary": "Detail",
+        "operationId": "detail_api_workflow_plans__plan_id__get",
+        "parameters": [
+          {
+            "name": "plan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Plan Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowPlanResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "authenticated workflow"
+        ],
+        "summary": "Update Plan",
+        "operationId": "update_plan_api_workflow_plans__plan_id__put",
+        "parameters": [
+          {
+            "name": "plan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Plan Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateWorkflowPlanRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowPlanResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
+    "/api/workflow/plans/{plan_id}/attachments": {
+      "post": {
+        "tags": [
+          "authenticated workflow"
+        ],
+        "summary": "Upload Attachment",
+        "operationId": "upload_attachment_api_workflow_plans__plan_id__attachments_post",
+        "parameters": [
+          {
+            "name": "plan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Plan Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_attachment_api_workflow_plans__plan_id__attachments_post"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowPlanResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
+    "/api/workflow/plans/{plan_id}/attachments/{attachment_id}": {
+      "get": {
+        "tags": [
+          "authenticated workflow"
+        ],
+        "summary": "Attachment",
+        "operationId": "attachment_api_workflow_plans__plan_id__attachments__attachment_id__get",
+        "parameters": [
+          {
+            "name": "plan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Plan Id"
+            }
+          },
+          {
+            "name": "attachment_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Attachment Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
+    "/api/workflow/plans/{plan_id}/submit": {
+      "post": {
+        "tags": [
+          "authenticated workflow"
+        ],
+        "summary": "Submit Plan",
+        "operationId": "submit_plan_api_workflow_plans__plan_id__submit_post",
+        "parameters": [
+          {
+            "name": "plan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Plan Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmitWorkflowPlanRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowPlanResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
+    "/api/workflow/plans/{plan_id}/rounds/{round_number}/decision": {
+      "post": {
+        "tags": [
+          "authenticated workflow"
+        ],
+        "summary": "Decide",
+        "operationId": "decide_api_workflow_plans__plan_id__rounds__round_number__decision_post",
+        "parameters": [
+          {
+            "name": "plan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Plan Id"
+            }
+          },
+          {
+            "name": "round_number",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Round Number"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkflowDecisionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowPlanResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
+    "/api/health": {
+      "get": {
+        "summary": "Health",
+        "operationId": "health_api_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/config": {
+      "get": {
+        "summary": "Config",
+        "operationId": "config_api_config_get",
+        "parameters": [
+          {
+            "name": "x-demo-actor",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Demo-Actor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
+    "/api/plans": {
+      "get": {
+        "summary": "Plans",
+        "operationId": "plans_api_plans_get",
+        "parameters": [
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 100,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "x-demo-actor",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Demo-Actor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PlanResponse"
+                  },
+                  "title": "Response Plans Api Plans Get"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
+    "/api/plans/{plan_id}/draft": {
+      "put": {
+        "summary": "Draft",
+        "operationId": "draft_api_plans__plan_id__draft_put",
+        "parameters": [
+          {
+            "name": "plan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Plan Id"
+            }
+          },
+          {
+            "name": "x-demo-actor",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Demo-Actor"
+            }
+          },
+          {
+            "name": "idempotency-key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200,
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Draft"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
+    "/api/reviews": {
+      "get": {
+        "summary": "Reviews",
+        "operationId": "reviews_api_reviews_get",
+        "parameters": [
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 100,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "x-demo-actor",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Demo-Actor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PlanResponse"
+                  },
+                  "title": "Response Reviews Api Reviews Get"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
+    "/api/plans/{plan_id}": {
+      "get": {
+        "summary": "Detail",
+        "operationId": "detail_api_plans__plan_id__get",
+        "parameters": [
+          {
+            "name": "plan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Plan Id"
+            }
+          },
+          {
+            "name": "x-demo-actor",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Demo-Actor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HistoryResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
+    "/api/plans/{plan_id}/attachments": {
+      "post": {
+        "summary": "Upload",
+        "operationId": "upload_api_plans__plan_id__attachments_post",
+        "parameters": [
+          {
+            "name": "plan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Plan Id"
+            }
+          },
+          {
+            "name": "x-demo-actor",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Demo-Actor"
+            }
+          },
+          {
+            "name": "idempotency-key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200,
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_api_plans__plan_id__attachments_post"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
+    "/api/plans/{plan_id}/attachments/{attachment_id}": {
+      "get": {
+        "summary": "Attachment",
+        "operationId": "attachment_api_plans__plan_id__attachments__attachment_id__get",
+        "parameters": [
+          {
+            "name": "plan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Plan Id"
+            }
+          },
+          {
+            "name": "attachment_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Attachment Id"
+            }
+          },
+          {
+            "name": "x-demo-actor",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Demo-Actor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
+    "/api/plans/{plan_id}/submit": {
+      "post": {
+        "summary": "Submit",
+        "operationId": "submit_api_plans__plan_id__submit_post",
+        "parameters": [
+          {
+            "name": "plan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Plan Id"
+            }
+          },
+          {
+            "name": "x-demo-actor",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Demo-Actor"
+            }
+          },
+          {
+            "name": "idempotency-key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200,
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Submission"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubmissionResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
+    "/api/plans/{plan_id}/rounds/{number}/evaluate": {
+      "post": {
+        "summary": "Evaluate",
+        "operationId": "evaluate_api_plans__plan_id__rounds__number__evaluate_post",
+        "parameters": [
+          {
+            "name": "plan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Plan Id"
+            }
+          },
+          {
+            "name": "number",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Number"
+            }
+          },
+          {
+            "name": "x-demo-actor",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Demo-Actor"
+            }
+          },
+          {
+            "name": "idempotency-key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200,
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Mutation"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvaluationResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
+    "/api/plans/{plan_id}/rounds/{number}/decision": {
+      "post": {
+        "summary": "Human Decision",
+        "operationId": "human_decision_api_plans__plan_id__rounds__number__decision_post",
+        "parameters": [
+          {
+            "name": "plan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Plan Id"
+            }
+          },
+          {
+            "name": "number",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Number"
+            }
+          },
+          {
+            "name": "x-demo-actor",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Demo-Actor"
+            }
+          },
+          {
+            "name": "idempotency-key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200,
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HumanDecisionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
+    "/api/plans/{plan_id}/rounds/{number}/observation": {
+      "get": {
+        "summary": "Observation",
+        "operationId": "observation_api_plans__plan_id__rounds__number__observation_get",
+        "parameters": [
+          {
+            "name": "plan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Plan Id"
+            }
+          },
+          {
+            "name": "number",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Number"
+            }
+          },
+          {
+            "name": "x-demo-actor",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Demo-Actor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
+    "/api/verify/{suite}": {
+      "post": {
+        "summary": "Verify",
+        "operationId": "verify_api_verify__suite__post",
+        "parameters": [
+          {
+            "name": "suite",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Suite"
+            }
+          },
+          {
+            "name": "x-demo-actor",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Demo-Actor"
+            }
+          },
+          {
+            "name": "idempotency-key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200,
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DTO"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VerifyResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AuthResponse": {
+        "properties": {
+          "user": {
+            "$ref": "#/components/schemas/AuthenticatedUser"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "user"
+        ],
+        "title": "AuthResponse"
+      },
+      "AuthenticatedUser": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "user_code": {
+            "type": "string",
+            "title": "User Code"
+          },
+          "username": {
+            "type": "string",
+            "title": "Username"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
+          "display_name": {
+            "type": "string",
+            "title": "Display Name"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "roles": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Roles"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "user_code",
+          "username",
+          "email",
+          "phone",
+          "display_name",
+          "status",
+          "roles"
+        ],
+        "title": "AuthenticatedUser"
+      },
+      "Body_upload_api_plans__plan_id__attachments_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File"
+          },
+          "expected_revision": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Expected Revision"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file",
+          "expected_revision"
+        ],
+        "title": "Body_upload_api_plans__plan_id__attachments_post"
+      },
+      "Body_upload_attachment_api_workflow_plans__plan_id__attachments_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File"
+          },
+          "expected_revision": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Expected Revision"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file",
+          "expected_revision"
+        ],
+        "title": "Body_upload_attachment_api_workflow_plans__plan_id__attachments_post"
+      },
+      "CreateWorkflowPlanRequest": {
+        "properties": {
+          "payload": {
+            "$ref": "#/components/schemas/WorkflowPayload"
+          },
+          "checker_user_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Checker User Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "CreateWorkflowPlanRequest"
+      },
+      "DTO": {
+        "properties": {},
+        "additionalProperties": false,
+        "type": "object",
+        "title": "DTO"
+      },
+      "Draft": {
+        "properties": {
+          "expected_revision": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Expected Revision"
+          },
+          "payload": {
+            "$ref": "#/components/schemas/DraftPayload"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "expected_revision",
+          "payload"
+        ],
+        "title": "Draft"
+      },
+      "DraftPayload": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "title": "Title",
+            "default": ""
+          },
+          "objective": {
+            "type": "string",
+            "title": "Objective",
+            "default": ""
+          },
+          "summary": {
+            "type": "string",
+            "title": "Summary",
+            "default": ""
+          },
+          "department": {
+            "type": "string",
+            "title": "Department",
+            "default": ""
+          },
+          "checker_id": {
+            "type": "string",
+            "title": "Checker Id",
+            "default": ""
+          },
+          "start_date": {
+            "type": "string",
+            "title": "Start Date",
+            "default": ""
+          },
+          "end_date": {
+            "type": "string",
+            "title": "End Date",
+            "default": ""
+          },
+          "budget_minor_units": {
+            "type": "string",
+            "title": "Budget Minor Units",
+            "default": ""
+          },
+          "currency": {
+            "type": "string",
+            "title": "Currency",
+            "default": ""
+          },
+          "target_audience": {
+            "type": "string",
+            "title": "Target Audience",
+            "default": ""
+          },
+          "channels": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Channels"
+          },
+          "kpi_expected": {
+            "type": "string",
+            "title": "Kpi Expected",
+            "default": ""
+          },
+          "notes": {
+            "type": "string",
+            "title": "Notes",
+            "default": ""
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "DraftPayload"
+      },
+      "ErrorResponse": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "correlation_id": {
+            "type": "string",
+            "title": "Correlation Id"
+          },
+          "http_status": {
+            "type": "integer",
+            "title": "Http Status"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "code",
+          "message",
+          "correlation_id",
+          "http_status"
+        ],
+        "title": "ErrorResponse"
+      },
+      "EvaluationResponse": {
+        "properties": {
+          "evaluation": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Evaluation"
+          },
+          "decision": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Decision"
+          },
+          "questions": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Questions"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "evaluation",
+          "decision",
+          "questions"
+        ],
+        "title": "EvaluationResponse"
+      },
+      "HistoryResponse": {
+        "properties": {
+          "plan": {
+            "$ref": "#/components/schemas/PlanResponse"
+          },
+          "versions": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Versions"
+          },
+          "rounds": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Rounds"
+          },
+          "records": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Records"
+          },
+          "audit": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Audit"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "plan",
+          "versions",
+          "rounds",
+          "records",
+          "audit"
+        ],
+        "title": "HistoryResponse"
+      },
+      "HumanDecisionRequest": {
+        "properties": {
+          "expected_revision": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Expected Revision"
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "APPROVED",
+              "REJECTED"
+            ],
+            "title": "Action"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "override_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Override Reason"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "expected_revision",
+          "action"
+        ],
+        "title": "HumanDecisionRequest"
+      },
+      "LoginRequest": {
+        "properties": {
+          "identifier": {
+            "type": "string",
+            "maxLength": 320,
+            "minLength": 1,
+            "title": "Identifier"
+          },
+          "password": {
+            "type": "string",
+            "maxLength": 1024,
+            "minLength": 1,
+            "title": "Password"
+          },
+          "remember_me": {
+            "type": "boolean",
+            "title": "Remember Me",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "identifier",
+          "password"
+        ],
+        "title": "LoginRequest"
+      },
+      "Mutation": {
+        "properties": {
+          "expected_revision": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Expected Revision"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "expected_revision"
+        ],
+        "title": "Mutation"
+      },
+      "PlanResponse": {
+        "properties": {
+          "plan_id": {
+            "type": "string",
+            "title": "Plan Id"
+          },
+          "maker_id": {
+            "type": "string",
+            "title": "Maker Id"
+          },
+          "payload": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Payload"
+          },
+          "attachments": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Attachments"
+          },
+          "revision": {
+            "type": "integer",
+            "title": "Revision"
+          },
+          "current_round": {
+            "type": "integer",
+            "title": "Current Round"
+          },
+          "state": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "State"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "plan_id",
+          "maker_id",
+          "payload",
+          "attachments",
+          "revision",
+          "current_round",
+          "state"
+        ],
+        "title": "PlanResponse"
+      },
+      "RegisterRequest": {
+        "properties": {
+          "username": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 3,
+            "title": "Username"
+          },
+          "contact": {
+            "type": "string",
+            "maxLength": 320,
+            "minLength": 1,
+            "title": "Contact"
+          },
+          "password": {
+            "type": "string",
+            "maxLength": 1024,
+            "minLength": 12,
+            "title": "Password"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "username",
+          "contact",
+          "password"
+        ],
+        "title": "RegisterRequest"
+      },
+      "Submission": {
+        "properties": {
+          "expected_revision": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Expected Revision"
+          },
+          "expected_policy_version": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Expected Policy Version"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "expected_revision",
+          "expected_policy_version"
+        ],
+        "title": "Submission"
+      },
+      "SubmissionResponse": {
+        "properties": {
+          "snapshot": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Snapshot"
+          },
+          "input_hash": {
+            "type": "string",
+            "title": "Input Hash"
+          },
+          "round": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Round"
+          },
+          "evaluation_ticket": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Evaluation Ticket"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "snapshot",
+          "input_hash",
+          "round",
+          "evaluation_ticket"
+        ],
+        "title": "SubmissionResponse"
+      },
+      "SubmitWorkflowPlanRequest": {
+        "properties": {
+          "expected_revision": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Expected Revision"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "expected_revision"
+        ],
+        "title": "SubmitWorkflowPlanRequest"
+      },
+      "UpdateWorkflowPlanRequest": {
+        "properties": {
+          "expected_revision": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Expected Revision"
+          },
+          "payload": {
+            "$ref": "#/components/schemas/WorkflowPayload"
+          },
+          "checker_user_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Checker User Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "expected_revision",
+          "payload"
+        ],
+        "title": "UpdateWorkflowPlanRequest"
+      },
+      "VerifyResponse": {
+        "properties": {
+          "run_id": {
+            "type": "string",
+            "title": "Run Id"
+          },
+          "suite": {
+            "type": "string",
+            "title": "Suite"
+          },
+          "rows": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Rows"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "run_id",
+          "suite",
+          "rows"
+        ],
+        "title": "VerifyResponse"
+      },
+      "WorkflowAttachmentResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename"
+          },
+          "media_type": {
+            "type": "string",
+            "title": "Media Type"
+          },
+          "byte_size": {
+            "type": "integer",
+            "title": "Byte Size"
+          },
+          "content_hash": {
+            "type": "string",
+            "title": "Content Hash"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "filename",
+          "media_type",
+          "byte_size",
+          "content_hash",
+          "created_at"
+        ],
+        "title": "WorkflowAttachmentResponse"
+      },
+      "WorkflowCheckerResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "display_name": {
+            "type": "string",
+            "title": "Display Name"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "display_name"
+        ],
+        "title": "WorkflowCheckerResponse"
+      },
+      "WorkflowDecisionRequest": {
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "APPROVED",
+              "REJECTED"
+            ],
+            "title": "Action"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 5000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "action"
+        ],
+        "title": "WorkflowDecisionRequest"
+      },
+      "WorkflowEventResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "actor_id": {
+            "type": "string",
+            "title": "Actor Id"
+          },
+          "actor_name": {
+            "type": "string",
+            "title": "Actor Name"
+          },
+          "action": {
+            "type": "string",
+            "title": "Action"
+          },
+          "status_before": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status Before"
+          },
+          "status_after": {
+            "type": "string",
+            "title": "Status After"
+          },
+          "details": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Details"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "actor_id",
+          "actor_name",
+          "action",
+          "status_before",
+          "status_after",
+          "details",
+          "created_at"
+        ],
+        "title": "WorkflowEventResponse"
+      },
+      "WorkflowPayload": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 200,
+            "title": "Title",
+            "default": ""
+          },
+          "objective": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Objective",
+            "default": ""
+          },
+          "summary": {
+            "type": "string",
+            "maxLength": 10000,
+            "title": "Summary",
+            "default": ""
+          },
+          "department": {
+            "type": "string",
+            "maxLength": 160,
+            "title": "Department",
+            "default": ""
+          },
+          "start_date": {
+            "type": "string",
+            "maxLength": 10,
+            "title": "Start Date",
+            "default": ""
+          },
+          "end_date": {
+            "type": "string",
+            "maxLength": 10,
+            "title": "End Date",
+            "default": ""
+          },
+          "budget_minor_units": {
+            "type": "string",
+            "maxLength": 24,
+            "title": "Budget Minor Units",
+            "default": ""
+          },
+          "currency": {
+            "type": "string",
+            "maxLength": 3,
+            "title": "Currency",
+            "default": "VND"
+          },
+          "target_audience": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Target Audience",
+            "default": ""
+          },
+          "channels": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 20,
+            "title": "Channels"
+          },
+          "kpi_expected": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Kpi Expected",
+            "default": ""
+          },
+          "notes": {
+            "type": "string",
+            "maxLength": 5000,
+            "title": "Notes",
+            "default": ""
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "WorkflowPayload"
+      },
+      "WorkflowPlanResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "payload": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Payload"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "processing_stage": {
+            "type": "string",
+            "title": "Processing Stage"
+          },
+          "maker_id": {
+            "type": "string",
+            "title": "Maker Id"
+          },
+          "maker_name": {
+            "type": "string",
+            "title": "Maker Name"
+          },
+          "checker_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Checker Id"
+          },
+          "checker_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Checker Name"
+          },
+          "current_version": {
+            "type": "integer",
+            "title": "Current Version"
+          },
+          "current_round": {
+            "type": "integer",
+            "title": "Current Round"
+          },
+          "revision": {
+            "type": "integer",
+            "title": "Revision"
+          },
+          "decision_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decision Reason"
+          },
+          "attachments": {
+            "items": {
+              "$ref": "#/components/schemas/WorkflowAttachmentResponse"
+            },
+            "type": "array",
+            "title": "Attachments"
+          },
+          "versions": {
+            "items": {
+              "$ref": "#/components/schemas/WorkflowVersionResponse"
+            },
+            "type": "array",
+            "title": "Versions"
+          },
+          "history": {
+            "items": {
+              "$ref": "#/components/schemas/WorkflowEventResponse"
+            },
+            "type": "array",
+            "title": "History"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "code",
+          "payload",
+          "status",
+          "processing_stage",
+          "maker_id",
+          "maker_name",
+          "checker_id",
+          "checker_name",
+          "current_version",
+          "current_round",
+          "revision",
+          "decision_reason",
+          "attachments",
+          "versions",
+          "history",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "WorkflowPlanResponse"
+      },
+      "WorkflowVersionResponse": {
+        "properties": {
+          "version_number": {
+            "type": "integer",
+            "title": "Version Number"
+          },
+          "round_number": {
+            "type": "integer",
+            "title": "Round Number"
+          },
+          "payload": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Payload"
+          },
+          "attachments": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Attachments"
+          },
+          "submitted_by": {
+            "type": "string",
+            "title": "Submitted By"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "version_number",
+          "round_number",
+          "payload",
+          "attachments",
+          "submitted_by",
+          "created_at"
+        ],
+        "title": "WorkflowVersionResponse"
+      }
+    }
+  }
+}\n
