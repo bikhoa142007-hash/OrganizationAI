@@ -16,16 +16,19 @@ from src.backend.demo import PRINCIPALS, ENGINE, configuration, CHECKER
 from .dependencies import Settings, open_workflow
 from .errors import error_response
 from .schemas import Draft, Submission, Mutation, HumanDecisionRequest, PlanResponse, HistoryResponse, ErrorResponse, SubmissionResponse, EvaluationResponse, VerifyResponse, DTO
+from .auth import router as auth_router
 
 
 def create_app(settings=None):
     settings = settings or Settings.from_environment()
     settings.validate()
     verify_runs = {}
-    app = FastAPI(title='OrganizationAI demo API', version='1.0',
-                  description='Synthetic demo authentication only. Production requests fail closed.',
+    app = FastAPI(title='OrganizationAI API', version='1.0',
+                  description='PostgreSQL authentication API and synthetic approval demo. Existing demo-actor routes are available only in APP_ENV=demo.',
                   responses={code: {'model': ErrorResponse} for code in (401, 403, 404, 409, 422, 503)})
-    app.add_middleware(CORSMiddleware, allow_origins=list(settings.cors_origins), allow_credentials=False,
+    app.state.allowed_origins = tuple(settings.cors_origins)
+    app.include_router(auth_router)
+    app.add_middleware(CORSMiddleware, allow_origins=list(settings.cors_origins), allow_credentials=True,
                        allow_methods=['GET', 'POST', 'PUT'],
                        allow_headers=['Content-Type', 'X-Demo-Actor', 'Idempotency-Key', 'X-Correlation-ID'])
 

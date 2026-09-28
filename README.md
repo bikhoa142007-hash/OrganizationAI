@@ -47,7 +47,7 @@ Backend Render lưu SQLite tại `/tmp/organizationai/demo-organization.sqlite3`
 | `Implemented` | Demo seed | Tám scenario tổng hợp, seed idempotent và không xóa database hiện có |
 | `Demo/Mock` | Actor identity | Chọn shared demo actor, gửi qua header `X-Demo-Actor`; server vẫn kiểm tra role và ownership |
 | `Demo/Mock` | AI evaluation | FastAPI đang nối `MockVLMProvider`; timeout/error/malformed evidence đều fail closed sang Human Review |
-| `Planned/TBD` | Production identity và AI | Production authentication, real Local VLM transport, persistent production database và rate limiting toàn diện chưa được triển khai |
+| `Planned/TBD` | Production identity và AI | Xác thực production/identity-provider, kết nối Auth với identity của Judge Demo, Local VLM transport thật, cơ sở dữ liệu production bền vững và rate limiting toàn diện chưa được triển khai; Auth PostgreSQL hiện chỉ là local foundation |
 
 AI không tự động từ chối kế hoạch. Engine chỉ trả `AUTO_APPROVED` hoặc `HUMAN_REVIEW_REQUIRED`; quyết định `REJECTED` chỉ do Checker được gán thực hiện. Policy mặc định cho submission HTTP mới là `DEMO-HTTP-2` với auto-approval tắt, nên mock PASS vẫn chuyển Checker; riêng seed `DEMO-SEED-AUTO` dùng snapshot `DEMO-HTTP-AUTO-1` để minh họa controlled auto-approval.
 
@@ -151,7 +151,7 @@ flowchart TB
 | Testing | Pytest, Vitest, Testing Library, Playwright | Unit, integration, frontend và browser E2E |
 | Deployment | Render Blueprint | Static frontend và Python web service riêng biệt |
 
-Repository không dùng Docker để chạy hoặc deploy Judge Demo hiện tại.
+Judge Demo công khai trên Render vẫn dùng cấu hình Render; Docker Compose chạy Judge Demo local cùng Auth PostgreSQL riêng.
 
 ---
 
@@ -244,6 +244,41 @@ npm run dev -- --host 127.0.0.1 --port 5173 --strictPort
 | OpenAPI JSON | [http://127.0.0.1:8010/openapi.json](http://127.0.0.1:8010/openapi.json) |
 
 ---
+
+## 🔐 Auth cục bộ với PostgreSQL và Docker Compose
+
+Auth dùng PostgreSQL riêng cho tài khoản và role. Judge Demo tiếp tục dùng SQLite cùng `X-Demo-Actor`; cookie Auth không biến tài khoản PostgreSQL thành actor demo. Docker Compose chạy các route demo hiện có cùng Auth cục bộ, còn Judge Demo công khai trên Render vẫn theo cấu hình Render.
+
+1. Sao chép `.env.example` thành `.env`; đặt các giá trị local riêng cho `POSTGRES_PASSWORD`, `JWT_SECRET` (ít nhất 32 byte ngẫu nhiên) và `AUTH_SEED_PASSWORD`. `DATABASE_URL` trong container dùng hostname `db` và port `5432`; PostgreSQL được mở trên host tại port `5433`. Không commit `.env`.
+2. Chạy stack local:
+
+   ```powershell
+   docker compose up --build
+   ```
+
+   Compose chờ PostgreSQL healthy, chạy `alembic upgrade head`, seed tài khoản demo rồi khởi động FastAPI và Vite.
+
+3. Dùng giao diện tại `/login`, `/register` và `/account`. Luồng Judge Demo vẫn bắt đầu tại `/` và giữ bộ chọn demo actor.
+
+| Thành phần | URL local |
+| --- | --- |
+| Frontend | `http://localhost:5173` |
+| FastAPI | `http://localhost:8010` |
+| API docs | `http://localhost:8010/docs` |
+| PostgreSQL host port | `localhost:5433` |
+
+`POST /api/auth/register` nhận username, email hoặc số điện thoại quốc tế, và mật khẩu; tài khoản tự đăng ký chỉ nhận role `MAKER` và sau khi tạo sẽ được chuyển tới đăng nhập. `POST /api/auth/login` nhận username, user code hoặc email và đặt JWT vào cookie `HttpOnly`, `SameSite=Lax`. `GET /api/auth/me` trả hồ sơ và role đã nạp từ PostgreSQL; `POST /api/auth/logout` xóa cookie. Ghi nhớ trên thiết bị này dùng thời hạn `AUTH_REMEMBER_TOKEN_DAYS`; phiên thường dùng `JWT_ACCESS_TOKEN_MINUTES`.
+
+Self-registration mặc định chỉ bật trong Compose local. Cookie dùng `AUTH_COOKIE_SECURE=false` cho HTTP localhost; môi trường HTTPS cần bật `AUTH_COOKIE_SECURE=true`. Không dùng `AUTH_SEED_PASSWORD` hoặc bật self-registration trên Judge Demo production. Các tài khoản seed local dùng username `maker`, `checker` và `admin`, cùng mật khẩu local trong `AUTH_SEED_PASSWORD`; seed không ghi đè mật khẩu hoặc trạng thái tài khoản hiện có.
+
+Chạy lại migration hoặc seed trong container:
+
+```powershell
+docker compose exec backend alembic upgrade head
+docker compose exec backend python -m src.backend.seed_auth
+```
+
+Auth foundation hiện chưa nối identity PostgreSQL vào authorization của các route Judge Demo. Vì vậy các role guard và demo actor của Judge Demo vẫn chạy qua `SessionProvider` riêng.
 
 ## ☁️ Sử Dụng Và Cập Nhật Server Render
 

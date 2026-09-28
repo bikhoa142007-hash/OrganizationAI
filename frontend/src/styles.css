@@ -558,6 +558,102 @@ h1, h2, h3, h4 { letter-spacing: 0; }
   .review-table td small { text-align: right; }
 }
 
+.result-header .back-link { display: block; margin-bottom: 12px; }
+.review-decision textarea { display: block; width: 100%; margin: 8px 0 16px; }
+/* Authentication screens remain intentionally small and easy to restyle. */
+.auth-page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 2rem 1rem;
+  background: #f4f6f8;
+}
+
+.auth-panel,
+.auth-account {
+  width: min(100%, 28rem);
+  padding: 2rem;
+  border: 1px solid #d9dee5;
+  border-radius: 0.75rem;
+  background: #fff;
+  color: #1c2733;
+}
+
+.auth-panel h1,
+.auth-account h1 {
+  margin-top: 0;
+}
+
+.auth-form {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+
+.auth-form input:not([type="checkbox"]) {
+  min-height: 2.75rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #8793a1;
+  border-radius: 0.375rem;
+  font: inherit;
+}
+
+.auth-form input:focus-visible,
+.auth-form button:focus-visible,
+.auth-account button:focus-visible {
+  outline: 3px solid #315f9f;
+  outline-offset: 2px;
+}
+
+.auth-form button,
+.auth-account button {
+  min-height: 2.75rem;
+  margin-top: 0.5rem;
+  border: 0;
+  border-radius: 0.375rem;
+  background: #214f87;
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.auth-form button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.auth-form__remember {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.auth-form__remember input[type="checkbox"] {
+  width: 1rem;
+  height: 1rem;
+  margin: 0;
+  accent-color: #315f9f;
+}
+
+.auth-form small {
+  color: #526170;
+}
+
+.auth-form__error {
+  margin: 0.25rem 0;
+  color: #a12622;
+}
+
+.auth-account {
+  margin: 36px auto;
+  line-height: 1.55;
+}
+
+.auth-account p {
+  overflow-wrap: anywhere;
+}
+
 @media (max-width: 680px) {
   .workspace-content { padding: 24px 14px 40px; }
   .header-context { display: none; }

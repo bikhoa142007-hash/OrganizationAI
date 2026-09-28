@@ -1,7 +1,9 @@
 import type { ReactNode } from 'react'
 import { Route, Routes } from 'react-router-dom'
 import { AppShell } from '../components/AppShell'
+import { RequireAuth } from '../components/auth/RequireAuth'
 import { StatePanel } from '../components/ui'
+import { AuthenticatedAccountPage } from '../pages/AuthenticatedAccountPage'
 import { AuditTimelinePage } from '../pages/AuditTimelinePage'
 import { LandingPage } from '../pages/LandingPage'
 import { LoginPage } from '../pages/LoginPage'
@@ -17,22 +19,27 @@ import { VerifyDashboardPage } from '../pages/VerifyDashboardPage'
 import { useSession } from '../services/SessionProvider'
 
 export function AppRoutes() {
-  return <Routes><Route path="/login" element={<LoginPage />} /><Route path="/register" element={<RegisterPage />} /><Route element={<AppShell />}>
-    <Route index element={<LandingPage />} />
-    <Route path="plans" element={<PlansPage />} />
-    <Route path="plans/:planId" element={<PlanDetailPage />} />
-    <Route path="plans/:planId/edit" element={<RoleGuard role="MAKER"><PlanFormPage key="edit" /></RoleGuard>} />
-    <Route path="plans/new" element={<RoleGuard role="MAKER"><PlanFormPage key="new" /></RoleGuard>} />
-    <Route path="plans/processing" element={<ProcessingPage />} />
-    <Route path="plans/:planId/processing" element={<ProcessingPage />} />
-    <Route path="plans/result" element={<ResultPage />} />
-    <Route path="plans/:planId/result" element={<ResultPage />} />
-    <Route path="review" element={<RoleGuard role="CHECKER"><ReviewQueuePage /></RoleGuard>} />
-    <Route path="audit" element={<AuditTimelinePage />} />
-    <Route path="verify" element={<VerifyDashboardPage />} />
-    <Route path="policy" element={<PolicyPage />} />
-    <Route path="*" element={<StatePanel kind="error" title="Không tìm thấy trang" description="Đường dẫn không tồn tại trong OrganizationAI." />} />
-  </Route></Routes>
+  return <Routes>
+    <Route path="/login" element={<LoginPage />} />
+    <Route path="/register" element={<RegisterPage />} />
+    <Route path="/account" element={<RequireAuth><AuthenticatedAccountPage /></RequireAuth>} />
+    <Route element={<AppShell />}>
+      <Route index element={<LandingPage />} />
+      <Route path="plans" element={<PlansPage />} />
+      <Route path="plans/:planId" element={<PlanDetailPage />} />
+      <Route path="plans/:planId/edit" element={<RoleGuard role="MAKER"><PlanFormPage key="edit" /></RoleGuard>} />
+      <Route path="plans/new" element={<RoleGuard role="MAKER"><PlanFormPage key="new" /></RoleGuard>} />
+      <Route path="plans/processing" element={<ProcessingPage />} />
+      <Route path="plans/:planId/processing" element={<ProcessingPage />} />
+      <Route path="plans/result" element={<ResultPage />} />
+      <Route path="plans/:planId/result" element={<ResultPage />} />
+      <Route path="review" element={<RoleGuard role="CHECKER"><ReviewQueuePage /></RoleGuard>} />
+      <Route path="audit" element={<AuditTimelinePage />} />
+      <Route path="verify" element={<VerifyDashboardPage />} />
+      <Route path="policy" element={<PolicyPage />} />
+      <Route path="*" element={<StatePanel kind="error" title="Không tìm thấy trang" description="Đường dẫn không tồn tại trong OrganizationAI." />} />
+    </Route>
+  </Routes>
 }
 
 function RoleGuard({ role, children }: { role: string; children: ReactNode }) {

@@ -1,15 +1,14 @@
 import { ArrowRight, Eye, EyeOff, LockKeyhole, Mail, ShieldCheck } from 'lucide-react'
-import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { Link } from 'react-router-dom'
+import { useState, type FormEvent } from 'react'
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
+import { AuthApiError } from '../services/auth'
 
-type FieldErrors = {
-  identifier?: string
-  password?: string
-}
+type FieldErrors = { identifier?: string; password?: string }
 
 function validateIdentifier(value: string) {
   const identifier = value.trim()
-  if (!identifier) return 'Vui lòng nhập email hoặc tên người dùng.'
+  if (!identifier) return 'Vui lòng nhập email, tên đăng nhập hoặc mã người dùng.'
   if (identifier.includes('@') && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier)) {
     return 'Email chưa đúng định dạng.'
   }
@@ -20,7 +19,17 @@ function validatePassword(value: string) {
   return value ? '' : 'Vui lòng nhập mật khẩu.'
 }
 
+function safeReturnPath(state: unknown): string {
+  if (!state || typeof state !== 'object' || !('from' in state) || typeof state.from !== 'string') {
+    return '/account'
+  }
+  return state.from.startsWith('/') && !state.from.startsWith('//') ? state.from : '/account'
+}
+
 export function LoginPage() {
+  const { isAuthenticated, isLoading: sessionLoading, login } = useAuth()
+  const location = useLocation()
+  const navigate = useNavigate()
   const [identifier, setIdentifier] = useState('')
   const [password, setPassword] = useState('')
   const [remember, setRemember] = useState(false)
@@ -29,13 +38,8 @@ export function LoginPage() {
   const [errors, setErrors] = useState<FieldErrors>({})
   const [loading, setLoading] = useState(false)
   const [formError, setFormError] = useState('')
-  const submitTimer = useRef<number | null>(null)
 
-  useEffect(() => () => {
-    if (submitTimer.current !== null) window.clearTimeout(submitTimer.current)
-  }, [])
-
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setFormError('')
     setTouched({ identifier: true, password: true })
@@ -53,14 +57,33 @@ export function LoginPage() {
     }
 
     setLoading(true)
-    submitTimer.current = window.setTimeout(() => {
+    try {
+      await login(identifier.trim(), password, remember)
+      navigate(safeReturnPath(location.state), { replace: true })
+    } catch (reason) {
+      if (reason instanceof AuthApiError && reason.status === 0) {
+        setFormError('Không thể kết nối đến dịch vụ đăng nhập. Hãy kiểm tra kết nối rồi thử lại.')
+      } else if (reason instanceof AuthApiError && reason.status === 401) {
+        setFormError('Thông tin đăng nhập không chính xác hoặc tài khoản đã bị vô hiệu hóa.')
+      } else if (reason instanceof AuthApiError && reason.status === 503) {
+        setFormError('Dịch vụ đăng nhập chưa được cấu hình. Vui lòng thử lại sau.')
+      } else {
+        setFormError('Đăng nhập chưa thành công. Hãy kiểm tra thông tin và thử lại.')
+      }
+    } finally {
       setLoading(false)
-      setFormError('Không thể đăng nhập lúc này. Vui lòng thử lại sau.')
-    }, 650)
+    }
   }
 
   const identifierError = touched.identifier ? (errors.identifier ?? validateIdentifier(identifier)) : ''
   const passwordError = touched.password ? (errors.password ?? validatePassword(password)) : ''
+  const notice = location.state && typeof location.state === 'object'
+    && 'notice' in location.state && typeof location.state.notice === 'string'
+    ? location.state.notice
+    : ''
+
+  if (sessionLoading) return <p role="status">Đang kiểm tra phiên đăng nhập…</p>
+  if (isAuthenticated) return <Navigate to={safeReturnPath(location.state)} replace />
 
   return (
     <main className="login-page">
@@ -101,17 +124,20 @@ export function LoginPage() {
             <p>Đăng nhập bằng tài khoản OrganizationAI của bạn.</p>
           </header>
 
+          {notice && <p className="login-form-message" role="status">{notice}</p>}
+
           <form className="login-form" noValidate onSubmit={handleSubmit} aria-busy={loading}>
             <div className={identifierError ? 'login-field login-field-error' : 'login-field'}>
-              <label htmlFor="login-identifier">Email hoặc tên người dùng</label>
+              <label htmlFor="login-identifier">Tên đăng nhập, mã người dùng hoặc email</label>
               <div className="login-input-wrap">
                 <Mail aria-hidden="true" />
                 <input
                   id="login-identifier"
-                  name="username"
+                  name="identifier"
                   type="text"
                   autoComplete="username"
-                  placeholder="ten@congty.com"
+                  placeholder="maker, USR-000001 hoặc ten@congty.com"
+                  maxLength={320}
                   value={identifier}
                   aria-invalid={Boolean(identifierError)}
                   aria-describedby={identifierError ? 'login-identifier-error' : undefined}
@@ -138,6 +164,7 @@ export function LoginPage() {
                   type={showPassword ? 'text' : 'password'}
                   autoComplete="current-password"
                   placeholder="Nhập mật khẩu"
+                  maxLength={1024}
                   value={password}
                   aria-invalid={Boolean(passwordError)}
                   aria-describedby={passwordError ? 'login-password-error' : undefined}
