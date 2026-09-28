@@ -19,6 +19,8 @@ const AuthContext = createContext<AuthContextValue | null>(null)
 export function AuthProvider({ children }: PropsWithChildren) {
   const location = useLocation()
   const requiresSession = ['/login', '/register', '/account'].includes(location.pathname)
+    || location.pathname === '/workflow'
+    || location.pathname.startsWith('/workflow/')
   const [user, setUser] = useState<AuthUser | null>(null)
   const [isLoading, setIsLoading] = useState(requiresSession)
 

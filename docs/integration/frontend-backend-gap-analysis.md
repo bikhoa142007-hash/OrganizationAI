@@ -1,5 +1,18 @@
 # Frontend Developer frontend / backend integration
 
+## Authenticated workflow update (2026-09-28)
+
+The historical `/api/plans` mapping below remains the synthetic Judge Demo
+contract and still uses SQLite plus `X-Demo-Actor`. A separate Auth workflow now
+uses JWT-cookie identity and PostgreSQL routes under `/api/workflow/*`; the UI is
+under `/workflow/*`. It persists Maker ownership, assigned Checker, private
+attachments/hashes, submitted snapshots, decisions and append-only history.
+There is no implicit SQLite-to-PostgreSQL transfer. The Auth submission path
+currently routes directly to human review; the existing AI pipeline remains
+attached to the isolated SQLite Judge Demo. See
+[`authenticated-workflow-postgresql.md`](authenticated-workflow-postgresql.md)
+for its API and data-retention boundary.
+
 Baseline: one React/TypeScript/Vite package, npm lockfile, React Router, local
 component state and ServicesProvider. App instantiated mock services, no HTTP
 client or authentication. Main forms had placeholder create IDs, simulated file

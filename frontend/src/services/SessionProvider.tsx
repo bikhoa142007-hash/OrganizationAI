@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type PropsWithChildren } from 'react'
+import { useLocation } from 'react-router-dom'
 import type { AppConfig } from '../types'
 import { api, demoActor } from './api/client'
 
@@ -42,11 +43,23 @@ const fallbackSession: SessionValue = {
 const SessionContext = createContext<SessionValue>(fallbackSession)
 
 export function SessionProvider({ children }: PropsWithChildren) {
+  const location = useLocation()
+  const isAuthRoute = location.pathname === '/login'
+    || location.pathname === '/register'
+    || location.pathname === '/account'
+    || location.pathname === '/workflow'
+    || location.pathname.startsWith('/workflow/')
   const [config, setConfig] = useState<AppConfig | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
   const refresh = useCallback(async () => {
+    if (isAuthRoute) {
+      setConfig(null)
+      setError('')
+      setLoading(false)
+      return
+    }
     setLoading(true)
     setError('')
     try {
@@ -75,7 +88,7 @@ export function SessionProvider({ children }: PropsWithChildren) {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [isAuthRoute])
 
   useEffect(() => { void refresh() }, [refresh])
 

@@ -725,3 +725,107 @@ h1, h2, h3, h4 { letter-spacing: 0; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
+
+/* Authenticated PostgreSQL workflow */
+.auth-workflow-shell { min-height: 100vh; background: var(--surface-soft); }
+.auth-workflow-header { display: flex; min-height: 76px; align-items: center; justify-content: space-between; gap: 20px; border-bottom: 1px solid var(--line); background: var(--surface); padding: 12px max(24px, calc((100vw - 1200px) / 2)); }
+.auth-workflow-brand { display: flex; align-items: center; gap: 10px; color: var(--ink); text-decoration: none; }
+.auth-workflow-brand > span { display: grid; width: 38px; height: 38px; place-items: center; border-radius: 7px; background: var(--brand-soft); color: var(--brand-dark); font-size: .8rem; font-weight: 800; }
+.auth-workflow-brand strong, .auth-workflow-brand small { display: block; }
+.auth-workflow-brand small { margin-top: 2px; color: var(--muted); font-size: .68rem; font-weight: 500; }
+.auth-workflow-header nav, .auth-workflow-user { display: flex; align-items: center; gap: 16px; }
+.auth-workflow-header nav a { display: inline-flex; align-items: center; gap: 7px; color: var(--muted); font-size: .88rem; font-weight: 650; text-decoration: none; }
+.auth-workflow-header nav a.active, .auth-workflow-header nav a:hover { color: var(--brand-dark); }
+.auth-workflow-user { border-left: 1px solid var(--line); padding-left: 18px; }
+.auth-workflow-user > span { display: grid; gap: 2px; font-size: .82rem; font-weight: 700; }
+.auth-workflow-user small { color: var(--muted); font-size: .7rem; font-weight: 500; }
+.auth-workflow-user button { display: inline-flex; align-items: center; gap: 6px; border: 0; background: transparent; color: var(--brand-dark); font-size: .82rem; font-weight: 700; }
+.auth-workflow-main { width: min(1200px, calc(100% - 48px)); margin: 0 auto; padding: 32px 0 64px; }
+.auth-workflow-page { display: grid; gap: 20px; }
+.auth-workflow-page-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; margin-bottom: 4px; }
+.auth-workflow-page-heading h1 { margin: 5px 0 7px; font-size: clamp(1.65rem, 3vw, 2.2rem); line-height: 1.15; }
+.auth-workflow-page-heading p:not(.page-eyebrow) { max-width: 680px; margin: 0; color: var(--muted); line-height: 1.5; }
+.auth-workflow-page-heading .page-eyebrow { margin: 0; color: var(--brand-dark); font-size: .7rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.auth-workflow-table-wrap { overflow: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+.auth-workflow-table { width: 100%; border-collapse: collapse; text-align: left; }
+.auth-workflow-table th { background: var(--surface-soft); color: var(--muted); font-size: .72rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+.auth-workflow-table th, .auth-workflow-table td { border-bottom: 1px solid var(--line); padding: 13px 16px; white-space: nowrap; }
+.auth-workflow-table tbody tr:last-child td { border-bottom: 0; }
+.auth-workflow-table td { color: var(--ink); font-size: .87rem; }
+.auth-workflow-table td a { display: grid; gap: 3px; color: var(--ink); text-decoration: none; }
+.auth-workflow-table td a:hover strong { color: var(--brand-dark); }
+.auth-workflow-table td small { color: var(--muted); font-size: .72rem; }
+.workflow-status { display: inline-flex; align-items: center; min-height: 26px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface-soft); padding: 3px 10px; color: var(--ink); font-size: .73rem; font-weight: 750; }
+.workflow-status.status-pending_approval { border-color: #e5c781; background: #fff7e4; color: #714b00; }
+.workflow-status.status-approved { border-color: #9bd5ba; background: #eaf8f1; color: #075f43; }
+.workflow-status.status-rejected { border-color: #edb2ae; background: #fff1f0; color: #8c201a; }
+.auth-workflow-state { border: 1px solid var(--line); border-radius: 8px; background: var(--surface); padding: 28px; color: var(--muted); }
+.auth-workflow-state h1, .auth-workflow-state h2 { margin: 0 0 8px; color: var(--ink); font-size: 1.12rem; }
+.auth-workflow-state p { margin: 0 0 14px; }
+.auth-workflow-state.is-error { border-color: #edb2ae; background: #fffafa; }
+.auth-back-link { display: inline-flex; align-items: center; gap: 7px; width: fit-content; color: var(--muted); font-size: .84rem; font-weight: 650; text-decoration: none; }
+.auth-back-link:hover { color: var(--brand-dark); }
+.auth-workflow-alert { display: flex; align-items: flex-start; gap: 10px; border-radius: 6px; padding: 12px 14px; }
+.auth-workflow-alert p { margin: 4px 0 0; }
+.auth-workflow-alert.is-error { border: 1px solid #edb2ae; background: #fff1f0; color: #7e211c; }
+.auth-workflow-alert.is-success { border: 1px solid #9bd5ba; background: #eaf8f1; color: #075f43; }
+.auth-workflow-form, .auth-workflow-card { border: 1px solid var(--line); border-radius: 8px; background: var(--surface); padding: 20px; }
+.auth-workflow-form fieldset { min-width: 0; margin: 0; border: 0; padding: 0; }
+.auth-workflow-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.auth-field { display: grid; gap: 7px; color: var(--ink); font-size: .84rem; font-weight: 700; }
+.auth-field input, .auth-field select, .auth-field textarea { width: 100%; border: 1px solid var(--line-strong); border-radius: 5px; background: white; padding: 10px 11px; color: var(--ink); font-weight: 450; }
+.auth-field input:focus, .auth-field select:focus, .auth-field textarea:focus { outline: 2px solid rgba(8,127,115,.24); border-color: var(--brand); }
+.auth-field small { color: var(--muted); font-size: .73rem; font-weight: 450; }
+.auth-field.field-wide { grid-column: 1 / -1; }
+.auth-upload-row { display: flex; align-items: center; gap: 10px; margin-top: 18px; border-top: 1px solid var(--line); padding-top: 16px; color: var(--muted); font-size: .82rem; }
+.auth-upload-row label { position: relative; overflow: hidden; }
+.auth-upload-row input[type="file"] { position: absolute; inset: 0; width: 100%; opacity: 0; cursor: pointer; }
+.auth-workflow-form-footer { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 20px; border-top: 1px solid var(--line); padding-top: 16px; }
+.auth-workflow-form-footer p { max-width: 520px; margin: 0; color: var(--muted); font-size: .8rem; line-height: 1.45; }
+.auth-workflow-detail-grid { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(290px, .65fr); gap: 18px; align-items: start; }
+.auth-workflow-card-heading { display: flex; align-items: center; gap: 9px; margin-bottom: 16px; color: var(--brand-dark); }
+.auth-workflow-card-heading h2 { margin: 0; color: var(--ink); font-size: 1.05rem; }
+.auth-workflow-definition-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 15px; margin: 0; }
+.auth-workflow-definition-grid div { min-width: 0; }
+.auth-workflow-definition-grid .field-wide { grid-column: 1 / -1; }
+.auth-workflow-definition-grid dt { margin-bottom: 4px; color: var(--muted); font-size: .72rem; font-weight: 750; }
+.auth-workflow-definition-grid dd { margin: 0; color: var(--ink); font-size: .88rem; line-height: 1.5; overflow-wrap: anywhere; white-space: pre-wrap; }
+.auth-workflow-attachments { margin-top: 20px; border-top: 1px solid var(--line); padding-top: 14px; }
+.auth-workflow-attachments h3 { margin: 0 0 10px; font-size: .9rem; }
+.auth-workflow-attachments > div { display: flex; align-items: center; gap: 10px; border-top: 1px solid var(--line); padding: 10px 0; }
+.auth-workflow-attachments .auth-workflow-attachment { align-items: center; }
+.auth-workflow-image-preview { width: 76px; height: 60px; border: 1px solid var(--line); border-radius: 4px; object-fit: cover; }
+.auth-workflow-attachments > div span, .auth-workflow-attachments small { display: block; }
+.auth-workflow-attachments small { margin-top: 3px; color: var(--muted); font-size: .7rem; }
+.auth-workflow-history { display: grid; gap: 0; margin: 0; padding: 0; list-style: none; }
+.auth-workflow-history li { display: grid; grid-template-columns: 30px 1fr; gap: 10px; border-left: 1px solid var(--line); margin-left: 11px; padding: 0 0 18px 15px; }
+.auth-workflow-history li:last-child { border-left-color: transparent; padding-bottom: 0; }
+.history-icon { display: grid; width: 24px; height: 24px; place-items: center; margin-left: -28px; border: 1px solid var(--line); border-radius: 50%; background: var(--surface); color: var(--brand-dark); }
+.auth-workflow-history strong { font-size: .84rem; }
+.auth-workflow-history p, .auth-workflow-history small { display: block; margin: 3px 0 0; color: var(--muted); font-size: .72rem; }
+.auth-workflow-history blockquote { margin: 7px 0 0; border-left: 2px solid var(--line-strong); padding-left: 9px; color: var(--ink); font-size: .8rem; }
+.auth-version-card details { border-top: 1px solid var(--line); padding: 12px 0; }
+.auth-version-card summary { cursor: pointer; font-weight: 700; }
+.auth-version-card details p { color: var(--muted); white-space: pre-wrap; }
+.auth-decision-card { display: grid; gap: 14px; }
+.auth-decision-card > p { margin: -8px 0 0; color: var(--muted); font-size: .84rem; }
+.auth-workflow-actions { display: flex; justify-content: flex-end; }
+.auth-quiet-refresh { justify-self: start; border: 0; background: transparent; color: var(--muted); padding: 3px 0; font-size: .78rem; text-decoration: underline; }
+@media (max-width: 900px) {
+  .auth-workflow-header { flex-wrap: wrap; padding: 12px 20px; }
+  .auth-workflow-header nav { order: 3; width: 100%; border-top: 1px solid var(--line); padding-top: 10px; }
+  .auth-workflow-user { margin-left: auto; }
+  .auth-workflow-detail-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 640px) {
+  .auth-workflow-main { width: min(100% - 28px, 1200px); padding-top: 22px; }
+  .auth-workflow-header { gap: 12px; padding: 12px 14px; }
+  .auth-workflow-header nav { gap: 16px; }
+  .auth-workflow-user { border: 0; padding: 0; }
+  .auth-workflow-fields, .auth-workflow-definition-grid { grid-template-columns: 1fr; }
+  .auth-field.field-wide, .auth-workflow-definition-grid .field-wide { grid-column: auto; }
+  .auth-workflow-page-heading, .auth-workflow-form-footer { align-items: stretch; flex-direction: column; }
+  .auth-workflow-form-footer .button-row { display: flex; }
+  .auth-workflow-form, .auth-workflow-card, .auth-workflow-state { padding: 16px; }
+  .auth-upload-row { flex-wrap: wrap; }
+}

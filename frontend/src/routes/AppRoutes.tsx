@@ -1,9 +1,13 @@
 import type { ReactNode } from 'react'
-import { Route, Routes } from 'react-router-dom'
+import { Navigate, Route, Routes } from 'react-router-dom'
 import { AppShell } from '../components/AppShell'
+import { AuthenticatedWorkflowShell, AuthWorkflowRoleGuard } from '../components/auth/AuthenticatedWorkflowShell'
 import { RequireAuth } from '../components/auth/RequireAuth'
 import { StatePanel } from '../components/ui'
 import { AuthenticatedAccountPage } from '../pages/AuthenticatedAccountPage'
+import { AuthenticatedPlansPage } from '../pages/AuthenticatedPlansPage'
+import { AuthenticatedWorkflowDetailPage } from '../pages/AuthenticatedWorkflowDetailPage'
+import { AuthenticatedWorkflowFormPage } from '../pages/AuthenticatedWorkflowFormPage'
 import { AuditTimelinePage } from '../pages/AuditTimelinePage'
 import { LandingPage } from '../pages/LandingPage'
 import { LoginPage } from '../pages/LoginPage'
@@ -23,6 +27,14 @@ export function AppRoutes() {
     <Route path="/login" element={<LoginPage />} />
     <Route path="/register" element={<RegisterPage />} />
     <Route path="/account" element={<RequireAuth><AuthenticatedAccountPage /></RequireAuth>} />
+    <Route path="/workflow" element={<RequireAuth><AuthenticatedWorkflowShell /></RequireAuth>}>
+      <Route index element={<Navigate to="plans" replace />} />
+      <Route path="plans" element={<AuthWorkflowRoleGuard roles={['MAKER']}><AuthenticatedPlansPage /></AuthWorkflowRoleGuard>} />
+      <Route path="plans/new" element={<AuthWorkflowRoleGuard roles={['MAKER']}><AuthenticatedWorkflowFormPage /></AuthWorkflowRoleGuard>} />
+      <Route path="plans/:planId" element={<AuthWorkflowRoleGuard roles={['MAKER', 'CHECKER']}><AuthenticatedWorkflowDetailPage /></AuthWorkflowRoleGuard>} />
+      <Route path="plans/:planId/edit" element={<AuthWorkflowRoleGuard roles={['MAKER']}><AuthenticatedWorkflowFormPage /></AuthWorkflowRoleGuard>} />
+      <Route path="reviews" element={<AuthWorkflowRoleGuard roles={['CHECKER']}><AuthenticatedPlansPage reviews /></AuthWorkflowRoleGuard>} />
+    </Route>
     <Route element={<AppShell />}>
       <Route index element={<LandingPage />} />
       <Route path="plans" element={<PlansPage />} />

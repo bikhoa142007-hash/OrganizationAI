@@ -47,7 +47,8 @@ Backend Render lưu SQLite tại `/tmp/organizationai/demo-organization.sqlite3`
 | `Implemented` | Demo seed | Tám scenario tổng hợp, seed idempotent và không xóa database hiện có |
 | `Demo/Mock` | Actor identity | Chọn shared demo actor, gửi qua header `X-Demo-Actor`; server vẫn kiểm tra role và ownership |
 | `Demo/Mock` | AI evaluation | FastAPI đang nối `MockVLMProvider`; timeout/error/malformed evidence đều fail closed sang Human Review |
-| `Planned/TBD` | Production identity và AI | Xác thực production/identity-provider, kết nối Auth với identity của Judge Demo, Local VLM transport thật, cơ sở dữ liệu production bền vững và rate limiting toàn diện chưa được triển khai; Auth PostgreSQL hiện chỉ là local foundation |
+| `Implemented (local)` | Auth workflow | Cookie JWT xác thực Maker/Checker; workflow mới lưu kế hoạch, snapshot, quyết định, file riêng tư và audit trong PostgreSQL |
+| `Planned/TBD` | Production identity và AI | Auth workflow chưa được đưa lên production; chưa nối pipeline AI vào PostgreSQL workflow, chưa có Local VLM transport thật hoặc rate limiting toàn diện |
 
 AI không tự động từ chối kế hoạch. Engine chỉ trả `AUTO_APPROVED` hoặc `HUMAN_REVIEW_REQUIRED`; quyết định `REJECTED` chỉ do Checker được gán thực hiện. Policy mặc định cho submission HTTP mới là `DEMO-HTTP-2` với auto-approval tắt, nên mock PASS vẫn chuyển Checker; riêng seed `DEMO-SEED-AUTO` dùng snapshot `DEMO-HTTP-AUTO-1` để minh họa controlled auto-approval.
 
@@ -147,7 +148,7 @@ flowchart TB
 | Frontend | React, TypeScript, Vite, React Router | Giao diện Judge Demo và API-backed workflow |
 | Backend | FastAPI, Uvicorn, Python | REST API, DTO, authorization dependency và application workflow |
 | AI pipeline | Python provider interface, deterministic mock provider | Tạo/kiểm tra evidence và mô phỏng các trạng thái AI trong demo |
-| Database | SQLite | Lưu plan, version, round, attachment, decision, intent và audit |
+| Database | SQLite + PostgreSQL | SQLite giữ Judge Demo; PostgreSQL lưu tài khoản Auth và Auth workflow |
 | Testing | Pytest, Vitest, Testing Library, Playwright | Unit, integration, frontend và browser E2E |
 | Deployment | Render Blueprint | Static frontend và Python web service riêng biệt |
 
@@ -278,7 +279,17 @@ docker compose exec backend alembic upgrade head
 docker compose exec backend python -m src.backend.seed_auth
 ```
 
-Auth foundation hiện chưa nối identity PostgreSQL vào authorization của các route Judge Demo. Vì vậy các role guard và demo actor của Judge Demo vẫn chạy qua `SessionProvider` riêng.
+Đăng nhập Maker sẽ mở workflow tại `/workflow/plans`; Checker xem `/workflow/reviews`. Các trang này dùng JWT cookie và route `/api/workflow/*`, không gửi `X-Demo-Actor`. `/api/plans`, `/api/reviews`, Verify và các trang demo vẫn dùng SQLite cùng actor header riêng.
+
+Auth workflow hiện chuyển mọi lần gửi sang `HUMAN_REVIEW_REQUIRED`; nó chưa gọi AI pipeline vốn đang gắn với SQLite Judge Demo. Migration `20260928_03` chỉ thêm các bảng `auth_workflow_*` vào PostgreSQL. Không có bước tự nhập hoặc xóa dữ liệu SQLite. Database `runtime/demo-organization.sqlite3` tiếp tục được giữ nguyên cho Judge Demo; nếu cần nhập dữ liệu sau này, phải chốt ánh xạ actor demo sang tài khoản Auth và backup trước khi chạy một công cụ chuyển dữ liệu riêng.
+
+Sau khi Compose khởi động và seed PostgreSQL, chạy smoke test với tài khoản `maker`, `checker`, `admin`:
+
+```powershell
+& .\.venv\Scripts\python.exe scripts/smoke_auth_workflow.py
+```
+
+Script hỏi mật khẩu seed và API base URL, tạo ba kế hoạch có ảnh riêng tư, thử approve, reject và hai quyết định đồng thời trên cùng round; script cũng xác nhận các quyền bị chặn và cookie Auth không thay thế `X-Demo-Actor`. Các bản ghi smoke có tên và ID riêng; xóa dữ liệu sau kiểm thử chỉ khi đã kiểm tra các ID đó.
 
 ## ☁️ Sử Dụng Và Cập Nhật Server Render
 
@@ -370,11 +381,21 @@ E2E tự chạy backend tại `127.0.0.1:8008`, frontend tại `127.0.0.1:5178` 
 | Production build | TypeScript + Vite build thành công |
 | Playwright E2E | Chưa hoàn tất: Chromium v1243 chưa có và CDN download timeout; không ghi số test pass |
 
+### Kết quả xác minh Auth workflow ngày 2026-09-28
+
+| Kiểm tra | Kết quả |
+|---|---|
+| Full backend Pytest | `215 passed`, `84 subtests passed`; 2 cảnh báo deprecation của Starlette/AnyIO |
+| Vitest | `29 passed` trong 6 test files |
+| Frontend production build | TypeScript và Vite build thành công |
+| Judge Demo Verify | `5/5` case; escalation/ground-truth `15/15` case |
+| Docker/PostgreSQL migration và smoke | Chưa chạy: Docker CLI/Desktop không khả dụng trong môi trường kiểm thử này |
+
 ---
 
 ## 🔌 API Chính
 
-Mọi endpoint nghiệp vụ dùng actor demo đã xác thực. Mutation yêu cầu `Idempotency-Key`; request body dùng `expected_revision` và, khi submit, `expected_policy_version`.
+Judge Demo endpoint `/api/plans`, `/api/reviews` và `/api/verify` dùng riêng `X-Demo-Actor`; mutation demo yêu cầu `Idempotency-Key`. Auth workflow `/api/workflow/*` dùng JWT cookie, role từ PostgreSQL và không nhận maker ID/role từ body.
 
 | Method | Endpoint | Actor/Permission | Mục đích |
 | --- | --- | --- | --- |
@@ -391,6 +412,15 @@ Mọi endpoint nghiệp vụ dùng actor demo đã xác thực. Mutation yêu c�
 | `POST` | `/api/plans/{plan_id}/rounds/{number}/decision` | Assigned `CHECKER` | Ghi quyết định human `APPROVED`/`REJECTED` |
 | `GET` | `/api/plans/{plan_id}/rounds/{number}/observation` | Actor có quyền đọc plan | Đọc persisted observation cho Verify/audit |
 | `POST` | `/api/verify/{suite}` | Demo actor hợp lệ | Chạy suite `general` hoặc `escalation` trong in-memory workflow |
+| `GET` | `/api/workflow/plans` | Auth cookie + `MAKER` | Danh sách kế hoạch mà Maker tạo |
+| `GET` | `/api/workflow/checkers` | Auth cookie + `MAKER` | Checker đang hoạt động để giao kế hoạch |
+| `POST` | `/api/workflow/plans` | Auth cookie + `MAKER` | Tạo draft; backend tự gán Maker |
+| `PUT` | `/api/workflow/plans/{plan_id}` | Maker sở hữu, DRAFT/REJECTED | Cập nhật draft với optimistic revision |
+| `POST` | `/api/workflow/plans/{plan_id}/attachments` | Maker sở hữu, DRAFT/REJECTED | Lưu ảnh riêng tư và SHA-256 trong PostgreSQL |
+| `POST` | `/api/workflow/plans/{plan_id}/submit` | Maker sở hữu | Tạo version/round snapshot và chuyển sang Human Review |
+| `GET` | `/api/workflow/reviews` | Auth cookie + `CHECKER` | Queue hồ sơ đang chờ, chỉ hồ sơ giao Checker hiện tại |
+| `GET` | `/api/workflow/plans/{plan_id}` | Maker sở hữu hoặc Checker được giao | Nội dung, version và lịch sử Auth workflow |
+| `POST` | `/api/workflow/plans/{plan_id}/rounds/{round}/decision` | Checker được giao | Phê duyệt/từ chối; từ chối cần lý do, một quyết định mỗi round |
 
 Xem thêm [API examples](docs/integration/api-examples.md) và [generated OpenAPI snapshot](docs/integration/openapi.json).
 
@@ -430,6 +460,7 @@ Phạm vi hiện tại chỉ phù hợp cho Sprint 1 Judge Demo và dữ liệu 
 | [Deployment runbook](deployment/README.md) | Render provisioning, environment, verification, rollback và persistence limits |
 | [BA – Backend – Frontend Developer integration report](docs/integration/ba-frontend-developer-integration-report.md) | Kiến trúc tích hợp, endpoint, seed, frontend và test handoff |
 | [Frontend/backend gap analysis](docs/integration/frontend-backend-gap-analysis.md) | Mapping UI với backend contract |
+| [Authenticated workflow on PostgreSQL](docs/integration/authenticated-workflow-postgresql.md) | Auth cookie, role checks, schema, SQLite retention and local smoke steps |
 | [BA contract mapping](docs/integration/ba-contract-mapping.md) | Mapping dataset/business evidence vào workflow |
 | [RBAC/workflow validation audit](docs/integration/rbac-workflow-validation-audit.md) | Kiểm tra quyền, validation, policy mode, seed và demo checklist |
 | [API examples](docs/integration/api-examples.md) | Ví dụ request/response demo HTTP API |
