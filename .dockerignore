@@ -1,0 +1,15 @@
+.git
+.venv
+venv
+node_modules
+frontend/node_modules
+frontend/dist
+runtime
+.pytest_cache
+__pycache__
+.env
+.env.*
+!.env.example
+*.sqlite
+*.sqlite3
+*.db

@@ -166,6 +166,57 @@ Sprint 1 requires:
 
 The mock provider must support PASS, REVIEW_REQUIRED and timeout/error scenarios.
 
+## Local authentication development with Docker Compose
+
+Authentication uses PostgreSQL tables managed by SQLAlchemy and Alembic. The existing approval workflow continues to use its SQLite demo repository and `X-Demo-Actor` until a separate migration work package replaces it.
+
+1. Copy `.env.example` to `.env` and replace the three local placeholders: `POSTGRES_PASSWORD`, `JWT_SECRET` (at least 32 random bytes), and `AUTH_SEED_PASSWORD`. Keep `DATABASE_URL` in sync with the PostgreSQL username, password, and database; URL-encode reserved characters in the password.
+2. Start the development stack:
+
+   ```powershell
+   docker compose up --build
+   ```
+
+   Compose starts PostgreSQL with a persistent `postgres_data` volume, waits for its health check, applies Alembic migrations, seeds local users, then starts FastAPI and Vite.
+
+3. Open [http://localhost:5173/login](http://localhost:5173/login). The authenticated account shell is at [http://localhost:5173/account](http://localhost:5173/account). Existing marketing-plan demo routes remain available at `/` and continue to use the demo actor selector.
+
+   - Frontend: `http://localhost:5173`
+   - FastAPI: `http://localhost:8010`
+   - API docs: `http://localhost:8010/docs`
+
+The login API accepts `POST /api/auth/login` with `identifier` (username, user code, or email), `password`, and optional `remember_me`. It sets an HS256 JWT in an `HttpOnly`, `SameSite=Lax` cookie; the browser does not receive or store the token in JavaScript-accessible storage. Without “remember this device,” the JWT expires after `JWT_ACCESS_TOKEN_MINUTES` (30 minutes by default) and the browser cookie is session-only. With it, both the JWT and cookie last `AUTH_REMEMBER_TOKEN_DAYS` (14 days by default). `GET /api/auth/me` returns the current user and roles from PostgreSQL; `POST /api/auth/logout` clears the cookie. Cookie-authenticated mutations check the request Origin against configured `CORS_ORIGINS`. Local Compose sets `AUTH_COOKIE_SECURE=false` for HTTP localhost only; use HTTPS and set it to `true` outside local development.
+
+`POST /api/auth/register` accepts `username`, `contact` (email or international phone with `+` country code), and `password`. The UI also checks password confirmation before sending. The server normalizes usernames and contacts, enforces unique values in PostgreSQL, generates the user code, hashes passwords with Argon2id, and assigns only `MAKER`. Registration does not sign the user in; after success, sign in with the new username. Phone numbers are saved in E.164 form and are not login identifiers. The local Compose stack enables self-registration by default; outside local development it is disabled unless `AUTH_REGISTRATION_ENABLED=true` is deliberately configured. Do not enable it where the public registration policy has not been approved.
+
+Authentication is PostgreSQL-only. Login, registration, and session lookup fail closed with a service-unavailable response when PostgreSQL or required JWT configuration is missing; there is no SQLite fallback. Logout still clears the browser cookie without requiring PostgreSQL. The Render Judge Demo remains on its existing SQLite/demo-actor boundary and does not get a real authenticated identity from the new auth cookie. Do not configure the local seed password or self-registration on the Judge Demo deployment.
+
+The local seed creates these users, all with the password set by `AUTH_SEED_PASSWORD`:
+
+| User code | Username | Email | Role |
+| --- | --- | --- | --- |
+| `USR-000001` | `maker` | `maker@example.com` | `MAKER` |
+| `USR-000002` | `checker` | `checker@example.com` | `CHECKER` |
+| `USR-000003` | `admin` | `admin@example.com` | `ADMIN` |
+
+The seed is idempotent and does not reset existing passwords or disabled accounts. To apply migrations or rerun the seed manually:
+
+```powershell
+docker compose exec backend alembic upgrade head
+docker compose exec backend python -m src.backend.seed_auth
+```
+
+The reusable backend dependencies are `require_role("MAKER")`, `require_role("CHECKER")`, and `require_any_role(...)`. Existing approval routes still authenticate through the demo actor header; this task does not migrate those routes or connect their demo principal IDs to the new user IDs.
+
+Backend and frontend verification commands:
+
+```powershell
+python -m pytest
+npm ci --prefix frontend
+npm test --prefix frontend
+npm run build --prefix frontend
+```
+
 ## Getting started
 
 Use the verified PowerShell commands in [Demo tích hợp BA – Backend – Frontend Developer](#demo-tích-hợp-ba--backend--frontend-developer) below. Verified runtimes: Python 3.13.14 and Node.js 24.17.0; package managers: pip and npm; database: SQLite. The HTTP demo uses an explicitly configured mock model.

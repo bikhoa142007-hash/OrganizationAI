@@ -70,6 +70,34 @@ Later implementation must execute AGENTS critical tests: incomplete drafts; inva
 - Stack selection is a prerequisite to later implementation, not a WP1 blocker.
 - No unresolved blocker prevents this framework-independent contract freeze.
 
+## Repository update — authentication foundation (2026-09-25)
+
+The audit above records the repository state on 2026-09-20 and remains a historical WP1 record. A later explicit user request authorized a bounded authentication foundation; the current stack and runtime are taken from source code and manifests, not from the earlier inventory.
+
+### Implemented boundary
+
+- React/Vite adds `/login` and a protected `/account` shell while keeping the existing marketing-plan routes available.
+- FastAPI adds `/api/auth/login`, `/api/auth/me`, and `/api/auth/logout`. A short-lived HS256 JWT is held in an `HttpOnly`, `SameSite=Lax` cookie; application roles are reloaded from PostgreSQL for each authenticated request.
+- SQLAlchemy/Alembic own the new `users`, `roles`, and `user_roles` tables. Authentication runtime and migrations require `postgresql+psycopg://`; the existing approval workflow remains on its SQLite repository and `X-Demo-Actor` identity until a separate migration is authorized.
+- The local seed is idempotent, reads `AUTH_SEED_PASSWORD`, and requires `AUTH_SEED_ENABLED=true`. Docker Compose sets that flag only in its development service.
+
+### Assumptions and limits
+
+- The authentication schema is a separate store from the workflow demo tables; user IDs are not silently treated as existing demo actor IDs.
+- `MAKER`, `CHECKER`, and `ADMIN` are the seeded login roles. `EVALUATOR` remains an internal demo principal and is not seedable through the login seed.
+- Account administration, password reset, production identity-provider integration, and migration of workflow routes to authenticated principals remain out of scope.
+- Local Compose uses HTTP localhost and explicitly disables the cookie `Secure` flag there. Other environments must use HTTPS and `AUTH_COOKIE_SECURE=true`.
+
+Run instructions and verification commands are maintained in the current README authentication section.
+
+### Authentication follow-up (2026-09-28)
+
+- Added `POST /api/auth/register` for controlled self-registration. It normalizes usernames and email/international phone contacts, enforces unique identity fields in PostgreSQL, hashes passwords with Argon2id, and assigns only `MAKER`. Registration is enabled in local Compose and disabled by default in other environments.
+- Added an additive registration migration for username, optional phone, nullable email, contact-presence constraints, and legacy username backfill. A downgrade refuses to discard phone-only accounts.
+- The login form supports username, user code, or email; the remember-device checkbox chooses a session cookie with the short configured JWT lifetime or a persistent cookie/JWT with the configured longer lifetime.
+- Auth endpoints report PostgreSQL configuration/availability failures as HTTP 503 and do not fall back to the SQLite workflow store. Real auth identities remain separate from `X-Demo-Actor` demo routes.
+- Docker and PostgreSQL runtime verification was not available in the implementation environment; SQLite migration tests cover an empty schema and legacy-user upgrade. See README for the exact local runtime commands.
+
 ## Change scope and handoff
 
 Only the nine documents linked above plus this plan are created (the link list represents eight distinct documents). Production modules, expected results, README, AGENTS, settings and role documentation remain untouched. Command execution and validation evidence are in verified-commands.md. The next safe action is user review of WP1; no subsequent work package is authorized by this document.

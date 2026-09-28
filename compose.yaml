@@ -1,0 +1,67 @@
+name: organizationai
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-organizationai}
+      POSTGRES_USER: ${POSTGRES_USER:-organizationai}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: .
+      dockerfile: deployment/Dockerfile.backend-dev
+    environment:
+      APP_ENV: demo
+      DEMO_DATABASE: /tmp/organizationai/demo-organization.sqlite3
+      DEMO_MOCK_MODE: ${DEMO_MOCK_MODE:-pass}
+      CORS_ORIGINS: http://localhost:5173,http://127.0.0.1:5173
+      DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL in .env}
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
+      JWT_ACCESS_TOKEN_MINUTES: ${JWT_ACCESS_TOKEN_MINUTES:-30}
+      AUTH_REMEMBER_TOKEN_DAYS: ${AUTH_REMEMBER_TOKEN_DAYS:-14}
+      AUTH_REGISTRATION_ENABLED: ${AUTH_REGISTRATION_ENABLED:-true}
+      AUTH_COOKIE_SECURE: "false"
+      AUTH_SEED_ENABLED: "true"
+      AUTH_SEED_PASSWORD: ${AUTH_SEED_PASSWORD:?Set AUTH_SEED_PASSWORD in .env}
+    ports:
+      - "127.0.0.1:8010:8010"
+    volumes:
+      - ./src:/app/src
+      - ./alembic:/app/alembic
+      - ./alembic.ini:/app/alembic.ini
+    depends_on:
+      db:
+        condition: service_healthy
+    command:
+      - sh
+      - -c
+      - alembic upgrade head && python -m src.backend.seed_auth && python -m uvicorn src.backend.api.app:app --host 0.0.0.0 --port 8010 --reload
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    environment:
+      VITE_API_BASE_URL: http://localhost:8010/api
+    ports:
+      - "127.0.0.1:5173:5173"
+    volumes:
+      - ./frontend:/app
+      - frontend_node_modules:/app/node_modules
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
+  frontend_node_modules:
