@@ -42,6 +42,7 @@ class SubmitWorkflowPlanRequest(AuthWorkflowDTO):
 class WorkflowDecisionRequest(AuthWorkflowDTO):
     action: Literal["APPROVED", "REJECTED"]
     reason: str | None = Field(default=None, max_length=5000)
+    override_reason: str | None = Field(default=None, max_length=5000)
 
 
 class WorkflowAttachmentResponse(AuthWorkflowDTO):
@@ -55,7 +56,8 @@ class WorkflowAttachmentResponse(AuthWorkflowDTO):
 
 class WorkflowEventResponse(AuthWorkflowDTO):
     id: str
-    actor_id: str
+    actor_id: str | None
+    actor_type: Literal["HUMAN", "SYSTEM"]
     actor_name: str
     action: str
     status_before: str | None
@@ -69,7 +71,41 @@ class WorkflowVersionResponse(AuthWorkflowDTO):
     round_number: int
     payload: dict[str, Any]
     attachments: list[dict[str, Any]]
+    snapshot_hash: str | None
     submitted_by: str
+    created_at: datetime
+
+
+class WorkflowEvaluationResponse(AuthWorkflowDTO):
+    id: str
+    version_number: int
+    round_number: int
+    run_id: str
+    evaluation_id: str
+    correlation_id: str
+    input_hash: str
+    provider: Literal["LOCAL_VLM", "MOCK_VLM"]
+    model_version: str | None
+    policy_version: str
+    policy_snapshot_id: str
+    policy_snapshot_hash: str
+    status: Literal["PENDING", "PROCESSING", "SUCCEEDED", "FAILED", "TIMED_OUT"]
+    attempts: int
+    retried: bool
+    evaluation: dict[str, Any] | None
+    failure_reason: str | None
+    started_at: datetime | None
+    completed_at: datetime | None
+    created_at: datetime
+
+
+class WorkflowEngineDecisionResponse(AuthWorkflowDTO):
+    id: str
+    version_number: int
+    round_number: int
+    decision_id: str
+    outcome: Literal["AUTO_APPROVED", "HUMAN_REVIEW_REQUIRED"]
+    decision: dict[str, Any]
     created_at: datetime
 
 
@@ -89,6 +125,8 @@ class WorkflowPlanResponse(AuthWorkflowDTO):
     decision_reason: str | None
     attachments: list[WorkflowAttachmentResponse]
     versions: list[WorkflowVersionResponse]
+    ai_evaluations: list[WorkflowEvaluationResponse]
+    engine_decisions: list[WorkflowEngineDecisionResponse]
     history: list[WorkflowEventResponse]
     created_at: datetime
     updated_at: datetime

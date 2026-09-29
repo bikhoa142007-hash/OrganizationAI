@@ -1,4 +1,5 @@
 from collections.abc import Iterator
+from datetime import datetime, timedelta, timezone
 import struct
 from uuid import UUID, uuid4
 import zlib
@@ -10,12 +11,22 @@ from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 from sqlalchemy import create_engine
 
+from src.ai_pipeline.providers.mock import MockVLMProvider
 from src.backend.api.app import create_app
 from src.backend.api.auth import get_auth_db
 from src.backend.api.dependencies import Settings
+from src.backend.application import auth_workflow as auth_workflow_application
 from src.backend.db.base import Base
-from src.backend.db.models import Role, User, UserRole
+from src.backend.db.models import AuthWorkflowEvaluationRun, AuthWorkflowPlan, Role, User, UserRole
 from src.backend.db.security import hash_password
+from src.backend.domain.policy import (
+    ApprovalConfiguration,
+    AuthoritySnapshot,
+    BudgetConfiguration,
+    Criterion,
+    MANDATORY_FIELDS,
+    PolicySnapshot,
+)
 
 
 def png_chunk(kind: bytes, content: bytes) -> bytes:
@@ -100,6 +111,7 @@ def make_plan(client: TestClient, checker_id: UUID, *, title: str = "Spring camp
             "title": title,
             "objective": "Reach qualified customers",
             "summary": "A measured campaign with a clear audience and outcome.",
+            "department": "marketing",
             "start_date": "2026-10-01",
             "end_date": "2026-10-31",
             "budget_minor_units": "50000000",
@@ -108,6 +120,21 @@ def make_plan(client: TestClient, checker_id: UUID, *, title: str = "Spring camp
     })
     assert response.status_code == 201, response.text
     return response.json()
+
+
+def auto_approval_configuration(checker_id: UUID) -> ApprovalConfiguration:
+    return ApprovalConfiguration(
+        PolicySnapshot(
+            "TEST-AUTH-POLICY", "TEST-AUTH-POLICY-1", True, MANDATORY_FIELDS,
+            (Criterion("strategy", 100),), ("mock-1",),
+            ("image/png", "image/jpeg", "image/webp"), 5_000_000,
+        ),
+        (BudgetConfiguration("TEST-AUTH-BUDGET", "VND", 0, "100000000", "marketing", True),),
+        AuthoritySnapshot(
+            "TEST-AUTH-AUTHORITY", "VND", "100000000", ("marketing",),
+            str(checker_id), str(checker_id), str(checker_id), True,
+        ),
+    )
 
 
 def upload_plan_image(client: TestClient, plan_id: str, revision: int) -> dict:
@@ -184,6 +211,12 @@ def test_maker_submits_and_only_assigned_checker_can_approve(workflow_client):
     assert submitted["current_round"] == 1
     assert submitted["processing_stage"] == "HUMAN_REVIEW_REQUIRED"
     assert submitted["versions"][0]["payload"]["title"] == "Spring campaign"
+    assert len(submitted["ai_evaluations"]) == 1
+    assert submitted["ai_evaluations"][0]["status"] in {"FAILED", "TIMED_OUT"}
+    assert submitted["ai_evaluations"][0]["provider"] == "LOCAL_VLM"
+    assert submitted["ai_evaluations"][0]["attempts"] == 2
+    assert submitted["ai_evaluations"][0]["retried"] is True
+    assert submitted["engine_decisions"][0]["outcome"] == "HUMAN_REVIEW_REQUIRED"
     locked_edit = client.put(f"/api/workflow/plans/{draft['id']}", json={
         "expected_revision": submitted["revision"],
         "payload": submitted["payload"],
@@ -217,15 +250,115 @@ def test_maker_submits_and_only_assigned_checker_can_approve(workflow_client):
     ).status_code == 404
 
     decision_url = f"/api/workflow/plans/{draft['id']}/rounds/1/decision"
-    approved = checker_client.post(decision_url, json={"action": "APPROVED", "reason": "Reviewed."})
+    approved = checker_client.post(decision_url, json={
+        "action": "APPROVED", "reason": "Reviewed.",
+        "override_reason": "Provider configuration was unavailable; reviewed the submission manually.",
+    })
     assert approved.status_code == 200, approved.text
     assert approved.json()["status"] == "APPROVED"
-    replay = checker_client.post(decision_url, json={"action": "APPROVED", "reason": "Reviewed."})
+    replay = checker_client.post(decision_url, json={
+        "action": "APPROVED", "reason": "Reviewed.",
+        "override_reason": "Provider configuration was unavailable; reviewed the submission manually.",
+    })
     assert replay.status_code == 200
     assert replay.json()["revision"] == approved.json()["revision"]
     detail = checker_client.get(f"/api/workflow/plans/{draft['id']}").json()
     assert detail["history"][-1]["action"] == "APPROVED"
     assert detail["history"][-1]["actor_id"] == str(checker.id)
+
+
+def test_authenticated_submission_uses_existing_policy_for_auto_approval(workflow_client):
+    client, factory, app = workflow_client
+    maker = create_user(factory, "maker.auto", ("MAKER",))
+    checker = create_user(factory, "checker.auto", ("CHECKER",))
+    login(client, maker)
+    app.state.auth_workflow_provider = MockVLMProvider("pass", model_version="mock-1")
+    app.state.auth_workflow_configuration = auto_approval_configuration(checker.id)
+
+    draft = make_plan(client, checker.id, title="Eligible campaign")
+    draft = upload_plan_image(client, draft["id"], draft["revision"])
+    submitted = submit_plan(client, draft)
+
+    assert submitted["status"] == "APPROVED"
+    assert submitted["processing_stage"] == "AI_AUTO_APPROVED"
+    assert submitted["ai_evaluations"][0]["status"] == "SUCCEEDED"
+    assert submitted["ai_evaluations"][0]["provider"] == "MOCK_VLM"
+    assert submitted["engine_decisions"][0]["outcome"] == "AUTO_APPROVED"
+    assert submitted["engine_decisions"][0]["decision"]["budget_validation"]["result"] == "PASS"
+    assert len([event for event in submitted["history"] if event["action"] == "AI_AUTO_APPROVED"]) == 1
+
+
+def test_authenticated_provider_failure_is_persisted_and_checker_can_review(workflow_client):
+    client, factory, app = workflow_client
+    maker = create_user(factory, "maker.timeout", ("MAKER",))
+    checker = create_user(factory, "checker.timeout", ("CHECKER",))
+    login(client, maker)
+    app.state.auth_workflow_provider = MockVLMProvider("timeout", model_version="mock-1")
+    app.state.auth_workflow_configuration = auto_approval_configuration(checker.id)
+
+    draft = make_plan(client, checker.id, title="Provider timeout campaign")
+    draft = upload_plan_image(client, draft["id"], draft["revision"])
+    submitted = submit_plan(client, draft)
+
+    assert submitted["status"] == "PENDING_APPROVAL"
+    assert submitted["processing_stage"] == "HUMAN_REVIEW_REQUIRED"
+    assert submitted["ai_evaluations"][0]["status"] == "TIMED_OUT"
+    assert submitted["ai_evaluations"][0]["provider"] == "MOCK_VLM"
+    assert submitted["ai_evaluations"][0]["attempts"] == 2
+    assert submitted["ai_evaluations"][0]["retried"] is True
+    assert submitted["engine_decisions"][0]["outcome"] == "HUMAN_REVIEW_REQUIRED"
+    assert "EVAL_VALID" in submitted["engine_decisions"][0]["decision"]["reason"]
+
+    checker_client = authenticated_client(app, checker)
+    decision = checker_client.post(
+        f"/api/workflow/plans/{draft['id']}/rounds/1/decision",
+        json={
+            "action": "APPROVED",
+            "reason": "Reviewed after provider timeout.",
+            "override_reason": "Approved after checking the submitted media manually.",
+        },
+    )
+    assert decision.status_code == 200, decision.text
+    assert decision.json()["status"] == "APPROVED"
+    assert decision.json()["history"][-1]["details"]["override_reason"] == (
+        "Approved after checking the submitted media manually."
+    )
+
+
+def test_stale_run_with_invalid_policy_routes_to_checker_review(workflow_client, monkeypatch):
+    client, factory, _app = workflow_client
+    maker = create_user(factory, "maker.recovery", ("MAKER",))
+    checker = create_user(factory, "checker.recovery", ("CHECKER",))
+    login(client, maker)
+
+    def leave_run_queued(session, plan_id, _round_number, _orchestrator, _correlation_id):
+        plan = session.get(AuthWorkflowPlan, plan_id)
+        return auth_workflow_application._plan_dict(session, plan)
+
+    monkeypatch.setattr(auth_workflow_application, "evaluate_submission", leave_run_queued)
+    draft = make_plan(client, checker.id, title="Interrupted evaluation")
+    draft = upload_plan_image(client, draft["id"], draft["revision"])
+    queued = submit_plan(client, draft)
+    assert queued["processing_stage"] == "AI_PENDING"
+
+    with factory.begin() as session:
+        run = session.scalar(select(AuthWorkflowEvaluationRun).where(
+            AuthWorkflowEvaluationRun.plan_id == UUID(queued["id"]),
+            AuthWorkflowEvaluationRun.round_number == 1,
+        ))
+        run.created_at = datetime.now(timezone.utc) - timedelta(minutes=2)
+        run.policy_snapshot = {"invalid": True}
+
+    detail = client.get(f"/api/workflow/plans/{queued['id']}")
+    assert detail.status_code == 200, detail.text
+    recovered = detail.json()
+    assert recovered["processing_stage"] == "HUMAN_REVIEW_REQUIRED"
+    assert recovered["status"] == "PENDING_APPROVAL"
+    assert recovered["ai_evaluations"][0]["status"] == "FAILED"
+    assert recovered["ai_evaluations"][0]["evaluation"]["agent_errors"][0]["code"] == (
+        "POLICY_SNAPSHOT_INVALID"
+    )
+    assert recovered["history"][-1]["action"] == "AI_RECOVERY_REVIEW_ROUTED"
 
 
 def test_rejection_needs_reason_and_resubmission_preserves_prior_version(workflow_client):
@@ -242,7 +375,10 @@ def test_rejection_needs_reason_and_resubmission_preserves_prior_version(workflo
     assert checker_client.post(decision_url, json={"action": "REJECTED", "reason": "  "}).status_code == 422
     rejected = checker_client.post(
         decision_url,
-        json={"action": "REJECTED", "reason": "Add clearer measurement targets."},
+        json={
+            "action": "REJECTED", "reason": "Add clearer measurement targets.",
+            "override_reason": "Provider configuration was unavailable; reviewed the submission manually.",
+        },
     )
     assert rejected.status_code == 200, rejected.text
     assert rejected.json()["status"] == "REJECTED"
@@ -265,6 +401,8 @@ def test_rejection_needs_reason_and_resubmission_preserves_prior_version(workflo
     assert resubmitted["status"] == "PENDING_APPROVAL"
     assert resubmitted["current_version"] == 2
     assert resubmitted["current_round"] == 2
+    assert len(resubmitted["ai_evaluations"]) == 2
+    assert resubmitted["ai_evaluations"][0]["input_hash"] != resubmitted["ai_evaluations"][1]["input_hash"]
     assert [version["payload"]["title"] for version in resubmitted["versions"]] == [
         "Spring campaign", "Spring campaign revised",
     ]

@@ -32,16 +32,14 @@ class LocalVLMProvider(VisualModelProvider):
     def __init__(self, *, model=None, analyzer=None):
         self.model_version = model or os.getenv("LOCAL_VLM_MODEL")
         self._analyzer = analyzer
-        if not self.model_version:
-            raise ProviderError("Local VLM provider is not configured")
 
     def health_check(self):
-        return self._analyzer is not None
+        return self._analyzer is not None and bool(self.model_version)
 
     def get_model_metadata(self):
         return {"provider": "LOCAL_VLM", "model_version": self.model_version}
 
     def analyze_image(self, request):
-        if self._analyzer is None:
+        if self._analyzer is None or not self.model_version:
             raise ProviderError("Local VLM inference backend is unavailable")
         return self._analyzer(request)

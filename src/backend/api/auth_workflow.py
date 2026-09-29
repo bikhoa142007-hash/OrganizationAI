@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, File, Form, Query, Request, UploadFile
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
+from src.ai_pipeline.orchestrator import EvaluationOrchestrator
 from src.backend.api.auth import (
     AuthenticatedPrincipal,
     _check_browser_origin,
@@ -13,6 +14,7 @@ from src.backend.api.auth import (
     require_role,
 )
 from src.backend.application import auth_workflow as workflow
+from src.backend.application.auth_workflow_ai import provider_metadata
 from .auth_workflow_schemas import (
     CreateWorkflowPlanRequest,
     SubmitWorkflowPlanRequest,
@@ -156,8 +158,17 @@ def submit_plan(
     session: Session = Depends(get_auth_db),
 ):
     _check_browser_origin(request)
-    return workflow.submit_plan(
-        session, principal, plan_id, body.expected_revision, _correlation(request)
+    provider = request.app.state.auth_workflow_provider
+    provider_name, model_version = provider_metadata(provider)
+    submitted = workflow.submit_plan(
+        session, principal, plan_id, body.expected_revision, _correlation(request),
+        provider_name=provider_name,
+        model_version=model_version,
+        configuration=request.app.state.auth_workflow_configuration,
+    )
+    return workflow.evaluate_submission(
+        session, plan_id, submitted["current_round"],
+        EvaluationOrchestrator(provider), _correlation(request),
     )
 
 
@@ -178,5 +189,6 @@ def decide(
         round_number,
         body.action,
         body.reason,
+        body.override_reason,
         _correlation(request),
     )

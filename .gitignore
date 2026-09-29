@@ -170,6 +170,9 @@ weights/
 *.pth
 *.safetensors
 *.gguf
+# Auth ORM source is application code, not downloaded model data.
+!src/backend/db/models/
+!src/backend/db/models/*.py
 # Internal team and Codex work packages
 docs/team/role/
 docs/work-packages/

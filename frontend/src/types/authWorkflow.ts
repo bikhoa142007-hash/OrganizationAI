@@ -24,7 +24,8 @@ export interface WorkflowAttachment {
 
 export interface WorkflowEvent {
   id: string
-  actor_id: string
+  actor_id: string | null
+  actor_type: 'HUMAN' | 'SYSTEM'
   actor_name: string
   action: string
   status_before: string | null
@@ -38,7 +39,73 @@ export interface WorkflowVersion {
   round_number: number
   payload: WorkflowPayload
   attachments: Array<Pick<WorkflowAttachment, 'id' | 'filename' | 'media_type' | 'byte_size' | 'content_hash'>>
+  snapshot_hash: string | null
   submitted_by: string
+  created_at: string
+}
+
+export interface WorkflowEvaluation {
+  evaluation_id: string
+  plan_id: string
+  plan_version: number
+  approval_round: number
+  run_id: string
+  status: 'SUCCEEDED' | 'FAILED' | 'TIMED_OUT'
+  provider: 'LOCAL_VLM' | 'MOCK_VLM'
+  model_version: string | null
+  policy_version: string
+  input_hash: string
+  media_result: 'PASS' | 'REVIEW_REQUIRED' | null
+  media_confidence: number | null
+  feasibility_score: number | null
+  feasibility_confidence: number | null
+  proposed_action: 'RECOMMEND_AUTO_APPROVAL' | 'RECOMMEND_HUMAN_REVIEW' | null
+  reason: string
+  media_findings: Array<{ finding_id: string; severity: 'HARD_VIOLATION' | 'WARNING'; description: string; rule_id: string | null; evidence_refs: string[] }>
+  evidence: Array<{ evidence_id: string; source_type: string; source_ref: string; observation: string; content_hash: string | null }>
+  evidence_conflicts: Array<{ conflict_id: string; description: string; evidence_refs: string[] }>
+  missing_facts: string[]
+  agent_errors: Array<{ component: string; code: string; message: string }>
+  criterion_scores: Array<{ criterion_id: string; score: number; maximum_score: number; rationale: string; evidence_refs: string[] }>
+  assumptions: string[]
+}
+
+export interface WorkflowAiEvaluation {
+  id: string
+  version_number: number
+  round_number: number
+  run_id: string
+  evaluation_id: string
+  correlation_id: string
+  input_hash: string
+  provider: 'LOCAL_VLM' | 'MOCK_VLM'
+  model_version: string | null
+  policy_version: string
+  policy_snapshot_id: string
+  policy_snapshot_hash: string
+  status: 'PENDING' | 'PROCESSING' | 'SUCCEEDED' | 'FAILED' | 'TIMED_OUT'
+  attempts: number
+  retried: boolean
+  evaluation: WorkflowEvaluation | null
+  failure_reason: string | null
+  started_at: string | null
+  completed_at: string | null
+  created_at: string
+}
+
+export interface WorkflowEngineDecision {
+  id: string
+  version_number: number
+  round_number: number
+  decision_id: string
+  outcome: 'AUTO_APPROVED' | 'HUMAN_REVIEW_REQUIRED'
+  decision: {
+    reason: string
+    applied_rule_ids: string[]
+    rule_checks: Array<{ rule_id: string; result: 'PASS' | 'FAIL' | 'UNKNOWN'; observed_value: unknown; applicable_rule_or_limit: string; evidence_refs: string[] }>
+    budget_validation: { result: 'PASS' | 'FAIL' | 'UNKNOWN'; budget_minor_units: string | null; limit_minor_units: string | null; currency: string | null }
+    escalation_category: string | null
+  }
   created_at: string
 }
 
@@ -58,6 +125,8 @@ export interface WorkflowPlan {
   decision_reason: string | null
   attachments: WorkflowAttachment[]
   versions: WorkflowVersion[]
+  ai_evaluations: WorkflowAiEvaluation[]
+  engine_decisions: WorkflowEngineDecision[]
   history: WorkflowEvent[]
   created_at: string
   updated_at: string

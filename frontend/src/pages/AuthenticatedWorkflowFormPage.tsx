@@ -110,7 +110,7 @@ export function AuthenticatedWorkflowFormPage() {
         </div>
         <div className="auth-upload-row"><label className="button button-secondary"><UploadCloud /> Chọn ảnh<input aria-label="Chọn ảnh đính kèm" type="file" accept="image/png,image/jpeg,image/webp" onChange={event => setFile(event.target.files?.[0] ?? null)} /></label><span>{file ? `${file.name} · ${Math.ceil(file.size / 1024)} KB` : `${plan?.attachments.length ?? 0} ảnh đã lưu`}</span>{(file || plan?.attachments.length) && <FileImage />}</div>
       </fieldset>
-      <div className="auth-workflow-form-footer"><p>Submit sẽ tạo version/round và chuyển hồ sơ cho Checker được gán.</p><div className="button-row"><button className="button button-secondary" type="button" disabled={busy || locked} onClick={() => void save(false)}>{busy ? 'Đang lưu…' : 'Lưu bản nháp'}</button><button className="button button-primary" type="submit" disabled={busy || locked}><Send /> {busy ? 'Đang gửi…' : 'Gửi duyệt'}</button></div></div>
+      <div className="auth-workflow-form-footer"><p>Gửi sẽ lưu snapshot, chạy đánh giá AI theo cấu hình hiện có và tự động chuyển Checker khi chưa đủ điều kiện.</p><div className="button-row"><button className="button button-secondary" type="button" disabled={busy || locked} onClick={() => void save(false)}>{busy ? 'Đang lưu…' : 'Lưu bản nháp'}</button><button className="button button-primary" type="submit" disabled={busy || locked}><Send /> {busy ? 'Đang gửi và đánh giá…' : 'Gửi duyệt'}</button></div></div>
     </form>
   </section>
 }

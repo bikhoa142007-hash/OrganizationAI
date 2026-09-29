@@ -70,8 +70,10 @@ export const authWorkflowService = {
     return request(`/workflow/plans/${encoded(planId)}/submit`, 'POST', { expected_revision: expectedRevision })
   },
 
-  decide(planId: string, round: number, action: 'APPROVED' | 'REJECTED', reason: string): Promise<WorkflowPlan> {
-    return request(`/workflow/plans/${encoded(planId)}/rounds/${round}/decision`, 'POST', { action, reason })
+  decide(planId: string, round: number, action: 'APPROVED' | 'REJECTED', reason: string, overrideReason: string): Promise<WorkflowPlan> {
+    return request(`/workflow/plans/${encoded(planId)}/rounds/${round}/decision`, 'POST', {
+      action, reason, override_reason: overrideReason,
+    })
   },
 
   async getAttachment(planId: string, attachmentId: string): Promise<Blob> {

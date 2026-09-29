@@ -759,6 +759,7 @@ h1, h2, h3, h4 { letter-spacing: 0; }
 .workflow-status.status-pending_approval { border-color: #e5c781; background: #fff7e4; color: #714b00; }
 .workflow-status.status-approved { border-color: #9bd5ba; background: #eaf8f1; color: #075f43; }
 .workflow-status.status-rejected { border-color: #edb2ae; background: #fff1f0; color: #8c201a; }
+.auth-stage-note { display: block; margin-top: 4px; color: var(--muted); font-size: .7rem; }
 .auth-workflow-state { border: 1px solid var(--line); border-radius: 8px; background: var(--surface); padding: 28px; color: var(--muted); }
 .auth-workflow-state h1, .auth-workflow-state h2 { margin: 0 0 8px; color: var(--ink); font-size: 1.12rem; }
 .auth-workflow-state p { margin: 0 0 14px; }
@@ -769,6 +770,8 @@ h1, h2, h3, h4 { letter-spacing: 0; }
 .auth-workflow-alert p { margin: 4px 0 0; }
 .auth-workflow-alert.is-error { border: 1px solid #edb2ae; background: #fff1f0; color: #7e211c; }
 .auth-workflow-alert.is-success { border: 1px solid #9bd5ba; background: #eaf8f1; color: #075f43; }
+.auth-workflow-alert.is-progress { border: 1px solid #b7d6e8; background: #f0f8fc; color: #164f70; }
+.auth-workflow-alert.is-review { border: 1px solid #e5c781; background: #fff7e4; color: #714b00; }
 .auth-workflow-form, .auth-workflow-card { border: 1px solid var(--line); border-radius: 8px; background: var(--surface); padding: 20px; }
 .auth-workflow-form fieldset { min-width: 0; margin: 0; border: 0; padding: 0; }
 .auth-workflow-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
@@ -807,6 +810,21 @@ h1, h2, h3, h4 { letter-spacing: 0; }
 .auth-version-card details { border-top: 1px solid var(--line); padding: 12px 0; }
 .auth-version-card summary { cursor: pointer; font-weight: 700; }
 .auth-version-card details p { color: var(--muted); white-space: pre-wrap; }
+.auth-ai-results { margin-top: 18px; }
+.auth-ai-results details { border-top: 1px solid var(--line); padding: 12px 0; }
+.auth-ai-results summary { cursor: pointer; color: var(--ink); font-weight: 750; }
+.auth-ai-results details > p { color: var(--muted); line-height: 1.5; white-space: pre-wrap; }
+.auth-ai-results h3 { margin: 14px 0 6px; font-size: .84rem; }
+.auth-ai-results ul { margin: 6px 0 12px; padding-left: 20px; color: var(--ink); font-size: .8rem; line-height: 1.5; }
+.auth-ai-metadata { display: flex; flex-wrap: wrap; gap: 8px 18px; margin: 10px 0; color: var(--muted); font-size: .74rem; }
+.auth-ai-metrics { margin: 12px 0; padding: 12px; border-radius: 6px; background: var(--surface-soft); }
+.auth-ai-metrics dd { font-size: .8rem; }
+.auth-hash { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .68rem !important; }
+.auth-ai-decision { margin-top: 14px; border: 1px solid var(--line); border-radius: 6px; padding: 12px; }
+.auth-ai-decision p { margin: 5px 0; line-height: 1.45; }
+.auth-ai-decision small { color: var(--muted); }
+.auth-ai-decision.is-approved { border-color: #9bd5ba; background: #eaf8f1; color: #075f43; }
+.auth-ai-decision.is-review { border-color: #e5c781; background: #fff7e4; color: #714b00; }
 .auth-decision-card { display: grid; gap: 14px; }
 .auth-decision-card > p { margin: -8px 0 0; color: var(--muted); font-size: .84rem; }
 .auth-workflow-actions { display: flex; justify-content: flex-end; }
