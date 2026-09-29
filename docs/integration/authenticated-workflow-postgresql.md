@@ -14,16 +14,19 @@ their client sends cookies and does not send `X-Demo-Actor`.
 
 ## PostgreSQL records
 
-Migration `20260928_03_auth_workflow` adds these tables without altering Auth
-users/roles or the Judge Demo database:
+Migration `20260928_03_auth_workflow` adds the core tables and
+`20260929_04_authenticated_ai_pipeline` adds AI-run persistence without
+altering Auth users/roles or the Judge Demo database:
 
 | Table | Persisted information |
 |---|---|
 | `auth_workflow_plans` | Current plan payload, status, Maker, assigned Checker, revision and current version/round |
 | `auth_workflow_attachments` | Private image bytes, media type, byte size and SHA-256 |
 | `auth_workflow_versions` | Immutable payload and attachment manifest captured on each submit |
-| `auth_workflow_decisions` | Final Checker action and optional reason, unique per plan/round |
-| `auth_workflow_events` | Append-only actor, action, per-plan sequence, time, before/after status and event details |
+| `auth_workflow_evaluation_runs` | Provider, policy/config snapshot hash, immutable input hash, validated evaluation, bounded retry count and run state, unique per plan/round |
+| `auth_workflow_engine_decisions` | Deterministic policy outcome and budget/rule checks, unique per plan/round and run |
+| `auth_workflow_decisions` | Final Checker action, rejection reason and any AI override reason, unique per plan/round |
+| `auth_workflow_events` | Append-only human/system actor, action, per-plan sequence, time, before/after status and event details |
 
 Draft edits and file uploads require the owning Maker and the current revision.
 Submission locks the plan row, validates required fields, a distinct active
@@ -35,9 +38,32 @@ delete operation for these records. Uploads are decoded server-side as PNG,
 JPEG or WebP, must match their declared media type, stay below 25 million pixels
 and 5 MB, and are stored with a SHA-256 hash.
 
-Every Auth submission currently enters `PENDING_APPROVAL` with
-`HUMAN_REVIEW_REQUIRED`. The AI orchestrator still belongs to the SQLite Judge
-Demo; this authenticated workflow does not claim AI evaluation or auto-approval.
+Submission commits the immutable version and approval round before starting AI
+evaluation. The existing bounded orchestrator then evaluates only the media
+whose hashes appear in that version's snapshot; the provider call runs outside
+the database transaction. A validated result and the deterministic engine
+decision are stored against the same version/round. Provider, schema, snapshot,
+policy or engine failures route the plan to Checker review; they never roll back
+the submitted plan or create an AI rejection. Interrupted runs older than 60
+seconds are recovered to Checker review when an authorized Maker or Checker
+reads the plan or list.
+
+Provider selection is explicit through `AUTH_WORKFLOW_AI_PROVIDER`. The default
+`LOCAL_VLM` adapter currently has no inference transport configured in this
+repository, so it fails closed to Checker review. `MOCK_VLM` can be selected
+only with `APP_ENV=demo` for local demos and accepts `pass`, `review`, `timeout`,
+`error`, `malformed` or `unknown_media` scenarios. It does not silently replace
+Local VLM. The Auth workflow has no approved production policy, budget or
+authority configuration source yet, so its default policy snapshot disables
+auto-approval and does not borrow demo limits. The API/service accepts an
+explicit configuration object for controlled environments; auto-approval must
+remain disabled until real Auth configuration is approved and persisted.
+
+Checker actions that differ from the AI recommendation, or are made without a
+recommendation, require an override reason. Every Checker rejection requires a
+separate non-blank rejection reason. An approved/rejected plan cannot be edited;
+rejected plans may be revised and submitted as the next immutable version and
+approval round.
 
 ## Existing SQLite data
 

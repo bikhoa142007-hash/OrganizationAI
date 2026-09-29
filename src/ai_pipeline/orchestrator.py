@@ -54,9 +54,15 @@ class EvaluationOrchestrator:
         code, message = last_error or ("PROVIDER_ERROR", "Provider execution failed.")
         return PipelineResult(self._failure(request, code, message, raw_hash), attempts, attempts > 1)
 
+    @staticmethod
+    def fail_closed(request: EvaluationRequest, code: str, message: str) -> PipelineResult:
+        """Create the same validated failure envelope for orchestration-level faults."""
+        return PipelineResult(EvaluationOrchestrator._failure(request, code, message), attempts=0, retried=False)
+
     run = evaluate
 
-    def _failure(self, request, code, message, raw_hash=None):
+    @staticmethod
+    def _failure(request, code, message, raw_hash=None):
         now = _now()
         return {
             "evaluation_id": request.evaluation_id,

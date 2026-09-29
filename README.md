@@ -47,8 +47,8 @@ Backend Render lưu SQLite tại `/tmp/organizationai/demo-organization.sqlite3`
 | `Implemented` | Demo seed | Tám scenario tổng hợp, seed idempotent và không xóa database hiện có |
 | `Demo/Mock` | Actor identity | Chọn shared demo actor, gửi qua header `X-Demo-Actor`; server vẫn kiểm tra role và ownership |
 | `Demo/Mock` | AI evaluation | FastAPI đang nối `MockVLMProvider`; timeout/error/malformed evidence đều fail closed sang Human Review |
-| `Implemented (local)` | Auth workflow | Cookie JWT xác thực Maker/Checker; workflow mới lưu kế hoạch, snapshot, quyết định, file riêng tư và audit trong PostgreSQL |
-| `Planned/TBD` | Production identity và AI | Auth workflow chưa được đưa lên production; chưa nối pipeline AI vào PostgreSQL workflow, chưa có Local VLM transport thật hoặc rate limiting toàn diện |
+| `Implemented (local)` | Auth workflow | Cookie JWT xác thực Maker/Checker; PostgreSQL lưu kế hoạch, snapshot, provider evaluation, quyết định policy và audit; AI lỗi chuyển Checker review |
+| `Planned/TBD` | Production identity và AI | Auth workflow chưa dành cho production; chưa có Local VLM inference transport, nguồn policy/budget/authority đã phê duyệt hoặc rate limiting toàn diện |
 
 AI không tự động từ chối kế hoạch. Engine chỉ trả `AUTO_APPROVED` hoặc `HUMAN_REVIEW_REQUIRED`; quyết định `REJECTED` chỉ do Checker được gán thực hiện. Policy mặc định cho submission HTTP mới là `DEMO-HTTP-2` với auto-approval tắt, nên mock PASS vẫn chuyển Checker; riêng seed `DEMO-SEED-AUTO` dùng snapshot `DEMO-HTTP-AUTO-1` để minh họa controlled auto-approval.
 
@@ -281,7 +281,9 @@ docker compose exec backend python -m src.backend.seed_auth
 
 Đăng nhập Maker sẽ mở workflow tại `/workflow/plans`; Checker xem `/workflow/reviews`. Các trang này dùng JWT cookie và route `/api/workflow/*`, không gửi `X-Demo-Actor`. `/api/plans`, `/api/reviews`, Verify và các trang demo vẫn dùng SQLite cùng actor header riêng.
 
-Auth workflow hiện chuyển mọi lần gửi sang `HUMAN_REVIEW_REQUIRED`; nó chưa gọi AI pipeline vốn đang gắn với SQLite Judge Demo. Migration `20260928_03` chỉ thêm các bảng `auth_workflow_*` vào PostgreSQL. Không có bước tự nhập hoặc xóa dữ liệu SQLite. Database `runtime/demo-organization.sqlite3` tiếp tục được giữ nguyên cho Judge Demo; nếu cần nhập dữ liệu sau này, phải chốt ánh xạ actor demo sang tài khoản Auth và backup trước khi chạy một công cụ chuyển dữ liệu riêng.
+Auth workflow gọi pipeline AI hiện có sau khi đã commit snapshot/version/round trong PostgreSQL; evaluation và quyết định tất định được lưu theo từng round. Mặc định chọn Local VLM adapter nhưng chưa có inference transport trong repository nên sẽ fail closed sang `HUMAN_REVIEW_REQUIRED`. Có thể chọn `MOCK_VLM` rõ ràng trong Compose local để demo các kịch bản pass/review/timeout/error/schema; Mock chỉ được phép khi `APP_ENV=demo`. Policy mặc định của Auth workflow tắt auto-approval vì chưa có cấu hình budget/authority/policy được phê duyệt cho tài khoản thật. Không dùng cấu hình demo để quyết định tài khoản Auth. Migration `20260929_04_authenticated_ai_pipeline` bổ sung persistence cho run/evaluation/engine decision, không chuyển đổi hay xóa SQLite. Database `runtime/demo-organization.sqlite3` tiếp tục riêng cho Judge Demo.
+
+Để chạy mô phỏng tường minh trong Compose local, đặt `AUTH_WORKFLOW_AI_PROVIDER=MOCK_VLM` và `AUTH_WORKFLOW_MOCK_SCENARIO=pass` (hoặc `review`, `timeout`, `error`, `malformed`, `unknown_media`) trong `.env`. Mock pass vẫn vào Checker review khi dùng Auth policy mặc định; auto-approval chỉ bật với một `ApprovalConfiguration` đã được ứng dụng phê duyệt và inject vào workflow.
 
 Sau khi Compose khởi động và seed PostgreSQL, chạy smoke test với tài khoản `maker`, `checker`, `admin`:
 
@@ -390,6 +392,17 @@ E2E tự chạy backend tại `127.0.0.1:8008`, frontend tại `127.0.0.1:5178` 
 | Frontend production build | TypeScript và Vite build thành công |
 | Judge Demo Verify | `5/5` case; escalation/ground-truth `15/15` case |
 | Docker/PostgreSQL migration và smoke | Chưa chạy: Docker CLI/Desktop không khả dụng trong môi trường kiểm thử này |
+
+### Kết quả tích hợp AI Auth workflow ngày 2026-09-29
+
+| Kiểm tra | Kết quả |
+|---|---|
+| Full backend Pytest | `218 passed`, `84 subtests passed`; 2 cảnh báo deprecation Starlette/AnyIO |
+| Auth API và migration tests | `12 passed` |
+| Vitest | `31 passed` trong 7 test files |
+| Frontend typecheck và production build | Thành công (`tsc -b`, Vite production build) |
+| PostgreSQL migration | Đã chạy trên Compose PostgreSQL: `20260928_03 -> 20260929_04` |
+| Auth HTTP smoke | Thành công: Maker submit, AI/engine persistence, Checker approve/reject, permission blocks và concurrent decision race; tạo 3 smoke plan tổng hợp trong local PostgreSQL |
 
 ---
 

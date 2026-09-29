@@ -17,6 +17,7 @@ def test_auth_migrations_create_registration_ready_identity_tables(tmp_path, mon
         "users", "roles", "user_roles", "alembic_version",
         "auth_workflow_plans", "auth_workflow_attachments", "auth_workflow_versions",
         "auth_workflow_events", "auth_workflow_decisions",
+        "auth_workflow_evaluation_runs", "auth_workflow_engine_decisions",
     } <= set(inspector.get_table_names())
     assert {"id", "user_code", "username", "email", "phone", "password_hash", "display_name", "status",
             "created_at", "updated_at"} == {column["name"] for column in inspector.get_columns("users")}
@@ -45,6 +46,28 @@ def test_auth_migrations_create_registration_ready_identity_tables(tmp_path, mon
     assert "sequence_number" in {
         column["name"] for column in inspector.get_columns("auth_workflow_events")
     }
+    assert {"actor_type", "actor_id"} <= {
+        column["name"] for column in inspector.get_columns("auth_workflow_events")
+    }
+    assert next(
+        column for column in inspector.get_columns("auth_workflow_events")
+        if column["name"] == "actor_id"
+    )["nullable"] is True
+    assert "snapshot_hash" in {
+        column["name"] for column in inspector.get_columns("auth_workflow_versions")
+    }
+    assert "override_reason" in {
+        column["name"] for column in inspector.get_columns("auth_workflow_decisions")
+    }
+    ai_runs = {column["name"] for column in inspector.get_columns("auth_workflow_evaluation_runs")}
+    assert {
+        "run_id", "evaluation_id", "input_hash", "provider", "model_version", "attempts", "retried",
+        "policy_snapshot", "evaluation", "failure_reason",
+    } <= ai_runs
+    ai_run_uniques = inspector.get_unique_constraints("auth_workflow_evaluation_runs")
+    assert any(item["column_names"] == ["plan_id", "round_number"] for item in ai_run_uniques)
+    engine_decision_uniques = inspector.get_unique_constraints("auth_workflow_engine_decisions")
+    assert any(item["column_names"] == ["plan_id", "round_number"] for item in engine_decision_uniques)
     decision_uniques = inspector.get_unique_constraints("auth_workflow_decisions")
     assert any(item["column_names"] == ["plan_id", "round_number"] for item in decision_uniques)
     event_uniques = inspector.get_unique_constraints("auth_workflow_events")

@@ -110,6 +110,14 @@ def main() -> None:
         racing = create_and_submit(maker_client, checker["id"], f"Docker concurrency smoke {suffix}")
         if approved["status"] != "PENDING_APPROVAL" or rejected["status"] != "PENDING_APPROVAL":
             raise RuntimeError("Submitted plans were not routed to Checker review.")
+        for submitted in (approved, rejected, racing):
+            if (
+                len(submitted["ai_evaluations"]) != 1
+                or len(submitted["engine_decisions"]) != 1
+                or submitted["processing_stage"] != "HUMAN_REVIEW_REQUIRED"
+                or submitted["engine_decisions"][0]["outcome"] != "HUMAN_REVIEW_REQUIRED"
+            ):
+                raise RuntimeError("Submission did not persist its AI evaluation and Checker route.")
 
         own_decision = maker_client.post(
             f"workflow/plans/{approved['id']}/rounds/1/decision",
@@ -127,11 +135,19 @@ def main() -> None:
 
         approved_result = require_status(checker_client.post(
             f"workflow/plans/{approved['id']}/rounds/1/decision",
-            json={"action": "APPROVED", "reason": "Reviewed in local Docker smoke test."},
+            json={
+                "action": "APPROVED",
+                "reason": "Reviewed in local Docker smoke test.",
+                "override_reason": "Local VLM is unavailable; Checker reviewed the full submission.",
+            },
         ), 200, "Checker approval")
         rejected_result = require_status(checker_client.post(
             f"workflow/plans/{rejected['id']}/rounds/1/decision",
-            json={"action": "REJECTED", "reason": "Please clarify the measurement plan."},
+            json={
+                "action": "REJECTED",
+                "reason": "Please clarify the measurement plan.",
+                "override_reason": "Local VLM is unavailable; Checker reviewed the full submission.",
+            },
         ), 200, "Checker rejection")
 
         maker_approval = maker_client.get(f"workflow/plans/{approved['id']}")
@@ -148,7 +164,11 @@ def main() -> None:
                 login(client, "checker", password)
                 response = client.post(
                     f"workflow/plans/{racing['id']}/rounds/1/decision",
-                    json={"action": action, "reason": f"Concurrent {action.lower()} smoke."},
+                    json={
+                        "action": action,
+                        "reason": f"Concurrent {action.lower()} smoke.",
+                        "override_reason": "Local VLM is unavailable; Checker reviewed the full submission.",
+                    },
                 )
                 return response.status_code
 
@@ -165,7 +185,8 @@ def main() -> None:
         if len(final_actions) != 1:
             raise RuntimeError("Concurrent decision persisted more than one final action.")
 
-    print("PASS: seeded Maker created and submitted two plans with private images.")
+    print("PASS: seeded Maker created and submitted three plans with private images.")
+    print("PASS: each submission persisted a structured AI evaluation and deterministic Checker route.")
     print("PASS: assigned Checker approved one plan and rejected another with a reason.")
     print("PASS: self-approval, Checker-as-Maker, and no-workflow-role access were blocked.")
     print("PASS: Auth cookie stayed separate from Judge Demo X-Demo-Actor identity.")

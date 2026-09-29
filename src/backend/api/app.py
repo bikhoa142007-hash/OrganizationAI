@@ -11,6 +11,10 @@ from starlette.exceptions import HTTPException
 from src.ai_pipeline.adapters import ApprovalPipelineAdapter
 from src.ai_pipeline.orchestrator import EvaluationOrchestrator
 from src.ai_pipeline.providers.mock import MockVLMProvider
+from src.backend.application.auth_workflow_ai import (
+    create_authenticated_provider,
+    unconfigured_approval_configuration,
+)
 from src.backend.application.workflow import ApplicationError
 from src.backend.demo import PRINCIPALS, ENGINE, configuration, CHECKER
 from .dependencies import Settings, open_workflow
@@ -20,14 +24,20 @@ from .auth import router as auth_router
 from .auth_workflow import router as auth_workflow_router
 
 
-def create_app(settings=None):
+def create_app(settings=None, *, auth_workflow_provider=None, auth_workflow_configuration=None):
     settings = settings or Settings.from_environment()
     settings.validate()
+    auth_workflow_provider = auth_workflow_provider or create_authenticated_provider(settings.app_env)
+    auth_workflow_configuration = auth_workflow_configuration or unconfigured_approval_configuration(
+        auth_workflow_provider
+    )
     verify_runs = {}
     app = FastAPI(title='OrganizationAI API', version='1.0',
                   description='PostgreSQL authentication and authenticated Maker-Checker workflow, plus a separate SQLite synthetic approval demo. Demo-actor routes are available only in APP_ENV=demo.',
                   responses={code: {'model': ErrorResponse} for code in (401, 403, 404, 409, 422, 503)})
     app.state.allowed_origins = tuple(settings.cors_origins)
+    app.state.auth_workflow_provider = auth_workflow_provider
+    app.state.auth_workflow_configuration = auth_workflow_configuration
     app.include_router(auth_router)
     app.include_router(auth_workflow_router)
     app.add_middleware(CORSMiddleware, allow_origins=list(settings.cors_origins), allow_credentials=True,
