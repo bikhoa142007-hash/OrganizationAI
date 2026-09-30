@@ -79,6 +79,7 @@ export interface WorkflowAiEvaluation {
   correlation_id: string
   input_hash: string
   provider: 'LOCAL_VLM' | 'MOCK_VLM'
+  model_id: string | null
   model_version: string | null
   policy_version: string
   policy_snapshot_id: string
@@ -87,10 +88,56 @@ export interface WorkflowAiEvaluation {
   attempts: number
   retried: boolean
   evaluation: WorkflowEvaluation | null
+  visual_extraction: WorkflowVlmExtraction | null
   failure_reason: string | null
   started_at: string | null
   completed_at: string | null
   created_at: string
+}
+
+export interface WorkflowVlmEvidence {
+  evidence_id: string
+  kind: 'OCR_TEXT' | 'OBSERVATION'
+  text: string
+  source_attachment_id: string
+  source_content_hash: string
+}
+
+export interface WorkflowVlmUncertainty {
+  text: string
+  source_attachment_id: string
+  source_content_hash: string
+}
+
+export interface WorkflowVlmAttachmentExtraction {
+  attachment_id: string
+  content_hash: string
+  media_type: string
+  status: 'COMPLETE' | 'PARTIAL' | 'UNREADABLE' | 'FAILED'
+  ocr_text: string
+  evidence: WorkflowVlmEvidence[]
+  uncertainties: WorkflowVlmUncertainty[]
+  error_code?: string
+}
+
+export interface WorkflowVlmExtraction {
+  status: 'SUCCEEDED' | 'PARTIAL' | 'UNREADABLE' | 'FAILED'
+  error_code?: string
+  provider: 'LOCAL_VLM'
+  model_id: string | null
+  model_revision: string | null
+  reported_model_id: string | null
+  prompt_version: string
+  schema_version: string
+  run_id: string
+  plan_id: string
+  plan_version: number
+  approval_round: number
+  input_hash: string
+  raw_output_hash: string | null
+  started_at: string
+  completed_at: string
+  attachments: WorkflowVlmAttachmentExtraction[]
 }
 
 export interface WorkflowEngineDecision {

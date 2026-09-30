@@ -159,16 +159,20 @@ def submit_plan(
 ):
     _check_browser_origin(request)
     provider = request.app.state.auth_workflow_provider
-    provider_name, model_version = provider_metadata(provider)
+    provider_name, model_version, model_id = provider_metadata(provider)
     submitted = workflow.submit_plan(
         session, principal, plan_id, body.expected_revision, _correlation(request),
         provider_name=provider_name,
+        model_id=model_id,
         model_version=model_version,
         configuration=request.app.state.auth_workflow_configuration,
     )
+    provider_timeout = getattr(provider, "timeout_seconds", None)
+    orchestrator_timeout = provider_timeout + 2 if provider_timeout is not None else 10
     return workflow.evaluate_submission(
         session, plan_id, submitted["current_round"],
-        EvaluationOrchestrator(provider), _correlation(request),
+        EvaluationOrchestrator(provider, timeout_seconds=orchestrator_timeout),
+        _correlation(request),
     )
 
 

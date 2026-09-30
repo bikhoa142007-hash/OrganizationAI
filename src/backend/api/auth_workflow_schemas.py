@@ -85,6 +85,7 @@ class WorkflowEvaluationResponse(AuthWorkflowDTO):
     correlation_id: str
     input_hash: str
     provider: Literal["LOCAL_VLM", "MOCK_VLM"]
+    model_id: str | None
     model_version: str | None
     policy_version: str
     policy_snapshot_id: str
@@ -93,6 +94,7 @@ class WorkflowEvaluationResponse(AuthWorkflowDTO):
     attempts: int
     retried: bool
     evaluation: dict[str, Any] | None
+    visual_extraction: dict[str, Any] | None
     failure_reason: str | None
     started_at: datetime | None
     completed_at: datetime | None

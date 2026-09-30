@@ -14,16 +14,18 @@ their client sends cookies and does not send `X-Demo-Actor`.
 
 ## PostgreSQL records
 
-Migration `20260928_03_auth_workflow` adds the core tables and
-`20260929_04_authenticated_ai_pipeline` adds AI-run persistence without
-altering Auth users/roles or the Judge Demo database:
+Migration `20260928_03_auth_workflow` adds the core tables,
+`20260929_04_authenticated_ai_pipeline` adds AI-run persistence, and
+`20260930_05_auth_workflow_vlm_extraction` adds configured model identity and
+separate immutable VLM extraction provenance without altering Auth users/roles
+or the Judge Demo database:
 
 | Table | Persisted information |
 |---|---|
 | `auth_workflow_plans` | Current plan payload, status, Maker, assigned Checker, revision and current version/round |
 | `auth_workflow_attachments` | Private image bytes, media type, byte size and SHA-256 |
 | `auth_workflow_versions` | Immutable payload and attachment manifest captured on each submit |
-| `auth_workflow_evaluation_runs` | Provider, policy/config snapshot hash, immutable input hash, validated evaluation, bounded retry count and run state, unique per plan/round |
+| `auth_workflow_evaluation_runs` | Provider/model ID, policy/config snapshot hash, immutable input hash, validated evaluation, separate VLM extraction, bounded retry count and run state, unique per plan/round |
 | `auth_workflow_engine_decisions` | Deterministic policy outcome and budget/rule checks, unique per plan/round and run |
 | `auth_workflow_decisions` | Final Checker action, rejection reason and any AI override reason, unique per plan/round |
 | `auth_workflow_events` | Append-only human/system actor, action, per-plan sequence, time, before/after status and event details |
@@ -39,25 +41,64 @@ JPEG or WebP, must match their declared media type, stay below 25 million pixels
 and 5 MB, and are stored with a SHA-256 hash.
 
 Submission commits the immutable version and approval round before starting AI
-evaluation. The existing bounded orchestrator then evaluates only the media
-whose hashes appear in that version's snapshot; the provider call runs outside
-the database transaction. A validated result and the deterministic engine
-decision are stored against the same version/round. Provider, schema, snapshot,
-policy or engine failures route the plan to Checker review; they never roll back
-the submitted plan or create an AI rejection. Interrupted runs older than 60
-seconds are recovered to Checker review when an authorized Maker or Checker
-reads the plan or list.
+evaluation. The bounded orchestrator loads only private media whose hashes
+appear in that snapshot; provider I/O runs outside the database transaction.
+The Local VLM extracts OCR and direct visual observations only. The server binds
+result evidence to the snapshot attachment IDs/hashes and persists the output
+separately from the common evaluation envelope. This repository has no real
+Media Compliance or Strategy provider, so those required results remain absent
+and the deterministic engine routes the submission to Checker review. It never
+derives an evaluation score from OCR or auto-rejects. Provider, schema, snapshot,
+policy or engine failures also route to Checker without rolling back submission.
+The Local VLM timeout is capped at 45 seconds per request with at most one
+retry; Auth recovery waits 120 seconds, so a bounded extraction is not marked
+interrupted while its request/retry is still within the configured limit.
 
 Provider selection is explicit through `AUTH_WORKFLOW_AI_PROVIDER`. The default
-`LOCAL_VLM` adapter currently has no inference transport configured in this
-repository, so it fails closed to Checker review. `MOCK_VLM` can be selected
-only with `APP_ENV=demo` for local demos and accepts `pass`, `review`, `timeout`,
-`error`, `malformed` or `unknown_media` scenarios. It does not silently replace
-Local VLM. The Auth workflow has no approved production policy, budget or
+`LOCAL_VLM` transport speaks configurable OpenAI-compatible Chat Completions,
+but model ID and endpoint are blank unless an operator configures them. An
+unconfigured or unsupported runtime fails closed to Checker; no Mock fallback
+occurs. `MOCK_VLM` can be selected only with `APP_ENV=demo` for local demos and
+accepts `pass`, `review`, `timeout`, `error`, `malformed` or `unknown_media`
+scenarios. It does not silently replace Local VLM. The Auth workflow has no approved production policy, budget or
 authority configuration source yet, so its default policy snapshot disables
 auto-approval and does not borrow demo limits. The API/service accepts an
 explicit configuration object for controlled environments; auto-approval must
 remain disabled until real Auth configuration is approved and persisted.
+
+## Local VLM configuration
+
+The backend accepts these operator-only environment variables; none comes from
+an Auth request, and the API key is never persisted or logged:
+
+| Variable | Purpose |
+|---|---|
+| `LOCAL_VLM_MODEL` | Runtime model ID; not treated as an immutable revision |
+| `LOCAL_VLM_BASE_URL` | OpenAI-compatible API root including `/v1` |
+| `LOCAL_VLM_ALLOW_REMOTE` | Defaults to `false`; non-local endpoints require explicit opt-in and HTTPS |
+| `LOCAL_VLM_API_KEY` | Optional bearer credential for the configured runtime |
+| `LOCAL_VLM_TIMEOUT_SECONDS` | 1–45 seconds per attempt; defaults to 30 |
+| `LOCAL_VLM_MAX_OUTPUT_TOKENS` | Output token cap; defaults to 1536 |
+| `LOCAL_VLM_MAX_RESPONSE_BYTES` | Response body cap; defaults to 262144 bytes |
+| `LOCAL_VLM_MAX_INPUT_BYTES` | Aggregate image-byte cap; defaults to 20 MiB |
+
+In `.env` for Docker Compose, point to a host runtime with
+`LOCAL_VLM_BASE_URL=http://host.docker.internal:<port>/v1`; do not use
+`localhost`, which addresses the backend container. Compose maps
+`host.docker.internal` to `host-gateway` for Linux and Docker Desktop. A runtime
+must listen on a host interface reachable from the backend container. The
+adapter permits loopback and `host.docker.internal` by default. A non-local host
+requires `LOCAL_VLM_ALLOW_REMOTE=true` and HTTPS; enable it only after explicitly
+approving that destination for private image data. The actual runtime/model
+remains operator-selected; no model is bundled or downloaded by this project.
+
+The adapter sends image bytes as base64 `image_url` content parts and requests a
+strict JSON Schema response. A runtime that lacks image or schema support is
+classified and routed to Checker. It does not send permanent attachment URLs.
+VLM confidence and bounding boxes are omitted because no calibrated confidence
+or supported coordinate source is configured. These extraction facts are not
+media confidence or strategy confidence. Verify the selected runtime's official
+documentation before enabling it; OpenAI protocol references for [image input](https://developers.openai.com/api/docs/guides/images-vision) and [structured output](https://developers.openai.com/api/docs/guides/structured-outputs) describe the request shape, not compatibility of a particular local runtime.
 
 Checker actions that differ from the AI recommendation, or are made without a
 recommendation, require an override reason. Every Checker rejection requires a
