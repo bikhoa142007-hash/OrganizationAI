@@ -214,8 +214,8 @@ def test_maker_submits_and_only_assigned_checker_can_approve(workflow_client):
     assert len(submitted["ai_evaluations"]) == 1
     assert submitted["ai_evaluations"][0]["status"] in {"FAILED", "TIMED_OUT"}
     assert submitted["ai_evaluations"][0]["provider"] == "LOCAL_VLM"
-    assert submitted["ai_evaluations"][0]["attempts"] == 2
-    assert submitted["ai_evaluations"][0]["retried"] is True
+    assert submitted["ai_evaluations"][0]["attempts"] == 1
+    assert submitted["ai_evaluations"][0]["retried"] is False
     assert submitted["engine_decisions"][0]["outcome"] == "HUMAN_REVIEW_REQUIRED"
     locked_edit = client.put(f"/api/workflow/plans/{draft['id']}", json={
         "expected_revision": submitted["revision"],
@@ -325,6 +325,76 @@ def test_authenticated_provider_failure_is_persisted_and_checker_can_review(work
     )
 
 
+def test_local_vlm_extraction_persists_separately_and_missing_evaluators_route_checker(workflow_client):
+    import json
+
+    import httpx
+
+    from src.ai_pipeline.providers.openai_provider import LocalVLMProvider
+
+    client, factory, app = workflow_client
+    captured = []
+    extraction = {
+        "images": [{
+            "image_index": 0,
+            "status": "COMPLETE",
+            "ocr_text": "Visible campaign headline",
+            "observations": ["A blue campaign banner."],
+            "uncertainties": [],
+        }],
+    }
+
+    def inference(request):
+        captured.append(request)
+        return httpx.Response(200, json={
+            "model": "runtime-model-name",
+            "system_fingerprint": "runtime-revision-1",
+            "choices": [{
+                "message": {"role": "assistant", "content": json.dumps(extraction)},
+                "finish_reason": "stop",
+            }],
+        })
+
+    app.state.auth_workflow_provider = LocalVLMProvider(
+        model="configured-model-id",
+        base_url="http://localhost:8000/v1",
+        client=httpx.Client(transport=httpx.MockTransport(inference)),
+    )
+    maker = create_user(factory, "maker.vlm", ("MAKER",))
+    checker = create_user(factory, "checker.vlm", ("CHECKER",))
+    login(client, maker)
+    draft = make_plan(client, checker.id, title="Local VLM extraction")
+    attached = upload_plan_image(client, draft["id"], draft["revision"])
+
+    response = client.post(
+        f"/api/workflow/plans/{draft['id']}/submit",
+        json={"expected_revision": attached["revision"]},
+    )
+    assert response.status_code == 200, response.text
+    result = response.json()
+    evaluation_run = result["ai_evaluations"][0]
+    visual = evaluation_run["visual_extraction"]
+
+    assert len(captured) == 1
+    assert result["processing_stage"] == "HUMAN_REVIEW_REQUIRED"
+    assert result["status"] == "PENDING_APPROVAL"
+    assert result["engine_decisions"][0]["outcome"] == "HUMAN_REVIEW_REQUIRED"
+    assert evaluation_run["status"] == "FAILED"
+    assert evaluation_run["model_id"] == "configured-model-id"
+    assert evaluation_run["model_version"] is None
+    assert evaluation_run["evaluation"]["media_result"] is None
+    assert evaluation_run["evaluation"]["feasibility_score"] is None
+    assert evaluation_run["evaluation"]["agent_errors"][0]["code"] == "MISSING_REQUIRED_EVALUATORS"
+    assert visual["status"] == "SUCCEEDED"
+    assert visual["model_id"] == "configured-model-id"
+    assert visual["model_revision"] == "runtime-revision-1"
+    assert visual["attachments"][0]["attachment_id"] == attached["attachments"][0]["id"]
+    assert visual["attachments"][0]["content_hash"] == attached["attachments"][0]["content_hash"]
+    assert visual["attachments"][0]["evidence"][0]["text"] == "Visible campaign headline"
+    assert evaluation_run["evaluation"]["evidence"][0]["source_ref"] == attached["attachments"][0]["id"]
+    assert app.state.auth_workflow_configuration.policy.auto_approval_policy_enabled is False
+
+
 def test_stale_run_with_invalid_policy_routes_to_checker_review(workflow_client, monkeypatch):
     client, factory, _app = workflow_client
     maker = create_user(factory, "maker.recovery", ("MAKER",))
@@ -358,6 +428,79 @@ def test_stale_run_with_invalid_policy_routes_to_checker_review(workflow_client,
     assert recovered["ai_evaluations"][0]["evaluation"]["agent_errors"][0]["code"] == (
         "POLICY_SNAPSHOT_INVALID"
     )
+    assert recovered["history"][-1]["action"] == "AI_RECOVERY_REVIEW_ROUTED"
+
+
+def test_late_vlm_result_cannot_replace_a_run_recovered_during_inference(workflow_client):
+    import json
+
+    import httpx
+
+    from src.ai_pipeline.providers.openai_provider import LocalVLMProvider
+
+    client, factory, app = workflow_client
+    maker = create_user(factory, "maker.late-vlm", ("MAKER",))
+    checker = create_user(factory, "checker.late-vlm", ("CHECKER",))
+    login(client, maker)
+    captured = []
+    plan_id = None
+
+    def finish_after_recovery(_request):
+        captured.append(True)
+        with factory.begin() as session:
+            run = session.scalar(select(AuthWorkflowEvaluationRun).where(
+                AuthWorkflowEvaluationRun.plan_id == UUID(plan_id),
+                AuthWorkflowEvaluationRun.round_number == 1,
+            ))
+            run.started_at = datetime.now(timezone.utc) - timedelta(minutes=3)
+        with factory() as recovery_session:
+            auth_workflow_application.recover_stale_evaluations(
+                recovery_session,
+                "late-vlm-test",
+                age_seconds=120,
+                visible_plan_ids=(UUID(plan_id),),
+            )
+        extraction = {
+            "images": [{
+                "image_index": 0,
+                "status": "COMPLETE",
+                "ocr_text": "Late output must not replace recovery.",
+                "observations": [],
+                "uncertainties": [],
+            }],
+        }
+        return httpx.Response(200, json={
+            "model": "runtime-model-name",
+            "choices": [{
+                "message": {"role": "assistant", "content": json.dumps(extraction)},
+                "finish_reason": "stop",
+            }],
+        })
+
+    app.state.auth_workflow_provider = LocalVLMProvider(
+        model="configured-model-id",
+        base_url="http://localhost:8000/v1",
+        client=httpx.Client(transport=httpx.MockTransport(finish_after_recovery)),
+    )
+    draft = make_plan(client, checker.id, title="Slow inference")
+    plan_id = draft["id"]
+    attached = upload_plan_image(client, plan_id, draft["revision"])
+
+    response = client.post(
+        f"/api/workflow/plans/{plan_id}/submit",
+        json={"expected_revision": attached["revision"]},
+    )
+
+    assert response.status_code == 200, response.text
+    assert captured == [True]
+    recovered = response.json()
+    run = recovered["ai_evaluations"][0]
+    assert recovered["processing_stage"] == "HUMAN_REVIEW_REQUIRED"
+    assert run["status"] == "FAILED"
+    assert run["evaluation"]["agent_errors"][0]["code"] == "RUN_INTERRUPTED"
+    assert run["visual_extraction"]["error_code"] == "RUN_INTERRUPTED"
+    assert "Late output must not replace recovery." not in json.dumps(run)
+    assert len(recovered["engine_decisions"]) == 1
     assert recovered["history"][-1]["action"] == "AI_RECOVERY_REVIEW_ROUTED"
 
 

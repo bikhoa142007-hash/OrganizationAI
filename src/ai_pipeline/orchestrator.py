@@ -4,8 +4,22 @@ from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeout
 from datetime import datetime, timezone
 
 from .models import EvaluationRequest, PipelineResult
-from .providers.base import ProviderError, ProviderTimeout, VisualModelProvider
+from .providers.base import (
+    ProviderAnalysis,
+    ProviderConfigurationError,
+    ProviderError,
+    ProviderNonRetryableError,
+    ProviderTimeout,
+    VisualModelProvider,
+)
 from .validation import EvidenceValidationError, safe_raw_hash, validate_evidence
+from .vlm_extraction import (
+    ExtractionValidationError,
+    common_evidence,
+    failed_extraction,
+    utc_now,
+    validate_and_bind_extraction,
+)
 
 
 def _now():
@@ -22,6 +36,9 @@ class EvaluationOrchestrator:
         self.max_retries = max_retries
 
     def evaluate(self, request: EvaluationRequest) -> PipelineResult:
+        if getattr(self.provider, "output_kind", "EVALUATION") == "VISUAL_EXTRACTION":
+            return self._evaluate_visual_extraction(request)
+
         attempts = 0
         last_error = None
         raw_hash = None
@@ -54,10 +71,112 @@ class EvaluationOrchestrator:
         code, message = last_error or ("PROVIDER_ERROR", "Provider execution failed.")
         return PipelineResult(self._failure(request, code, message, raw_hash), attempts, attempts > 1)
 
+    def _evaluate_visual_extraction(self, request: EvaluationRequest) -> PipelineResult:
+        started_at = utc_now()
+        attempts = 0
+        last_code = "PROVIDER_ERROR"
+        last_raw_hash = None
+        while attempts <= self.max_retries:
+            attempts += 1
+            executor = ThreadPoolExecutor(max_workers=1)
+            future = executor.submit(self.provider.analyze_image, request)
+            try:
+                provider_result = future.result(timeout=self.timeout_seconds)
+                executor.shutdown(wait=True)
+                if not isinstance(provider_result, ProviderAnalysis):
+                    raise ProviderNonRetryableError(
+                        "Provider returned an invalid response.", code="INVALID_PROVIDER_RESPONSE"
+                    )
+                last_raw_hash = provider_result.raw_output_hash
+                completed_at = utc_now()
+                extraction = validate_and_bind_extraction(
+                    provider_result.output,
+                    request,
+                    model_id=(request.metadata.get("model_id")
+                              or self.provider.get_model_metadata().get("model_id")),
+                    model_revision=provider_result.model_revision,
+                    reported_model_id=provider_result.reported_model_id,
+                    raw_output_hash=provider_result.raw_output_hash,
+                    started_at=started_at,
+                    completed_at=completed_at,
+                )
+                evaluation = self._failure(
+                    request,
+                    "MISSING_REQUIRED_EVALUATORS",
+                    "Media Compliance and Strategy evaluators are not configured.",
+                    provider_result.raw_output_hash,
+                )
+                evaluation["reason"] = (
+                    "Image extraction completed; required Media Compliance and Strategy "
+                    "evaluations are unavailable, so Checker review is required."
+                )
+                evaluation["agent_errors"] = [{
+                    "component": "evaluation",
+                    "code": "MISSING_REQUIRED_EVALUATORS",
+                    "message": "Media Compliance and Strategy evaluators are not configured.",
+                }]
+                evaluation["evidence"] = common_evidence(extraction)
+                return PipelineResult(
+                    evaluation, attempts, attempts > 1, visual_extraction=extraction
+                )
+            except FutureTimeout:
+                future.cancel()
+                executor.shutdown(wait=False, cancel_futures=True)
+                last_code = "PROVIDER_TIMEOUT"
+            except ExtractionValidationError as exc:
+                executor.shutdown(wait=True)
+                last_code = exc.code
+                break
+            except ProviderTimeout as exc:
+                executor.shutdown(wait=True)
+                last_code = exc.code
+            except ProviderConfigurationError as exc:
+                executor.shutdown(wait=True)
+                last_code = exc.code
+                break
+            except ProviderNonRetryableError as exc:
+                executor.shutdown(wait=True)
+                last_code = exc.code
+                break
+            except ProviderError as exc:
+                executor.shutdown(wait=True)
+                last_code = exc.code
+            except Exception:
+                executor.shutdown(wait=True)
+                last_code = "PROVIDER_ERROR"
+
+        completed_at = utc_now()
+        extraction = failed_extraction(
+            request,
+            model_id=(request.metadata.get("model_id")
+                      or self.provider.get_model_metadata().get("model_id")),
+            error_code=last_code,
+            raw_output_hash=last_raw_hash,
+            started_at=started_at,
+            completed_at=completed_at,
+        )
+        message = "Image extraction failed; Checker review is required."
+        evaluation = self._failure(request, last_code, message, last_raw_hash)
+        return PipelineResult(
+            evaluation, attempts, attempts > 1, visual_extraction=extraction
+        )
+
     @staticmethod
     def fail_closed(request: EvaluationRequest, code: str, message: str) -> PipelineResult:
         """Create the same validated failure envelope for orchestration-level faults."""
-        return PipelineResult(EvaluationOrchestrator._failure(request, code, message), attempts=0, retried=False)
+        extraction = None
+        if request.provider == "LOCAL_VLM":
+            extraction = failed_extraction(
+                request,
+                model_id=request.metadata.get("model_id"),
+                error_code=code,
+            )
+        return PipelineResult(
+            EvaluationOrchestrator._failure(request, code, message),
+            attempts=0,
+            retried=False,
+            visual_extraction=extraction,
+        )
 
     run = evaluate
 

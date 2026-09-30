@@ -404,6 +404,32 @@ E2E tự chạy backend tại `127.0.0.1:8008`, frontend tại `127.0.0.1:5178` 
 | PostgreSQL migration | Đã chạy trên Compose PostgreSQL: `20260928_03 -> 20260929_04` |
 | Auth HTTP smoke | Thành công: Maker submit, AI/engine persistence, Checker approve/reject, permission blocks và concurrent decision race; tạo 3 smoke plan tổng hợp trong local PostgreSQL |
 
+### Local VLM trích xuất ảnh cho Auth workflow
+
+`LocalVLMProvider` gửi ảnh riêng tư từ snapshot đã xác minh tới một endpoint OpenAI-compatible Chat Completions do operator cấu hình. Request dùng base64 `image_url` và JSON Schema response format; adapter chỉ yêu cầu OCR, quan sát trực tiếp và điều chưa đọc được. Server tự gắn attachment ID/hash, version, approval round, run ID và input hash. VLM không trả confidence, bounding box, quyết định duyệt hoặc điểm đánh giá.
+
+Repository không chọn sẵn model ID hoặc runtime, và môi trường local hiện không có endpoint/model VLM cấu hình nên chưa chạy inference thật. `LOCAL_VLM_BASE_URL` để trống mặc định nhằm tránh gửi ảnh ra ngoài. Khi có extraction hợp lệ, Auth vẫn chuyển Checker vì Media Compliance và Strategy chưa có provider thật; media confidence và feasibility score giữ trống. Auto-approval Auth vẫn tắt theo cấu hình mặc định.
+
+Thiết lập các biến sau trong `.env` (không commit file này):
+
+| Biến | Ý nghĩa |
+| --- | --- |
+| `AUTH_WORKFLOW_AI_PROVIDER` | `LOCAL_VLM` mặc định; chỉ chọn `MOCK_VLM` rõ ràng cho demo |
+| `LOCAL_VLM_MODEL` | Model ID do runtime đang chạy nhận diện; không phải revision bất biến |
+| `LOCAL_VLM_BASE_URL` | Root URL, gồm `/v1`, của endpoint tương thích Chat Completions |
+| `LOCAL_VLM_ALLOW_REMOTE` | Mặc định `false`; endpoint không-local cần bật rõ ràng và dùng HTTPS |
+| `LOCAL_VLM_API_KEY` | Tùy chọn; chỉ truyền trong Authorization header ở backend |
+| `LOCAL_VLM_TIMEOUT_SECONDS` | Timeout mỗi lần gọi, 1–45 giây; mặc định 30 |
+| `LOCAL_VLM_MAX_OUTPUT_TOKENS` | Giới hạn output token, mặc định 1536 |
+| `LOCAL_VLM_MAX_RESPONSE_BYTES` | Giới hạn response body, mặc định 262144 byte |
+| `LOCAL_VLM_MAX_INPUT_BYTES` | Giới hạn tổng bytes ảnh mỗi request VLM, mặc định 20 MiB |
+
+Với Docker Compose, không dùng `localhost` làm inference host vì địa chỉ đó trỏ tới backend container. Ví dụ Docker Desktop: `LOCAL_VLM_BASE_URL=http://host.docker.internal:8000/v1`; backend Compose có ánh xạ `host.docker.internal:host-gateway` cho Docker Engine trên Linux. Runtime trên host phải lắng nghe địa chỉ có thể truy cập từ container. Mặc định adapter chỉ cho phép loopback và `host.docker.internal`; host khác cần được duyệt rõ qua `LOCAL_VLM_ALLOW_REMOTE=true` và dùng HTTPS trước khi nhận ảnh riêng tư.
+
+Khởi động Auth workflow và migration PostgreSQL bằng `docker compose up --build -d`. Sau khi model/runtime được chọn và chạy, đăng nhập bằng Maker, tạo kế hoạch có ảnh và mở chi tiết tại `/workflow/plans/{id}`. Mục “Trích xuất ảnh (VLM)” hiển thị OCR, quan sát, phần chưa đọc được và attachment hash; trạng thái đánh giá toàn bộ, Media Compliance, Strategy và Decision Engine hiển thị riêng. Với cấu hình hiện tại chưa có model/runtime, hệ thống ghi extraction lỗi đã làm sạch và chuyển Checker; không fallback sang Mock.
+
+Endpoint phải hỗ trợ ảnh base64 trong Chat Completions cùng `response_format` kiểu `json_schema`; output được server kiểm tra lại. Đây là giao thức transport, không phải xác nhận một runtime cụ thể tương thích. Tài liệu giao thức chính thức: [image inputs](https://developers.openai.com/api/docs/guides/images-vision) và [structured outputs](https://developers.openai.com/api/docs/guides/structured-outputs). Cần xác minh runtime/model ID và chạy smoke test thật sau khi người vận hành cung cấp cấu hình.
+
 ---
 
 ## 🔌 API Chính
@@ -452,7 +478,7 @@ Xem thêm [API examples](docs/integration/api-examples.md) và [generated OpenAP
 ## ⚠️ Giới Hạn Hiện Tại
 
 - Shared demo actors có thể được bất kỳ người dùng demo nào chọn; chưa có production authentication/session management.
-- FastAPI Judge Demo dùng `MockVLMProvider`; `LocalVLMProvider` cần inference callable được cấu hình và external provider execution đang bị vô hiệu hóa.
+- FastAPI Judge Demo tiếp tục dùng `MockVLMProvider`. Auth Local VLM có transport OpenAI-compatible nhưng runtime/model chưa được chọn hoặc cấu hình; Media Compliance và Strategy provider thật còn thiếu nên Auth vẫn route Checker.
 - SQLite phù hợp single-instance demo, không phù hợp horizontal scaling hoặc dữ liệu phê duyệt thật.
 - Render Free dùng ephemeral `/tmp`; plan, attachment, audit và idempotency record có thể mất khi restart/redeploy/spin-down. Chỉ tám seed scenario được tạo lại.
 - Render Free có cold start và có thể gián đoạn trong lúc deploy.

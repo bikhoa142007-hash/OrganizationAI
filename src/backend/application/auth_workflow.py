@@ -274,6 +274,7 @@ def _plan_dict(session: Session, plan: AuthWorkflowPlan) -> dict[str, Any]:
             "correlation_id": item.correlation_id,
             "input_hash": item.input_hash,
             "provider": item.provider,
+            "model_id": item.model_id,
             "model_version": item.model_version,
             "policy_version": item.policy_version,
             "policy_snapshot_id": item.policy_snapshot_id,
@@ -282,6 +283,7 @@ def _plan_dict(session: Session, plan: AuthWorkflowPlan) -> dict[str, Any]:
             "attempts": item.attempts,
             "retried": item.retried,
             "evaluation": item.evaluation,
+            "visual_extraction": item.visual_extraction,
             "failure_reason": item.failure_reason,
             "started_at": item.started_at,
             "completed_at": item.completed_at,
@@ -508,6 +510,7 @@ def submit_plan(
     provider_name: str,
     model_version: str | None,
     configuration: ApprovalConfiguration,
+    model_id: str | None = None,
 ):
     _require_role(principal, "MAKER", correlation_id)
     try:
@@ -576,6 +579,7 @@ def submit_plan(
                 correlation_id=correlation_id,
                 input_hash=snapshot_hash,
                 provider=provider_name,
+                model_id=model_id,
                 model_version=model_version,
                 policy_version=configuration.policy.policy_version,
                 policy_snapshot_id=configuration.policy.snapshot_id,
@@ -605,6 +609,7 @@ def submit_plan(
                     "evaluation_id": evaluation_id,
                     "input_hash": snapshot_hash,
                     "provider": provider_name,
+                    "model_id": model_id,
                     "model_version": model_version,
                     "policy_version": configuration.policy.policy_version,
                     "policy_snapshot_hash": policy_snapshot_hash,
@@ -721,7 +726,7 @@ def evaluate_submission(
                     provider=run.provider,
                     model_version=run.model_version,
                     configuration=configuration,
-                    metadata={"attachment_contents": contents},
+                    metadata={"attachment_contents": contents, "model_id": run.model_id},
                 )
                 run.status = "PROCESSING"
                 run.attempts = 0
@@ -763,6 +768,10 @@ def evaluate_submission(
         raw_evaluation = pipeline_result.evaluation
 
         with _write_transaction(session):
+            # Recovery or a Checker request may have committed while provider I/O
+            # was in flight. This session has expire_on_commit=False, so reload its
+            # identity map before checking whether the run still owns the active round.
+            session.expire_all()
             plan = _plan_or_404(session, plan_id, correlation_id, lock=True)
             run = session.scalar(
                 select(AuthWorkflowEvaluationRun)
@@ -773,6 +782,7 @@ def evaluate_submission(
                 _fail("NOT_FOUND", "Evaluation run not found.", correlation_id)
             if run.evaluation is not None:
                 return _plan_dict(session, plan)
+            run.visual_extraction = pipeline_result.visual_extraction
 
             evaluation_status = raw_evaluation.get("status", "FAILED")
             if (
@@ -785,6 +795,7 @@ def evaluate_submission(
                 # late output attached to its original run without applying it to a newer round.
                 run.status = evaluation_status
                 run.evaluation = raw_evaluation
+                run.visual_extraction = pipeline_result.visual_extraction
                 run.failure_reason = "Late evaluation result was retained but not applied to a newer plan state."
                 run.completed_at = _now_datetime()
                 _record_event(
@@ -924,7 +935,7 @@ def recover_stale_evaluations(
     session: Session,
     correlation_id: str,
     *,
-    age_seconds: int = 60,
+    age_seconds: int = 120,
     visible_plan_ids: tuple[UUID, ...] | None = None,
 ) -> None:
     """Move interrupted durable runs to Checker review when a user returns."""
@@ -990,6 +1001,7 @@ def recover_stale_evaluations(
                 request = EvaluationRequest(
                     snapshot, run.policy_version, run.evaluation_id, run.run_id,
                     run.correlation_id, run.provider, run.model_version, config,
+                    metadata={"model_id": run.model_id},
                 )
                 failure = EvaluationOrchestrator.fail_closed(
                     request,
@@ -1036,6 +1048,7 @@ def recover_stale_evaluations(
                 }
                 if bundle is not None:
                     run.evaluation = bundle.evaluation.to_dict()
+                    run.visual_extraction = failure.visual_extraction
                     session.add(AuthWorkflowEngineDecision(
                         id=uuid4(), plan_id=plan.id, evaluation_run_id=run.id,
                         version_number=run.version_number, round_number=run.round_number,
@@ -1048,6 +1061,7 @@ def recover_stale_evaluations(
                 else:
                     run.failure_reason = "RUN_INTERRUPTED_DECISION_POLICY_ERROR"
                     run.evaluation = failure.evaluation
+                    run.visual_extraction = failure.visual_extraction
                 _record_event(
                     session, plan_id=plan.id, actor_id=None, actor_type="SYSTEM",
                     action="AI_RECOVERY_REVIEW_ROUTED", status_before=plan.status,

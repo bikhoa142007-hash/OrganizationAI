@@ -57,7 +57,7 @@ def unconfigured_approval_configuration(provider: VisualModelProvider) -> Approv
     return ApprovalConfiguration(policy=policy, budgets=(), authority=None)
 
 
-def provider_metadata(provider: VisualModelProvider) -> tuple[str, str | None]:
+def provider_metadata(provider: VisualModelProvider) -> tuple[str, str | None, str | None]:
     try:
         metadata = provider.get_model_metadata()
     except ProviderError:
@@ -68,4 +68,7 @@ def provider_metadata(provider: VisualModelProvider) -> tuple[str, str | None]:
     model_version = metadata.get("model_version")
     if not isinstance(model_version, str) or not model_version.strip():
         model_version = None
-    return provider_name, model_version
+    model_id = metadata.get("model_id")
+    if not isinstance(model_id, str) or not model_id.strip():
+        model_id = None
+    return provider_name, model_version, model_id
