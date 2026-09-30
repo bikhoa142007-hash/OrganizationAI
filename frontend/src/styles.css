@@ -821,6 +821,12 @@ h1, h2, h3, h4 { letter-spacing: 0; }
 .auth-ai-metrics dd { font-size: .8rem; }
 .auth-ai-phase { margin-top: 14px; border-top: 1px solid var(--line); padding-top: 10px; }
 .auth-ai-phase > p { color: var(--muted); font-size: .8rem; line-height: 1.5; }
+.auth-task-evaluation { border: 1px solid var(--line); border-radius: 8px; padding: 12px; background: var(--surface); }
+.auth-task-evaluation h4 { margin: 10px 0 4px; font-size: .8rem; }
+.auth-task-score-table-wrap { overflow-x: auto; margin-top: 10px; }
+.auth-task-score-table { width: 100%; border-collapse: collapse; font-size: .75rem; }
+.auth-task-score-table th, .auth-task-score-table td { border-bottom: 1px solid var(--line); padding: 8px; text-align: left; vertical-align: top; }
+.auth-task-score-table td small { display: block; margin-top: 4px; color: var(--muted); overflow-wrap: anywhere; }
 .auth-vlm-attachments { display: grid; gap: 10px; list-style: none; padding: 0 !important; }
 .auth-vlm-attachments > li { border: 1px solid var(--line); border-radius: 6px; padding: 12px; }
 .auth-vlm-attachments h4 { margin: 0 0 6px; font-size: .8rem; }

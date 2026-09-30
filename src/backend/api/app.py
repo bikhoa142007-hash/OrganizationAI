@@ -11,6 +11,7 @@ from starlette.exceptions import HTTPException
 from src.ai_pipeline.adapters import ApprovalPipelineAdapter
 from src.ai_pipeline.orchestrator import EvaluationOrchestrator
 from src.ai_pipeline.providers.mock import MockVLMProvider
+from src.ai_pipeline.task_config import configured_task_components
 from src.backend.application.auth_workflow_ai import (
     create_authenticated_provider,
     unconfigured_approval_configuration,
@@ -24,12 +25,22 @@ from .auth import router as auth_router
 from .auth_workflow import router as auth_workflow_router
 
 
-def create_app(settings=None, *, auth_workflow_provider=None, auth_workflow_configuration=None):
+def create_app(settings=None, *, auth_workflow_provider=None, auth_workflow_configuration=None,
+               auth_workflow_media_provider=None, auth_workflow_strategy_provider=None):
     settings = settings or Settings.from_environment()
     settings.validate()
     auth_workflow_provider = auth_workflow_provider or create_authenticated_provider(settings.app_env)
+    configured_media, configured_strategy, media_policy, strategy_rubric = configured_task_components()
+    auth_workflow_media_provider = auth_workflow_media_provider or configured_media
+    auth_workflow_strategy_provider = auth_workflow_strategy_provider or configured_strategy
+    media_settings = getattr(auth_workflow_media_provider, "settings", None)
+    strategy_settings = getattr(auth_workflow_strategy_provider, "settings", None)
     auth_workflow_configuration = auth_workflow_configuration or unconfigured_approval_configuration(
-        auth_workflow_provider
+        auth_workflow_provider,
+        media_policy=media_policy,
+        strategy_rubric=strategy_rubric,
+        media_model_snapshot=media_settings.public_snapshot() if media_settings else None,
+        strategy_model_snapshot=strategy_settings.public_snapshot() if strategy_settings else None,
     )
     verify_runs = {}
     app = FastAPI(title='OrganizationAI API', version='1.0',
@@ -37,6 +48,8 @@ def create_app(settings=None, *, auth_workflow_provider=None, auth_workflow_conf
                   responses={code: {'model': ErrorResponse} for code in (401, 403, 404, 409, 422, 503)})
     app.state.allowed_origins = tuple(settings.cors_origins)
     app.state.auth_workflow_provider = auth_workflow_provider
+    app.state.auth_workflow_media_provider = auth_workflow_media_provider
+    app.state.auth_workflow_strategy_provider = auth_workflow_strategy_provider
     app.state.auth_workflow_configuration = auth_workflow_configuration
     app.include_router(auth_router)
     app.include_router(auth_workflow_router)

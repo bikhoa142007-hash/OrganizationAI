@@ -17,7 +17,8 @@ their client sends cookies and does not send `X-Demo-Actor`.
 Migration `20260928_03_auth_workflow` adds the core tables,
 `20260929_04_authenticated_ai_pipeline` adds AI-run persistence, and
 `20260930_05_auth_workflow_vlm_extraction` adds configured model identity and
-separate immutable VLM extraction provenance without altering Auth users/roles
+separate immutable VLM extraction provenance. `20260930_06_auth_media_strategy_evaluations`
+adds separate Media and Strategy step results without altering Auth users/roles
 or the Judge Demo database:
 
 | Table | Persisted information |
@@ -25,7 +26,7 @@ or the Judge Demo database:
 | `auth_workflow_plans` | Current plan payload, status, Maker, assigned Checker, revision and current version/round |
 | `auth_workflow_attachments` | Private image bytes, media type, byte size and SHA-256 |
 | `auth_workflow_versions` | Immutable payload and attachment manifest captured on each submit |
-| `auth_workflow_evaluation_runs` | Provider/model ID, policy/config snapshot hash, immutable input hash, validated evaluation, separate VLM extraction, bounded retry count and run state, unique per plan/round |
+| `auth_workflow_evaluation_runs` | Provider/model ID, policy/config snapshot hash, immutable input hash, validated evaluation, separate VLM extraction and Media/Strategy step results, bounded retry count and run state, unique per plan/round |
 | `auth_workflow_engine_decisions` | Deterministic policy outcome and budget/rule checks, unique per plan/round and run |
 | `auth_workflow_decisions` | Final Checker action, rejection reason and any AI override reason, unique per plan/round |
 | `auth_workflow_events` | Append-only human/system actor, action, per-plan sequence, time, before/after status and event details |
@@ -44,15 +45,19 @@ Submission commits the immutable version and approval round before starting AI
 evaluation. The bounded orchestrator loads only private media whose hashes
 appear in that snapshot; provider I/O runs outside the database transaction.
 The Local VLM extracts OCR and direct visual observations only. The server binds
-result evidence to the snapshot attachment IDs/hashes and persists the output
-separately from the common evaluation envelope. This repository has no real
-Media Compliance or Strategy provider, so those required results remain absent
-and the deterministic engine routes the submission to Checker review. It never
-derives an evaluation score from OCR or auto-rejects. Provider, schema, snapshot,
-policy or engine failures also route to Checker without rolling back submission.
-The Local VLM timeout is capped at 45 seconds per request with at most one
-retry; Auth recovery waits 120 seconds, so a bounded extraction is not marked
-interrupted while its request/retry is still within the configured limit.
+evidence to snapshot attachment IDs/hashes and persists extraction separately.
+Media Compliance evaluates those observations against a versioned content
+policy. Strategy Evaluation uses the seven BA criteria and fixed weights; the
+backend validates each score and computes the weighted total with Decimal
+arithmetic. Each task has a separate provider/model, endpoint fingerprint,
+timeout, input/output limits, retries and prompt/schema versions. Task progress
+is committed in short transactions between provider calls, preserving one
+successful step if a later step fails. Reload reads saved results and never
+starts inference again. Missing policy/provider, unknown model, invalid output,
+missing evidence, timeout or engine errors route to Checker without rolling
+back submission. The pipeline never derives a Strategy score from OCR or
+auto-rejects. Maximum configured run time is 190 seconds; stale-run recovery
+waits 240 seconds before routing an interrupted run to Checker.
 
 Provider selection is explicit through `AUTH_WORKFLOW_AI_PROVIDER`. The default
 `LOCAL_VLM` transport speaks configurable OpenAI-compatible Chat Completions,
@@ -60,11 +65,37 @@ but model ID and endpoint are blank unless an operator configures them. An
 unconfigured or unsupported runtime fails closed to Checker; no Mock fallback
 occurs. `MOCK_VLM` can be selected only with `APP_ENV=demo` for local demos and
 accepts `pass`, `review`, `timeout`, `error`, `malformed` or `unknown_media`
-scenarios. It does not silently replace Local VLM. The Auth workflow has no approved production policy, budget or
-authority configuration source yet, so its default policy snapshot disables
-auto-approval and does not borrow demo limits. The API/service accepts an
-explicit configuration object for controlled environments; auto-approval must
-remain disabled until real Auth configuration is approved and persisted.
+scenarios. Auth Mock VLM returns extraction evidence only; it does not replace
+either task evaluator or the Judge Demo's legacy mock. The Auth workflow has no
+approved production budget/authority source, so its default policy snapshot
+disables auto-approval and does not borrow demo limits. Task configuration is
+server-side and cannot be enabled through an API request.
+
+## Media and Strategy configuration
+
+Set independent `AUTH_WORKFLOW_MEDIA_*` and `AUTH_WORKFLOW_STRATEGY_*` variables
+documented in `.env.example`. Each task supports the explicit protocol
+`OPENAI_COMPATIBLE_CHAT_COMPLETIONS` and pins its provider, endpoint, model ID and
+model version separately. API keys are sent only in backend bearer headers and
+are excluded from snapshots/logs/frontend. The adapter requests strict JSON
+Schema output and validates schema, model identity/version and evidence
+references again on the backend. The protocol label does not prove compatibility
+of any particular runtime.
+
+`AUTH_WORKFLOW_MEDIA_POLICY_JSON` must contain an organization-approved,
+versioned policy with department/channel scope and rules describing severity,
+meaning and required evidence kinds. This repository does not supply a live
+content policy. `AUTH_WORKFLOW_STRATEGY_RUBRIC_JSON` accepts only the seven BA
+criteria and fixed weights: objective, audience, channel, timeline, KPI and
+budget efficiency at 15 each, and risk control at 10. Both JSON variables are
+blank by default; until a required task policy/rubric and model are configured,
+the task is marked `NOT_CONFIGURED` and makes no inference request.
+
+Remote endpoints require HTTPS and the task-specific `*_ALLOW_REMOTE=true`
+opt-in. The endpoint itself is not persisted or returned; each submitted round
+stores only a configuration fingerprint, model IDs/versions and prompt/schema
+versions. Auto-approval stays disabled unless an approved server configuration
+explicitly enables it together with budget and authority snapshots.
 
 ## Local VLM configuration
 

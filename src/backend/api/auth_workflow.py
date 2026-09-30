@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, File, Form, Query, Request, UploadFile
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
-from src.ai_pipeline.orchestrator import EvaluationOrchestrator
+from src.ai_pipeline.authenticated_orchestrator import AuthenticatedEvaluationOrchestrator
 from src.backend.api.auth import (
     AuthenticatedPrincipal,
     _check_browser_origin,
@@ -168,10 +168,19 @@ def submit_plan(
         configuration=request.app.state.auth_workflow_configuration,
     )
     provider_timeout = getattr(provider, "timeout_seconds", None)
-    orchestrator_timeout = provider_timeout + 2 if provider_timeout is not None else 10
+    media_provider = request.app.state.auth_workflow_media_provider
+    strategy_provider = request.app.state.auth_workflow_strategy_provider
+    task_timeouts = [
+        getattr(getattr(item, "settings", None), "timeout_seconds", 20)
+        for item in (media_provider, strategy_provider)
+    ]
+    orchestrator_timeout = max(180, (provider_timeout or 30) * 2 + sum(task_timeouts) + 10)
     return workflow.evaluate_submission(
         session, plan_id, submitted["current_round"],
-        EvaluationOrchestrator(provider, timeout_seconds=orchestrator_timeout),
+        AuthenticatedEvaluationOrchestrator(
+            provider, media_provider=media_provider, strategy_provider=strategy_provider,
+            timeout_seconds=orchestrator_timeout,
+        ),
         _correlation(request),
     )
 

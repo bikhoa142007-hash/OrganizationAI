@@ -196,6 +196,8 @@ class AuthWorkflowEvaluationRun(Base):
     retried: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     evaluation: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
     visual_extraction: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+    media_evaluation: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+    strategy_evaluation: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
     failure_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

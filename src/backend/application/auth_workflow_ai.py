@@ -1,15 +1,19 @@
-"""Runtime composition for the authenticated workflow's existing AI pipeline."""
+"""Runtime composition for the authenticated workflow's AI pipeline."""
 import os
 
 from src.ai_pipeline.providers.base import ProviderError, VisualModelProvider
-from src.ai_pipeline.providers.mock import MockVLMProvider
+from src.ai_pipeline.providers.mock import AuthenticatedMockVLMProvider
 from src.ai_pipeline.providers.openai_provider import LocalVLMProvider
 from src.backend.application.auth_workflow import ALLOWED_MEDIA, MAX_ATTACHMENT_BYTES
 from src.backend.domain.policy import (
     ApprovalConfiguration,
     Criterion,
     MANDATORY_FIELDS,
+    STRATEGY_CRITERIA,
     PolicySnapshot,
+    StrategyCriterion,
+    StrategyRubric,
+    MediaCompliancePolicy,
 )
 
 
@@ -30,11 +34,18 @@ def create_authenticated_provider(app_env: str) -> VisualModelProvider:
         version = os.getenv("AUTH_WORKFLOW_MOCK_MODEL_VERSION", "mock-1").strip()
         if not version:
             raise ValueError("AUTH_WORKFLOW_MOCK_MODEL_VERSION cannot be blank.")
-        return MockVLMProvider(scenario, model_version=version)
+        return AuthenticatedMockVLMProvider(scenario, model_version=version)
     raise ValueError("AUTH_WORKFLOW_AI_PROVIDER must be LOCAL_VLM or MOCK_VLM.")
 
 
-def unconfigured_approval_configuration(provider: VisualModelProvider) -> ApprovalConfiguration:
+def unconfigured_approval_configuration(
+    provider: VisualModelProvider,
+    *,
+    media_policy: MediaCompliancePolicy | None = None,
+    strategy_rubric: StrategyRubric | None = None,
+    media_model_snapshot: dict | None = None,
+    strategy_model_snapshot: dict | None = None,
+) -> ApprovalConfiguration:
     """Fail-closed policy snapshot for deployments without approved auth policy data.
 
     The existing demo policy, budget and authority are intentionally not copied
@@ -44,17 +55,26 @@ def unconfigured_approval_configuration(provider: VisualModelProvider) -> Approv
     metadata = provider.get_model_metadata()
     model_version = metadata.get("model_version")
     known_models = (model_version,) if isinstance(model_version, str) and model_version.strip() else ()
+    rubric_criteria = strategy_rubric.criteria if strategy_rubric else tuple(
+        StrategyCriterion(criterion_id, label, weight)
+        for criterion_id, label, weight in STRATEGY_CRITERIA
+    )
     policy = PolicySnapshot(
         snapshot_id="AUTH-WORKFLOW-POLICY-UNCONFIGURED",
         policy_version="AUTH-WORKFLOW-POLICY-UNCONFIGURED-1",
         auto_approval_policy_enabled=False,
         mandatory_fields=MANDATORY_FIELDS,
-        criteria=(Criterion("strategy", 100),),
+        criteria=tuple(Criterion(item.criterion_id, item.weight) for item in rubric_criteria),
         known_model_versions=known_models,
         allowed_media_types=tuple(ALLOWED_MEDIA),
         max_attachment_bytes=MAX_ATTACHMENT_BYTES,
     )
-    return ApprovalConfiguration(policy=policy, budgets=(), authority=None)
+    return ApprovalConfiguration(
+        policy=policy, budgets=(), authority=None,
+        media_policy=media_policy, strategy_rubric=strategy_rubric,
+        media_model_snapshot=media_model_snapshot,
+        strategy_model_snapshot=strategy_model_snapshot,
+    )
 
 
 def provider_metadata(provider: VisualModelProvider) -> tuple[str, str | None, str | None]:
