@@ -62,7 +62,8 @@ def test_auth_migrations_create_registration_ready_identity_tables(tmp_path, mon
     ai_runs = {column["name"] for column in inspector.get_columns("auth_workflow_evaluation_runs")}
     assert {
         "run_id", "evaluation_id", "input_hash", "provider", "model_version", "attempts", "retried",
-        "policy_snapshot", "evaluation", "failure_reason",
+        "policy_snapshot", "evaluation", "visual_extraction", "media_evaluation",
+        "strategy_evaluation", "failure_reason",
     } <= ai_runs
     ai_run_uniques = inspector.get_unique_constraints("auth_workflow_evaluation_runs")
     assert any(item["column_names"] == ["plan_id", "round_number"] for item in ai_run_uniques)

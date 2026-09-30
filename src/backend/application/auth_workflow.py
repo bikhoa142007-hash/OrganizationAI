@@ -29,6 +29,7 @@ from src.backend.db.models import (
 )
 from src.ai_pipeline.models import EvaluationRequest
 from src.ai_pipeline.orchestrator import EvaluationOrchestrator
+from src.ai_pipeline.authenticated_orchestrator import initial_evaluation_step
 from src.backend.domain.models import AttachmentManifest, MarketingPlan
 from src.backend.domain.policy import ApprovalConfiguration
 from src.backend.rules.decision import DecisionContext, decide
@@ -284,6 +285,8 @@ def _plan_dict(session: Session, plan: AuthWorkflowPlan) -> dict[str, Any]:
             "retried": item.retried,
             "evaluation": item.evaluation,
             "visual_extraction": item.visual_extraction,
+            "media_evaluation": item.media_evaluation,
+            "strategy_evaluation": item.strategy_evaluation,
             "failure_reason": item.failure_reason,
             "started_at": item.started_at,
             "completed_at": item.completed_at,
@@ -558,6 +561,14 @@ def submit_plan(
             policy_snapshot_hash = canonical_hash(policy_snapshot)
             run_id = "run-" + uuid4().hex
             evaluation_id = "evaluation-" + uuid4().hex
+            media_initial = initial_evaluation_step(
+                "MEDIA_COMPLIANCE", snapshot_hash, configuration,
+                configuration.media_model_snapshot,
+            )
+            strategy_initial = initial_evaluation_step(
+                "STRATEGY_EVALUATION", snapshot_hash, configuration,
+                configuration.strategy_model_snapshot,
+            )
             session.add(AuthWorkflowVersion(
                 id=uuid4(),
                 plan_id=plan.id,
@@ -586,6 +597,8 @@ def submit_plan(
                 policy_snapshot_hash=policy_snapshot_hash,
                 policy_snapshot=policy_snapshot,
                 status="PENDING",
+                media_evaluation=media_initial,
+                strategy_evaluation=strategy_initial,
             ))
             _record_event(
                 session, plan_id=plan.id, actor_id=principal.id,
@@ -756,7 +769,26 @@ def evaluate_submission(
         # Provider I/O is deliberately outside the transaction and row lock.
         if snapshot_is_valid:
             try:
-                pipeline_result = orchestrator.evaluate(request)
+                if getattr(orchestrator, "supports_step_updates", False):
+                    def persist_step(name, state):
+                        column = {
+                            "media_evaluation": "media_evaluation",
+                            "strategy_evaluation": "strategy_evaluation",
+                        }.get(name)
+                        if column is None:
+                            return
+                        with _write_transaction(session):
+                            current_run = session.scalar(
+                                select(AuthWorkflowEvaluationRun)
+                                .where(AuthWorkflowEvaluationRun.id == run.id)
+                                .with_for_update()
+                            )
+                            if current_run is None or current_run.status != "PROCESSING" or current_run.evaluation is not None:
+                                return
+                            setattr(current_run, column, state)
+                    pipeline_result = orchestrator.evaluate(request, on_step=persist_step)
+                else:
+                    pipeline_result = orchestrator.evaluate(request)
             except Exception:
                 pipeline_result = orchestrator.fail_closed(
                     request, "ORCHESTRATOR_ERROR", "AI evaluation could not be completed."
@@ -796,6 +828,8 @@ def evaluate_submission(
                 run.status = evaluation_status
                 run.evaluation = raw_evaluation
                 run.visual_extraction = pipeline_result.visual_extraction
+                run.media_evaluation = pipeline_result.media_evaluation or run.media_evaluation
+                run.strategy_evaluation = pipeline_result.strategy_evaluation or run.strategy_evaluation
                 run.failure_reason = "Late evaluation result was retained but not applied to a newer plan state."
                 run.completed_at = _now_datetime()
                 _record_event(
@@ -815,6 +849,8 @@ def evaluate_submission(
 
             run.attempts = pipeline_result.attempts
             run.retried = pipeline_result.retried
+            run.media_evaluation = pipeline_result.media_evaluation or run.media_evaluation
+            run.strategy_evaluation = pipeline_result.strategy_evaluation or run.strategy_evaluation
             config = ApprovalConfiguration.from_dict(run.policy_snapshot)
             valid_checkers = session.scalars(
                 select(User.id)
@@ -935,7 +971,7 @@ def recover_stale_evaluations(
     session: Session,
     correlation_id: str,
     *,
-    age_seconds: int = 120,
+    age_seconds: int = 240,
     visible_plan_ids: tuple[UUID, ...] | None = None,
 ) -> None:
     """Move interrupted durable runs to Checker review when a user returns."""
@@ -1046,6 +1082,16 @@ def recover_stale_evaluations(
                     "input_hash": run.input_hash,
                     "reason": failure_reason,
                 }
+                for column in ("media_evaluation", "strategy_evaluation"):
+                    stage = getattr(run, column)
+                    if stage and stage.get("status") in {"PENDING", "PROCESSING"}:
+                        setattr(run, column, {
+                            **stage,
+                            "status": "FAILED",
+                            "error_code": "RUN_INTERRUPTED",
+                            "reason": failure_reason,
+                            "completed_at": _timestamp(),
+                        })
                 if bundle is not None:
                     run.evaluation = bundle.evaluation.to_dict()
                     run.visual_extraction = failure.visual_extraction

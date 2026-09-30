@@ -48,7 +48,8 @@ Backend Render lưu SQLite tại `/tmp/organizationai/demo-organization.sqlite3`
 | `Demo/Mock` | Actor identity | Chọn shared demo actor, gửi qua header `X-Demo-Actor`; server vẫn kiểm tra role và ownership |
 | `Demo/Mock` | AI evaluation | FastAPI đang nối `MockVLMProvider`; timeout/error/malformed evidence đều fail closed sang Human Review |
 | `Implemented (local)` | Auth workflow | Cookie JWT xác thực Maker/Checker; PostgreSQL lưu kế hoạch, snapshot, provider evaluation, quyết định policy và audit; AI lỗi chuyển Checker review |
-| `Planned/TBD` | Production identity và AI | Auth workflow chưa dành cho production; chưa có Local VLM inference transport, nguồn policy/budget/authority đã phê duyệt hoặc rate limiting toàn diện |
+| `Implemented (local)` | Auth AI stages | Local VLM extraction, Media Compliance và Strategy Evaluation là các bước độc lập; kết quả và cấu hình an toàn được lưu theo từng round; task chưa cấu hình sẽ chuyển Checker |
+| `Planned/TBD` | Production identity và policy operations | Chưa có nguồn budget/authority/content policy được phê duyệt, cấu hình quản trị hoặc rate limiting toàn diện |
 
 AI không tự động từ chối kế hoạch. Engine chỉ trả `AUTO_APPROVED` hoặc `HUMAN_REVIEW_REQUIRED`; quyết định `REJECTED` chỉ do Checker được gán thực hiện. Policy mặc định cho submission HTTP mới là `DEMO-HTTP-2` với auto-approval tắt, nên mock PASS vẫn chuyển Checker; riêng seed `DEMO-SEED-AUTO` dùng snapshot `DEMO-HTTP-AUTO-1` để minh họa controlled auto-approval.
 
@@ -281,7 +282,7 @@ docker compose exec backend python -m src.backend.seed_auth
 
 Đăng nhập Maker sẽ mở workflow tại `/workflow/plans`; Checker xem `/workflow/reviews`. Các trang này dùng JWT cookie và route `/api/workflow/*`, không gửi `X-Demo-Actor`. `/api/plans`, `/api/reviews`, Verify và các trang demo vẫn dùng SQLite cùng actor header riêng.
 
-Auth workflow gọi pipeline AI hiện có sau khi đã commit snapshot/version/round trong PostgreSQL; evaluation và quyết định tất định được lưu theo từng round. Mặc định chọn Local VLM adapter nhưng chưa có inference transport trong repository nên sẽ fail closed sang `HUMAN_REVIEW_REQUIRED`. Có thể chọn `MOCK_VLM` rõ ràng trong Compose local để demo các kịch bản pass/review/timeout/error/schema; Mock chỉ được phép khi `APP_ENV=demo`. Policy mặc định của Auth workflow tắt auto-approval vì chưa có cấu hình budget/authority/policy được phê duyệt cho tài khoản thật. Không dùng cấu hình demo để quyết định tài khoản Auth. Migration `20260929_04_authenticated_ai_pipeline` bổ sung persistence cho run/evaluation/engine decision, không chuyển đổi hay xóa SQLite. Database `runtime/demo-organization.sqlite3` tiếp tục riêng cho Judge Demo.
+Auth workflow commit snapshot/version/round trước khi chạy AI. Local VLM chỉ trích xuất OCR/quan sát ảnh. Hai text agent riêng đánh giá bằng chứng Media theo content policy và đánh giá kế hoạch Strategy theo rubric bảy tiêu chí; điểm có trọng số được backend tính bằng Decimal. Các bước có model, protocol, endpoint, timeout, giới hạn output, prompt/schema version và retry riêng. Kết quả từng bước cùng hash cấu hình được lưu theo round; không lưu API key hoặc endpoint thô. Khi cấu hình model hoặc policy thiếu, không phát sinh request cho task đó và giao diện ghi `Chưa cấu hình`. Auto-approval mặc định tắt và không lấy budget/authority/policy từ Judge Demo. Migration `20260930_06` bổ sung persistence riêng cho Media và Strategy; SQLite của Judge Demo không bị đổi.
 
 Để chạy mô phỏng tường minh trong Compose local, đặt `AUTH_WORKFLOW_AI_PROVIDER=MOCK_VLM` và `AUTH_WORKFLOW_MOCK_SCENARIO=pass` (hoặc `review`, `timeout`, `error`, `malformed`, `unknown_media`) trong `.env`. Mock pass vẫn vào Checker review khi dùng Auth policy mặc định; auto-approval chỉ bật với một `ApprovalConfiguration` đã được ứng dụng phê duyệt và inject vào workflow.
 
@@ -404,11 +405,11 @@ E2E tự chạy backend tại `127.0.0.1:8008`, frontend tại `127.0.0.1:5178` 
 | PostgreSQL migration | Đã chạy trên Compose PostgreSQL: `20260928_03 -> 20260929_04` |
 | Auth HTTP smoke | Thành công: Maker submit, AI/engine persistence, Checker approve/reject, permission blocks và concurrent decision race; tạo 3 smoke plan tổng hợp trong local PostgreSQL |
 
-### Local VLM trích xuất ảnh cho Auth workflow
+### Auth Local VLM, Media Compliance và Strategy Evaluation
 
 `LocalVLMProvider` gửi ảnh riêng tư từ snapshot đã xác minh tới một endpoint OpenAI-compatible Chat Completions do operator cấu hình. Request dùng base64 `image_url` và JSON Schema response format; adapter chỉ yêu cầu OCR, quan sát trực tiếp và điều chưa đọc được. Server tự gắn attachment ID/hash, version, approval round, run ID và input hash. VLM không trả confidence, bounding box, quyết định duyệt hoặc điểm đánh giá.
 
-Repository không chọn sẵn model ID hoặc runtime, và môi trường local hiện không có endpoint/model VLM cấu hình nên chưa chạy inference thật. `LOCAL_VLM_BASE_URL` để trống mặc định nhằm tránh gửi ảnh ra ngoài. Khi có extraction hợp lệ, Auth vẫn chuyển Checker vì Media Compliance và Strategy chưa có provider thật; media confidence và feasibility score giữ trống. Auto-approval Auth vẫn tắt theo cấu hình mặc định.
+`LocalVLMProvider` là bước trích xuất ảnh hiện có. Media và Strategy dùng hai `OpenAICompatibleTaskProvider` tách biệt; chúng không tái sử dụng đầu ra combined evaluator cũ. Mỗi task chỉ gọi khi có provider/model/version và cấu hình policy/rubric đang hoạt động. Hiện repo không kèm content policy Marketing đã được phê duyệt; vì vậy `AUTH_WORKFLOW_MEDIA_POLICY_JSON` để trống và Media luôn báo chưa cấu hình cho đến khi operator cung cấp chính sách có version. Strategy rubric cũng chưa được bật mặc định. Auto-approval Auth vẫn tắt.
 
 Thiết lập các biến sau trong `.env` (không commit file này):
 
@@ -424,9 +425,13 @@ Thiết lập các biến sau trong `.env` (không commit file này):
 | `LOCAL_VLM_MAX_RESPONSE_BYTES` | Giới hạn response body, mặc định 262144 byte |
 | `LOCAL_VLM_MAX_INPUT_BYTES` | Giới hạn tổng bytes ảnh mỗi request VLM, mặc định 20 MiB |
 
+Media và Strategy có bộ biến môi trường độc lập trong `.env.example`: `AUTH_WORKFLOW_MEDIA_*` và `AUTH_WORKFLOW_STRATEGY_*`. Mỗi bộ hỗ trợ protocol `OPENAI_COMPATIBLE_CHAT_COMPLETIONS`, base URL, model ID, model version do operator pin, API key tùy chọn cho runtime local, timeout, giới hạn input/output, retry, prompt version và schema version. Schema/prompt version không được tự ý thay đổi; adapter hiện chỉ chấp nhận version được hỗ trợ. API key không được ghi vào snapshot hoặc gửi lên frontend.
+
+Chỉ điền `AUTH_WORKFLOW_MEDIA_POLICY_JSON` với policy do tổ chức phê duyệt, gồm `policy_id`, `policy_version`, `status`, `scope_departments`, `scope_channels` và các rule có severity, mô tả, evidence kind bắt buộc. Không có policy ví dụ được áp dụng mặc định. `AUTH_WORKFLOW_STRATEGY_RUBRIC_JSON` nhận rubric versioned với đúng bảy BA criteria và weights 15/15/15/15/15/15/10; backend từ chối rubric khác. Với endpoint không-local, cần dùng HTTPS và bật riêng `AUTH_WORKFLOW_MEDIA_ALLOW_REMOTE=true` hoặc `AUTH_WORKFLOW_STRATEGY_ALLOW_REMOTE=true` sau khi cho phép truyền dữ liệu. Cấu hình provider/policy là server-side; request client không thể bật model hoặc auto-approval.
+
 Với Docker Compose, không dùng `localhost` làm inference host vì địa chỉ đó trỏ tới backend container. Ví dụ Docker Desktop: `LOCAL_VLM_BASE_URL=http://host.docker.internal:8000/v1`; backend Compose có ánh xạ `host.docker.internal:host-gateway` cho Docker Engine trên Linux. Runtime trên host phải lắng nghe địa chỉ có thể truy cập từ container. Mặc định adapter chỉ cho phép loopback và `host.docker.internal`; host khác cần được duyệt rõ qua `LOCAL_VLM_ALLOW_REMOTE=true` và dùng HTTPS trước khi nhận ảnh riêng tư.
 
-Khởi động Auth workflow và migration PostgreSQL bằng `docker compose up --build -d`. Sau khi model/runtime được chọn và chạy, đăng nhập bằng Maker, tạo kế hoạch có ảnh và mở chi tiết tại `/workflow/plans/{id}`. Mục “Trích xuất ảnh (VLM)” hiển thị OCR, quan sát, phần chưa đọc được và attachment hash; trạng thái đánh giá toàn bộ, Media Compliance, Strategy và Decision Engine hiển thị riêng. Với cấu hình hiện tại chưa có model/runtime, hệ thống ghi extraction lỗi đã làm sạch và chuyển Checker; không fallback sang Mock.
+Khởi động Auth workflow và migration PostgreSQL bằng `docker compose up --build -d`. Khi Local VLM/runtime đã được operator cấu hình, Maker có thể gửi kế hoạch có ảnh và xem trang `/workflow/plans/{id}`. Trang chi tiết hiển thị extraction, Media policy checks, Strategy criteria/weights, confidence, bằng chứng và trạng thái từng bước riêng. Reload chỉ đọc kết quả lưu theo round và không chạy lại extraction. Nếu thiếu cấu hình, model sai version, output/schema lỗi, thiếu evidence hoặc timeout, quyết định fail closed sang Checker; không fallback sang Mock.
 
 Endpoint phải hỗ trợ ảnh base64 trong Chat Completions cùng `response_format` kiểu `json_schema`; output được server kiểm tra lại. Đây là giao thức transport, không phải xác nhận một runtime cụ thể tương thích. Tài liệu giao thức chính thức: [image inputs](https://developers.openai.com/api/docs/guides/images-vision) và [structured outputs](https://developers.openai.com/api/docs/guides/structured-outputs). Cần xác minh runtime/model ID và chạy smoke test thật sau khi người vận hành cung cấp cấu hình.
 

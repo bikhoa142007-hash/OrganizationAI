@@ -95,6 +95,8 @@ class WorkflowEvaluationResponse(AuthWorkflowDTO):
     retried: bool
     evaluation: dict[str, Any] | None
     visual_extraction: dict[str, Any] | None
+    media_evaluation: dict[str, Any] | None
+    strategy_evaluation: dict[str, Any] | None
     failure_reason: str | None
     started_at: datetime | None
     completed_at: datetime | None

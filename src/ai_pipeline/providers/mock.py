@@ -1,9 +1,11 @@
 """Deterministic provider used by demos and automated tests."""
 
 from datetime import datetime, timezone
+import hashlib
+import json
 from typing import Any
 
-from .base import ProviderError, ProviderTimeout, VisualModelProvider
+from .base import ProviderAnalysis, ProviderError, ProviderTimeout, VisualModelProvider
 
 
 def _now() -> str:
@@ -103,3 +105,53 @@ class MockVLMProvider(VisualModelProvider):
             "criterion_scores": scores,
             "assumptions": [],
         }
+
+
+class AuthenticatedMockVLMProvider(VisualModelProvider):
+    """Explicit demo extractor matching the Auth visual-evidence boundary."""
+
+    output_kind = "VISUAL_EXTRACTION"
+    model_id = "mock-image-extractor"
+
+    def __init__(self, scenario: str = "pass", *, model_version: str = "mock-1"):
+        self.scenario = scenario
+        self.model_version = model_version
+        self.calls = 0
+
+    def health_check(self) -> bool:
+        return self.scenario not in {"timeout", "error"}
+
+    def get_model_metadata(self):
+        return {
+            "provider": "MOCK_VLM",
+            "model_id": self.model_id,
+            "model_version": self.model_version,
+        }
+
+    def analyze_image(self, request):
+        self.calls += 1
+        if self.scenario == "timeout":
+            raise ProviderTimeout("Mock provider timed out")
+        if self.scenario == "error":
+            raise ProviderError("Mock provider error")
+        if self.scenario == "malformed":
+            return ProviderAnalysis(
+                {"unexpected": True}, model_revision=self.model_version,
+                reported_model_id=self.model_id,
+            )
+        review = self.scenario in {"review", "unknown_media"}
+        images = []
+        for index, _attachment in enumerate(request.plan.attachments):
+            images.append({
+                "image_index": index,
+                "status": "PARTIAL" if review else "COMPLETE",
+                "ocr_text": "Mock extracted campaign text.",
+                "observations": [] if review else ["Mock observed a campaign banner."],
+                "uncertainties": ["Mock scenario requires Checker visual review."] if review else [],
+            })
+        output = {"images": images}
+        raw = json.dumps(output, sort_keys=True, separators=(",", ":")).encode("utf-8")
+        return ProviderAnalysis(
+            output, raw_output_hash=hashlib.sha256(raw).hexdigest(),
+            model_revision=self.model_version, reported_model_id=self.model_id,
+        )

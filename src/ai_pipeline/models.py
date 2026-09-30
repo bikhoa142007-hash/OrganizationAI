@@ -55,6 +55,8 @@ class PipelineResult:
     attempts: int
     retried: bool
     visual_extraction: dict | None = None
+    media_evaluation: dict | None = None
+    strategy_evaluation: dict | None = None
 
     @property
     def outcome_recommendation(self) -> str | None:

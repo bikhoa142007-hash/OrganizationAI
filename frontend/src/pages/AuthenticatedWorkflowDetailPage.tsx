@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { authWorkflowService } from '../services/authWorkflow'
-import type { WorkflowPlan, WorkflowVlmExtraction } from '../types/authWorkflow'
+import type { WorkflowPlan, WorkflowTaskEvaluation, WorkflowVlmExtraction } from '../types/authWorkflow'
 
 export function AuthenticatedWorkflowDetailPage() {
   const { planId = '' } = useParams()
@@ -77,7 +77,11 @@ export function AuthenticatedWorkflowDetailPage() {
       return <details key={item.id} open={item.round_number === plan.current_round}>
         <summary>Version {item.version_number} · Round {item.round_number} · {evaluation ? evaluationStatusLabel(evaluation.status) : runStatusLabel(item.status)}</summary>
         <div className="auth-ai-metadata"><span>{providerLabel(item.provider)}</span><span>Model ID: {item.model_id || item.model_version || 'Chưa xác định'}</span>{item.model_id && item.model_version && <span>Model revision: {item.model_version}</span>}<span>Policy: {item.policy_version}</span><span>Lần thử: {item.attempts}{item.retried ? ' · đã retry' : ''}</span></div>
-        {item.visual_extraction && <VlmExtractionDetails extraction={item.visual_extraction} plan={plan} />}
+        {item.visual_extraction
+          ? <VlmExtractionDetails extraction={item.visual_extraction} plan={plan} />
+          : <section className="auth-ai-phase"><h3>Trích xuất ảnh (VLM) · {item.status === 'PROCESSING' ? 'Đang xử lý' : item.status === 'PENDING' ? 'Đang chờ' : 'Chưa có kết quả riêng'}</h3><p>Ảnh chỉ được trích xuất một lần cho snapshot đã gửi. Tải lại trang chỉ đọc kết quả đã lưu.</p></section>}
+        <TaskEvaluationDetails title="Media Compliance" stage={item.media_evaluation} kind="media" />
+        <TaskEvaluationDetails title="Strategy Evaluation" stage={item.strategy_evaluation} kind="strategy" />
         {evaluation ? <>
           <section className="auth-ai-phase"><h3>Đánh giá tổng thể</h3><p>{evaluation.reason}</p></section>
           <dl className="auth-workflow-definition-grid auth-ai-metrics">
@@ -101,6 +105,39 @@ export function AuthenticatedWorkflowDetailPage() {
     {canEdit && <div className="auth-workflow-actions"><Link className="button button-secondary" to={`/workflow/plans/${plan.id}/edit`}>Chỉnh sửa và gửi lại</Link></div>}
     {canDecide && <section className="auth-workflow-card auth-decision-card"><div className="auth-workflow-card-heading"><Check /><h2>Quyết định Checker</h2></div><p>Nội dung và snapshot được lưu chỉ đọc. Từ chối cần có lý do.</p><label className="auth-field">Lý do hoặc nhận xét<textarea rows={3} value={reason} onChange={event => setReason(event.target.value)} placeholder="Bắt buộc khi từ chối" /></label><label className="auth-field">Lý do override AI<textarea rows={2} value={overrideReason} onChange={event => setOverrideReason(event.target.value)} placeholder="Bắt buộc khi quyết định khác hoặc chưa có khuyến nghị AI" /></label><div className="button-row"><button className="button button-secondary" disabled={busy} onClick={() => void decide('REJECTED')}>{busy ? 'Đang xử lý…' : 'Từ chối'}</button><button className="button button-primary" disabled={busy} onClick={() => void decide('APPROVED')}><Check /> {busy ? 'Đang xử lý…' : 'Phê duyệt'}</button></div></section>}
     <button className="auth-quiet-refresh" onClick={() => setReload(value => value + 1)}>Tải lại trạng thái</button>
+  </section>
+}
+
+function TaskEvaluationDetails({ title, stage, kind }: {
+  title: string
+  stage: WorkflowTaskEvaluation | null
+  kind: 'media' | 'strategy'
+}) {
+  if (!stage) return <section className="auth-ai-phase"><h3>{title}</h3><p>Phiên xử lý cũ chưa lưu riêng bước này.</p></section>
+  const result = stage.result
+  return <section className="auth-ai-phase auth-task-evaluation">
+    <h3>{title} · {taskStatusLabel(stage.status)}</h3>
+    <div className="auth-ai-metadata">
+      <span>Model: {stage.model_id || 'Chưa cấu hình'}</span>
+      {stage.model_version && <span>Model version: {stage.model_version}</span>}
+      <span>Policy/Rubric: {stage.configuration_id || 'Chưa cấu hình'}{stage.configuration_version ? ` · ${stage.configuration_version}` : ''}</span>
+      {stage.prompt_version && <span>Prompt: {stage.prompt_version}</span>}
+      {stage.schema_version && <span>Schema: {stage.schema_version}</span>}
+      {stage.raw_output_hash && <span>Output SHA-256: {stage.raw_output_hash}</span>}
+      <span>Lần thử: {stage.attempts}{stage.retried ? ' · đã retry' : ''}</span>
+    </div>
+    {stage.reason && <p>{stage.reason}</p>}
+    {stage.error_code && <div className="auth-workflow-alert is-review" role="status">{stage.error_code} · Checker cần xem xét bước này.</div>}
+    {result?.reason && <p>{result.reason}</p>}
+    {kind === 'media' && result?.outcome && <p>Kết quả: <strong>{result.outcome === 'PASS' ? 'Đạt policy' : 'Cần Checker xem xét'}</strong>{result.confidence != null && ` · ${percent(result.confidence)}`}</p>}
+    {kind === 'media' && result?.findings?.length ? <div><h4>Phát hiện</h4><ul>{result.findings.map(item => <li key={item.finding_id}><strong>{item.severity}</strong>: {item.description}</li>)}</ul></div> : null}
+    {kind === 'media' && result?.rule_results?.length ? <div><h4>Kết quả theo quy tắc</h4><ul>{result.rule_results.map(item => <li key={item.rule_id}>{item.rule_id}: {item.result} — {item.rationale}</li>)}</ul></div> : null}
+    {kind === 'media' && result?.missing_evidence?.length ? <div><h4>Bằng chứng ảnh còn thiếu</h4><ul>{result.missing_evidence.map(item => <li key={`${item.rule_id}-${item.evidence_kind}`}>{item.rule_id}: cần {item.evidence_kind}</li>)}</ul></div> : null}
+    {kind === 'strategy' && result?.feasibility_score != null && <p>Điểm có trọng số do backend tính: <strong>{result.feasibility_score} / 100</strong>{result.confidence != null && ` · ${percent(result.confidence)}`}</p>}
+    {kind === 'strategy' && result?.criterion_scores?.length ? <div className="auth-task-score-table-wrap"><table className="auth-task-score-table"><thead><tr><th>Tiêu chí</th><th>Điểm / 100</th><th>Trọng số</th><th>Phần điểm</th><th>Căn cứ</th></tr></thead><tbody>{result.criterion_scores.map(item => <tr key={item.criterion_id}><th scope="row">{item.criterion_id}</th><td>{item.score} / {item.maximum_score}</td><td>{item.weight}%</td><td>{(item.score * item.weight / 100).toFixed(2)}</td><td>{item.rationale}<small>{item.evidence_refs.join(', ')}</small></td></tr>)}</tbody></table></div> : null}
+    {kind === 'strategy' && result?.assumptions?.length ? <div><h4>Giả định</h4><ul>{result.assumptions.map((item, index) => <li key={`${index}-${item}`}>{item}</li>)}</ul></div> : null}
+    {kind === 'strategy' && result?.missing_facts?.length ? <div><h4>Thông tin còn thiếu</h4><ul>{result.missing_facts.map(item => <li key={item}>{item}</li>)}</ul></div> : null}
+    {kind === 'strategy' && result?.critical_gaps?.length ? <div><h4>Khoảng trống quan trọng</h4><ul>{result.critical_gaps.map(item => <li key={item}>{item}</li>)}</ul></div> : null}
   </section>
 }
 
@@ -158,6 +195,14 @@ function runStatusLabel(status: string) {
 
 function evaluationStatusLabel(status: string) {
   return ({ SUCCEEDED: 'Đánh giá toàn bộ hoàn tất', FAILED: 'Đánh giá toàn bộ chưa hoàn tất · cần Checker', TIMED_OUT: 'Đánh giá toàn bộ hết thời gian chờ' } as Record<string, string>)[status] ?? status
+}
+
+function taskStatusLabel(status: string) {
+  return ({
+    PENDING: 'Đang chờ', PROCESSING: 'Đang xử lý', SUCCEEDED: 'Hoàn tất',
+    REVIEW_REQUIRED: 'Cần Checker xem xét', NOT_CONFIGURED: 'Chưa cấu hình',
+    FAILED: 'Thất bại · cần Checker', TIMED_OUT: 'Hết thời gian chờ · cần Checker',
+  } as Record<string, string>)[status] ?? status
 }
 
 function extractionStatusLabel(status: string) {

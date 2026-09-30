@@ -32,6 +32,8 @@ function planFixture(): WorkflowPlan {
       policy_snapshot_id: 'AUTH-WORKFLOW-POLICY-UNCONFIGURED', policy_snapshot_hash: 'b'.repeat(64),
       status: 'FAILED', attempts: 2, retried: true,
       visual_extraction: null,
+      media_evaluation: null,
+      strategy_evaluation: null,
       failure_reason: 'PROVIDER_TIMEOUT', started_at: '2026-09-29T10:00:01Z',
       completed_at: '2026-09-29T10:00:02Z', created_at: '2026-09-29T10:00:00Z',
       evaluation: {
@@ -109,6 +111,20 @@ it('shows raw VLM extraction separately from incomplete media and strategy evalu
       }],
     }],
   }
+  run.media_evaluation = {
+    step: 'MEDIA_COMPLIANCE', status: 'NOT_CONFIGURED', provider: null, model_id: null,
+    model_version: null, prompt_version: 'media-compliance-prompt-v1', schema_version: 'media-compliance-schema-v1',
+    configuration_id: null, configuration_version: null, configuration_hash: 'e'.repeat(64), input_hash: 'a'.repeat(64), raw_output_hash: null,
+    started_at: null, completed_at: null, latency_ms: null, attempts: 0, retried: false,
+    result: null, error_code: null, reason: 'Chưa có chính sách nội dung Media đang hoạt động.',
+  }
+  run.strategy_evaluation = {
+    step: 'STRATEGY_EVALUATION', status: 'NOT_CONFIGURED', provider: null, model_id: null,
+    model_version: null, prompt_version: 'strategy-feasibility-prompt-v1', schema_version: 'strategy-feasibility-schema-v1',
+    configuration_id: null, configuration_version: null, configuration_hash: 'f'.repeat(64), input_hash: 'a'.repeat(64), raw_output_hash: null,
+    started_at: null, completed_at: null, latency_ms: null, attempts: 0, retried: false,
+    result: null, error_code: null, reason: 'Chưa có rubric Strategy đang hoạt động.',
+  }
   run.evaluation!.status = 'FAILED'
   run.evaluation!.agent_errors = [{
     component: 'evaluation', code: 'MISSING_REQUIRED_EVALUATORS',
@@ -125,8 +141,38 @@ it('shows raw VLM extraction separately from incomplete media and strategy evalu
   expect(screen.getByText('The small-print line is blurry.')).toBeVisible()
   expect(screen.getByText(/Đánh giá toàn bộ chưa hoàn tất/)).toBeVisible()
   expect(screen.getByText(/Media Compliance và Strategy chưa được cấu hình; hồ sơ được chuyển Checker\./)).toBeVisible()
+  expect(screen.getByRole('heading', { name: 'Media Compliance · Chưa cấu hình' })).toBeVisible()
+  expect(screen.getByRole('heading', { name: 'Strategy Evaluation · Chưa cấu hình' })).toBeVisible()
   expect(screen.getByText('Chưa có điểm')).toBeVisible()
   expect(screen.getByText(/Runtime không cung cấp/)).toBeVisible()
+})
+
+it('shows the verified strategy score, weights, and weighted contributions', async () => {
+  vi.spyOn(authService, 'me').mockResolvedValue(checker)
+  const plan = planFixture()
+  plan.ai_evaluations[0].strategy_evaluation = {
+    step: 'STRATEGY_EVALUATION', status: 'SUCCEEDED', provider: 'OPENAI_COMPATIBLE_CHAT_COMPLETIONS',
+    model_id: 'strategy-model', model_version: 'strategy-rev-1', prompt_version: 'strategy-feasibility-prompt-v1',
+    schema_version: 'strategy-feasibility-schema-v1', configuration_id: 'BA-STRATEGY',
+    configuration_version: '1', configuration_hash: 'f'.repeat(64), input_hash: 'a'.repeat(64), raw_output_hash: 'b'.repeat(64),
+    started_at: '2026-09-29T10:00:01Z', completed_at: '2026-09-29T10:00:02Z', latency_ms: 1,
+    attempts: 1, retried: false, error_code: null, reason: 'Backend-verified weighted score.',
+    result: {
+      feasibility_score: 71, confidence: 0.82, reason: 'Backend-verified weighted score.',
+      criterion_scores: [
+        { criterion_id: 'objective', weight: 15, score: 71, maximum_score: 100, rationale: 'Clear objective.', evidence_refs: ['plan-field:objective'] },
+        { criterion_id: 'risk_control', weight: 10, score: 71, maximum_score: 100, rationale: 'Risks described.', evidence_refs: ['plan-field:notes'] },
+      ],
+    },
+  }
+  vi.spyOn(authWorkflowService, 'getPlan').mockResolvedValue(plan)
+  vi.spyOn(authWorkflowService, 'getAttachment').mockResolvedValue(new Blob())
+  renderDetail()
+
+  expect(await screen.findAllByText(/71\s*\/\s*100/)).toHaveLength(3)
+  expect(screen.getByText('15%')).toBeVisible()
+  expect(screen.getByText('10%')).toBeVisible()
+  expect(screen.getByText('10.65')).toBeVisible()
 })
 
 it('requires an override explanation and shows Checker API errors', async () => {

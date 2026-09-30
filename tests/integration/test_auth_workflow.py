@@ -1,5 +1,6 @@
 from collections.abc import Iterator
 from datetime import datetime, timedelta, timezone
+import json
 import struct
 from uuid import UUID, uuid4
 import zlib
@@ -11,7 +12,10 @@ from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 from sqlalchemy import create_engine
 
-from src.ai_pipeline.providers.mock import MockVLMProvider
+from src.ai_pipeline.providers.base import ProviderAnalysis
+from src.ai_pipeline.providers.mock import AuthenticatedMockVLMProvider
+from src.ai_pipeline.task_evaluation import STRATEGY_CRITERIA, media_policy_from_json, strategy_rubric_from_json
+from src.ai_pipeline.task_providers import TaskModelSettings
 from src.backend.api.app import create_app
 from src.backend.api.auth import get_auth_db
 from src.backend.api.dependencies import Settings
@@ -104,7 +108,8 @@ def authenticated_client(app, user: User) -> TestClient:
     return client
 
 
-def make_plan(client: TestClient, checker_id: UUID, *, title: str = "Spring campaign") -> dict:
+def make_plan(client: TestClient, checker_id: UUID, *, title: str = "Spring campaign",
+              channels: tuple[str, ...] = ()) -> dict:
     response = client.post("/api/workflow/plans", json={
         "checker_user_id": str(checker_id),
         "payload": {
@@ -116,6 +121,7 @@ def make_plan(client: TestClient, checker_id: UUID, *, title: str = "Spring camp
             "end_date": "2026-10-31",
             "budget_minor_units": "50000000",
             "currency": "VND",
+            "channels": list(channels),
         },
     })
     assert response.status_code == 201, response.text
@@ -123,10 +129,25 @@ def make_plan(client: TestClient, checker_id: UUID, *, title: str = "Spring camp
 
 
 def auto_approval_configuration(checker_id: UUID) -> ApprovalConfiguration:
+    media_policy = media_policy_from_json('''{
+      "policy_id":"TEST-MEDIA","policy_version":"1","status":"ACTIVE",
+      "scope_departments":["marketing"],"scope_channels":["social"],
+      "rules":[{"rule_id":"TEST-LOGO","severity":"WARNING","description":"Test evidence rule",
+        "required_evidence_kinds":["OBSERVATION"]}]
+    }''')
+    rubric = strategy_rubric_from_json(json.dumps({
+        "rubric_id": "TEST-STRATEGY", "rubric_version": "1", "status": "ACTIVE",
+        "criteria": [
+            {"criterion_id": key, "label": label, "weight": weight}
+            for key, label, weight in STRATEGY_CRITERIA
+        ],
+    }))
+    media_settings = _task_settings("MEDIA_COMPLIANCE")
+    strategy_settings = _task_settings("STRATEGY_EVALUATION")
     return ApprovalConfiguration(
         PolicySnapshot(
             "TEST-AUTH-POLICY", "TEST-AUTH-POLICY-1", True, MANDATORY_FIELDS,
-            (Criterion("strategy", 100),), ("mock-1",),
+            tuple(Criterion(key, weight) for key, _label, weight in STRATEGY_CRITERIA), ("mock-1",),
             ("image/png", "image/jpeg", "image/webp"), 5_000_000,
         ),
         (BudgetConfiguration("TEST-AUTH-BUDGET", "VND", 0, "100000000", "marketing", True),),
@@ -134,7 +155,58 @@ def auto_approval_configuration(checker_id: UUID) -> ApprovalConfiguration:
             "TEST-AUTH-AUTHORITY", "VND", "100000000", ("marketing",),
             str(checker_id), str(checker_id), str(checker_id), True,
         ),
+        media_policy=media_policy,
+        strategy_rubric=rubric,
+        media_model_snapshot=media_settings.public_snapshot(),
+        strategy_model_snapshot=strategy_settings.public_snapshot(),
     )
+
+
+def _task_settings(task: str) -> TaskModelSettings:
+    model = "test-media-model" if task == "MEDIA_COMPLIANCE" else "test-strategy-model"
+    return TaskModelSettings(
+        task=task, provider="OPENAI_COMPATIBLE_CHAT_COMPLETIONS",
+        base_url=f"http://localhost:8000/v1/{task.lower()}", model_id=model,
+        model_version=f"{model}-rev-1", api_key="test-secret", timeout_seconds=2,
+        max_output_tokens=1024, max_response_bytes=4096, max_input_bytes=4096,
+        max_retries=0, prompt_version=f"{task.lower()}-prompt-v1",
+        schema_version=f"{task.lower()}-schema-v1",
+    )
+
+
+class FakeAuthenticatedTaskProvider:
+    def __init__(self, task: str):
+        self.settings = _task_settings(task)
+        self.task = task
+        self.calls = 0
+
+    def evaluate(self, request):
+        self.calls += 1
+        if self.task == "MEDIA_COMPLIANCE":
+            reference = next(item["evidence_id"] for item in request.evidence if item["kind"] == "OBSERVATION")
+            output = {
+                "policy_id": request.policy.policy_id, "policy_version": request.policy.policy_version,
+                "outcome": "PASS", "confidence": 0.93, "reason": "Test policy check passed.",
+                "rule_results": [{"rule_id": rule.rule_id, "result": "PASS",
+                                  "rationale": "Cited test observation supports the check.",
+                                  "evidence_refs": [reference]} for rule in request.policy.rules],
+                "findings": [], "evidence_conflicts": [],
+            }
+        else:
+            output = {
+                "rubric_id": request.rubric.rubric_id,
+                "rubric_version": request.rubric.rubric_version,
+                "total_score": 71, "confidence": 0.82,
+                "criterion_scores": [{
+                    "criterion_id": item.criterion_id, "score": 71,
+                    "rationale": "Grounded in the synthetic test plan.",
+                    "evidence_refs": ["plan-field:objective"],
+                } for item in request.rubric.criteria],
+                "assumptions": [], "missing_facts": [], "critical_gaps": [],
+                "evidence_conflicts": [], "reason": "Synthetic test evaluation.",
+            }
+        return ProviderAnalysis(output, model_revision=self.settings.model_version,
+                                reported_model_id=self.settings.model_id)
 
 
 def upload_plan_image(client: TestClient, plan_id: str, revision: int) -> dict:
@@ -272,20 +344,32 @@ def test_authenticated_submission_uses_existing_policy_for_auto_approval(workflo
     maker = create_user(factory, "maker.auto", ("MAKER",))
     checker = create_user(factory, "checker.auto", ("CHECKER",))
     login(client, maker)
-    app.state.auth_workflow_provider = MockVLMProvider("pass", model_version="mock-1")
     app.state.auth_workflow_configuration = auto_approval_configuration(checker.id)
+    app.state.auth_workflow_provider = AuthenticatedMockVLMProvider("pass", model_version="mock-1")
+    app.state.auth_workflow_media_provider = FakeAuthenticatedTaskProvider("MEDIA_COMPLIANCE")
+    app.state.auth_workflow_strategy_provider = FakeAuthenticatedTaskProvider("STRATEGY_EVALUATION")
 
-    draft = make_plan(client, checker.id, title="Eligible campaign")
+    draft = make_plan(client, checker.id, title="Eligible campaign", channels=("social",))
     draft = upload_plan_image(client, draft["id"], draft["revision"])
     submitted = submit_plan(client, draft)
 
-    assert submitted["status"] == "APPROVED"
+    assert submitted["status"] == "APPROVED", json.dumps(submitted["ai_evaluations"][0], indent=2)
     assert submitted["processing_stage"] == "AI_AUTO_APPROVED"
     assert submitted["ai_evaluations"][0]["status"] == "SUCCEEDED"
     assert submitted["ai_evaluations"][0]["provider"] == "MOCK_VLM"
+    assert submitted["ai_evaluations"][0]["media_evaluation"]["status"] == "SUCCEEDED"
+    assert submitted["ai_evaluations"][0]["strategy_evaluation"]["status"] == "SUCCEEDED"
+    assert submitted["ai_evaluations"][0]["strategy_evaluation"]["result"]["feasibility_score"] == 71
     assert submitted["engine_decisions"][0]["outcome"] == "AUTO_APPROVED"
     assert submitted["engine_decisions"][0]["decision"]["budget_validation"]["result"] == "PASS"
     assert len([event for event in submitted["history"] if event["action"] == "AI_AUTO_APPROVED"]) == 1
+    saved_media, saved_strategy = submitted["ai_evaluations"][0]["media_evaluation"], submitted["ai_evaluations"][0]["strategy_evaluation"]
+    reloaded = client.get(f"/api/workflow/plans/{draft['id']}").json()
+    assert reloaded["ai_evaluations"][0]["media_evaluation"] == saved_media
+    assert reloaded["ai_evaluations"][0]["strategy_evaluation"] == saved_strategy
+    assert app.state.auth_workflow_media_provider.calls == 1
+    assert app.state.auth_workflow_strategy_provider.calls == 1
+    assert app.state.auth_workflow_provider.calls == 1
 
 
 def test_authenticated_provider_failure_is_persisted_and_checker_can_review(workflow_client):
@@ -293,8 +377,10 @@ def test_authenticated_provider_failure_is_persisted_and_checker_can_review(work
     maker = create_user(factory, "maker.timeout", ("MAKER",))
     checker = create_user(factory, "checker.timeout", ("CHECKER",))
     login(client, maker)
-    app.state.auth_workflow_provider = MockVLMProvider("timeout", model_version="mock-1")
+    app.state.auth_workflow_provider = AuthenticatedMockVLMProvider("timeout", model_version="mock-1")
     app.state.auth_workflow_configuration = auto_approval_configuration(checker.id)
+    app.state.auth_workflow_media_provider = FakeAuthenticatedTaskProvider("MEDIA_COMPLIANCE")
+    app.state.auth_workflow_strategy_provider = FakeAuthenticatedTaskProvider("STRATEGY_EVALUATION")
 
     draft = make_plan(client, checker.id, title="Provider timeout campaign")
     draft = upload_plan_image(client, draft["id"], draft["revision"])
@@ -302,9 +388,9 @@ def test_authenticated_provider_failure_is_persisted_and_checker_can_review(work
 
     assert submitted["status"] == "PENDING_APPROVAL"
     assert submitted["processing_stage"] == "HUMAN_REVIEW_REQUIRED"
-    assert submitted["ai_evaluations"][0]["status"] == "TIMED_OUT"
+    assert submitted["ai_evaluations"][0]["status"] == "TIMED_OUT", json.dumps(submitted["ai_evaluations"][0], indent=2)
     assert submitted["ai_evaluations"][0]["provider"] == "MOCK_VLM"
-    assert submitted["ai_evaluations"][0]["attempts"] == 2
+    assert submitted["ai_evaluations"][0]["attempts"] == 3
     assert submitted["ai_evaluations"][0]["retried"] is True
     assert submitted["engine_decisions"][0]["outcome"] == "HUMAN_REVIEW_REQUIRED"
     assert "EVAL_VALID" in submitted["engine_decisions"][0]["decision"]["reason"]
@@ -384,7 +470,11 @@ def test_local_vlm_extraction_persists_separately_and_missing_evaluators_route_c
     assert evaluation_run["model_version"] is None
     assert evaluation_run["evaluation"]["media_result"] is None
     assert evaluation_run["evaluation"]["feasibility_score"] is None
-    assert evaluation_run["evaluation"]["agent_errors"][0]["code"] == "MISSING_REQUIRED_EVALUATORS"
+    assert evaluation_run["media_evaluation"]["status"] == "NOT_CONFIGURED"
+    assert evaluation_run["strategy_evaluation"]["status"] == "NOT_CONFIGURED"
+    assert "MEDIA_NOT_CONFIGURED" in {
+        error["code"] for error in evaluation_run["evaluation"]["agent_errors"]
+    }, json.dumps(evaluation_run["evaluation"], indent=2)
     assert visual["status"] == "SUCCEEDED"
     assert visual["model_id"] == "configured-model-id"
     assert visual["model_revision"] == "runtime-revision-1"
@@ -416,7 +506,7 @@ def test_stale_run_with_invalid_policy_routes_to_checker_review(workflow_client,
             AuthWorkflowEvaluationRun.plan_id == UUID(queued["id"]),
             AuthWorkflowEvaluationRun.round_number == 1,
         ))
-        run.created_at = datetime.now(timezone.utc) - timedelta(minutes=2)
+        run.created_at = datetime.now(timezone.utc) - timedelta(minutes=5)
         run.policy_snapshot = {"invalid": True}
 
     detail = client.get(f"/api/workflow/plans/{queued['id']}")

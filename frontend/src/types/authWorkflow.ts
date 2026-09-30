@@ -89,10 +89,48 @@ export interface WorkflowAiEvaluation {
   retried: boolean
   evaluation: WorkflowEvaluation | null
   visual_extraction: WorkflowVlmExtraction | null
+  media_evaluation: WorkflowTaskEvaluation | null
+  strategy_evaluation: WorkflowTaskEvaluation | null
   failure_reason: string | null
   started_at: string | null
   completed_at: string | null
   created_at: string
+}
+
+export interface WorkflowTaskEvaluation {
+  step: 'MEDIA_COMPLIANCE' | 'STRATEGY_EVALUATION'
+  status: 'PENDING' | 'PROCESSING' | 'SUCCEEDED' | 'REVIEW_REQUIRED' | 'NOT_CONFIGURED' | 'FAILED' | 'TIMED_OUT'
+  provider: string | null
+  model_id: string | null
+  model_version: string | null
+  prompt_version: string | null
+  schema_version: string | null
+  configuration_id: string | null
+  configuration_version: string | null
+  configuration_hash: string
+  input_hash: string
+  raw_output_hash: string | null
+  started_at: string | null
+  completed_at: string | null
+  latency_ms: number | null
+  attempts: number
+  retried: boolean
+  result: {
+    outcome?: 'PASS' | 'REVIEW_REQUIRED'
+    confidence?: number | null
+    reason?: string
+    findings?: Array<{ finding_id: string; severity: 'HARD_VIOLATION' | 'WARNING'; description: string; rule_id: string | null; evidence_refs: string[] }>
+    rule_results?: Array<{ rule_id: string; result: string; rationale: string; evidence_refs: string[] }>
+    criterion_scores?: Array<{ criterion_id: string; weight: number; score: number; maximum_score: number; rationale: string; evidence_refs: string[] }>
+    feasibility_score?: number
+    assumptions?: string[]
+    missing_facts?: string[]
+    critical_gaps?: string[]
+    evidence_conflicts?: Array<{ conflict_id: string; description: string; evidence_refs: string[] }>
+    missing_evidence?: Array<{ rule_id: string; evidence_kind: string }>
+  } | null
+  error_code: string | null
+  reason: string | null
 }
 
 export interface WorkflowVlmEvidence {

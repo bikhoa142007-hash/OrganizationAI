@@ -66,11 +66,24 @@ def normalize_evaluation(raw, plan, config, ctx):
                 config.policy.known_model_versions, 'Unknown model')
         error_code = 'INVALID_SCHEMA'
         if result.status == 'SUCCEEDED':
-            maxima = {c.criterion_id: c.maximum_score for c in config.policy.criteria}
-            require({c.criterion_id: c.maximum_score for c in result.criterion_scores} == maxima,
-                    'Criterion set mismatch')
-            require(sum(Decimal(str(c.score)) for c in result.criterion_scores) ==
-                    Decimal(str(result.feasibility_score)), 'Criterion total mismatch')
+            if config.strategy_rubric is not None:
+                weights = {c.criterion_id: c.weight for c in config.strategy_rubric.criteria}
+                require({c.criterion_id for c in result.criterion_scores} == set(weights),
+                        'Strategy criterion set mismatch')
+                require(all(c.maximum_score == 100 for c in result.criterion_scores),
+                        'Strategy criterion scale mismatch')
+                weighted_total = sum(
+                    Decimal(str(c.score)) * Decimal(weights[c.criterion_id]) / Decimal(100)
+                    for c in result.criterion_scores
+                )
+                require(weighted_total == Decimal(str(result.feasibility_score)),
+                        'Strategy weighted total mismatch')
+            else:
+                maxima = {c.criterion_id: c.maximum_score for c in config.policy.criteria}
+                require({c.criterion_id: c.maximum_score for c in result.criterion_scores} == maxima,
+                        'Criterion set mismatch')
+                require(sum(Decimal(str(c.score)) for c in result.criterion_scores) ==
+                        Decimal(str(result.feasibility_score)), 'Criterion total mismatch')
         attachments = {a.attachment_id: a.content_hash for a in plan.attachments}
         for evidence in result.evidence:
             if evidence.source_type == 'ATTACHMENT':
