@@ -18,9 +18,12 @@ CHANNEL = "social"
 POLICY_ID = "LOCAL_MEDIA_RULESET_1"
 POLICY_RULE_ID = "PROHIBITED_CLAIM"
 FORBIDDEN_TEXT = "UNAPPROVED_GUARANTEE"
-LOCAL_OLLAMA_URL = "http://host.docker.internal:11434/v1"
+LOCAL_OLLAMA_URLS = {
+    "http://host.docker.internal:11434/v1",
+    "http://127.0.0.1:11434/v1",
+}
 TEXT_MODEL = "organizationai-qwen3:4b-ctx8192"
-TEXT_MODEL_DIGEST = "sha256:b2ef2f414e31e4e10ef46366751464631a5fa4b5c1bf183b3e1b3e9076ab2116ef"
+TEXT_MODEL_DIGEST = "sha256:b2ef2f414e31e4e10ef46366751464631a5fa4b5c1bf183b1e3b9076ab2116ef"
 VISUAL_MODEL_DIGEST = "sha256:1343d82ebee38e26a4dd6b0180b915eb91550184e67c505dea97509571c8f683"
 
 
@@ -29,7 +32,7 @@ def _require_local_configuration() -> None:
     if (
         getattr(visual_provider, "model_id", None) != "qwen3-vl:4b"
         or getattr(visual_provider, "model_version", None) != VISUAL_MODEL_DIGEST
-        or getattr(visual_provider, "base_url", None) != LOCAL_OLLAMA_URL
+        or getattr(visual_provider, "base_url", None) not in LOCAL_OLLAMA_URLS
         or getattr(visual_provider, "allow_remote", True)
     ):
         raise RuntimeError("VLM extraction must use local qwen3-vl:4b through Ollama with remote access disabled.")
@@ -39,13 +42,13 @@ def _require_local_configuration() -> None:
         if not settings.is_configured:
             raise RuntimeError(f"{name} is not configured: {settings.configuration_error or 'missing settings'}")
         media_task = name.endswith("media_provider")
-        expected_prompt = "media-compliance-prompt-v4" if media_task else "strategy-evaluation-prompt-v4"
-        expected_schema = "media-compliance-schema-v2" if media_task else "strategy-evaluation-schema-v4"
+        expected_prompt = "media-compliance-prompt-v5" if media_task else "strategy-evaluation-prompt-v5"
+        expected_schema = "media-compliance-schema-v3" if media_task else "strategy-evaluation-schema-v5"
         if (
             settings.provider != "OPENAI_COMPATIBLE_CHAT_COMPLETIONS"
             or settings.model_id != TEXT_MODEL
             or settings.model_version != TEXT_MODEL_DIGEST
-            or settings.base_url != LOCAL_OLLAMA_URL
+            or settings.base_url not in LOCAL_OLLAMA_URLS
             or settings.allow_remote
             or settings.reasoning_effort != "none"
             or settings.prompt_version != expected_prompt

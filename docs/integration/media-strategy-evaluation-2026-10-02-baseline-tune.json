@@ -1,0 +1,2131 @@
+{
+  "report_schema": "organizationai.local-media-strategy-evaluation/1.0",
+  "generated_at": "2026-10-02T07:07:50Z",
+  "dataset_id": "local-media-strategy-2026-10-02-v1",
+  "dataset_label_status": "PROPOSED_NOT_HUMAN_APPROVED",
+  "split": "tune",
+  "execution": {
+    "mode": "REAL_LOCAL_OLLAMA_TEXT_EVALUATORS",
+    "calls_are_sequential": true,
+    "maximum_model_calls": 12,
+    "retries_per_case": 0,
+    "timeout_seconds_by_task": {
+      "MEDIA_COMPLIANCE": 45,
+      "STRATEGY_EVALUATION": 45
+    },
+    "image_extraction_measured": false,
+    "final_approval_decisions_made": false,
+    "auto_approval_enabled": false
+  },
+  "policy": {
+    "policy_id": "SYNTHETIC_LOCAL_SMOKE",
+    "policy_version": "SYNTHETIC_LOCAL_SMOKE-1.0-proposed",
+    "scope_departments": [
+      "SYNTHETIC_LOCAL_SMOKE"
+    ],
+    "scope_channels": [
+      "social"
+    ],
+    "production_policy": false
+  },
+  "rubric": {
+    "rubric_id": "SYNTHETIC_STRATEGY_7",
+    "rubric_version": "SYNTHETIC_STRATEGY_7-1.0-proposed",
+    "weights": {
+      "objective": 15,
+      "audience": 15,
+      "channel": 15,
+      "timeline": 15,
+      "kpi": 15,
+      "budget_efficiency": 15,
+      "risk_control": 10
+    },
+    "production_rubric": false
+  },
+  "model": {
+    "provider": "OPENAI_COMPATIBLE_CHAT_COMPLETIONS",
+    "model_id": "organizationai-qwen3:4b-ctx8192",
+    "configured_model_version": "sha256:b2ef2f414e31e4e10ef46366751464631a5fa4b5c1bf183b1e3b9076ab2116ef",
+    "observed_ollama_digest": "sha256:b2ef2f414e31e4e10ef46366751464631a5fa4b5c1bf183b1e3b9076ab2116ef",
+    "context_size": 8192,
+    "remote_access_enabled": false,
+    "initially_loaded": false
+  },
+  "summary": {
+    "MEDIA_COMPLIANCE": {
+      "cases": 6,
+      "schema_valid": 0,
+      "schema_invalid_or_provider_failed": 6,
+      "timeouts": 0,
+      "provider_error_codes": {
+        "INVALID_SCHEMA": 6
+      },
+      "latency_seconds": [
+        12.722,
+        4.393,
+        5.266,
+        6.238,
+        4.953,
+        3.534
+      ],
+      "proposed_component_label_matches": 0,
+      "raw_pass_with_hard_violation": 4,
+      "validator_fail_closed": 6
+    },
+    "STRATEGY_EVALUATION": {
+      "cases": 6,
+      "schema_valid": 3,
+      "schema_invalid_or_provider_failed": 3,
+      "timeouts": 0,
+      "provider_error_codes": {
+        "INVALID_SCHEMA": 3
+      },
+      "latency_seconds": [
+        10.879,
+        10.803,
+        10.895,
+        12.075,
+        10.159,
+        11.807
+      ],
+      "proposed_conflict_label_matches": 3,
+      "per_criterion": {
+        "objective": {
+          "weight": 15,
+          "scored_cases": 3,
+          "scores": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "evidence_references": [
+            [
+              "plan-field:objective"
+            ],
+            [
+              "plan-field:objective"
+            ],
+            [
+              "strategy-006-note"
+            ]
+          ]
+        },
+        "audience": {
+          "weight": 15,
+          "scored_cases": 3,
+          "scores": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "evidence_references": [
+            [
+              "plan-field:target_audience"
+            ],
+            [
+              "plan-field:target_audience"
+            ],
+            [
+              "plan-field:target_audience"
+            ]
+          ]
+        },
+        "channel": {
+          "weight": 15,
+          "scored_cases": 3,
+          "scores": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "evidence_references": [
+            [
+              "plan-field:channels"
+            ],
+            [
+              "plan-field:summary",
+              "plan-field:notes"
+            ],
+            [
+              "plan-field:channels"
+            ]
+          ]
+        },
+        "timeline": {
+          "weight": 15,
+          "scored_cases": 3,
+          "scores": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "evidence_references": [
+            [
+              "plan-field:start_date",
+              "plan-field:end_date"
+            ],
+            [
+              "plan-field:start_date",
+              "plan-field:end_date"
+            ],
+            [
+              "plan-field:start_date",
+              "plan-field:end_date"
+            ]
+          ]
+        },
+        "kpi": {
+          "weight": 15,
+          "scored_cases": 3,
+          "scores": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "evidence_references": [
+            [
+              "plan-field:kpi_expected"
+            ],
+            [
+              "plan-field:kpi_expected"
+            ],
+            [
+              "plan-field:kpi_expected"
+            ]
+          ]
+        },
+        "budget_efficiency": {
+          "weight": 15,
+          "scored_cases": 3,
+          "scores": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "evidence_references": [
+            [
+              "plan-field:budget_minor_units",
+              "plan-field:currency"
+            ],
+            [
+              "plan-field:budget_minor_units",
+              "plan-field:currency"
+            ],
+            [
+              "plan-field:budget_minor_units"
+            ]
+          ]
+        },
+        "risk_control": {
+          "weight": 10,
+          "scored_cases": 3,
+          "scores": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "evidence_references": [
+            [
+              "plan-field:notes"
+            ],
+            [
+              "plan-field:notes"
+            ],
+            [
+              "plan-field:notes"
+            ]
+          ]
+        }
+      }
+    }
+  },
+  "results": [
+    {
+      "case_id": "MEDIA-001",
+      "split": "tune",
+      "task": "MEDIA_COMPLIANCE",
+      "started_at": "2026-10-02T07:06:06Z",
+      "elapsed_seconds": 12.722,
+      "status": "FAILED",
+      "error_code": "INVALID_SCHEMA",
+      "error_reason": "The raw model output failed local schema or evidence validation.",
+      "validator_error": "Media output references an unknown policy version.",
+      "raw_output_hash": "54ba0bb02db655631f6e9ec8eb5a93c35a19b5f1d97192681f4e6ed9e9abac37",
+      "raw_model_output": {
+        "policy_id": "SYNTHETIC_LOCAL_SMOKE",
+        "policy_version": "SYN:LOCAL_SMOKE-1.0-proposed",
+        "outcome": "PASS",
+        "confidence": 1.0,
+        "reason": "No forbidden literals found in OCR evidence",
+        "rule_results": [
+          {
+            "rule_id": "PROHIBITED_CLAIM",
+            "result": "PASS",
+            "rationale": "The required evidence kind 'OCR_TEXT' is present. The forbidden literal 'UNAPPROVED_GUARANTEE' does not occur in the OCR evidence text 'Join a product demonstration at our community event this weekend.'",
+            "evidence_refs": [
+              "media-001-ocr"
+            ]
+          }
+        ],
+        "findings": [],
+        "evidence_conflicts": []
+      },
+      "validated_output": null,
+      "raw_evidence_refs": [
+        "media-001-ocr"
+      ],
+      "required_evidence_refs_cited": [
+        "media-001-ocr"
+      ],
+      "required_evidence_refs_missing": [],
+      "assessment": {
+        "expected_component_outcome": "PASS",
+        "actual_component_outcome": "HUMAN_REVIEW_REQUIRED",
+        "component_outcome_matches_proposed_label": false,
+        "hard_violation_expected": false,
+        "hard_violation_reported": false,
+        "raw_pass_with_hard_violation": false,
+        "validator_failed_closed": true,
+        "decision_scope": "Media component result only; this evaluator does not make an approval decision."
+      },
+      "model_loaded_after_case": true,
+      "runtime_context_length_after_case": 8192,
+      "sequence_number": 1,
+      "model_phase": "first_or_unloaded"
+    },
+    {
+      "case_id": "MEDIA-002",
+      "split": "tune",
+      "task": "MEDIA_COMPLIANCE",
+      "started_at": "2026-10-02T07:06:19Z",
+      "elapsed_seconds": 4.393,
+      "status": "FAILED",
+      "error_code": "INVALID_SCHEMA",
+      "error_reason": "The raw model output failed local schema or evidence validation.",
+      "validator_error": "Media output references an unknown policy version.",
+      "raw_output_hash": "3751aea6e55ec723ebac07f9b9ad35d5de72cf87a85d69cab836cae615cae855",
+      "raw_model_output": {
+        "policy_id": "SYNTHETIC_LOCAL_SMO:1.0-proposed",
+        "policy_version": "SYNETHETIC_LOCAL_SMOKE-1.0-proposed",
+        "outcome": "PASS",
+        "confidence": 1.0,
+        "reason": "No evidence found for required evidence kinds",
+        "rule_results": [
+          {
+            "rule_id": "PROHIBITED_CLAIM",
+            "result": "PASS",
+            "rationale": "No evidence found for required evidence kinds",
+            "evidence_refs": [
+              "media-002-ocr"
+            ]
+          }
+        ],
+        "findings": [
+          {
+            "finding_id": "no-violation",
+            "severity": "HARD_VIOLATION",
+            "description": "No violation found",
+            "rule_id": "PROHIBITED_CLAIM",
+            "evidence_refs": [
+              "media-002-ocr"
+            ]
+          }
+        ],
+        "evidence_conflicts": []
+      },
+      "validated_output": null,
+      "raw_evidence_refs": [
+        "media-002-ocr"
+      ],
+      "required_evidence_refs_cited": [
+        "media-002-ocr"
+      ],
+      "required_evidence_refs_missing": [],
+      "assessment": {
+        "expected_component_outcome": "REVIEW_REQUIRED",
+        "actual_component_outcome": "HUMAN_REVIEW_REQUIRED",
+        "component_outcome_matches_proposed_label": false,
+        "hard_violation_expected": true,
+        "hard_violation_reported": true,
+        "raw_pass_with_hard_violation": true,
+        "validator_failed_closed": true,
+        "decision_scope": "Media component result only; this evaluator does not make an approval decision."
+      },
+      "model_loaded_after_case": true,
+      "runtime_context_length_after_case": 8192,
+      "sequence_number": 2,
+      "model_phase": "warm"
+    },
+    {
+      "case_id": "MEDIA-003",
+      "split": "tune",
+      "task": "MEDIA_COMPLIANCE",
+      "started_at": "2026-10-02T07:06:23Z",
+      "elapsed_seconds": 5.266,
+      "status": "FAILED",
+      "error_code": "INVALID_SCHEMA",
+      "error_reason": "The raw model output failed local schema or evidence validation.",
+      "validator_error": "Media output references an unknown policy version.",
+      "raw_output_hash": "1e18922c38b3c3e7b07d7a003df08f5eec09455326de225e4c200ecc33758970",
+      "raw_model_output": {
+        "policy_id": "SYNTHETIC_LOCAL_SMO:003-visual",
+        "policy_version": "SYNTHETIC_LOCAL_SMOKE-1.0-proposed",
+        "outcome": "PASS",
+        "confidence": 1.0,
+        "reason": "The evidence for this rule is missing (OCR_TEXT evidence is unavailable).",
+        "rule_results": [
+          {
+            "rule_id": "PROHIBITED_CLAIM",
+            "result": "PASS",
+            "rationale": "The rule requires OCR_TEXT evidence, but the evidence provided is of type VISUAL_QUALITY with observation 'The small-print copy is too blurred to read; OCR text is unavailable.' This means the required OCR_TEXT evidence is missing, so the rule passes (no forbidden literals found).",
+            "evidence_refs": [
+              "media-003-visual"
+            ]
+          }
+        ],
+        "findings": [
+          {
+            "finding_id": "no_forbidden_literals",
+            "severity": "HARD_VIOLATION",
+            "description": "No forbidden literals found in the OCR_TEXT evidence because the required OCR evidence is missing.",
+            "rule_id": "PROHIBITED_CLAIM",
+            "evidence_refs": [
+              "media-003-visual"
+            ]
+          }
+        ],
+        "evidence_conflicts": []
+      },
+      "validated_output": null,
+      "raw_evidence_refs": [
+        "media-003-visual"
+      ],
+      "required_evidence_refs_cited": [],
+      "required_evidence_refs_missing": [],
+      "assessment": {
+        "expected_component_outcome": "REVIEW_REQUIRED",
+        "actual_component_outcome": "HUMAN_REVIEW_REQUIRED",
+        "component_outcome_matches_proposed_label": false,
+        "hard_violation_expected": false,
+        "hard_violation_reported": true,
+        "raw_pass_with_hard_violation": true,
+        "validator_failed_closed": true,
+        "decision_scope": "Media component result only; this evaluator does not make an approval decision."
+      },
+      "model_loaded_after_case": true,
+      "runtime_context_length_after_case": 8192,
+      "sequence_number": 3,
+      "model_phase": "warm"
+    },
+    {
+      "case_id": "MEDIA-004",
+      "split": "tune",
+      "task": "MEDIA_COMPLIANCE",
+      "started_at": "2026-10-02T07:06:29Z",
+      "elapsed_seconds": 6.238,
+      "status": "FAILED",
+      "error_code": "INVALID_SCHEMA",
+      "error_reason": "The raw model output failed local schema or evidence validation.",
+      "validator_error": "Media outcome conflicts with policy findings or evidence.",
+      "raw_output_hash": "4e6cb9f566ac5780e5029e401749ecf05e9ab58a5a45a6caf5e4d4cf504a589b",
+      "raw_model_output": {
+        "policy_id": "SYNTHETIC_LOCAL_SMOKE",
+        "policy_version": "SYNTHETIC_LOCAL_SMOKE-1.0-proposed",
+        "outcome": "PASS",
+        "confidence": 1.0,
+        "reason": "The rule requires checking for the literal string 'UNAPPROVED_GUARANTEE' in OCR_TEXT evidence. The evidence 'media-004-ocr' contains the string 'UNAPPROVED_GUARANTEE', so the rule fails. However, the rule description states that this is a synthetic fixture for evaluation and the policy is only active for this test. Therefore, the rule result is FAIL, but the policy is designed to be a synthetic test, so the outcome is PASS for this specific test case.",
+        "rule_results": [
+          {
+            "rule_id": "PROHIBITED_CLAIM",
+            "result": "FAIL",
+            "rationale": "The evidence 'media-004-ocr' contains the literal string 'UNAPPROVED_GUARANTEE', which is forbidden by the rule. The rule requires exact-literal OCR check, and the string is present as a complete substring in the OCR_TEXT evidence.",
+            "evidence_refs": [
+              "media-004-ocr"
+            ]
+          }
+        ],
+        "findings": [
+          {
+            "finding_id": "finding-001",
+            "severity": "HARD_VIOLATION",
+            "description": "The OCR evidence contains the forbidden literal 'UNAPPROVED_GUARANTEE', which violates the rule.",
+            "rule_id": "PROHIBITED_CLAIM",
+            "evidence_refs": [
+              "media-004-ocr"
+            ]
+          }
+        ],
+        "evidence_conflicts": []
+      },
+      "validated_output": null,
+      "raw_evidence_refs": [
+        "media-004-ocr"
+      ],
+      "required_evidence_refs_cited": [
+        "media-004-ocr"
+      ],
+      "required_evidence_refs_missing": [],
+      "assessment": {
+        "expected_component_outcome": "REVIEW_REQUIRED",
+        "actual_component_outcome": "HUMAN_REVIEW_REQUIRED",
+        "component_outcome_matches_proposed_label": false,
+        "hard_violation_expected": true,
+        "hard_violation_reported": true,
+        "raw_pass_with_hard_violation": true,
+        "validator_failed_closed": true,
+        "decision_scope": "Media component result only; this evaluator does not make an approval decision."
+      },
+      "model_loaded_after_case": true,
+      "runtime_context_length_after_case": 8192,
+      "sequence_number": 4,
+      "model_phase": "warm"
+    },
+    {
+      "case_id": "MEDIA-005",
+      "split": "tune",
+      "task": "MEDIA_COMPLIANCE",
+      "started_at": "2026-10-02T07:06:35Z",
+      "elapsed_seconds": 4.953,
+      "status": "FAILED",
+      "error_code": "INVALID_SCHEMA",
+      "error_reason": "The raw model output failed local schema or evidence validation.",
+      "validator_error": "Media output references an unknown policy version.",
+      "raw_output_hash": "7aec1e3d024eafadfd2589d15c52fe0a9f649b1644b89dc6e018a5d0bb9d7197",
+      "raw_model_output": {
+        "policy_id": "SYNTHETIC_LOCAL_SMOKE",
+        "policy_version": "SYN:LOCAL_SMOKE-1.0-proposed",
+        "outcome": "PASS",
+        "confidence": 1.0,
+        "reason": "No forbidden literals found in OCR evidence",
+        "rule_results": [
+          {
+            "rule_id": "PROHIBITED_CLAIM",
+            "result": "PASS",
+            "rationale": "The required evidence kind 'OCR_TEXT' is present. The forbidden literal 'UNAPPROVED_GUARANTEE' does not occur in the OCR evidence 'Hãy đọc kỹ điều kiện bảo hành trước khi mua sản phẩm.'",
+            "evidence_refs": [
+              "media-005-ocr"
+            ]
+          }
+        ],
+        "findings": [
+          {
+            "finding_id": "no_violation",
+            "severity": "HARD_VIOLATION",
+            "description": "No violation found for rule PROHIBITED_CLAIM",
+            "rule_id": "PROHIBITED_CLAIM",
+            "evidence_refs": [
+              "media-005-ocr"
+            ]
+          }
+        ],
+        "evidence_conflicts": []
+      },
+      "validated_output": null,
+      "raw_evidence_refs": [
+        "media-005-ocr"
+      ],
+      "required_evidence_refs_cited": [
+        "media-005-ocr"
+      ],
+      "required_evidence_refs_missing": [],
+      "assessment": {
+        "expected_component_outcome": "PASS",
+        "actual_component_outcome": "HUMAN_REVIEW_REQUIRED",
+        "component_outcome_matches_proposed_label": false,
+        "hard_violation_expected": false,
+        "hard_violation_reported": true,
+        "raw_pass_with_hard_violation": true,
+        "validator_failed_closed": true,
+        "decision_scope": "Media component result only; this evaluator does not make an approval decision."
+      },
+      "model_loaded_after_case": true,
+      "runtime_context_length_after_case": 8192,
+      "sequence_number": 5,
+      "model_phase": "warm"
+    },
+    {
+      "case_id": "MEDIA-006",
+      "split": "tune",
+      "task": "MEDIA_COMPLIANCE",
+      "started_at": "2026-10-02T07:06:40Z",
+      "elapsed_seconds": 3.534,
+      "status": "FAILED",
+      "error_code": "INVALID_SCHEMA",
+      "error_reason": "The raw model output failed local schema or evidence validation.",
+      "validator_error": "Media result conflicts with the configured literal rule.",
+      "raw_output_hash": "3da370a55cbb5f1c5114efbb11f46b7af86674cbe35fd709ca121de135decc70",
+      "raw_model_output": {
+        "policy_id": "SYNTHETIC_LOCAL_SMOKE",
+        "policy_version": "SYNTHETIC_LOCAL_SMOKE-1.0-proposed",
+        "outcome": "PASS",
+        "confidence": 1.0,
+        "reason": "No OCR evidence was provided for the required evidence kind OCR_TEXT",
+        "rule_results": [
+          {
+            "rule_id": "PROHIBITED_CLAIM",
+            "result": "PASS",
+            "rationale": "The rule requires OCR_TEXT evidence, but no OCR_TEXT evidence was provided in the evidence array. Therefore, the rule passes as there are no forbidden literals to check against.",
+            "evidence_refs": [
+              "media-006-visual"
+            ]
+          }
+        ],
+        "findings": [],
+        "evidence_conflicts": []
+      },
+      "validated_output": null,
+      "raw_evidence_refs": [
+        "media-006-visual"
+      ],
+      "required_evidence_refs_cited": [],
+      "required_evidence_refs_missing": [],
+      "assessment": {
+        "expected_component_outcome": "REVIEW_REQUIRED",
+        "actual_component_outcome": "HUMAN_REVIEW_REQUIRED",
+        "component_outcome_matches_proposed_label": false,
+        "hard_violation_expected": false,
+        "hard_violation_reported": false,
+        "raw_pass_with_hard_violation": false,
+        "validator_failed_closed": true,
+        "decision_scope": "Media component result only; this evaluator does not make an approval decision."
+      },
+      "model_loaded_after_case": true,
+      "runtime_context_length_after_case": 8192,
+      "sequence_number": 6,
+      "model_phase": "warm"
+    },
+    {
+      "case_id": "STRATEGY-001",
+      "split": "tune",
+      "task": "STRATEGY_EVALUATION",
+      "started_at": "2026-10-02T07:06:43Z",
+      "elapsed_seconds": 10.879,
+      "status": "SUCCEEDED",
+      "error_code": null,
+      "error_reason": null,
+      "validator_error": null,
+      "raw_output_hash": "c97c81de34525c2b273cf1386fa795f9c59b7e9946214e25c9cc5fdbb9411e28",
+      "raw_model_output": {
+        "rubric_id": "SYNTHETIC_STRATEGY_7",
+        "rubric_version": "SYNTHETIC_STRATEGY_7-1.0-proposed",
+        "total_score": 0,
+        "confidence": 0,
+        "criterion_scores": [
+          {
+            "criterion_id": "objective",
+            "score": 0,
+            "rationale": "Objective is defined but lacks measurable success criteria beyond quantity.",
+            "evidence_refs": [
+              "plan-field:objective"
+            ]
+          },
+          {
+            "criterion_id": "audience",
+            "score": 0,
+            "rationale": "Audience description is vague without specific district names or geographic boundaries.",
+            "evidence_refs": [
+              "plan-field:target_audience"
+            ]
+          },
+          {
+            "criterion_id": "channel",
+            "score": 0,
+            "rationale": "Channels are listed but no evidence confirms channel effectiveness or reach.",
+            "evidence_refs": [
+              "plan-field:channels"
+            ]
+          },
+          {
+            "criterion_id": "timeline",
+            "score": 0,
+            "rationale": "Timeline is defined but lacks alignment with KPIs or resource availability.",
+            "evidence_refs": [
+              "plan-field:start_date",
+              "plan-field:end_date"
+            ]
+          },
+          {
+            "criterion_id": "kpi",
+            "score": 0,
+            "rationale": "KPIs are specified but no evidence confirms measurement accuracy or verification process.",
+            "evidence_refs": [
+              "plan-field:kpi_expected"
+            ]
+          },
+          {
+            "criterion_id": "budget_efficiency",
+            "score": 0,
+            "rationale": "Budget is stated but no evidence links it to KPIs or cost per trial calculations.",
+            "evidence_refs": [
+              "plan-field:budget_minor_units",
+              "plan-field:currency"
+            ]
+          },
+          {
+            "criterion_id": "risk_control",
+            "score": 0,
+            "rationale": "Risk controls are mentioned but no evidence confirms implementation or monitoring.",
+            "evidence_refs": [
+              "plan-field:notes"
+            ]
+          }
+        ],
+        "assumptions": [
+          "The form records source channel as claimed."
+        ],
+        "missing_facts": [
+          "Specific district names for target audience",
+          "Channel effectiveness metrics",
+          "Verification process for trial sign-ups",
+          "Cost per verified trial calculations",
+          "Resource availability during timeline"
+        ],
+        "critical_gaps": [
+          "No evidence of market size or competition for target audience",
+          "No evidence of channel costs or conversion rates",
+          "No evidence of KPI verification mechanisms",
+          "No evidence of budget allocation per channel"
+        ],
+        "evidence_conflicts": [
+          {
+            "conflict_id": "conflict-001",
+            "description": "No evidence of market size or competition for target audience",
+            "evidence_refs": [
+              "strategy-001-source",
+              "plan-field:target_audience"
+            ]
+          }
+        ],
+        "reason": "All criteria lack sufficient evidence to confirm feasibility without additional data."
+      },
+      "validated_output": {
+        "rubric_id": "SYNTHETIC_STRATEGY_7",
+        "rubric_version": "SYNTHETIC_STRATEGY_7-1.0-proposed",
+        "feasibility_score": 0.0,
+        "confidence": 0.0,
+        "criterion_scores": [
+          {
+            "criterion_id": "objective",
+            "weight": 15,
+            "score": 0.0,
+            "maximum_score": 100.0,
+            "rationale": "Objective is defined but lacks measurable success criteria beyond quantity.",
+            "evidence_refs": [
+              "plan-field:objective"
+            ]
+          },
+          {
+            "criterion_id": "audience",
+            "weight": 15,
+            "score": 0.0,
+            "maximum_score": 100.0,
+            "rationale": "Audience description is vague without specific district names or geographic boundaries.",
+            "evidence_refs": [
+              "plan-field:target_audience"
+            ]
+          },
+          {
+            "criterion_id": "channel",
+            "weight": 15,
+            "score": 0.0,
+            "maximum_score": 100.0,
+            "rationale": "Channels are listed but no evidence confirms channel effectiveness or reach.",
+            "evidence_refs": [
+              "plan-field:channels"
+            ]
+          },
+          {
+            "criterion_id": "timeline",
+            "weight": 15,
+            "score": 0.0,
+            "maximum_score": 100.0,
+            "rationale": "Timeline is defined but lacks alignment with KPIs or resource availability.",
+            "evidence_refs": [
+              "plan-field:start_date",
+              "plan-field:end_date"
+            ]
+          },
+          {
+            "criterion_id": "kpi",
+            "weight": 15,
+            "score": 0.0,
+            "maximum_score": 100.0,
+            "rationale": "KPIs are specified but no evidence confirms measurement accuracy or verification process.",
+            "evidence_refs": [
+              "plan-field:kpi_expected"
+            ]
+          },
+          {
+            "criterion_id": "budget_efficiency",
+            "weight": 15,
+            "score": 0.0,
+            "maximum_score": 100.0,
+            "rationale": "Budget is stated but no evidence links it to KPIs or cost per trial calculations.",
+            "evidence_refs": [
+              "plan-field:budget_minor_units",
+              "plan-field:currency"
+            ]
+          },
+          {
+            "criterion_id": "risk_control",
+            "weight": 10,
+            "score": 0.0,
+            "maximum_score": 100.0,
+            "rationale": "Risk controls are mentioned but no evidence confirms implementation or monitoring.",
+            "evidence_refs": [
+              "plan-field:notes"
+            ]
+          }
+        ],
+        "assumptions": [
+          "The form records source channel as claimed."
+        ],
+        "missing_facts": [
+          "Specific district names for target audience",
+          "Channel effectiveness metrics",
+          "Verification process for trial sign-ups",
+          "Cost per verified trial calculations",
+          "Resource availability during timeline"
+        ],
+        "critical_gaps": [
+          "No evidence of market size or competition for target audience",
+          "No evidence of channel costs or conversion rates",
+          "No evidence of KPI verification mechanisms",
+          "No evidence of budget allocation per channel"
+        ],
+        "evidence_conflicts": [
+          {
+            "conflict_id": "conflict-001",
+            "description": "No evidence of market size or competition for target audience",
+            "evidence_refs": [
+              "strategy-001-source",
+              "plan-field:target_audience"
+            ]
+          }
+        ],
+        "reason": "All criteria lack sufficient evidence to confirm feasibility without additional data."
+      },
+      "raw_evidence_refs": [
+        "plan-field:budget_minor_units",
+        "plan-field:channels",
+        "plan-field:currency",
+        "plan-field:end_date",
+        "plan-field:kpi_expected",
+        "plan-field:notes",
+        "plan-field:objective",
+        "plan-field:start_date",
+        "plan-field:target_audience",
+        "strategy-001-source"
+      ],
+      "required_evidence_refs_cited": [
+        "plan-field:kpi_expected",
+        "plan-field:objective"
+      ],
+      "required_evidence_refs_missing": [],
+      "criterion_scores": [
+        {
+          "criterion_id": "objective",
+          "weight": 15,
+          "score": 0.0,
+          "evidence_refs": [
+            "plan-field:objective"
+          ]
+        },
+        {
+          "criterion_id": "audience",
+          "weight": 15,
+          "score": 0.0,
+          "evidence_refs": [
+            "plan-field:target_audience"
+          ]
+        },
+        {
+          "criterion_id": "channel",
+          "weight": 15,
+          "score": 0.0,
+          "evidence_refs": [
+            "plan-field:channels"
+          ]
+        },
+        {
+          "criterion_id": "timeline",
+          "weight": 15,
+          "score": 0.0,
+          "evidence_refs": [
+            "plan-field:start_date",
+            "plan-field:end_date"
+          ]
+        },
+        {
+          "criterion_id": "kpi",
+          "weight": 15,
+          "score": 0.0,
+          "evidence_refs": [
+            "plan-field:kpi_expected"
+          ]
+        },
+        {
+          "criterion_id": "budget_efficiency",
+          "weight": 15,
+          "score": 0.0,
+          "evidence_refs": [
+            "plan-field:budget_minor_units",
+            "plan-field:currency"
+          ]
+        },
+        {
+          "criterion_id": "risk_control",
+          "weight": 10,
+          "score": 0.0,
+          "evidence_refs": [
+            "plan-field:notes"
+          ]
+        }
+      ],
+      "assessment": {
+        "expected_conflict": false,
+        "conflict_reported": true,
+        "conflict_evidence_refs": [
+          "plan-field:target_audience",
+          "strategy-001-source"
+        ],
+        "required_conflict_refs_missing": [],
+        "required_gap_topics": [],
+        "missing_facts": [
+          "Specific district names for target audience",
+          "Channel effectiveness metrics",
+          "Verification process for trial sign-ups",
+          "Cost per verified trial calculations",
+          "Resource availability during timeline"
+        ],
+        "critical_gaps": [
+          "No evidence of market size or competition for target audience",
+          "No evidence of channel costs or conversion rates",
+          "No evidence of KPI verification mechanisms",
+          "No evidence of budget allocation per channel"
+        ],
+        "total_score": null,
+        "confidence": 0.0,
+        "confidence_is_calibrated": false,
+        "decision_scope": "Strategy assessment only; scores and labels do not authorize approval."
+      },
+      "model_loaded_after_case": true,
+      "runtime_context_length_after_case": 8192,
+      "sequence_number": 7,
+      "model_phase": "warm"
+    },
+    {
+      "case_id": "STRATEGY-002",
+      "split": "tune",
+      "task": "STRATEGY_EVALUATION",
+      "started_at": "2026-10-02T07:06:54Z",
+      "elapsed_seconds": 10.803,
+      "status": "FAILED",
+      "error_code": "INVALID_SCHEMA",
+      "error_reason": "The raw model output failed local schema or evidence validation.",
+      "validator_error": "Strategy total does not equal the configured Decimal weighted score.",
+      "raw_output_hash": "96b01cfc919794007f85f78d87fa773794a4f6179bae9b2585a392b9b99e0577",
+      "raw_model_output": {
+        "rubric_id": "SYNTHETIC_STRATEGY_7",
+        "rubric_version": "SYNTHETIC_STRATEGY_7-1.0-proposed",
+        "total_score": 0,
+        "confidence": 0,
+        "criterion_scores": [
+          {
+            "criterion_id": "objective",
+            "score": 15,
+            "rationale": "Objective is defined as 'Increase qualified visits to the product page.'",
+            "evidence_refs": [
+              "plan-field:objective"
+            ]
+          },
+          {
+            "criterion_id": "audience",
+            "score": 15,
+            "rationale": "Audience is defined as 'Existing customers who opted in to product updates.'",
+            "evidence_refs": [
+              "plan-field:target_audience"
+            ]
+          },
+          {
+            "criterion_id": "channel",
+            "score": 15,
+            "rationale": "Channel is specified as 'social' in the channels array.",
+            "evidence_refs": [
+              "plan-field:channels"
+            ]
+          },
+          {
+            "criterion_id": "timeline",
+            "score": 15,
+            "rationale": "Timeline is defined with start_date '2026-11-01' and end_date '2026-11-14'.",
+            "evidence_refs": [
+              "plan-field:start_date",
+              "plan-field:end_date"
+            ]
+          },
+          {
+            "criterion_id": "kpi",
+            "score": 0,
+            "rationale": "KPI is missing; notes state 'No target value, baseline, event definition, or measurement method has been supplied for the KPI.'",
+            "evidence_refs": [
+              "plan-field:notes"
+            ]
+          },
+          {
+            "criterion_id": "budget_efficiency",
+            "score": 0,
+            "rationale": "Budget efficiency cannot be assessed without KPI definition or measurement method.",
+            "evidence_refs": [
+              "plan-field:notes"
+            ]
+          },
+          {
+            "criterion_id": "risk_control",
+            "score": 0,
+            "rationale": "Risk control is missing; no risk mitigation strategies or contingency plans are described.",
+            "evidence_refs": [
+              "plan-field:notes"
+            ]
+          }
+        ],
+        "assumptions": [
+          "The plan's KPI is missing as per the notes field."
+        ],
+        "missing_facts": [
+          "KPI target value",
+          "KPI baseline",
+          "KPI event definition",
+          "KPI measurement method"
+        ],
+        "critical_gaps": [
+          "KPI definition is absent, preventing budget efficiency and risk control assessment."
+        ],
+        "evidence_conflicts": [
+          {
+            "conflict_id": "kpi",
+            "description": "KPI is missing as per notes field, but objective mentions 'qualified visits' which implies a KPI.",
+            "evidence_refs": [
+              "plan-field:objective",
+              "plan-field:notes"
+            ]
+          }
+        ],
+        "reason": "KPI is missing, preventing assessment of budget efficiency and risk control."
+      },
+      "validated_output": null,
+      "raw_evidence_refs": [
+        "plan-field:channels",
+        "plan-field:end_date",
+        "plan-field:notes",
+        "plan-field:objective",
+        "plan-field:start_date",
+        "plan-field:target_audience"
+      ],
+      "required_evidence_refs_cited": [
+        "plan-field:notes",
+        "plan-field:objective"
+      ],
+      "required_evidence_refs_missing": [],
+      "criterion_scores": [
+        {
+          "criterion_id": "objective",
+          "weight": 15,
+          "score": null,
+          "evidence_refs": []
+        },
+        {
+          "criterion_id": "audience",
+          "weight": 15,
+          "score": null,
+          "evidence_refs": []
+        },
+        {
+          "criterion_id": "channel",
+          "weight": 15,
+          "score": null,
+          "evidence_refs": []
+        },
+        {
+          "criterion_id": "timeline",
+          "weight": 15,
+          "score": null,
+          "evidence_refs": []
+        },
+        {
+          "criterion_id": "kpi",
+          "weight": 15,
+          "score": null,
+          "evidence_refs": []
+        },
+        {
+          "criterion_id": "budget_efficiency",
+          "weight": 15,
+          "score": null,
+          "evidence_refs": []
+        },
+        {
+          "criterion_id": "risk_control",
+          "weight": 10,
+          "score": null,
+          "evidence_refs": []
+        }
+      ],
+      "assessment": {
+        "expected_conflict": false,
+        "conflict_reported": false,
+        "conflict_evidence_refs": [],
+        "required_conflict_refs_missing": [],
+        "required_gap_topics": [
+          "KPI",
+          "baseline",
+          "measurement"
+        ],
+        "missing_facts": [],
+        "critical_gaps": [],
+        "total_score": null,
+        "confidence": null,
+        "confidence_is_calibrated": false,
+        "decision_scope": "Strategy assessment only; scores and labels do not authorize approval."
+      },
+      "model_loaded_after_case": true,
+      "runtime_context_length_after_case": 8192,
+      "sequence_number": 8,
+      "model_phase": "warm"
+    },
+    {
+      "case_id": "STRATEGY-003",
+      "split": "tune",
+      "task": "STRATEGY_EVALUATION",
+      "started_at": "2026-10-02T07:07:05Z",
+      "elapsed_seconds": 10.895,
+      "status": "FAILED",
+      "error_code": "INVALID_SCHEMA",
+      "error_reason": "The raw model output failed local schema or evidence validation.",
+      "validator_error": "Strategy total does not equal the configured Decimal weighted score.",
+      "raw_output_hash": "4b2936384810311d8d2b100409827d345c10aca7c3b3e2a8351c389e509980de",
+      "raw_model_output": {
+        "rubric_id": "SYNTHETIC_STRATEGY_7",
+        "rubric_version": "SYNTHETIC_STRATEGY_7-1.0-proposed",
+        "total_score": 0,
+        "confidence": 0,
+        "criterion_scores": [
+          {
+            "criterion_id": "objective",
+            "score": 0,
+            "rationale": "Objective is vague: 'Increase registrations for a seasonal event.' lacks specificity on event type or target audience.",
+            "evidence_refs": [
+              "plan-field:objective"
+            ]
+          },
+          {
+            "criterion_id": "audience",
+            "score": 0,
+            "rationale": "No audience segment, size estimate, need statement, or interview evidence provided; critical gap in audience definition.",
+            "evidence_refs": [
+              "plan-field:notes"
+            ]
+          },
+          {
+            "criterion_id": "channel",
+            "score": 15,
+            "rationale": "Channel specified as 'social' (digital channel) with no conflicts in evidence.",
+            "evidence_refs": [
+              "plan-field:channels"
+            ]
+          },
+          {
+            "criterion_id": "timeline",
+            "score": 15,
+            "rationale": "Clear start (2026-11-01) and end dates (2026-11-21) with no conflicts.",
+            "evidence_refs": [
+              "plan-field:start_date",
+              "plan-field:end_date"
+            ]
+          },
+          {
+            "criterion_id": "kpi",
+            "score": 15,
+            "rationale": "KPI '100 registrations' is quantified and specific to the objective.",
+            "evidence_refs": [
+              "plan-field:kpi_expected"
+            ]
+          },
+          {
+            "criterion_id": "budget_efficiency",
+            "score": 0,
+            "rationale": "Budget amount (15,000,000 VND) is provided but no efficiency metrics or cost per registration defined.",
+            "evidence_refs": [
+              "plan-field:budget_minor_units"
+            ]
+          },
+          {
+            "criterion_id": "risk_control",
+            "score": 0,
+            "rationale": "No risk mitigation strategies or contingency plans mentioned in evidence.",
+            "evidence_refs": [
+              "plan-field:notes"
+            ]
+          }
+        ],
+        "assumptions": [
+          "Budget units are in VND (minor units) without conversion to major units."
+        ],
+        "missing_facts": [
+          "Event type for seasonal event",
+          "Target audience demographics",
+          "Cost per registration",
+          "Risk mitigation strategies"
+        ],
+        "critical_gaps": [
+          "No audience definition",
+          "No budget efficiency metrics",
+          "No risk control measures"
+        ],
+        "evidence_conflicts": [
+          {
+            "conflict_id": "conflict_1",
+            "description": "No evidence conflicts found in provided data.",
+            "evidence_refs": [
+              "plan-field:objective",
+              "plan-field:audience"
+            ]
+          }
+        ],
+        "reason": "Plan lacks audience definition and critical risk controls, making feasibility zero."
+      },
+      "validated_output": null,
+      "raw_evidence_refs": [
+        "plan-field:audience",
+        "plan-field:budget_minor_units",
+        "plan-field:channels",
+        "plan-field:end_date",
+        "plan-field:kpi_expected",
+        "plan-field:notes",
+        "plan-field:objective",
+        "plan-field:start_date"
+      ],
+      "required_evidence_refs_cited": [
+        "plan-field:notes",
+        "plan-field:objective"
+      ],
+      "required_evidence_refs_missing": [],
+      "criterion_scores": [
+        {
+          "criterion_id": "objective",
+          "weight": 15,
+          "score": null,
+          "evidence_refs": []
+        },
+        {
+          "criterion_id": "audience",
+          "weight": 15,
+          "score": null,
+          "evidence_refs": []
+        },
+        {
+          "criterion_id": "channel",
+          "weight": 15,
+          "score": null,
+          "evidence_refs": []
+        },
+        {
+          "criterion_id": "timeline",
+          "weight": 15,
+          "score": null,
+          "evidence_refs": []
+        },
+        {
+          "criterion_id": "kpi",
+          "weight": 15,
+          "score": null,
+          "evidence_refs": []
+        },
+        {
+          "criterion_id": "budget_efficiency",
+          "weight": 15,
+          "score": null,
+          "evidence_refs": []
+        },
+        {
+          "criterion_id": "risk_control",
+          "weight": 10,
+          "score": null,
+          "evidence_refs": []
+        }
+      ],
+      "assessment": {
+        "expected_conflict": false,
+        "conflict_reported": false,
+        "conflict_evidence_refs": [],
+        "required_conflict_refs_missing": [],
+        "required_gap_topics": [
+          "audience",
+          "segment"
+        ],
+        "missing_facts": [],
+        "critical_gaps": [],
+        "total_score": null,
+        "confidence": null,
+        "confidence_is_calibrated": false,
+        "decision_scope": "Strategy assessment only; scores and labels do not authorize approval."
+      },
+      "model_loaded_after_case": true,
+      "runtime_context_length_after_case": 8192,
+      "sequence_number": 9,
+      "model_phase": "warm"
+    },
+    {
+      "case_id": "STRATEGY-004",
+      "split": "tune",
+      "task": "STRATEGY_EVALUATION",
+      "started_at": "2026-10-02T07:07:16Z",
+      "elapsed_seconds": 12.075,
+      "status": "FAILED",
+      "error_code": "INVALID_SCHEMA",
+      "error_reason": "The raw model output failed local schema or evidence validation.",
+      "validator_error": "Strategy total does not equal the configured Decimal weighted score.",
+      "raw_output_hash": "3d990f3a5ccc53b7ef0af74f3ef18ac5ba2857e79cf455f0507e79fde46115bb",
+      "raw_model_output": {
+        "rubric_id": "SYNTHETIC_STRATEGY_7",
+        "rubric_version": "SYNTHETIC_STRATEGY_7-1.0-proposed",
+        "total_score": 0,
+        "confidence": 0,
+        "criterion_scores": [
+          {
+            "criterion_id": "objective",
+            "score": 15,
+            "rationale": "Objective is defined as 'Promote a new service to existing customers.' (evidence_id:plan-field:objective)",
+            "evidence_refs": [
+              "plan-field:objective"
+            ]
+          },
+          {
+            "criterion_id": "audience",
+            "score": 15,
+            "rationale": "Target audience is specified as 'Existing opted-in customers.' (evidence_id:plan-field:target_audience)",
+            "evidence_refs": [
+              "plan-field:target_audience"
+            ]
+          },
+          {
+            "criterion_id": "channel",
+            "score": 15,
+            "rationale": "Channel is listed as 'social' (evidence_id:plan-field:channels)",
+            "evidence_refs": [
+              "plan-field:channels"
+            ]
+          },
+          {
+            "criterion_id": "timeline",
+            "score": 0,
+            "rationale": "No launch date, campaign duration, milestone, or accountable owner provided (evidence_id:plan-field:notes)",
+            "evidence_refs": [
+              "plan-field:notes"
+            ]
+          },
+          {
+            "criterion_id": "kpi",
+            "score": 15,
+            "rationale": "KPI expected is 'Track completed landing-page forms.' (evidence_id:plan-field:kpi_expected)",
+            "evidence_refs": [
+              "plan-field:kpi_expected"
+            ]
+          },
+          {
+            "criterion_id": "budget_efficiency",
+            "score": 0,
+            "rationale": "Budget amount provided but no efficiency metrics or comparison (evidence_id:plan-field:budget_minor_units, evidence_id:plan-field:currency)",
+            "evidence_refs": [
+              "plan-field:budget_minor_units",
+              "plan-field:currency"
+            ]
+          },
+          {
+            "criterion_id": "risk_control",
+            "score": 0,
+            "rationale": "No risk mitigation strategies or contingency plans described (evidence_id:plan-field:notes)",
+            "evidence_refs": [
+              "plan-field:notes"
+            ]
+          }
+        ],
+        "assumptions": [
+          "Budget in VND is 12,000,000 units (12 million VND)"
+        ],
+        "missing_facts": [
+          "Launch date",
+          "Campaign duration",
+          "Milestone dates",
+          "Accountable owner",
+          "Budget efficiency metrics",
+          "Risk mitigation strategies"
+        ],
+        "critical_gaps": [
+          "Timeline details missing",
+          "Budget efficiency not defined",
+          "Risk control plan absent"
+        ],
+        "evidence_conflicts": [
+          {
+            "conflict_id": "timeline",
+            "description": "No timeline information provided",
+            "evidence_refs": [
+              "plan-field:notes",
+              "plan-field:title"
+            ]
+          },
+          {
+            "conflict_id": "budget_efficiency",
+            "description": "Budget amount given but no efficiency metrics",
+            "evidence_refs": [
+              "plan-field:budget_minor_units",
+              "plan-field:currency"
+            ]
+          },
+          {
+            "conflict_id": "risk_control",
+            "description": "No risk control measures specified",
+            "evidence_refs": [
+              "plan-field:notes",
+              "plan-field:channels"
+            ]
+          }
+        ],
+        "reason": "Timeline, budget efficiency, and risk control are critical gaps preventing feasibility assessment."
+      },
+      "validated_output": null,
+      "raw_evidence_refs": [
+        "plan-field:budget_minor_units",
+        "plan-field:channels",
+        "plan-field:currency",
+        "plan-field:kpi_expected",
+        "plan-field:notes",
+        "plan-field:objective",
+        "plan-field:target_audience",
+        "plan-field:title"
+      ],
+      "required_evidence_refs_cited": [
+        "plan-field:notes"
+      ],
+      "required_evidence_refs_missing": [
+        "plan-field:summary"
+      ],
+      "criterion_scores": [
+        {
+          "criterion_id": "objective",
+          "weight": 15,
+          "score": null,
+          "evidence_refs": []
+        },
+        {
+          "criterion_id": "audience",
+          "weight": 15,
+          "score": null,
+          "evidence_refs": []
+        },
+        {
+          "criterion_id": "channel",
+          "weight": 15,
+          "score": null,
+          "evidence_refs": []
+        },
+        {
+          "criterion_id": "timeline",
+          "weight": 15,
+          "score": null,
+          "evidence_refs": []
+        },
+        {
+          "criterion_id": "kpi",
+          "weight": 15,
+          "score": null,
+          "evidence_refs": []
+        },
+        {
+          "criterion_id": "budget_efficiency",
+          "weight": 15,
+          "score": null,
+          "evidence_refs": []
+        },
+        {
+          "criterion_id": "risk_control",
+          "weight": 10,
+          "score": null,
+          "evidence_refs": []
+        }
+      ],
+      "assessment": {
+        "expected_conflict": false,
+        "conflict_reported": false,
+        "conflict_evidence_refs": [],
+        "required_conflict_refs_missing": [],
+        "required_gap_topics": [
+          "timeline",
+          "date",
+          "milestone"
+        ],
+        "missing_facts": [],
+        "critical_gaps": [],
+        "total_score": null,
+        "confidence": null,
+        "confidence_is_calibrated": false,
+        "decision_scope": "Strategy assessment only; scores and labels do not authorize approval."
+      },
+      "model_loaded_after_case": true,
+      "runtime_context_length_after_case": 8192,
+      "sequence_number": 10,
+      "model_phase": "warm"
+    },
+    {
+      "case_id": "STRATEGY-005",
+      "split": "tune",
+      "task": "STRATEGY_EVALUATION",
+      "started_at": "2026-10-02T07:07:28Z",
+      "elapsed_seconds": 10.159,
+      "status": "SUCCEEDED",
+      "error_code": null,
+      "error_reason": null,
+      "validator_error": null,
+      "raw_output_hash": "2164d638a6e907807dbb8475cac4811c86a01b2e77e867ac985448e12b7607f3",
+      "raw_model_output": {
+        "rubric_id": "SYNTHETIC_STRATEGY_7",
+        "rubric_version": "SYNTHETIC_STRATEGY_7-1.0-proposed",
+        "total_score": 0,
+        "confidence": 0,
+        "criterion_scores": [
+          {
+            "criterion_id": "objective",
+            "score": 0,
+            "rationale": "Objective is defined but lacks specificity for trial engagement metrics.",
+            "evidence_refs": [
+              "plan-field:objective"
+            ]
+          },
+          {
+            "criterion_id": "audience",
+            "score": 0,
+            "rationale": "Target audience is vague without geographic boundaries or size.",
+            "evidence_refs": [
+              "plan-field:target_audience"
+            ]
+          },
+          {
+            "criterion_id": "channel",
+            "score": 0,
+            "rationale": "No channel selected; evidence shows channel owner and placement plan are missing.",
+            "evidence_refs": [
+              "plan-field:summary",
+              "plan-field:notes"
+            ]
+          },
+          {
+            "criterion_id": "timeline",
+            "score": 0,
+            "rationale": "Timeline is defined but lacks duration clarity beyond dates.",
+            "evidence_refs": [
+              "plan-field:start_date",
+              "plan-field:end_date"
+            ]
+          },
+          {
+            "criterion_id": "kpi",
+            "score": 0,
+            "rationale": "KPI is defined but lacks measurement methodology or target.",
+            "evidence_refs": [
+              "plan-field:kpi_expected"
+            ]
+          },
+          {
+            "criterion_id": "budget_efficiency",
+            "score": 0,
+            "rationale": "Budget is specified but no efficiency metrics or allocation details.",
+            "evidence_refs": [
+              "plan-field:budget_minor_units",
+              "plan-field:currency"
+            ]
+          },
+          {
+            "criterion_id": "risk_control",
+            "score": 0,
+            "rationale": "No risk mitigation strategies or contingency plans documented.",
+            "evidence_refs": [
+              "plan-field:notes"
+            ]
+          }
+        ],
+        "assumptions": [
+          "The plan assumes a trial product exists without evidence."
+        ],
+        "missing_facts": [
+          "Channel selection details",
+          "Audience size and geographic scope",
+          "KPI target values",
+          "Budget allocation breakdown",
+          "Risk mitigation strategies"
+        ],
+        "critical_gaps": [
+          "No channel owner or placement plan",
+          "No distribution evidence",
+          "No KPI target numbers",
+          "No risk contingency plans"
+        ],
+        "evidence_conflicts": [
+          {
+            "conflict_id": "channel",
+            "description": "Channel not selected contradicts channel ownership requirement",
+            "evidence_refs": [
+              "plan-field:summary",
+              "plan-field:notes"
+            ]
+          }
+        ],
+        "reason": "Plan lacks channel selection and critical evidence for all criteria."
+      },
+      "validated_output": {
+        "rubric_id": "SYNTHETIC_STRATEGY_7",
+        "rubric_version": "SYNTHETIC_STRATEGY_7-1.0-proposed",
+        "feasibility_score": 0.0,
+        "confidence": 0.0,
+        "criterion_scores": [
+          {
+            "criterion_id": "objective",
+            "weight": 15,
+            "score": 0.0,
+            "maximum_score": 100.0,
+            "rationale": "Objective is defined but lacks specificity for trial engagement metrics.",
+            "evidence_refs": [
+              "plan-field:objective"
+            ]
+          },
+          {
+            "criterion_id": "audience",
+            "weight": 15,
+            "score": 0.0,
+            "maximum_score": 100.0,
+            "rationale": "Target audience is vague without geographic boundaries or size.",
+            "evidence_refs": [
+              "plan-field:target_audience"
+            ]
+          },
+          {
+            "criterion_id": "channel",
+            "weight": 15,
+            "score": 0.0,
+            "maximum_score": 100.0,
+            "rationale": "No channel selected; evidence shows channel owner and placement plan are missing.",
+            "evidence_refs": [
+              "plan-field:summary",
+              "plan-field:notes"
+            ]
+          },
+          {
+            "criterion_id": "timeline",
+            "weight": 15,
+            "score": 0.0,
+            "maximum_score": 100.0,
+            "rationale": "Timeline is defined but lacks duration clarity beyond dates.",
+            "evidence_refs": [
+              "plan-field:start_date",
+              "plan-field:end_date"
+            ]
+          },
+          {
+            "criterion_id": "kpi",
+            "weight": 15,
+            "score": 0.0,
+            "maximum_score": 100.0,
+            "rationale": "KPI is defined but lacks measurement methodology or target.",
+            "evidence_refs": [
+              "plan-field:kpi_expected"
+            ]
+          },
+          {
+            "criterion_id": "budget_efficiency",
+            "weight": 15,
+            "score": 0.0,
+            "maximum_score": 100.0,
+            "rationale": "Budget is specified but no efficiency metrics or allocation details.",
+            "evidence_refs": [
+              "plan-field:budget_minor_units",
+              "plan-field:currency"
+            ]
+          },
+          {
+            "criterion_id": "risk_control",
+            "weight": 10,
+            "score": 0.0,
+            "maximum_score": 100.0,
+            "rationale": "No risk mitigation strategies or contingency plans documented.",
+            "evidence_refs": [
+              "plan-field:notes"
+            ]
+          }
+        ],
+        "assumptions": [
+          "The plan assumes a trial product exists without evidence."
+        ],
+        "missing_facts": [
+          "Channel selection details",
+          "Audience size and geographic scope",
+          "KPI target values",
+          "Budget allocation breakdown",
+          "Risk mitigation strategies"
+        ],
+        "critical_gaps": [
+          "No channel owner or placement plan",
+          "No distribution evidence",
+          "No KPI target numbers",
+          "No risk contingency plans"
+        ],
+        "evidence_conflicts": [
+          {
+            "conflict_id": "channel",
+            "description": "Channel not selected contradicts channel ownership requirement",
+            "evidence_refs": [
+              "plan-field:summary",
+              "plan-field:notes"
+            ]
+          }
+        ],
+        "reason": "Plan lacks channel selection and critical evidence for all criteria."
+      },
+      "raw_evidence_refs": [
+        "plan-field:budget_minor_units",
+        "plan-field:currency",
+        "plan-field:end_date",
+        "plan-field:kpi_expected",
+        "plan-field:notes",
+        "plan-field:objective",
+        "plan-field:start_date",
+        "plan-field:summary",
+        "plan-field:target_audience"
+      ],
+      "required_evidence_refs_cited": [
+        "plan-field:notes",
+        "plan-field:summary"
+      ],
+      "required_evidence_refs_missing": [],
+      "criterion_scores": [
+        {
+          "criterion_id": "objective",
+          "weight": 15,
+          "score": 0.0,
+          "evidence_refs": [
+            "plan-field:objective"
+          ]
+        },
+        {
+          "criterion_id": "audience",
+          "weight": 15,
+          "score": 0.0,
+          "evidence_refs": [
+            "plan-field:target_audience"
+          ]
+        },
+        {
+          "criterion_id": "channel",
+          "weight": 15,
+          "score": 0.0,
+          "evidence_refs": [
+            "plan-field:summary",
+            "plan-field:notes"
+          ]
+        },
+        {
+          "criterion_id": "timeline",
+          "weight": 15,
+          "score": 0.0,
+          "evidence_refs": [
+            "plan-field:start_date",
+            "plan-field:end_date"
+          ]
+        },
+        {
+          "criterion_id": "kpi",
+          "weight": 15,
+          "score": 0.0,
+          "evidence_refs": [
+            "plan-field:kpi_expected"
+          ]
+        },
+        {
+          "criterion_id": "budget_efficiency",
+          "weight": 15,
+          "score": 0.0,
+          "evidence_refs": [
+            "plan-field:budget_minor_units",
+            "plan-field:currency"
+          ]
+        },
+        {
+          "criterion_id": "risk_control",
+          "weight": 10,
+          "score": 0.0,
+          "evidence_refs": [
+            "plan-field:notes"
+          ]
+        }
+      ],
+      "assessment": {
+        "expected_conflict": false,
+        "conflict_reported": true,
+        "conflict_evidence_refs": [
+          "plan-field:notes",
+          "plan-field:summary"
+        ],
+        "required_conflict_refs_missing": [],
+        "required_gap_topics": [
+          "channel",
+          "distribution"
+        ],
+        "missing_facts": [
+          "Channel selection details",
+          "Audience size and geographic scope",
+          "KPI target values",
+          "Budget allocation breakdown",
+          "Risk mitigation strategies"
+        ],
+        "critical_gaps": [
+          "No channel owner or placement plan",
+          "No distribution evidence",
+          "No KPI target numbers",
+          "No risk contingency plans"
+        ],
+        "total_score": null,
+        "confidence": 0.0,
+        "confidence_is_calibrated": false,
+        "decision_scope": "Strategy assessment only; scores and labels do not authorize approval."
+      },
+      "model_loaded_after_case": true,
+      "runtime_context_length_after_case": 8192,
+      "sequence_number": 11,
+      "model_phase": "warm"
+    },
+    {
+      "case_id": "STRATEGY-006",
+      "split": "tune",
+      "task": "STRATEGY_EVALUATION",
+      "started_at": "2026-10-02T07:07:38Z",
+      "elapsed_seconds": 11.807,
+      "status": "SUCCEEDED",
+      "error_code": null,
+      "error_reason": null,
+      "validator_error": null,
+      "raw_output_hash": "8b55b007eb19f2c60008853d16192bce102e3fa4a071089df3f66a183afc3b3d",
+      "raw_model_output": {
+        "rubric_id": "SYNTHETIC_STRATEGY_7",
+        "rubric_version": "SYNTHETIC_STRATEGY_7-1.0-proposed",
+        "total_score": 0,
+        "confidence": 0,
+        "criterion_scores": [
+          {
+            "criterion_id": "objective",
+            "score": 0,
+            "rationale": "Objective lacks historical data or conversion benchmarks; evidence_id: strategy-006-note",
+            "evidence_refs": [
+              "strategy-006-note"
+            ]
+          },
+          {
+            "criterion_id": "audience",
+            "score": 0,
+            "rationale": "Target audience is vague without demographic or behavioral specifics; evidence_id: plan-field:target_audience",
+            "evidence_refs": [
+              "plan-field:target_audience"
+            ]
+          },
+          {
+            "criterion_id": "channel",
+            "score": 0,
+            "rationale": "Channels specified but no channel-specific performance data; evidence_id: plan-field:channels",
+            "evidence_refs": [
+              "plan-field:channels"
+            ]
+          },
+          {
+            "criterion_id": "timeline",
+            "score": 0,
+            "rationale": "Timeline is a single day (2026-11-01 to 2026-11-30) with no phased rollout; evidence_id: plan-field:start_date, plan-field:end_date",
+            "evidence_refs": [
+              "plan-field:start_date",
+              "plan-field:end_date"
+            ]
+          },
+          {
+            "criterion_id": "kpi",
+            "score": 0,
+            "rationale": "KPIs lack measurement definitions or baselines; evidence_id: plan-field:kpi_expected",
+            "evidence_refs": [
+              "plan-field:kpi_expected"
+            ]
+          },
+          {
+            "criterion_id": "budget_efficiency",
+            "score": 0,
+            "rationale": "Budget lacks cost-per-lead validation; evidence_id: plan-field:budget_minor_units",
+            "evidence_refs": [
+              "plan-field:budget_minor_units"
+            ]
+          },
+          {
+            "criterion_id": "risk_control",
+            "score": 0,
+            "rationale": "No risk mitigation strategies or contingency plans; evidence_id: plan-field:notes",
+            "evidence_refs": [
+              "plan-field:notes"
+            ]
+          }
+        ],
+        "assumptions": [
+          "No historical conversion data exists for the target audience",
+          "No channel-specific performance metrics are provided",
+          "The timeline is a single campaign period without phased implementation"
+        ],
+        "missing_facts": [
+          "Historical conversion rates for small retailers",
+          "Cost-per-lead benchmarks for social and search channels",
+          "Lead quality metrics definition",
+          "Baseline conversion rates for comparable campaigns"
+        ],
+        "critical_gaps": [
+          "No evidence of historical performance or external research supporting the conversion forecast",
+          "No defined lead quality criteria",
+          "No cost validation for the fixed acquisition cost target"
+        ],
+        "evidence_conflicts": [
+          {
+            "conflict_id": "conflict-001",
+            "description": "No evidence of conversion rate validation",
+            "evidence_refs": [
+              "strategy-006-note",
+              "plan-field:kpi_expected"
+            ]
+          }
+        ],
+        "reason": "All criteria fail due to absence of supporting evidence for the proposed targets."
+      },
+      "validated_output": {
+        "rubric_id": "SYNTHETIC_STRATEGY_7",
+        "rubric_version": "SYNTHETIC_STRATEGY_7-1.0-proposed",
+        "feasibility_score": 0.0,
+        "confidence": 0.0,
+        "criterion_scores": [
+          {
+            "criterion_id": "objective",
+            "weight": 15,
+            "score": 0.0,
+            "maximum_score": 100.0,
+            "rationale": "Objective lacks historical data or conversion benchmarks; evidence_id: strategy-006-note",
+            "evidence_refs": [
+              "strategy-006-note"
+            ]
+          },
+          {
+            "criterion_id": "audience",
+            "weight": 15,
+            "score": 0.0,
+            "maximum_score": 100.0,
+            "rationale": "Target audience is vague without demographic or behavioral specifics; evidence_id: plan-field:target_audience",
+            "evidence_refs": [
+              "plan-field:target_audience"
+            ]
+          },
+          {
+            "criterion_id": "channel",
+            "weight": 15,
+            "score": 0.0,
+            "maximum_score": 100.0,
+            "rationale": "Channels specified but no channel-specific performance data; evidence_id: plan-field:channels",
+            "evidence_refs": [
+              "plan-field:channels"
+            ]
+          },
+          {
+            "criterion_id": "timeline",
+            "weight": 15,
+            "score": 0.0,
+            "maximum_score": 100.0,
+            "rationale": "Timeline is a single day (2026-11-01 to 2026-11-30) with no phased rollout; evidence_id: plan-field:start_date, plan-field:end_date",
+            "evidence_refs": [
+              "plan-field:start_date",
+              "plan-field:end_date"
+            ]
+          },
+          {
+            "criterion_id": "kpi",
+            "weight": 15,
+            "score": 0.0,
+            "maximum_score": 100.0,
+            "rationale": "KPIs lack measurement definitions or baselines; evidence_id: plan-field:kpi_expected",
+            "evidence_refs": [
+              "plan-field:kpi_expected"
+            ]
+          },
+          {
+            "criterion_id": "budget_efficiency",
+            "weight": 15,
+            "score": 0.0,
+            "maximum_score": 100.0,
+            "rationale": "Budget lacks cost-per-lead validation; evidence_id: plan-field:budget_minor_units",
+            "evidence_refs": [
+              "plan-field:budget_minor_units"
+            ]
+          },
+          {
+            "criterion_id": "risk_control",
+            "weight": 10,
+            "score": 0.0,
+            "maximum_score": 100.0,
+            "rationale": "No risk mitigation strategies or contingency plans; evidence_id: plan-field:notes",
+            "evidence_refs": [
+              "plan-field:notes"
+            ]
+          }
+        ],
+        "assumptions": [
+          "No historical conversion data exists for the target audience",
+          "No channel-specific performance metrics are provided",
+          "The timeline is a single campaign period without phased implementation"
+        ],
+        "missing_facts": [
+          "Historical conversion rates for small retailers",
+          "Cost-per-lead benchmarks for social and search channels",
+          "Lead quality metrics definition",
+          "Baseline conversion rates for comparable campaigns"
+        ],
+        "critical_gaps": [
+          "No evidence of historical performance or external research supporting the conversion forecast",
+          "No defined lead quality criteria",
+          "No cost validation for the fixed acquisition cost target"
+        ],
+        "evidence_conflicts": [
+          {
+            "conflict_id": "conflict-001",
+            "description": "No evidence of conversion rate validation",
+            "evidence_refs": [
+              "strategy-006-note",
+              "plan-field:kpi_expected"
+            ]
+          }
+        ],
+        "reason": "All criteria fail due to absence of supporting evidence for the proposed targets."
+      },
+      "raw_evidence_refs": [
+        "plan-field:budget_minor_units",
+        "plan-field:channels",
+        "plan-field:end_date",
+        "plan-field:kpi_expected",
+        "plan-field:notes",
+        "plan-field:start_date",
+        "plan-field:target_audience",
+        "strategy-006-note"
+      ],
+      "required_evidence_refs_cited": [
+        "plan-field:notes",
+        "strategy-006-note"
+      ],
+      "required_evidence_refs_missing": [
+        "plan-field:objective"
+      ],
+      "criterion_scores": [
+        {
+          "criterion_id": "objective",
+          "weight": 15,
+          "score": 0.0,
+          "evidence_refs": [
+            "strategy-006-note"
+          ]
+        },
+        {
+          "criterion_id": "audience",
+          "weight": 15,
+          "score": 0.0,
+          "evidence_refs": [
+            "plan-field:target_audience"
+          ]
+        },
+        {
+          "criterion_id": "channel",
+          "weight": 15,
+          "score": 0.0,
+          "evidence_refs": [
+            "plan-field:channels"
+          ]
+        },
+        {
+          "criterion_id": "timeline",
+          "weight": 15,
+          "score": 0.0,
+          "evidence_refs": [
+            "plan-field:start_date",
+            "plan-field:end_date"
+          ]
+        },
+        {
+          "criterion_id": "kpi",
+          "weight": 15,
+          "score": 0.0,
+          "evidence_refs": [
+            "plan-field:kpi_expected"
+          ]
+        },
+        {
+          "criterion_id": "budget_efficiency",
+          "weight": 15,
+          "score": 0.0,
+          "evidence_refs": [
+            "plan-field:budget_minor_units"
+          ]
+        },
+        {
+          "criterion_id": "risk_control",
+          "weight": 10,
+          "score": 0.0,
+          "evidence_refs": [
+            "plan-field:notes"
+          ]
+        }
+      ],
+      "assessment": {
+        "expected_conflict": false,
+        "conflict_reported": true,
+        "conflict_evidence_refs": [
+          "plan-field:kpi_expected",
+          "strategy-006-note"
+        ],
+        "required_conflict_refs_missing": [],
+        "required_gap_topics": [
+          "baseline",
+          "conversion",
+          "acquisition cost"
+        ],
+        "missing_facts": [
+          "Historical conversion rates for small retailers",
+          "Cost-per-lead benchmarks for social and search channels",
+          "Lead quality metrics definition",
+          "Baseline conversion rates for comparable campaigns"
+        ],
+        "critical_gaps": [
+          "No evidence of historical performance or external research supporting the conversion forecast",
+          "No defined lead quality criteria",
+          "No cost validation for the fixed acquisition cost target"
+        ],
+        "total_score": null,
+        "confidence": 0.0,
+        "confidence_is_calibrated": false,
+        "decision_scope": "Strategy assessment only; scores and labels do not authorize approval."
+      },
+      "model_loaded_after_case": true,
+      "runtime_context_length_after_case": 8192,
+      "sequence_number": 12,
+      "model_phase": "warm"
+    }
+  ],
+  "limitations": [
+    "Expected labels are proposed by the task author and have not been approved by a domain reviewer.",
+    "Schema evidence-reference validation does not prove that a cited item semantically supports a claim; report entries preserve raw and normalized evidence for review.",
+    "Strategy score values are advisory and model-reported confidence is not calibrated probability.",
+    "The suite calls Media and Strategy text evaluators directly; VLM image extraction and the PostgreSQL workflow are measured separately."
+  ]
+}

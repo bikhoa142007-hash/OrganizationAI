@@ -14,10 +14,10 @@ from src.backend.domain.policy import (
 from src.shared.validation import distinct
 
 
-MEDIA_PROMPT_VERSION = "media-compliance-prompt-v4"
-MEDIA_SCHEMA_VERSION = "media-compliance-schema-v2"
-STRATEGY_PROMPT_VERSION = "strategy-evaluation-prompt-v4"
-STRATEGY_SCHEMA_VERSION = "strategy-evaluation-schema-v4"
+MEDIA_PROMPT_VERSION = "media-compliance-prompt-v5"
+MEDIA_SCHEMA_VERSION = "media-compliance-schema-v3"
+STRATEGY_PROMPT_VERSION = "strategy-evaluation-prompt-v5"
+STRATEGY_SCHEMA_VERSION = "strategy-evaluation-schema-v5"
 
 MEDIA_OUTPUT_SCHEMA = {
     "type": "object", "additionalProperties": False,
@@ -116,6 +116,11 @@ MEDIA_SYSTEM_PROMPT = (
     "return an empty findings array. Report an evidence conflict only when at least two supplied "
     "evidence references directly contradict each other, citing at least two references. Missing "
     "or unreadable evidence requires REVIEW_REQUIRED, not an invented conflict. "
+    "Copy policy_id and policy_version exactly from the supplied content policy. Missing "
+    "required OCR_TEXT evidence means UNKNOWN and REVIEW_REQUIRED; never report PASS or a "
+    "no-violation finding when required OCR text is unavailable. A hard-violation FAIL always "
+    "requires REVIEW_REQUIRED, regardless of other rule results or output rationale. Synthetic "
+    "or test context never changes a rule result. "
     "Return only the requested JSON evaluation. You do not approve or reject plans."
 )
 
@@ -132,7 +137,14 @@ STRATEGY_SYSTEM_PROMPT = (
     "exact evidence_id values from the supplied evidence; cite the relevant plan-field ID when "
     "explaining that information is missing. Never invent, prefix, or alter an evidence ID. Keep "
     "the reason, assumptions, and gaps brief. A feasibility score is an "
-    "advisory rubric score, not a probability of business success. Do not set budgets, permissions, or approval decisions. "
+    "advisory rubric score, not a probability of business success. Copy rubric_id and rubric_version "
+    "exactly from the supplied rubric. total_score must be the weighted Decimal sum of the seven "
+    "criterion scores using the supplied weights; do not round it. The backend verifies this exact "
+    "total. Absence of evidence, a missing benchmark, or an unsupported target is not a conflict. "
+    "Conflicts require two mutually incompatible factual claims from supplied evidence; lack of a "
+    "fact, weak support, or the difference between a stated target and no historical benchmark is "
+    "not a conflict. When no contradiction exists, return an empty evidence_conflicts array. Do not "
+    "set budgets, permissions, or approval decisions. "
     "Return only JSON."
 )
 
@@ -261,7 +273,7 @@ def validate_media_output(
         rule = configured_rules.get(rule_id)
         if rule is None or item["severity"] != rule.severity:
             raise ValueError("Media finding does not match a configured policy rule.")
-        if results_by_id[rule_id]["result"] not in {"FAIL", "UNKNOWN"}:
+        if results_by_id[rule_id]["result"] != "FAIL":
             raise ValueError("Media finding conflicts with its policy rule result.")
         refs = _references(item["evidence_refs"], valid_evidence, "Media finding evidence reference")
         if not refs:

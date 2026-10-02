@@ -1,6 +1,7 @@
 """Isolated, secret-safe model adapters for Media Compliance and Strategy Evaluation."""
 
 from contextlib import contextmanager
+from copy import deepcopy
 from dataclasses import dataclass, field
 import hashlib
 import json
@@ -197,7 +198,7 @@ class OpenAICompatibleTaskProvider:
         input_bytes = sum(len(item["content"].encode("utf-8")) for item in messages)
         if input_bytes > settings.max_input_bytes:
             raise ProviderNonRetryableError("Task input exceeds the configured limit.", code="INPUT_TOO_LARGE")
-        schema_name, schema = _schema_for(request.task)
+        schema_name, schema = _schema_for(request)
         body = {
             "model": settings.model_id,
             "messages": messages,
@@ -292,10 +293,51 @@ def _versions(task):
     return STRATEGY_PROMPT_VERSION, STRATEGY_SCHEMA_VERSION
 
 
-def _schema_for(task):
-    if task == "MEDIA_COMPLIANCE":
-        return "media_compliance", MEDIA_OUTPUT_SCHEMA
-    return "strategy_feasibility", STRATEGY_OUTPUT_SCHEMA
+def _schema_for(request):
+    """Constrain identifiers to this immutable evaluation input snapshot."""
+    if request.task == "MEDIA_COMPLIANCE":
+        name, source = "media_compliance", MEDIA_OUTPUT_SCHEMA
+    else:
+        name, source = "strategy_feasibility", STRATEGY_OUTPUT_SCHEMA
+    schema = deepcopy(source)
+
+    def set_enum(node, values):
+        if values:
+            node["enum"] = values
+
+    evidence_ids = _unique_text_values(
+        item.get("evidence_id") for item in request.evidence if isinstance(item, Mapping)
+    )
+    if request.task == "MEDIA_COMPLIANCE":
+        if request.policy is not None:
+            properties = schema["properties"]
+            set_enum(properties["policy_id"], [request.policy.policy_id])
+            set_enum(properties["policy_version"], [request.policy.policy_version])
+            rule_ids = [rule.rule_id for rule in request.policy.rules]
+            set_enum(properties["rule_results"]["items"]["properties"]["rule_id"], rule_ids)
+            set_enum(properties["findings"]["items"]["properties"]["rule_id"], rule_ids)
+        for key in ("rule_results", "findings", "evidence_conflicts"):
+            refs = schema["properties"][key]["items"]["properties"]["evidence_refs"]
+            set_enum(refs["items"], evidence_ids)
+    elif request.rubric is not None:
+        properties = schema["properties"]
+        set_enum(properties["rubric_id"], [request.rubric.rubric_id])
+        set_enum(properties["rubric_version"], [request.rubric.rubric_version])
+        criterion_ids = [criterion.criterion_id for criterion in request.rubric.criteria]
+        set_enum(
+            properties["criterion_scores"]["items"]["properties"]["criterion_id"],
+            criterion_ids,
+        )
+        for key in ("criterion_scores", "evidence_conflicts"):
+            refs = schema["properties"][key]["items"]["properties"]["evidence_refs"]
+            set_enum(refs["items"], evidence_ids)
+    return name, schema
+
+
+def _unique_text_values(values):
+    return list(dict.fromkeys(
+        value for value in values if isinstance(value, str) and value.strip()
+    ))
 
 
 def _bounded_int(environ, name, default, minimum, maximum):

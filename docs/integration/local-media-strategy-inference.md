@@ -12,7 +12,7 @@ The local Compose backend can call Ollama on the Windows host through
 | Strategy Evaluation | `organizationai-qwen3:4b-ctx8192` | Score the fixed seven-criterion BA rubric and surface assumptions/gaps |
 
 The task alias is Qwen3-4B Q4_K_M (2.5 GB download, Apache-2.0) with an 8,192-token context. Its Ollama model digest is pinned in local `.env` as
-`sha256:b2ef2f414e31e4e10ef46366751464631a5fa4b5c1bf183b3e1b3e9076ab2116ef`.
+`sha256:b2ef2f414e31e4e10ef46366751464631a5fa4b5c1bf183b1e3b9076ab2116ef`.
 The base tag is `qwen3:4b`; create the constrained alias with:
 
 ```powershell
@@ -31,13 +31,16 @@ digest above. Set `ALLOW_REMOTE=false`, `TIMEOUT_SECONDS=45`,
 `MAX_OUTPUT_TOKENS=2048`, `MAX_RESPONSE_BYTES=262144`, `MAX_INPUT_BYTES=8192`,
 `MAX_RETRIES=1`, and `REASONING_EFFORT=none`. Use the supported prompt and schema
 versions already shown in `.env.example`; do not substitute an unrecognized
-version. Media uses `media-compliance-prompt-v4` and
-`media-compliance-schema-v2` to keep findings aligned with failed policy rules
+version. Media uses `media-compliance-prompt-v5` and
+`media-compliance-schema-v3` to constrain policy identifiers to the submitted
+snapshot and keep findings aligned with failed policy rules
 and require cited evidence, without inferring exceptions from synthetic/demo
-context. Configured forbidden OCR literals are checked against the submitted
-extraction evidence before the Media result is accepted. Strategy uses
-`strategy-evaluation-prompt-v4` and
-`strategy-evaluation-schema-v4` to distinguish missing facts from conflicts,
+context. The request schema constrains policy, rule, and evidence IDs to the
+active submitted snapshot. Configured forbidden OCR literals are checked
+against the submitted extraction evidence before the Media result is accepted.
+Strategy uses `strategy-evaluation-prompt-v5` and
+`strategy-evaluation-schema-v5` to constrain rubric, criterion, and evidence IDs
+to the active submitted snapshot and distinguish missing facts from conflicts,
 require two references per conflict, require each criterion to cite a supplied
 evidence ID, and keep local-model output concise. The
 backend Compose service passes these settings into the container.

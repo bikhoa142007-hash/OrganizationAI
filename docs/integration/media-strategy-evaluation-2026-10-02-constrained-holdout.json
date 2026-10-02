@@ -1,0 +1,1037 @@
+{
+  "report_schema": "organizationai.local-media-strategy-evaluation/1.0",
+  "generated_at": "2026-10-02T09:37:21Z",
+  "dataset_id": "local-media-strategy-2026-10-02-v1",
+  "dataset_label_status": "PROPOSED_NOT_HUMAN_APPROVED",
+  "split": "holdout",
+  "execution": {
+    "mode": "REAL_LOCAL_OLLAMA_TEXT_EVALUATORS",
+    "calls_are_sequential": true,
+    "maximum_model_calls": 4,
+    "retries_per_case": 0,
+    "timeout_seconds_by_task": {
+      "MEDIA_COMPLIANCE": 45,
+      "STRATEGY_EVALUATION": 45
+    },
+    "image_extraction_measured": false,
+    "final_approval_decisions_made": false,
+    "auto_approval_enabled": false
+  },
+  "policy": {
+    "policy_id": "SYNTHETIC_LOCAL_SMOKE",
+    "policy_version": "SYNTHETIC_LOCAL_SMOKE-1.0-proposed",
+    "scope_departments": [
+      "SYNTHETIC_LOCAL_SMOKE"
+    ],
+    "scope_channels": [
+      "social"
+    ],
+    "production_policy": false
+  },
+  "rubric": {
+    "rubric_id": "SYNTHETIC_STRATEGY_7",
+    "rubric_version": "SYNTHETIC_STRATEGY_7-1.0-proposed",
+    "weights": {
+      "objective": 15,
+      "audience": 15,
+      "channel": 15,
+      "timeline": 15,
+      "kpi": 15,
+      "budget_efficiency": 15,
+      "risk_control": 10
+    },
+    "production_rubric": false
+  },
+  "proposed_criterion_state_legend": {
+    "PRESENT": "The submitted plan states the criterion information directly.",
+    "PARTIAL": "Some relevant information is present, but a material definition or measure is missing.",
+    "MISSING": "The plan omits the information needed for the criterion.",
+    "UNSUPPORTED_TARGET": "The plan states a target or forecast without supporting baseline or evidence.",
+    "NO_BENCHMARK": "No external or historical benchmark is provided; this alone is not a contradiction.",
+    "CONFLICT": "Two supplied factual sources state incompatible amounts or facts."
+  },
+  "model": {
+    "provider": "OPENAI_COMPATIBLE_CHAT_COMPLETIONS",
+    "model_id": "organizationai-qwen3:4b-ctx8192",
+    "configured_model_version": "sha256:b2ef2f414e31e4e10ef46366751464631a5fa4b5c1bf183b1e3b9076ab2116ef",
+    "observed_ollama_digest": "sha256:b2ef2f414e31e4e10ef46366751464631a5fa4b5c1bf183b1e3b9076ab2116ef",
+    "context_size": 8192,
+    "remote_access_enabled": false,
+    "initially_loaded": false
+  },
+  "summary": {
+    "MEDIA_COMPLIANCE": {
+      "cases": 2,
+      "schema_valid": 1,
+      "schema_invalid_or_provider_failed": 1,
+      "timeouts": 0,
+      "provider_error_codes": {
+        "INVALID_SCHEMA": 1
+      },
+      "latency_seconds": [
+        19.225,
+        14.177
+      ],
+      "proposed_component_label_matches": 1,
+      "raw_pass_with_hard_violation": 1,
+      "validator_fail_closed": 1
+    },
+    "STRATEGY_EVALUATION": {
+      "cases": 2,
+      "schema_valid": 2,
+      "schema_invalid_or_provider_failed": 0,
+      "timeouts": 0,
+      "provider_error_codes": {},
+      "latency_seconds": [
+        7404.314,
+        8.799
+      ],
+      "proposed_conflict_label_matches_on_valid_outputs": 2,
+      "per_criterion": {
+        "objective": {
+          "weight": 15,
+          "scored_cases": 2,
+          "scores": [
+            0.0,
+            0.0
+          ],
+          "evidence_references": [
+            [
+              "plan-field:objective"
+            ],
+            [
+              "plan-field:objective"
+            ]
+          ],
+          "scores_by_proposed_information_state": {
+            "PRESENT": [
+              0.0,
+              0.0
+            ]
+          }
+        },
+        "audience": {
+          "weight": 15,
+          "scored_cases": 2,
+          "scores": [
+            0.0,
+            0.0
+          ],
+          "evidence_references": [
+            [
+              "plan-field:target_audience"
+            ],
+            [
+              "plan-field:target_audience"
+            ]
+          ],
+          "scores_by_proposed_information_state": {
+            "PRESENT": [
+              0.0,
+              0.0
+            ]
+          }
+        },
+        "channel": {
+          "weight": 15,
+          "scored_cases": 2,
+          "scores": [
+            0.0,
+            0.0
+          ],
+          "evidence_references": [
+            [
+              "plan-field:channels"
+            ],
+            [
+              "plan-field:channels"
+            ]
+          ],
+          "scores_by_proposed_information_state": {
+            "PRESENT": [
+              0.0,
+              0.0
+            ]
+          }
+        },
+        "timeline": {
+          "weight": 15,
+          "scored_cases": 2,
+          "scores": [
+            0.0,
+            0.0
+          ],
+          "evidence_references": [
+            [
+              "plan-field:start_date",
+              "plan-field:end_date"
+            ],
+            [
+              "plan-field:start_date"
+            ]
+          ],
+          "scores_by_proposed_information_state": {
+            "PRESENT": [
+              0.0,
+              0.0
+            ]
+          }
+        },
+        "kpi": {
+          "weight": 15,
+          "scored_cases": 2,
+          "scores": [
+            0.0,
+            0.0
+          ],
+          "evidence_references": [
+            [
+              "plan-field:kpi_expected"
+            ],
+            [
+              "plan-field:objective"
+            ]
+          ],
+          "scores_by_proposed_information_state": {
+            "PRESENT": [
+              0.0
+            ],
+            "UNSUPPORTED_TARGET": [
+              0.0
+            ]
+          }
+        },
+        "budget_efficiency": {
+          "weight": 15,
+          "scored_cases": 2,
+          "scores": [
+            0.0,
+            0.0
+          ],
+          "evidence_references": [
+            [
+              "plan-field:summary",
+              "plan-field:budget_minor_units"
+            ],
+            [
+              "plan-field:budget_minor_units"
+            ]
+          ],
+          "scores_by_proposed_information_state": {
+            "CONFLICT": [
+              0.0
+            ],
+            "NO_BENCHMARK": [
+              0.0
+            ]
+          }
+        },
+        "risk_control": {
+          "weight": 10,
+          "scored_cases": 2,
+          "scores": [
+            0.0,
+            0.0
+          ],
+          "evidence_references": [
+            [
+              "plan-field:notes"
+            ],
+            [
+              "plan-field:notes"
+            ]
+          ],
+          "scores_by_proposed_information_state": {
+            "MISSING": [
+              0.0,
+              0.0
+            ]
+          }
+        }
+      }
+    }
+  },
+  "results": [
+    {
+      "case_id": "MEDIA-007",
+      "split": "holdout",
+      "task": "MEDIA_COMPLIANCE",
+      "started_at": "2026-10-02T07:33:20Z",
+      "elapsed_seconds": 19.225,
+      "status": "FAILED",
+      "error_code": "INVALID_SCHEMA",
+      "error_reason": "The raw model output failed local schema or evidence validation.",
+      "validator_error": "Media result conflicts with the configured literal rule.",
+      "raw_output_hash": "7b5d0bb5b10d243dad084ed1ab656222a3039b503f88d1bdbadfc0f57291fa14",
+      "raw_model_output": {
+        "policy_id": "SYNTHETIC_LOCAL_SMOKE",
+        "policy_version": "SYNTHETIC_LOCAL_SMOKE-1.0-proposed",
+        "outcome": "PASS",
+        "confidence": 1.0,
+        "reason": "No evidence found for forbidden literals",
+        "rule_results": [
+          {
+            "rule_id": "PROHIBITED_CLAIM",
+            "result": "PASS",
+            "rationale": "No evidence found for forbidden literals",
+            "evidence_refs": [
+              "media-007-ocr-a",
+              "media-007-ocr-b"
+            ]
+          }
+        ],
+        "findings": [
+          {
+            "finding_id": "no-violation",
+            "severity": "HARD_VIOLATION",
+            "description": "No evidence found for forbidden literals",
+            "rule_id": "PROHIBITED_CLAIM",
+            "evidence_refs": [
+              "media-007-ocr-a",
+              "media-007-ocr-b"
+            ]
+          }
+        ],
+        "evidence_conflicts": []
+      },
+      "validated_output": null,
+      "raw_evidence_refs": [
+        "media-007-ocr-a",
+        "media-007-ocr-b"
+      ],
+      "required_evidence_refs_cited": [
+        "media-007-ocr-a"
+      ],
+      "required_evidence_refs_missing": [],
+      "assessment": {
+        "expected_component_outcome": "REVIEW_REQUIRED",
+        "actual_component_outcome": "HUMAN_REVIEW_REQUIRED",
+        "component_outcome_matches_proposed_label": false,
+        "hard_violation_expected": true,
+        "hard_violation_reported": true,
+        "raw_pass_with_hard_violation": true,
+        "validator_failed_closed": true,
+        "decision_scope": "Media component result only; this evaluator does not make an approval decision."
+      },
+      "model_loaded_after_case": true,
+      "runtime_context_length_after_case": 8192,
+      "sequence_number": 1,
+      "model_phase": "first_or_unloaded"
+    },
+    {
+      "case_id": "MEDIA-008",
+      "split": "holdout",
+      "task": "MEDIA_COMPLIANCE",
+      "started_at": "2026-10-02T07:33:40Z",
+      "elapsed_seconds": 14.177,
+      "status": "SUCCEEDED",
+      "error_code": null,
+      "error_reason": null,
+      "validator_error": null,
+      "raw_output_hash": "87f540c4664ef685e1b4c02e92d0ece29f5ec09908d590d3534c42ac4d6d80e6",
+      "raw_model_output": {
+        "policy_id": "SYNTHETIC_LOCAL_SMOKE",
+        "policy_version": "SYNTHETIC_LOCAL_SMOKE-1.0-proposed",
+        "outcome": "PASS",
+        "confidence": 1.0,
+        "reason": "The rule requires checking for the literal string 'UNAPPROVED_GUARANTEE' in OCR_TEXT evidence. The evidence provided is 'UNAPPROVED-GUARANTEE uses a hyphen, not the configured underscore literal.' This evidence does not contain the exact literal 'UNAPPROVED_GUARANTEE' as a complete substring. Therefore, the rule passes.",
+        "rule_results": [
+          {
+            "rule_id": "PROHIBITED_CLAIM",
+            "result": "PASS",
+            "rationale": "The required evidence is present as OCR_TEXT. The forbidden literal 'UNAPPROVED_GUARANTEE' does not occur as a complete substring in the evidence text 'UNAPPROVED-GUARANTEE uses a hyphen, not the configured underscore literal.'",
+            "evidence_refs": [
+              "media-008-ocr"
+            ]
+          }
+        ],
+        "findings": [],
+        "evidence_conflicts": []
+      },
+      "validated_output": {
+        "policy_id": "SYNTHETIC_LOCAL_SMOKE",
+        "policy_version": "SYNTHETIC_LOCAL_SMOKE-1.0-proposed",
+        "outcome": "PASS",
+        "confidence": 1.0,
+        "reason": "The rule requires checking for the literal string 'UNAPPROVED_GUARANTEE' in OCR_TEXT evidence. The evidence provided is 'UNAPPROVED-GUARANTEE uses a hyphen, not the configured underscore literal.' This evidence does not contain the exact literal 'UNAPPROVED_GUARANTEE' as a complete substring. Therefore, the rule passes.",
+        "rule_results": [
+          {
+            "rule_id": "PROHIBITED_CLAIM",
+            "result": "PASS",
+            "severity": "HARD_VIOLATION",
+            "rationale": "The required evidence is present as OCR_TEXT. The forbidden literal 'UNAPPROVED_GUARANTEE' does not occur as a complete substring in the evidence text 'UNAPPROVED-GUARANTEE uses a hyphen, not the configured underscore literal.'",
+            "evidence_refs": [
+              "media-008-ocr"
+            ]
+          }
+        ],
+        "findings": [],
+        "evidence_conflicts": [],
+        "missing_evidence": []
+      },
+      "raw_evidence_refs": [
+        "media-008-ocr"
+      ],
+      "required_evidence_refs_cited": [
+        "media-008-ocr"
+      ],
+      "required_evidence_refs_missing": [],
+      "assessment": {
+        "expected_component_outcome": "PASS",
+        "actual_component_outcome": "PASS",
+        "component_outcome_matches_proposed_label": true,
+        "hard_violation_expected": false,
+        "hard_violation_reported": false,
+        "raw_pass_with_hard_violation": false,
+        "validator_failed_closed": false,
+        "decision_scope": "Media component result only; this evaluator does not make an approval decision."
+      },
+      "model_loaded_after_case": true,
+      "runtime_context_length_after_case": 8192,
+      "sequence_number": 2,
+      "model_phase": "warm"
+    },
+    {
+      "case_id": "STRATEGY-007",
+      "split": "holdout",
+      "task": "STRATEGY_EVALUATION",
+      "started_at": "2026-10-02T07:33:54Z",
+      "elapsed_seconds": 7404.314,
+      "status": "SUCCEEDED",
+      "error_code": null,
+      "error_reason": null,
+      "validator_error": null,
+      "raw_output_hash": "284ffddceb447c8eb2d287c2d64ce6629547d962cf71e7ecf881910876e92fc1",
+      "raw_model_output": {
+        "rubric_id": "SYNTHETIC_STRATEGY_7",
+        "rubric_version": "SYNTHETIC_STRATEGY_7-1.0-proposed",
+        "total_score": 0.0,
+        "confidence": 0.0,
+        "criterion_scores": [
+          {
+            "criterion_id": "objective",
+            "score": 0.0,
+            "rationale": "Plan objective states 'Run a three-week pilot and measure confirmed registrations.' but no evidence confirms this is a valid business objective for the target audience.",
+            "evidence_refs": [
+              "plan-field:objective"
+            ]
+          },
+          {
+            "criterion_id": "audience",
+            "score": 0.0,
+            "rationale": "Target audience 'Small retailers in the test district' lacks demographic details and geographic specificity for market feasibility.",
+            "evidence_refs": [
+              "plan-field:target_audience"
+            ]
+          },
+          {
+            "criterion_id": "channel",
+            "score": 0.0,
+            "rationale": "Channel 'social' is too vague; no platform-specific strategy or channel effectiveness data provided.",
+            "evidence_refs": [
+              "plan-field:channels"
+            ]
+          },
+          {
+            "criterion_id": "timeline",
+            "score": 0.0,
+            "rationale": "Timeline from 2026-11-01 to 2026-11-21 is too short for a pilot program with 200 registrations.",
+            "evidence_refs": [
+              "plan-field:start_date",
+              "plan-field:end_date"
+            ]
+          },
+          {
+            "criterion_id": "kpi",
+            "score": 0.0,
+            "rationale": "KPI '200 confirmed registrations' lacks a clear definition of 'confirmed' and target audience size context.",
+            "evidence_refs": [
+              "plan-field:kpi_expected"
+            ]
+          },
+          {
+            "criterion_id": "budget_efficiency",
+            "score": 0.0,
+            "rationale": "Budget of VND 250,000,000 (250 million VND) is stated but no cost breakdown or efficiency metrics provided.",
+            "evidence_refs": [
+              "plan-field:summary",
+              "plan-field:budget_minor_units"
+            ]
+          },
+          {
+            "criterion_id": "risk_control",
+            "score": 0.0,
+            "rationale": "No risk mitigation strategies or contingency plans are outlined in the plan.",
+            "evidence_refs": [
+              "plan-field:notes"
+            ]
+          }
+        ],
+        "assumptions": [
+          "The vendor quote confirms the budget amount matches the form."
+        ],
+        "missing_facts": [
+          "Specific geographic location of test district",
+          "Number of small retailers in the test district",
+          "Social media platform details",
+          "Registration confirmation process",
+          "Cost allocation per channel",
+          "Risk mitigation strategies"
+        ],
+        "critical_gaps": [
+          "Timeline too short for 200 registrations",
+          "No budget breakdown",
+          "No risk control measures"
+        ],
+        "evidence_conflicts": [
+          {
+            "conflict_id": "budget_amount",
+            "description": "Plan states VND 250,000,000 but vendor quote shows VND 2,500,000,000 (2.5 billion).",
+            "evidence_refs": [
+              "plan-field:summary",
+              "strategy-007-quote"
+            ]
+          }
+        ],
+        "reason": "Budget amount discrepancy between plan and vendor quote"
+      },
+      "validated_output": {
+        "rubric_id": "SYNTHETIC_STRATEGY_7",
+        "rubric_version": "SYNTHETIC_STRATEGY_7-1.0-proposed",
+        "feasibility_score": 0.0,
+        "confidence": 0.0,
+        "criterion_scores": [
+          {
+            "criterion_id": "objective",
+            "weight": 15,
+            "score": 0.0,
+            "maximum_score": 100.0,
+            "rationale": "Plan objective states 'Run a three-week pilot and measure confirmed registrations.' but no evidence confirms this is a valid business objective for the target audience.",
+            "evidence_refs": [
+              "plan-field:objective"
+            ]
+          },
+          {
+            "criterion_id": "audience",
+            "weight": 15,
+            "score": 0.0,
+            "maximum_score": 100.0,
+            "rationale": "Target audience 'Small retailers in the test district' lacks demographic details and geographic specificity for market feasibility.",
+            "evidence_refs": [
+              "plan-field:target_audience"
+            ]
+          },
+          {
+            "criterion_id": "channel",
+            "weight": 15,
+            "score": 0.0,
+            "maximum_score": 100.0,
+            "rationale": "Channel 'social' is too vague; no platform-specific strategy or channel effectiveness data provided.",
+            "evidence_refs": [
+              "plan-field:channels"
+            ]
+          },
+          {
+            "criterion_id": "timeline",
+            "weight": 15,
+            "score": 0.0,
+            "maximum_score": 100.0,
+            "rationale": "Timeline from 2026-11-01 to 2026-11-21 is too short for a pilot program with 200 registrations.",
+            "evidence_refs": [
+              "plan-field:start_date",
+              "plan-field:end_date"
+            ]
+          },
+          {
+            "criterion_id": "kpi",
+            "weight": 15,
+            "score": 0.0,
+            "maximum_score": 100.0,
+            "rationale": "KPI '200 confirmed registrations' lacks a clear definition of 'confirmed' and target audience size context.",
+            "evidence_refs": [
+              "plan-field:kpi_expected"
+            ]
+          },
+          {
+            "criterion_id": "budget_efficiency",
+            "weight": 15,
+            "score": 0.0,
+            "maximum_score": 100.0,
+            "rationale": "Budget of VND 250,000,000 (250 million VND) is stated but no cost breakdown or efficiency metrics provided.",
+            "evidence_refs": [
+              "plan-field:summary",
+              "plan-field:budget_minor_units"
+            ]
+          },
+          {
+            "criterion_id": "risk_control",
+            "weight": 10,
+            "score": 0.0,
+            "maximum_score": 100.0,
+            "rationale": "No risk mitigation strategies or contingency plans are outlined in the plan.",
+            "evidence_refs": [
+              "plan-field:notes"
+            ]
+          }
+        ],
+        "assumptions": [
+          "The vendor quote confirms the budget amount matches the form."
+        ],
+        "missing_facts": [
+          "Specific geographic location of test district",
+          "Number of small retailers in the test district",
+          "Social media platform details",
+          "Registration confirmation process",
+          "Cost allocation per channel",
+          "Risk mitigation strategies"
+        ],
+        "critical_gaps": [
+          "Timeline too short for 200 registrations",
+          "No budget breakdown",
+          "No risk control measures"
+        ],
+        "evidence_conflicts": [
+          {
+            "conflict_id": "budget_amount",
+            "description": "Plan states VND 250,000,000 but vendor quote shows VND 2,500,000,000 (2.5 billion).",
+            "evidence_refs": [
+              "plan-field:summary",
+              "strategy-007-quote"
+            ]
+          }
+        ],
+        "reason": "Budget amount discrepancy between plan and vendor quote"
+      },
+      "raw_evidence_refs": [
+        "plan-field:budget_minor_units",
+        "plan-field:channels",
+        "plan-field:end_date",
+        "plan-field:kpi_expected",
+        "plan-field:notes",
+        "plan-field:objective",
+        "plan-field:start_date",
+        "plan-field:summary",
+        "plan-field:target_audience",
+        "strategy-007-quote"
+      ],
+      "required_evidence_refs_cited": [
+        "plan-field:budget_minor_units",
+        "strategy-007-quote"
+      ],
+      "required_evidence_refs_missing": [],
+      "criterion_scores": [
+        {
+          "criterion_id": "objective",
+          "weight": 15,
+          "proposed_information_state": "PRESENT",
+          "score": 0.0,
+          "rationale": "Plan objective states 'Run a three-week pilot and measure confirmed registrations.' but no evidence confirms this is a valid business objective for the target audience.",
+          "evidence_refs": [
+            "plan-field:objective"
+          ]
+        },
+        {
+          "criterion_id": "audience",
+          "weight": 15,
+          "proposed_information_state": "PRESENT",
+          "score": 0.0,
+          "rationale": "Target audience 'Small retailers in the test district' lacks demographic details and geographic specificity for market feasibility.",
+          "evidence_refs": [
+            "plan-field:target_audience"
+          ]
+        },
+        {
+          "criterion_id": "channel",
+          "weight": 15,
+          "proposed_information_state": "PRESENT",
+          "score": 0.0,
+          "rationale": "Channel 'social' is too vague; no platform-specific strategy or channel effectiveness data provided.",
+          "evidence_refs": [
+            "plan-field:channels"
+          ]
+        },
+        {
+          "criterion_id": "timeline",
+          "weight": 15,
+          "proposed_information_state": "PRESENT",
+          "score": 0.0,
+          "rationale": "Timeline from 2026-11-01 to 2026-11-21 is too short for a pilot program with 200 registrations.",
+          "evidence_refs": [
+            "plan-field:start_date",
+            "plan-field:end_date"
+          ]
+        },
+        {
+          "criterion_id": "kpi",
+          "weight": 15,
+          "proposed_information_state": "PRESENT",
+          "score": 0.0,
+          "rationale": "KPI '200 confirmed registrations' lacks a clear definition of 'confirmed' and target audience size context.",
+          "evidence_refs": [
+            "plan-field:kpi_expected"
+          ]
+        },
+        {
+          "criterion_id": "budget_efficiency",
+          "weight": 15,
+          "proposed_information_state": "CONFLICT",
+          "score": 0.0,
+          "rationale": "Budget of VND 250,000,000 (250 million VND) is stated but no cost breakdown or efficiency metrics provided.",
+          "evidence_refs": [
+            "plan-field:summary",
+            "plan-field:budget_minor_units"
+          ]
+        },
+        {
+          "criterion_id": "risk_control",
+          "weight": 10,
+          "proposed_information_state": "MISSING",
+          "score": 0.0,
+          "rationale": "No risk mitigation strategies or contingency plans are outlined in the plan.",
+          "evidence_refs": [
+            "plan-field:notes"
+          ]
+        }
+      ],
+      "assessment": {
+        "expected_conflict": true,
+        "conflict_reported": true,
+        "conflict_evidence_refs": [
+          "plan-field:summary",
+          "strategy-007-quote"
+        ],
+        "required_conflict_refs_missing": [
+          "plan-field:budget_minor_units"
+        ],
+        "required_gap_topics": [
+          "budget",
+          "currency",
+          "amount"
+        ],
+        "missing_facts": [
+          "Specific geographic location of test district",
+          "Number of small retailers in the test district",
+          "Social media platform details",
+          "Registration confirmation process",
+          "Cost allocation per channel",
+          "Risk mitigation strategies"
+        ],
+        "critical_gaps": [
+          "Timeline too short for 200 registrations",
+          "No budget breakdown",
+          "No risk control measures"
+        ],
+        "total_score": null,
+        "confidence": 0.0,
+        "confidence_is_calibrated": false,
+        "decision_scope": "Strategy assessment only; scores and labels do not authorize approval."
+      },
+      "model_loaded_after_case": true,
+      "runtime_context_length_after_case": 8192,
+      "sequence_number": 3,
+      "model_phase": "warm"
+    },
+    {
+      "case_id": "STRATEGY-008",
+      "split": "holdout",
+      "task": "STRATEGY_EVALUATION",
+      "started_at": "2026-10-02T09:37:12Z",
+      "elapsed_seconds": 8.799,
+      "status": "SUCCEEDED",
+      "error_code": null,
+      "error_reason": null,
+      "validator_error": null,
+      "raw_output_hash": "af857d7393dd65c12567814b06f7bf82d797e63129d809b985581628e3634941",
+      "raw_model_output": {
+        "rubric_id": "SYNTHETIC_STRATEGY_7",
+        "rubric_version": "SYNTHETIC_STRATEGY_7-1.0-proposed",
+        "total_score": 0.0,
+        "confidence": 0.0,
+        "criterion_scores": [
+          {
+            "criterion_id": "objective",
+            "score": 0.0,
+            "rationale": "Objective lacks measurable KPIs and conversion baseline; evidence_id:plan-field:objective",
+            "evidence_refs": [
+              "plan-field:objective"
+            ]
+          },
+          {
+            "criterion_id": "audience",
+            "score": 0.0,
+            "rationale": "Audience definition is vague without conversion baseline; evidence_id:plan-field:target_audience",
+            "evidence_refs": [
+              "plan-field:target_audience"
+            ]
+          },
+          {
+            "criterion_id": "channel",
+            "score": 0.0,
+            "rationale": "Channel lacks conversion baseline and attribution method; evidence_id:plan-field:channels",
+            "evidence_refs": [
+              "plan-field:channels"
+            ]
+          },
+          {
+            "criterion_id": "timeline",
+            "score": 0.0,
+            "rationale": "Timeline is too short for 5,000 purchases; evidence_id:plan-field:start_date",
+            "evidence_refs": [
+              "plan-field:start_date"
+            ]
+          },
+          {
+            "criterion_id": "kpi",
+            "score": 0.0,
+            "rationale": "KPIs are unsupported and lack conversion baseline; evidence_id:plan-field:objective",
+            "evidence_refs": [
+              "plan-field:objective"
+            ]
+          },
+          {
+            "criterion_id": "budget_efficiency",
+            "score": 0.0,
+            "rationale": "Budget lacks conversion baseline and attribution method; evidence_id:plan-field:budget_minor_units",
+            "evidence_refs": [
+              "plan-field:budget_minor_units"
+            ]
+          },
+          {
+            "criterion_id": "risk_control",
+            "score": 0.0,
+            "rationale": "No risk-control plan provided; evidence_id:plan-field:notes",
+            "evidence_refs": [
+              "plan-field:notes"
+            ]
+          }
+        ],
+        "assumptions": [
+          "No conversion baseline exists for the target audience"
+        ],
+        "missing_facts": [
+          "Conversion baseline for target audience",
+          "Purchase attribution method",
+          "Risk-control plan"
+        ],
+        "critical_gaps": [
+          "No historical benchmark for 5,000 purchases in 30 days",
+          "No conversion rate or cost per acquisition data"
+        ],
+        "evidence_conflicts": [],
+        "reason": "All criteria fail due to missing conversion baseline and unsupported claims"
+      },
+      "validated_output": {
+        "rubric_id": "SYNTHETIC_STRATEGY_7",
+        "rubric_version": "SYNTHETIC_STRATEGY_7-1.0-proposed",
+        "feasibility_score": 0.0,
+        "confidence": 0.0,
+        "criterion_scores": [
+          {
+            "criterion_id": "objective",
+            "weight": 15,
+            "score": 0.0,
+            "maximum_score": 100.0,
+            "rationale": "Objective lacks measurable KPIs and conversion baseline; evidence_id:plan-field:objective",
+            "evidence_refs": [
+              "plan-field:objective"
+            ]
+          },
+          {
+            "criterion_id": "audience",
+            "weight": 15,
+            "score": 0.0,
+            "maximum_score": 100.0,
+            "rationale": "Audience definition is vague without conversion baseline; evidence_id:plan-field:target_audience",
+            "evidence_refs": [
+              "plan-field:target_audience"
+            ]
+          },
+          {
+            "criterion_id": "channel",
+            "weight": 15,
+            "score": 0.0,
+            "maximum_score": 100.0,
+            "rationale": "Channel lacks conversion baseline and attribution method; evidence_id:plan-field:channels",
+            "evidence_refs": [
+              "plan-field:channels"
+            ]
+          },
+          {
+            "criterion_id": "timeline",
+            "weight": 15,
+            "score": 0.0,
+            "maximum_score": 100.0,
+            "rationale": "Timeline is too short for 5,000 purchases; evidence_id:plan-field:start_date",
+            "evidence_refs": [
+              "plan-field:start_date"
+            ]
+          },
+          {
+            "criterion_id": "kpi",
+            "weight": 15,
+            "score": 0.0,
+            "maximum_score": 100.0,
+            "rationale": "KPIs are unsupported and lack conversion baseline; evidence_id:plan-field:objective",
+            "evidence_refs": [
+              "plan-field:objective"
+            ]
+          },
+          {
+            "criterion_id": "budget_efficiency",
+            "weight": 15,
+            "score": 0.0,
+            "maximum_score": 100.0,
+            "rationale": "Budget lacks conversion baseline and attribution method; evidence_id:plan-field:budget_minor_units",
+            "evidence_refs": [
+              "plan-field:budget_minor_units"
+            ]
+          },
+          {
+            "criterion_id": "risk_control",
+            "weight": 10,
+            "score": 0.0,
+            "maximum_score": 100.0,
+            "rationale": "No risk-control plan provided; evidence_id:plan-field:notes",
+            "evidence_refs": [
+              "plan-field:notes"
+            ]
+          }
+        ],
+        "assumptions": [
+          "No conversion baseline exists for the target audience"
+        ],
+        "missing_facts": [
+          "Conversion baseline for target audience",
+          "Purchase attribution method",
+          "Risk-control plan"
+        ],
+        "critical_gaps": [
+          "No historical benchmark for 5,000 purchases in 30 days",
+          "No conversion rate or cost per acquisition data"
+        ],
+        "evidence_conflicts": [],
+        "reason": "All criteria fail due to missing conversion baseline and unsupported claims"
+      },
+      "raw_evidence_refs": [
+        "plan-field:budget_minor_units",
+        "plan-field:channels",
+        "plan-field:notes",
+        "plan-field:objective",
+        "plan-field:start_date",
+        "plan-field:target_audience"
+      ],
+      "required_evidence_refs_cited": [
+        "plan-field:notes"
+      ],
+      "required_evidence_refs_missing": [
+        "plan-field:summary"
+      ],
+      "criterion_scores": [
+        {
+          "criterion_id": "objective",
+          "weight": 15,
+          "proposed_information_state": "PRESENT",
+          "score": 0.0,
+          "rationale": "Objective lacks measurable KPIs and conversion baseline; evidence_id:plan-field:objective",
+          "evidence_refs": [
+            "plan-field:objective"
+          ]
+        },
+        {
+          "criterion_id": "audience",
+          "weight": 15,
+          "proposed_information_state": "PRESENT",
+          "score": 0.0,
+          "rationale": "Audience definition is vague without conversion baseline; evidence_id:plan-field:target_audience",
+          "evidence_refs": [
+            "plan-field:target_audience"
+          ]
+        },
+        {
+          "criterion_id": "channel",
+          "weight": 15,
+          "proposed_information_state": "PRESENT",
+          "score": 0.0,
+          "rationale": "Channel lacks conversion baseline and attribution method; evidence_id:plan-field:channels",
+          "evidence_refs": [
+            "plan-field:channels"
+          ]
+        },
+        {
+          "criterion_id": "timeline",
+          "weight": 15,
+          "proposed_information_state": "PRESENT",
+          "score": 0.0,
+          "rationale": "Timeline is too short for 5,000 purchases; evidence_id:plan-field:start_date",
+          "evidence_refs": [
+            "plan-field:start_date"
+          ]
+        },
+        {
+          "criterion_id": "kpi",
+          "weight": 15,
+          "proposed_information_state": "UNSUPPORTED_TARGET",
+          "score": 0.0,
+          "rationale": "KPIs are unsupported and lack conversion baseline; evidence_id:plan-field:objective",
+          "evidence_refs": [
+            "plan-field:objective"
+          ]
+        },
+        {
+          "criterion_id": "budget_efficiency",
+          "weight": 15,
+          "proposed_information_state": "NO_BENCHMARK",
+          "score": 0.0,
+          "rationale": "Budget lacks conversion baseline and attribution method; evidence_id:plan-field:budget_minor_units",
+          "evidence_refs": [
+            "plan-field:budget_minor_units"
+          ]
+        },
+        {
+          "criterion_id": "risk_control",
+          "weight": 10,
+          "proposed_information_state": "MISSING",
+          "score": 0.0,
+          "rationale": "No risk-control plan provided; evidence_id:plan-field:notes",
+          "evidence_refs": [
+            "plan-field:notes"
+          ]
+        }
+      ],
+      "assessment": {
+        "expected_conflict": false,
+        "conflict_reported": false,
+        "conflict_evidence_refs": [],
+        "required_conflict_refs_missing": [],
+        "required_gap_topics": [
+          "baseline",
+          "attribution",
+          "risk"
+        ],
+        "missing_facts": [
+          "Conversion baseline for target audience",
+          "Purchase attribution method",
+          "Risk-control plan"
+        ],
+        "critical_gaps": [
+          "No historical benchmark for 5,000 purchases in 30 days",
+          "No conversion rate or cost per acquisition data"
+        ],
+        "total_score": null,
+        "confidence": 0.0,
+        "confidence_is_calibrated": false,
+        "decision_scope": "Strategy assessment only; scores and labels do not authorize approval."
+      },
+      "model_loaded_after_case": true,
+      "runtime_context_length_after_case": 8192,
+      "sequence_number": 4,
+      "model_phase": "warm"
+    }
+  ],
+  "limitations": [
+    "Expected labels are proposed by the task author and have not been approved by a domain reviewer.",
+    "Schema evidence-reference validation does not prove that a cited item semantically supports a claim; report entries preserve raw and normalized evidence for review.",
+    "Strategy score values are advisory and model-reported confidence is not calibrated probability.",
+    "The suite calls Media and Strategy text evaluators directly; VLM image extraction and the PostgreSQL workflow are measured separately."
+  ]
+}

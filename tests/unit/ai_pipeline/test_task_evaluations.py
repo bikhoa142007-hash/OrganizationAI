@@ -184,6 +184,23 @@ def test_media_literal_rule_routes_missing_ocr_to_review():
     assert result["rule_results"][0]["result"] == "UNKNOWN"
 
 
+def test_media_finding_cannot_be_attached_to_unknown_rule_result():
+    output = valid_media_output()
+    output["outcome"] = "REVIEW_REQUIRED"
+    output["rule_results"][0].update(
+        result="UNKNOWN", rationale="The required image evidence is unreadable.", evidence_refs=["ev-image-1"]
+    )
+    output["findings"] = [{
+        "finding_id": "finding-unknown",
+        "severity": "HARD_VIOLATION",
+        "description": "The rule cannot be evaluated from this evidence.",
+        "rule_id": "BRAND-LOGO",
+        "evidence_refs": ["ev-image-1"],
+    }]
+    with pytest.raises(ValueError, match="finding conflicts"):
+        validate_media_output(output, media_policy(), {"ev-image-1"})
+
+
 def test_media_policy_must_have_an_explicit_scope_and_version():
     assert media_policy_from_json("") is None
     with pytest.raises(ValueError):
@@ -250,3 +267,21 @@ def test_media_contract_requires_consistent_findings_and_grounded_references():
     assert "findings must match a fail rule result" in MEDIA_SYSTEM_PROMPT.lower()
     assert "Do not infer an exception" in MEDIA_SYSTEM_PROMPT
     assert "forbidden_literals" in MEDIA_SYSTEM_PROMPT
+
+
+def test_media_prompt_requires_verbatim_versions_and_fails_closed_on_missing_ocr_or_hard_violation():
+    prompt = MEDIA_SYSTEM_PROMPT.lower()
+
+    assert "copy policy_id and policy_version exactly" in prompt
+    assert "missing required ocr_text evidence means unknown and review_required" in prompt
+    assert "a hard-violation fail always requires review_required" in prompt
+    assert "synthetic or test context never changes a rule result" in prompt
+
+
+def test_strategy_prompt_requires_verbatim_rubric_version_weighted_total_and_strict_conflicts():
+    prompt = STRATEGY_SYSTEM_PROMPT.lower()
+
+    assert "copy rubric_id and rubric_version exactly" in prompt
+    assert "total_score must be the weighted decimal sum of the seven criterion scores" in prompt
+    assert "absence of evidence, a missing benchmark, or an unsupported target is not a conflict" in prompt
+    assert "conflicts require two mutually incompatible factual claims" in prompt
