@@ -193,3 +193,6 @@ Pytest with SQLite-backed test sessions checks API logic and permission behavior
 but it does not prove the PostgreSQL migration ran. Only `alembic upgrade head`
 against the Compose PostgreSQL service followed by the smoke script establishes
 that runtime result.
+
+The local real-model smoke configuration and retained smoke records are
+documented in [Local Media and Strategy inference](local-media-strategy-inference.md).

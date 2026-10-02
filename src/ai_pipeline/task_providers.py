@@ -40,6 +40,7 @@ class TaskModelSettings:
     model_id: str
     model_version: str
     api_key: str = field(default="", repr=False, compare=False)
+    reasoning_effort: str | None = None
     allow_remote: bool = False
     timeout_seconds: int = 20
     max_output_tokens: int = 2048
@@ -60,6 +61,12 @@ class TaskModelSettings:
         model_id = _optional(environ.get(prefix + "_MODEL")) or ""
         model_version = _optional(environ.get(prefix + "_MODEL_VERSION")) or ""
         api_key = environ.get(prefix + "_API_KEY", "")
+        reasoning_effort = _optional(environ.get(prefix + "_REASONING_EFFORT"))
+        if reasoning_effort is not None:
+            reasoning_effort = reasoning_effort.lower()
+        reasoning_invalid = reasoning_effort not in {None, "none", "low", "medium", "high", "max"}
+        if reasoning_invalid:
+            reasoning_effort = None
         prompt_version = _optional(environ.get(prefix + "_PROMPT_VERSION")) or expected_prompt
         schema_version = _optional(environ.get(prefix + "_SCHEMA_VERSION")) or expected_schema
         allow_remote, remote_invalid = _boolean(environ.get(prefix + "_ALLOW_REMOTE"), default=False)
@@ -88,7 +95,9 @@ class TaskModelSettings:
             # not prevent the authenticated workflow API from starting.
             error = "INVALID_PROVIDER_CONFIGURATION"
             parsed = defaults
-        if provider and provider != SUPPORTED_PROTOCOL:
+        if reasoning_invalid:
+            error = "INVALID_PROVIDER_CONFIGURATION"
+        elif provider and provider != SUPPORTED_PROTOCOL:
             error = "UNSUPPORTED_PROVIDER_PROTOCOL"
         elif provider and prompt_version != expected_prompt:
             error = "UNSUPPORTED_PROMPT_VERSION"
@@ -108,6 +117,7 @@ class TaskModelSettings:
             model_id=model_id,
             model_version=model_version,
             api_key=api_key,
+            reasoning_effort=reasoning_effort,
             allow_remote=allow_remote,
             prompt_version=prompt_version,
             schema_version=schema_version,
@@ -129,6 +139,7 @@ class TaskModelSettings:
             "provider": self.provider,
             "model_id": self.model_id or None,
             "model_version": self.model_version or None,
+            "reasoning_effort": self.reasoning_effort,
             "endpoint_fingerprint": hashlib.sha256(self.base_url.encode("utf-8")).hexdigest()
             if self.base_url else None,
             "timeout_seconds": self.timeout_seconds,
@@ -198,6 +209,8 @@ class OpenAICompatibleTaskProvider:
                 "json_schema": {"name": schema_name, "strict": True, "schema": schema},
             },
         }
+        if settings.reasoning_effort is not None:
+            body["reasoning_effort"] = settings.reasoning_effort
         response_bytes = self._post(body)
         try:
             response = json.loads(response_bytes)

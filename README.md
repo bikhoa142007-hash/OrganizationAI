@@ -409,7 +409,7 @@ E2E tự chạy backend tại `127.0.0.1:8008`, frontend tại `127.0.0.1:5178` 
 
 `LocalVLMProvider` gửi ảnh riêng tư từ snapshot đã xác minh tới một endpoint OpenAI-compatible Chat Completions do operator cấu hình. Request dùng base64 `image_url` và JSON Schema response format; adapter chỉ yêu cầu OCR, quan sát trực tiếp và điều chưa đọc được. Server tự gắn attachment ID/hash, version, approval round, run ID và input hash. VLM không trả confidence, bounding box, quyết định duyệt hoặc điểm đánh giá.
 
-`LocalVLMProvider` là bước trích xuất ảnh hiện có. Media và Strategy dùng hai `OpenAICompatibleTaskProvider` tách biệt; chúng không tái sử dụng đầu ra combined evaluator cũ. Mỗi task chỉ gọi khi có provider/model/version và cấu hình policy/rubric đang hoạt động. Hiện repo không kèm content policy Marketing đã được phê duyệt; vì vậy `AUTH_WORKFLOW_MEDIA_POLICY_JSON` để trống và Media luôn báo chưa cấu hình cho đến khi operator cung cấp chính sách có version. Strategy rubric cũng chưa được bật mặc định. Auto-approval Auth vẫn tắt.
+`LocalVLMProvider` là bước trích xuất ảnh hiện có. Media và Strategy dùng hai `OpenAICompatibleTaskProvider` tách biệt; chúng không tái sử dụng đầu ra combined evaluator cũ. Mỗi task chỉ gọi khi có provider/model/version và cấu hình policy/rubric đang hoạt động. Repo không kèm content policy Marketing đã được tổ chức phê duyệt, nên policy mẫu chỉ được giới hạn trong `.env` local để smoke test và không áp dụng cho department/channel khác. Strategy rubric được bật riêng trong `.env` local. Auto-approval Auth vẫn tắt. Xem [hướng dẫn inference local](docs/integration/local-media-strategy-inference.md) để biết runtime/model đã xác minh và kết quả smoke PostgreSQL.
 
 Thiết lập các biến sau trong `.env` (không commit file này):
 
@@ -483,7 +483,7 @@ Xem thêm [API examples](docs/integration/api-examples.md) và [generated OpenAP
 ## ⚠️ Giới Hạn Hiện Tại
 
 - Shared demo actors có thể được bất kỳ người dùng demo nào chọn; chưa có production authentication/session management.
-- FastAPI Judge Demo tiếp tục dùng `MockVLMProvider`. Auth Local VLM có transport OpenAI-compatible nhưng runtime/model chưa được chọn hoặc cấu hình; Media Compliance và Strategy provider thật còn thiếu nên Auth vẫn route Checker.
+- FastAPI Judge Demo tiếp tục dùng `MockVLMProvider`. Cấu hình local hiện dùng Ollama cho VLM extraction, Media Compliance và Strategy Evaluation trên dữ liệu tổng hợp; model không được đóng gói cùng ứng dụng. Đây chưa phải content policy, budget hoặc authority config đã được tổ chức phê duyệt; Auth auto-approval vẫn tắt và production inference chưa được cấu hình.
 - SQLite phù hợp single-instance demo, không phù hợp horizontal scaling hoặc dữ liệu phê duyệt thật.
 - Render Free dùng ephemeral `/tmp`; plan, attachment, audit và idempotency record có thể mất khi restart/redeploy/spin-down. Chỉ tám seed scenario được tạo lại.
 - Render Free có cold start và có thể gián đoạn trong lúc deploy.
