@@ -229,7 +229,7 @@ class AuthenticatedEvaluationOrchestrator:
                 deadline, lambda output, refs: validate_media_output(
                     output, media_policy, refs, required_evidence_missing=missing_evidence,
                 ),
-                {item["evidence_id"]: item.get("kind") for item in image_evidence}, on_step,
+                {item["evidence_id"]: item for item in image_evidence}, on_step,
             )
 
         # Strategy depends on the submitted plan snapshot and receives extraction evidence when available.

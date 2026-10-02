@@ -1,6 +1,7 @@
 """Isolated, secret-safe model adapters for Media Compliance and Strategy Evaluation."""
 
 from contextlib import contextmanager
+from copy import deepcopy
 from dataclasses import dataclass, field
 import hashlib
 import json
@@ -40,6 +41,7 @@ class TaskModelSettings:
     model_id: str
     model_version: str
     api_key: str = field(default="", repr=False, compare=False)
+    reasoning_effort: str | None = None
     allow_remote: bool = False
     timeout_seconds: int = 20
     max_output_tokens: int = 2048
@@ -60,6 +62,12 @@ class TaskModelSettings:
         model_id = _optional(environ.get(prefix + "_MODEL")) or ""
         model_version = _optional(environ.get(prefix + "_MODEL_VERSION")) or ""
         api_key = environ.get(prefix + "_API_KEY", "")
+        reasoning_effort = _optional(environ.get(prefix + "_REASONING_EFFORT"))
+        if reasoning_effort is not None:
+            reasoning_effort = reasoning_effort.lower()
+        reasoning_invalid = reasoning_effort not in {None, "none", "low", "medium", "high", "max"}
+        if reasoning_invalid:
+            reasoning_effort = None
         prompt_version = _optional(environ.get(prefix + "_PROMPT_VERSION")) or expected_prompt
         schema_version = _optional(environ.get(prefix + "_SCHEMA_VERSION")) or expected_schema
         allow_remote, remote_invalid = _boolean(environ.get(prefix + "_ALLOW_REMOTE"), default=False)
@@ -88,7 +96,9 @@ class TaskModelSettings:
             # not prevent the authenticated workflow API from starting.
             error = "INVALID_PROVIDER_CONFIGURATION"
             parsed = defaults
-        if provider and provider != SUPPORTED_PROTOCOL:
+        if reasoning_invalid:
+            error = "INVALID_PROVIDER_CONFIGURATION"
+        elif provider and provider != SUPPORTED_PROTOCOL:
             error = "UNSUPPORTED_PROVIDER_PROTOCOL"
         elif provider and prompt_version != expected_prompt:
             error = "UNSUPPORTED_PROMPT_VERSION"
@@ -108,6 +118,7 @@ class TaskModelSettings:
             model_id=model_id,
             model_version=model_version,
             api_key=api_key,
+            reasoning_effort=reasoning_effort,
             allow_remote=allow_remote,
             prompt_version=prompt_version,
             schema_version=schema_version,
@@ -129,6 +140,7 @@ class TaskModelSettings:
             "provider": self.provider,
             "model_id": self.model_id or None,
             "model_version": self.model_version or None,
+            "reasoning_effort": self.reasoning_effort,
             "endpoint_fingerprint": hashlib.sha256(self.base_url.encode("utf-8")).hexdigest()
             if self.base_url else None,
             "timeout_seconds": self.timeout_seconds,
@@ -186,7 +198,7 @@ class OpenAICompatibleTaskProvider:
         input_bytes = sum(len(item["content"].encode("utf-8")) for item in messages)
         if input_bytes > settings.max_input_bytes:
             raise ProviderNonRetryableError("Task input exceeds the configured limit.", code="INPUT_TOO_LARGE")
-        schema_name, schema = _schema_for(request.task)
+        schema_name, schema = _schema_for(request)
         body = {
             "model": settings.model_id,
             "messages": messages,
@@ -198,6 +210,8 @@ class OpenAICompatibleTaskProvider:
                 "json_schema": {"name": schema_name, "strict": True, "schema": schema},
             },
         }
+        if settings.reasoning_effort is not None:
+            body["reasoning_effort"] = settings.reasoning_effort
         response_bytes = self._post(body)
         try:
             response = json.loads(response_bytes)
@@ -279,10 +293,51 @@ def _versions(task):
     return STRATEGY_PROMPT_VERSION, STRATEGY_SCHEMA_VERSION
 
 
-def _schema_for(task):
-    if task == "MEDIA_COMPLIANCE":
-        return "media_compliance", MEDIA_OUTPUT_SCHEMA
-    return "strategy_feasibility", STRATEGY_OUTPUT_SCHEMA
+def _schema_for(request):
+    """Constrain identifiers to this immutable evaluation input snapshot."""
+    if request.task == "MEDIA_COMPLIANCE":
+        name, source = "media_compliance", MEDIA_OUTPUT_SCHEMA
+    else:
+        name, source = "strategy_feasibility", STRATEGY_OUTPUT_SCHEMA
+    schema = deepcopy(source)
+
+    def set_enum(node, values):
+        if values:
+            node["enum"] = values
+
+    evidence_ids = _unique_text_values(
+        item.get("evidence_id") for item in request.evidence if isinstance(item, Mapping)
+    )
+    if request.task == "MEDIA_COMPLIANCE":
+        if request.policy is not None:
+            properties = schema["properties"]
+            set_enum(properties["policy_id"], [request.policy.policy_id])
+            set_enum(properties["policy_version"], [request.policy.policy_version])
+            rule_ids = [rule.rule_id for rule in request.policy.rules]
+            set_enum(properties["rule_results"]["items"]["properties"]["rule_id"], rule_ids)
+            set_enum(properties["findings"]["items"]["properties"]["rule_id"], rule_ids)
+        for key in ("rule_results", "findings", "evidence_conflicts"):
+            refs = schema["properties"][key]["items"]["properties"]["evidence_refs"]
+            set_enum(refs["items"], evidence_ids)
+    elif request.rubric is not None:
+        properties = schema["properties"]
+        set_enum(properties["rubric_id"], [request.rubric.rubric_id])
+        set_enum(properties["rubric_version"], [request.rubric.rubric_version])
+        criterion_ids = [criterion.criterion_id for criterion in request.rubric.criteria]
+        set_enum(
+            properties["criterion_scores"]["items"]["properties"]["criterion_id"],
+            criterion_ids,
+        )
+        for key in ("criterion_scores", "evidence_conflicts"):
+            refs = schema["properties"][key]["items"]["properties"]["evidence_refs"]
+            set_enum(refs["items"], evidence_ids)
+    return name, schema
+
+
+def _unique_text_values(values):
+    return list(dict.fromkeys(
+        value for value in values if isinstance(value, str) and value.strip()
+    ))
 
 
 def _bounded_int(environ, name, default, minimum, maximum):

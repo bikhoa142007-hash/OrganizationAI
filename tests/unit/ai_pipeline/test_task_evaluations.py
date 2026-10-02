@@ -3,6 +3,10 @@ from decimal import Decimal
 import pytest
 
 from src.ai_pipeline.task_evaluation import (
+    MEDIA_OUTPUT_SCHEMA,
+    MEDIA_SYSTEM_PROMPT,
+    STRATEGY_OUTPUT_SCHEMA,
+    STRATEGY_SYSTEM_PROMPT,
     STRATEGY_CRITERIA,
     media_policy_from_json,
     strategy_rubric_from_json,
@@ -23,6 +27,23 @@ def media_policy():
         "severity":"HARD_VIOLATION",
         "description":"Check the supplied organization brand mark rule.",
         "required_evidence_kinds":["OBSERVATION"]
+      }]
+    }''')
+
+
+def literal_media_policy():
+    return media_policy_from_json('''{
+      "policy_id":"MEDIA-POLICY-TEST",
+      "policy_version":"1",
+      "status":"ACTIVE",
+      "scope_departments":["marketing"],
+      "scope_channels":["social"],
+      "rules":[{
+        "rule_id":"BRAND-LOGO",
+        "severity":"HARD_VIOLATION",
+        "description":"Flag the exact forbidden OCR literal.",
+        "required_evidence_kinds":["OCR_TEXT"],
+        "forbidden_literals":["UNAPPROVED_GUARANTEE"]
       }]
     }''')
 
@@ -119,6 +140,67 @@ def test_media_hard_violation_cannot_be_reported_as_pass():
     assert validate_media_output(output, policy, {"ev-image-1"})["outcome"] == "REVIEW_REQUIRED"
 
 
+def test_media_forbidden_literal_must_match_evidence_and_be_reported_as_a_finding():
+    policy = literal_media_policy()
+    evidence = {
+        "ev-image-1": {"kind": "OCR_TEXT", "observation": "Headline UNAPPROVED_GUARANTEE"},
+        "ev-image-2": {"kind": "OBSERVATION", "observation": "Text on a white background"},
+    }
+    output = valid_media_output()
+    with pytest.raises(ValueError, match="literal rule"):
+        validate_media_output(output, policy, evidence)
+
+    output["outcome"] = "REVIEW_REQUIRED"
+    output["rule_results"][0].update(result="FAIL", rationale="The configured OCR literal is present.")
+    output["findings"] = [{
+        "finding_id": "finding-1",
+        "severity": "HARD_VIOLATION",
+        "description": "The configured forbidden literal appears in OCR text.",
+        "rule_id": "BRAND-LOGO",
+        "evidence_refs": ["ev-image-1"],
+    }]
+    result = validate_media_output(output, policy, evidence)
+    assert result["outcome"] == "REVIEW_REQUIRED"
+    assert result["findings"][0]["evidence_refs"] == ["ev-image-1"]
+
+    output["findings"][0]["evidence_refs"] = ["ev-image-2"]
+    with pytest.raises(ValueError, match="matching OCR evidence"):
+        validate_media_output(output, policy, evidence)
+
+
+def test_media_literal_rule_routes_missing_ocr_to_review():
+    policy = literal_media_policy()
+    output = valid_media_output()
+    output["outcome"] = "REVIEW_REQUIRED"
+    output["rule_results"][0].update(
+        result="UNKNOWN", rationale="Required OCR evidence is unavailable.", evidence_refs=[]
+    )
+    result = validate_media_output(
+        output, policy, {}, required_evidence_missing=[{
+            "rule_id": "BRAND-LOGO", "evidence_kind": "OCR_TEXT",
+        }],
+    )
+    assert result["outcome"] == "REVIEW_REQUIRED"
+    assert result["rule_results"][0]["result"] == "UNKNOWN"
+
+
+def test_media_finding_cannot_be_attached_to_unknown_rule_result():
+    output = valid_media_output()
+    output["outcome"] = "REVIEW_REQUIRED"
+    output["rule_results"][0].update(
+        result="UNKNOWN", rationale="The required image evidence is unreadable.", evidence_refs=["ev-image-1"]
+    )
+    output["findings"] = [{
+        "finding_id": "finding-unknown",
+        "severity": "HARD_VIOLATION",
+        "description": "The rule cannot be evaluated from this evidence.",
+        "rule_id": "BRAND-LOGO",
+        "evidence_refs": ["ev-image-1"],
+    }]
+    with pytest.raises(ValueError, match="finding conflicts"):
+        validate_media_output(output, media_policy(), {"ev-image-1"})
+
+
 def test_media_policy_must_have_an_explicit_scope_and_version():
     assert media_policy_from_json("") is None
     with pytest.raises(ValueError):
@@ -154,3 +236,52 @@ def test_strategy_backend_weighted_total_is_decimal_and_exactly_checked():
     wrong_evidence["criterion_scores"][0]["evidence_refs"] = ["foreign-evidence"]
     with pytest.raises(ValueError, match="evidence"):
         validate_strategy_output(wrong_evidence, rubric, {"ev-plan-objective"})
+
+
+def test_strategy_schema_and_prompt_require_grounded_evidence_conflicts():
+    conflict_refs = STRATEGY_OUTPUT_SCHEMA["properties"]["evidence_conflicts"]["items"]["properties"]["evidence_refs"]
+    criterion_refs = STRATEGY_OUTPUT_SCHEMA["properties"]["criterion_scores"]["items"]["properties"]["evidence_refs"]
+    criterion_rationale = STRATEGY_OUTPUT_SCHEMA["properties"]["criterion_scores"]["items"]["properties"]["rationale"]
+    summary_reason = STRATEGY_OUTPUT_SCHEMA["properties"]["reason"]
+
+    assert conflict_refs["minItems"] == 2
+    assert criterion_refs["minItems"] == 1
+    assert criterion_rationale["maxLength"] == 300
+    assert summary_reason["maxLength"] == 800
+    assert "absence of information as a missing fact" in STRATEGY_SYSTEM_PROMPT
+    assert "at least two supplied evidence references" in STRATEGY_SYSTEM_PROMPT
+    assert "concise sentence" in STRATEGY_SYSTEM_PROMPT
+    assert "exact evidence_id values" in STRATEGY_SYSTEM_PROMPT
+    assert "Never invent, prefix, or alter an evidence ID" in STRATEGY_SYSTEM_PROMPT
+
+
+def test_media_contract_requires_consistent_findings_and_grounded_references():
+    properties = MEDIA_OUTPUT_SCHEMA["properties"]
+    rule_refs = properties["rule_results"]["items"]["properties"]["evidence_refs"]
+    finding_refs = properties["findings"]["items"]["properties"]["evidence_refs"]
+    conflict_refs = properties["evidence_conflicts"]["items"]["properties"]["evidence_refs"]
+
+    assert rule_refs["minItems"] == 1
+    assert finding_refs["minItems"] == 1
+    assert conflict_refs["minItems"] == 2
+    assert "findings must match a fail rule result" in MEDIA_SYSTEM_PROMPT.lower()
+    assert "Do not infer an exception" in MEDIA_SYSTEM_PROMPT
+    assert "forbidden_literals" in MEDIA_SYSTEM_PROMPT
+
+
+def test_media_prompt_requires_verbatim_versions_and_fails_closed_on_missing_ocr_or_hard_violation():
+    prompt = MEDIA_SYSTEM_PROMPT.lower()
+
+    assert "copy policy_id and policy_version exactly" in prompt
+    assert "missing required ocr_text evidence means unknown and review_required" in prompt
+    assert "a hard-violation fail always requires review_required" in prompt
+    assert "synthetic or test context never changes a rule result" in prompt
+
+
+def test_strategy_prompt_requires_verbatim_rubric_version_weighted_total_and_strict_conflicts():
+    prompt = STRATEGY_SYSTEM_PROMPT.lower()
+
+    assert "copy rubric_id and rubric_version exactly" in prompt
+    assert "total_score must be the weighted decimal sum of the seven criterion scores" in prompt
+    assert "absence of evidence, a missing benchmark, or an unsupported target is not a conflict" in prompt
+    assert "conflicts require two mutually incompatible factual claims" in prompt

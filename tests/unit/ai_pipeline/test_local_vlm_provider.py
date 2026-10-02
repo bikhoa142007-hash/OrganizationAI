@@ -1,6 +1,7 @@
 import base64
 import hashlib
 import json
+from dataclasses import replace
 
 import httpx
 import pytest
@@ -8,13 +9,14 @@ import pytest
 from src.ai_pipeline.models import EvaluationRequest
 from src.ai_pipeline.orchestrator import EvaluationOrchestrator
 from src.ai_pipeline.providers.openai_provider import LocalVLMProvider
+from src.ai_pipeline.providers.base import ProviderConfigurationError, ProviderNonRetryableError
 from src.backend.domain.models import AttachmentManifest, MarketingPlan
 
 
 PNG = b"\x89PNG\r\n\x1a\nsynthetic-image-bytes"
 
 
-def make_request(image=PNG):
+def make_request(image=PNG, *, model_version=None):
     manifest = AttachmentManifest(
         "attachment-1", hashlib.sha256(image).hexdigest(), "image/png", len(image)
     )
@@ -28,7 +30,7 @@ def make_request(image=PNG):
         run_id="run-1",
         correlation_id="trace-1",
         provider="LOCAL_VLM",
-        model_version=None,
+        model_version=model_version,
         metadata={"attachment_contents": {manifest.attachment_id: image}},
     )
 
@@ -140,6 +142,40 @@ def test_server_binds_extracted_evidence_to_snapshot_and_keeps_model_revision_se
     assert result.evaluation["evidence"][0]["evidence_id"] == image["evidence"][0]["evidence_id"]
     assert result.evaluation["proposed_action"] is None
     assert result.visual_extraction.get("confidence") is None
+
+
+def test_pinned_ollama_digest_is_used_as_model_revision_and_response_model_is_checked():
+    digest = "sha256:" + "a" * 64
+    provider = configured_provider(
+        lambda _request: chat_response(
+            {"images": [extraction_item()]},
+            model="configured-vlm-4b",
+            fingerprint="fp_ollama",
+        ),
+        model_version=digest,
+    )
+    request = make_request(model_version=digest)
+
+    analysis = provider.analyze_image(request)
+
+    assert provider.get_model_metadata()["model_version"] == digest
+    assert analysis.model_revision == digest
+    assert analysis.reported_model_id == "configured-vlm-4b"
+
+
+def test_pinned_ollama_rejects_a_changed_snapshot_version_or_reported_model():
+    digest = "sha256:" + "a" * 64
+    provider = configured_provider(
+        lambda _request: chat_response({"images": [extraction_item()]}, model="different-model"),
+        model_version=digest,
+    )
+    with pytest.raises(ProviderConfigurationError, match="version changed"):
+        provider.analyze_image(make_request(model_version="sha256:" + "b" * 64))
+
+    request = replace(make_request(), model_version=digest)
+    with pytest.raises(ProviderNonRetryableError) as mismatch:
+        provider.analyze_image(request)
+    assert mismatch.value.code == "UNKNOWN_MODEL"
 
 
 def test_multiple_image_outputs_bind_by_snapshot_index_not_model_return_order():

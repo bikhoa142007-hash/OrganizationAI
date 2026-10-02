@@ -21,6 +21,7 @@ from src.backend.domain.policy import (
     MANDATORY_FIELDS,
     PolicySnapshot,
 )
+from src.backend.rules.decision import DecisionContext, decide
 
 
 MEDIA_POLICY_JSON = '''{
@@ -237,6 +238,59 @@ def test_invalid_policy_reference_and_weighted_total_are_step_failures():
     assert result.strategy_evaluation["status"] == "FAILED"
     assert result.strategy_evaluation["error_code"] == "INVALID_SCHEMA"
     assert result.evaluation["status"] == "FAILED"
+
+
+def test_media_pass_with_hard_violation_fails_closed_through_decision_engine():
+    submitted = request()
+    media = FakeTaskProvider("MEDIA_COMPLIANCE")
+    original_evaluate = media.evaluate
+
+    def contradictory_evaluate(task_request):
+        analysis = original_evaluate(task_request)
+        output = dict(analysis.output)
+        output["outcome"] = "PASS"
+        output["rule_results"] = [
+            {**output["rule_results"][0], "result": "FAIL"}
+        ]
+        output["findings"] = [{
+            "finding_id": "hard-violation-1",
+            "severity": "HARD_VIOLATION",
+            "description": "A configured hard policy rule failed.",
+            "rule_id": "BRAND-LOGO",
+            "evidence_refs": ["ev-image-1"],
+        }]
+        return ProviderAnalysis(
+            output=output,
+            model_revision=analysis.model_revision,
+            reported_model_id=analysis.reported_model_id,
+            raw_output_hash=analysis.raw_output_hash,
+        )
+
+    media.evaluate = contradictory_evaluate
+    result = make_orchestrator(
+        media=media, strategy=FakeTaskProvider("STRATEGY_EVALUATION"),
+    ).evaluate(submitted)
+
+    assert result.media_evaluation["status"] == "FAILED"
+    assert result.media_evaluation["error_code"] == "INVALID_SCHEMA"
+    assert result.media_evaluation["result"] is None
+    assert result.evaluation["status"] == "FAILED"
+
+    context = DecisionContext(
+        evaluation_id="eval-1", run_id="run-1", provider="LOCAL_VLM",
+        correlation_id="trace-1", idempotency_key="synthetic-intent",
+        decided_at="2026-10-02T00:00:00Z", plan_status="PENDING_APPROVAL",
+        approval_round_status="ACTIVE", round_revision=0,
+        expected_input_hash=submitted.plan.input_hash,
+        verified_attachment_hashes=((
+            "attachment-1", hashlib.sha256(b"synthetic-image-bytes").hexdigest(),
+        ),), valid_checker_ids=("checker-1",), suspicious_input=False,
+    )
+    decision = decide(
+        submitted.plan, submitted.configuration, result.evaluation, context,
+    ).decision
+    assert decision.outcome == "HUMAN_REVIEW_REQUIRED"
+    assert "EVAL_VALID" in decision.reason_codes
 
 
 def test_partial_extraction_uncertainty_blocks_auto_recommendation():

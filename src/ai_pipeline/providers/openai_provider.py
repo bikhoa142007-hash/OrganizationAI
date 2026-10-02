@@ -52,6 +52,7 @@ class LocalVLMProvider(VisualModelProvider):
         self,
         *,
         model=None,
+        model_version=None,
         base_url=None,
         api_key=None,
         timeout_seconds=None,
@@ -62,6 +63,11 @@ class LocalVLMProvider(VisualModelProvider):
         client=None,
     ):
         self.model_id = (model if model is not None else os.getenv("LOCAL_VLM_MODEL", "")).strip()
+        configured_version = (
+            model_version if model_version is not None
+            else os.getenv("LOCAL_VLM_MODEL_VERSION", "")
+        )
+        self.model_version = configured_version.strip() or None
         self.base_url = (base_url if base_url is not None else os.getenv("LOCAL_VLM_BASE_URL", "")).strip().rstrip("/")
         self.api_key = api_key if api_key is not None else os.getenv("LOCAL_VLM_API_KEY", "")
         self.timeout_seconds = _bounded_setting(
@@ -110,12 +116,11 @@ class LocalVLMProvider(VisualModelProvider):
             return False
 
     def get_model_metadata(self):
-        # The configured model ID is not an immutable runtime/model revision.
         return {
             "provider": "LOCAL_VLM",
             "model_id": self.model_id or None,
             "runtime_protocol": "OPENAI_COMPATIBLE_CHAT_COMPLETIONS",
-            "model_version": None,
+            "model_version": self.model_version,
         }
 
     def analyze_image(self, request):
@@ -127,6 +132,11 @@ class LocalVLMProvider(VisualModelProvider):
         if "model_id" in request.metadata and snapshotted_model_id != self.model_id:
             raise ProviderConfigurationError(
                 "The configured model changed after submission.",
+                code="MODEL_CONFIGURATION_CHANGED",
+            )
+        if request.model_version != self.model_version:
+            raise ProviderConfigurationError(
+                "The configured model version changed after submission.",
                 code="MODEL_CONFIGURATION_CHANGED",
             )
 
@@ -195,11 +205,20 @@ class LocalVLMProvider(VisualModelProvider):
                 "Provider returned an invalid response.", code="INVALID_SCHEMA"
             )
 
+        reported_model_id = _optional_metadata(response.get("model"))
+        if self.model_version and reported_model_id != self.model_id:
+            raise ProviderNonRetryableError(
+                "Provider returned a different model ID.", code="UNKNOWN_MODEL"
+            )
+
         return ProviderAnalysis(
             output=output,
             raw_output_hash=hashlib.sha256(content.encode("utf-8")).hexdigest(),
-            model_revision=_optional_metadata(response.get("system_fingerprint")),
-            reported_model_id=_optional_metadata(response.get("model")),
+            # Ollama's system_fingerprint (for example, "fp_ollama") identifies
+            # the runtime, not the model weights. Use the locally configured
+            # Ollama tag digest when one has been pinned.
+            model_revision=(self.model_version or _optional_metadata(response.get("system_fingerprint"))),
+            reported_model_id=reported_model_id,
         )
 
     @contextmanager

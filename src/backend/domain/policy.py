@@ -40,12 +40,26 @@ class MediaPolicyRule(Contract):
     severity: Literal["HARD_VIOLATION", "WARNING"]
     description: str
     required_evidence_kinds: tuple[str, ...]
+    forbidden_literals: tuple[str, ...] = ()
+
+    @classmethod
+    def from_dict(cls, value):
+        # Existing scoped policies remain readable; literal checks are opt-in.
+        if isinstance(value, Mapping) and "forbidden_literals" not in value:
+            value = {**value, "forbidden_literals": []}
+        return super().from_dict(value)
 
     def validate(self):
         require(bool(self.required_evidence_kinds), "Media policy rules need evidence requirements")
         require(set(self.required_evidence_kinds) <= MEDIA_EVIDENCE_KINDS,
                 "Media policy has an unsupported evidence kind")
         distinct(self.required_evidence_kinds)
+        distinct(self.forbidden_literals)
+        require(all(isinstance(item, str) and item.strip() for item in self.forbidden_literals),
+                "Media policy literal checks need nonblank text")
+        if self.forbidden_literals:
+            require("OCR_TEXT" in self.required_evidence_kinds,
+                    "Forbidden literal checks require OCR_TEXT evidence")
 
 
 @dataclass(frozen=True)
