@@ -3,6 +3,7 @@ import { useState, type FormEvent } from 'react'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { AuthApiError } from '../services/auth'
+import { safeReturnPath } from '../services/authNavigation'
 
 type FieldErrors = { identifier?: string; password?: string }
 
@@ -19,15 +20,8 @@ function validatePassword(value: string) {
   return value ? '' : 'Vui lòng nhập mật khẩu.'
 }
 
-function safeReturnPath(state: unknown): string {
-  if (!state || typeof state !== 'object' || !('from' in state) || typeof state.from !== 'string') {
-    return '/account'
-  }
-  return state.from.startsWith('/') && !state.from.startsWith('//') ? state.from : '/account'
-}
-
 export function LoginPage() {
-  const { isAuthenticated, isLoading: sessionLoading, login } = useAuth()
+  const { isAuthenticated, isLoading: sessionLoading, login, roles } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
   const [identifier, setIdentifier] = useState('')
@@ -58,8 +52,8 @@ export function LoginPage() {
 
     setLoading(true)
     try {
-      await login(identifier.trim(), password, remember)
-      navigate(safeReturnPath(location.state), { replace: true })
+      const authenticatedUser = await login(identifier.trim(), password, remember)
+      navigate(safeReturnPath(location.state, authenticatedUser.roles), { replace: true })
     } catch (reason) {
       if (reason instanceof AuthApiError && reason.status === 0) {
         setFormError('Không thể kết nối đến dịch vụ đăng nhập. Hãy kiểm tra kết nối rồi thử lại.')
@@ -67,6 +61,8 @@ export function LoginPage() {
         setFormError('Thông tin đăng nhập không chính xác hoặc tài khoản đã bị vô hiệu hóa.')
       } else if (reason instanceof AuthApiError && reason.status === 503) {
         setFormError('Dịch vụ đăng nhập chưa được cấu hình. Vui lòng thử lại sau.')
+      } else if (reason instanceof AuthApiError && reason.status === 429) {
+        setFormError('Có quá nhiều lần đăng nhập từ thiết bị này. Vui lòng chờ trước khi thử lại.')
       } else {
         setFormError('Đăng nhập chưa thành công. Hãy kiểm tra thông tin và thử lại.')
       }
@@ -83,7 +79,7 @@ export function LoginPage() {
     : ''
 
   if (sessionLoading) return <p role="status">Đang kiểm tra phiên đăng nhập…</p>
-  if (isAuthenticated) return <Navigate to={safeReturnPath(location.state)} replace />
+  if (isAuthenticated) return <Navigate to={safeReturnPath(location.state, roles)} replace />
 
   return (
     <main className="login-page">

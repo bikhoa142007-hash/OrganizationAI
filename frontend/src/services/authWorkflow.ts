@@ -1,13 +1,17 @@
 import { AuthApiError } from './auth'
 import type { WorkflowChecker, WorkflowPayload, WorkflowPlan } from '../types/authWorkflow'
+import { resolveApiBaseUrl } from './apiBaseUrl'
 
-const baseUrl = (import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8010/api').replace(/\/$/, '')
+function announceAuthFailure(status: number) {
+  if (status === 401) window.dispatchEvent(new Event('organizationai:auth-expired'))
+  if (status === 403) window.dispatchEvent(new Event('organizationai:access-denied'))
+}
 
 async function request<T>(path: string, method: 'GET' | 'POST' | 'PUT', body?: unknown): Promise<T> {
   const multipart = body instanceof FormData
   let response: Response
   try {
-    response = await fetch(`${baseUrl}${path}`, {
+    response = await fetch(`${resolveApiBaseUrl()}${path}`, {
       method,
       credentials: 'include',
       headers: body === undefined || multipart ? undefined : { 'Content-Type': 'application/json' },
@@ -20,6 +24,7 @@ async function request<T>(path: string, method: 'GET' | 'POST' | 'PUT', body?: u
   if (response.status === 204) return undefined as T
   const data: unknown = await response.json().catch(() => null)
   if (!response.ok) {
+    announceAuthFailure(response.status)
     const message = data && typeof data === 'object' && 'message' in data && typeof data.message === 'string'
       ? data.message
       : 'Authenticated workflow request failed.'
@@ -77,10 +82,13 @@ export const authWorkflowService = {
   },
 
   async getAttachment(planId: string, attachmentId: string): Promise<Blob> {
-    const response = await fetch(`${baseUrl}/workflow/plans/${encoded(planId)}/attachments/${encoded(attachmentId)}`, {
+    const response = await fetch(`${resolveApiBaseUrl()}/workflow/plans/${encoded(planId)}/attachments/${encoded(attachmentId)}`, {
       credentials: 'include',
     })
-    if (!response.ok) throw new AuthApiError(response.status, 'Could not load this private attachment.')
+    if (!response.ok) {
+      announceAuthFailure(response.status)
+      throw new AuthApiError(response.status, 'Could not load this private attachment.')
+    }
     return response.blob()
   },
 }

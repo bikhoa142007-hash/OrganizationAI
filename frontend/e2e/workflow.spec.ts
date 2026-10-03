@@ -3,7 +3,7 @@ import { resolve } from 'node:path'
 
 const image = resolve(import.meta.dirname, '../../tests/fixtures/ba/v2.1/images/creative-pass.png')
 async function fillPlan(page: Page, title: string, budget: string) {
-  await page.goto('/plans/new')
+  await page.goto('/demo/plans/new')
   await page.getByLabel('Tên chiến dịch').fill(title)
   await page.getByRole('textbox', { name: /^Mục tiêu \*/ }).fill('Synthetic browser campaign')
   await page.getByLabel('Ngày bắt đầu').fill('2026-10-01')
@@ -44,7 +44,7 @@ test('Maker submits mock pass, then assigned Checker approves with persisted evi
   await page.getByRole('button', { name: 'Approve', exact: true }).click()
   await page.getByRole('button', { name: 'Xác nhận', exact: true }).click()
   await expect(page.getByText('Quyết định đã được lưu cùng audit.')).toBeVisible()
-  await page.goto(`/plans/${id}/result`)
+  await page.goto(`/demo/plans/${id}/result`)
   await expect(page.getByRole('heading', { name: 'E2E auto campaign', exact: true })).toBeVisible()
   const finalResponse = await request.get(`http://127.0.0.1:8008/api/plans/${id}`, { headers: { 'X-Demo-Actor': 'DEMO-CHECKER-01' } })
   const finalHistory = await finalResponse.json()
@@ -83,7 +83,7 @@ test('Human Review: Checker rejects, Maker resubmits and history preserves both 
 })
 
 test('factual evidence and real Verify results render', async ({ page }) => {
-  await page.goto('/plans/DEMO-SEED-FACTS/result')
+  await page.goto('/demo/plans/DEMO-SEED-FACTS/result')
   await expect(page.getByText('PENDING_APPROVAL · POLICY_OUT_OF_SCOPE')).toBeVisible()
   await expect(page.getByText(/form KPI 1200; visual evidence 12000/)).toBeVisible()
   await page.screenshot({ path: 'test-results/factual-review.png', fullPage: true })
@@ -93,7 +93,7 @@ test('factual evidence and real Verify results render', async ({ page }) => {
 })
 
 test('Checker approves a review with an explicit override and persisted audit', async ({ page, request }) => {
-  await page.goto('/plans')
+  await page.goto('/demo/plans')
   await page.getByLabel('Demo actor').selectOption('DEMO-CHECKER-01')
   await page.getByRole('link', { name: 'Chờ tôi duyệt', exact: true }).click()
   await page.getByText('Demo review', { exact: true }).click()
@@ -111,12 +111,12 @@ test('Checker approves a review with an explicit override and persisted audit', 
 
 
 test('direct UI routes deny unavailable roles and unassigned Checker has an empty queue', async ({ page }) => {
-  await page.goto('/review')
+  await page.goto('/demo/review')
   await expect(page.getByRole('alert')).toHaveText(/Không có quyền CHECKER/)
   await page.getByLabel('Demo actor').selectOption('DEMO-DUAL-01')
   await page.getByRole('link', { name: 'Chờ tôi duyệt', exact: true }).click()
   await expect(page.getByText('Backend hiện chưa trả về hồ sơ human review nào cho Checker này.')).toBeVisible()
   await page.getByLabel('Demo actor').selectOption('DEMO-CHECKER-01')
-  await page.goto('/plans/new', { waitUntil: 'commit' })
+  await page.goto('/demo/plans/new', { waitUntil: 'commit' })
   await expect(page.getByRole('alert')).toHaveText(/Không có quyền MAKER/)
 })

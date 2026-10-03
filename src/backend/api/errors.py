@@ -1,7 +1,7 @@
 from fastapi.responses import JSONResponse
 
 STATUS = {'VALIDATION_ERROR': 422, 'UNAUTHENTICATED': 401, 'FORBIDDEN': 403,
-          'NOT_FOUND': 404, 'CONFLICT': 409, 'UNAVAILABLE': 503}
+          'NOT_FOUND': 404, 'CONFLICT': 409, 'RATE_LIMITED': 429, 'UNAVAILABLE': 503}
 
 
 def error_response(code, message, correlation_id, status=None):

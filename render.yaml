@@ -31,6 +31,8 @@ services:
         value: 24.17.0
       - key: VITE_API_BASE_URL
         sync: false
+      - key: VITE_DEMO_ENABLED
+        value: "true"
     routes:
       - type: rewrite
         source: /*

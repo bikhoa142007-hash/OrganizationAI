@@ -6,6 +6,7 @@ from sqlalchemy import engine_from_config, pool
 
 from src.backend.db.base import Base
 from src.backend.db import models  # noqa: F401 - registers mapped tables in Base.metadata
+from src.backend.db.session import normalize_database_url
 
 config = context.config
 if config.config_file_name is not None:
@@ -15,9 +16,10 @@ target_metadata = Base.metadata
 database_url = os.getenv("DATABASE_URL", "").strip()
 if not database_url:
     raise RuntimeError("Set DATABASE_URL before running Alembic.")
-if (not database_url.startswith("postgresql+psycopg://")
-        and os.getenv("AUTH_ALLOW_SQLITE_MIGRATION_TESTS") != "true"):
-    raise RuntimeError("Authentication migrations require PostgreSQL and psycopg 3.")
+database_url = normalize_database_url(
+    database_url,
+    allow_sqlite_test=os.getenv("AUTH_ALLOW_SQLITE_MIGRATION_TESTS") == "true",
+)
 config.set_main_option("sqlalchemy.url", database_url.replace("%", "%%"))
 
 

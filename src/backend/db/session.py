@@ -6,11 +6,19 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
 
+def normalize_database_url(url: str, *, allow_sqlite_test: bool = False) -> str:
+    url = url.strip()
+    if url.startswith(("postgres://", "postgresql://")):
+        return "postgresql+psycopg://" + url.split("://", 1)[1]
+    if url.startswith("postgresql+psycopg://"):
+        return url
+    if allow_sqlite_test and url.startswith("sqlite+"):
+        return url
+    raise RuntimeError("Authentication requires DATABASE_URL with PostgreSQL and psycopg 3.")
+
+
 def _database_url() -> str:
-    url = os.getenv("DATABASE_URL", "").strip()
-    if not url.startswith("postgresql+psycopg://"):
-        raise RuntimeError("Authentication requires DATABASE_URL with PostgreSQL and psycopg 3.")
-    return url
+    return normalize_database_url(os.getenv("DATABASE_URL", ""))
 
 
 @lru_cache(maxsize=1)

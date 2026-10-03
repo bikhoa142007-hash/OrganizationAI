@@ -1,3 +1,5 @@
+import { resolveApiBaseUrl } from '../apiBaseUrl'
+
 export class ApiError extends Error {
   constructor(public code: string, message: string, public status: number, public correlationId?: string) { super(message) }
 }
@@ -47,4 +49,4 @@ export class ApiClient {
 }
 
 export const demoActor = () => sessionStorage.getItem('organization-demo-actor') ?? 'DEMO-MAKER-01'
-export const api = new ApiClient(import.meta.env.VITE_API_BASE_URL ?? 'http://127.0.0.1:8000/api', demoActor)
+export const api = new ApiClient(resolveApiBaseUrl(import.meta.env.VITE_API_BASE_URL ?? 'http://127.0.0.1:8000/api', true), demoActor)

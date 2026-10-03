@@ -11,6 +11,6 @@ export default defineConfig({
     { command: `${python} -m src.backend.seed_demo && ${python} -m uvicorn src.backend.api.app:app --host 127.0.0.1 --port 8008`, cwd: root,
       env: { APP_ENV: 'demo', DEMO_DATABASE: database, CORS_ORIGINS: 'http://127.0.0.1:5178' }, url: 'http://127.0.0.1:8008/api/health', reuseExistingServer: false },
     { command: 'npm run dev -- --host 127.0.0.1 --port 5178 --strictPort',
-      env: { VITE_API_BASE_URL: 'http://127.0.0.1:8008/api' }, url: 'http://127.0.0.1:5178', reuseExistingServer: false },
+      env: { VITE_API_BASE_URL: 'http://127.0.0.1:8008/api', VITE_DEMO_ENABLED: 'true' }, url: 'http://127.0.0.1:5178', reuseExistingServer: false },
   ],
 })

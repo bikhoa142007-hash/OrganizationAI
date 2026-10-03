@@ -9,9 +9,12 @@
 ![Render](https://img.shields.io/badge/Render-000000?logo=render&logoColor=white)
 ![Pytest](https://img.shields.io/badge/Pytest-0A9EDC?logo=pytest&logoColor=white)
 
-> OrganizationAI là Sprint 1 Judge Demo hỗ trợ Maker tạo và gửi kế hoạch marketing, dùng AI evaluation để tạo evidence, sau đó áp dụng rule/policy engine tất định để tự động phê duyệt hoặc chuyển hồ sơ cho Checker thẩm định thủ công.
+> Source hiện tại mở đầu bằng Auth: đăng nhập/đăng ký và workflow Maker–Checker dùng PostgreSQL. Judge Demo tổng hợp được tách riêng dưới `/demo` và tiếp tục dùng SQLite cùng `X-Demo-Actor`.
 
-Hệ thống hướng đến quy trình phê duyệt có kiểm soát, lưu lại version, approval round, evaluation, quyết định và audit event. Bản tích hợp HTTP hiện dùng `MockVLMProvider` với dữ liệu tổng hợp; đây không phải hệ thống đăng nhập, AI hay hạ tầng production.
+Judge Demo vẫn là một môi trường tổng hợp, không phải hệ thống production. Các URL Render bên dưới là lần triển khai demo được xác minh ngày 2026-09-22; Auth-first branch và PostgreSQL staging riêng chưa được deploy.
+
+Xem [báo cáo Scope 1 ngày 2026-10-03](docs/integration/scope-1-progress-2026-10-03.md)
+để biết ma trận phạm vi, test evidence, trạng thái bảo toàn dữ liệu và blocker staging.
 
 ---
 
@@ -260,7 +263,7 @@ Auth dùng PostgreSQL riêng cho tài khoản và role. Judge Demo tiếp tục 
 
    Compose chờ PostgreSQL healthy, chạy `alembic upgrade head`, seed tài khoản demo rồi khởi động FastAPI và Vite.
 
-3. Dùng giao diện tại `/login`, `/register` và `/account`. Luồng Judge Demo vẫn bắt đầu tại `/` và giữ bộ chọn demo actor.
+3. Dùng `/` để khôi phục phiên hoặc mở đăng nhập; `/register` chỉ hiện biểu mẫu nếu `AUTH_REGISTRATION_ENABLED=true`; `/account` là trang tài khoản. Luồng Judge Demo nằm tại `/demo` khi `VITE_DEMO_ENABLED=true`.
 
 | Thành phần | URL local |
 | --- | --- |
@@ -271,7 +274,7 @@ Auth dùng PostgreSQL riêng cho tài khoản và role. Judge Demo tiếp tục 
 
 `POST /api/auth/register` nhận username, email hoặc số điện thoại quốc tế, và mật khẩu; tài khoản tự đăng ký chỉ nhận role `MAKER` và sau khi tạo sẽ được chuyển tới đăng nhập. `POST /api/auth/login` nhận username, user code hoặc email và đặt JWT vào cookie `HttpOnly`, `SameSite=Lax`. `GET /api/auth/me` trả hồ sơ và role đã nạp từ PostgreSQL; `POST /api/auth/logout` xóa cookie. Ghi nhớ trên thiết bị này dùng thời hạn `AUTH_REMEMBER_TOKEN_DAYS`; phiên thường dùng `JWT_ACCESS_TOKEN_MINUTES`.
 
-Self-registration mặc định chỉ bật trong Compose local. Cookie dùng `AUTH_COOKIE_SECURE=false` cho HTTP localhost; môi trường HTTPS cần bật `AUTH_COOKIE_SECURE=true`. Không dùng `AUTH_SEED_PASSWORD` hoặc bật self-registration trên Judge Demo production. Các tài khoản seed local dùng username `maker`, `checker` và `admin`, cùng mật khẩu local trong `AUTH_SEED_PASSWORD`; seed không ghi đè mật khẩu hoặc trạng thái tài khoản hiện có.
+Self-registration mặc định chỉ bật trong Compose local; server trả public feature switch để UI không hiển thị form khi bị tắt. Cookie dùng `AUTH_COOKIE_SECURE=false` cho HTTP localhost; môi trường HTTPS cần bật `AUTH_COOKIE_SECURE=true`. Không dùng `AUTH_SEED_PASSWORD` hoặc seed tài khoản chung trên staging/production. Liên hệ đăng ký chưa được xác minh. Các tài khoản seed local dùng username `maker`, `checker` và `admin`, cùng mật khẩu local trong `AUTH_SEED_PASSWORD`; seed không ghi đè mật khẩu hoặc trạng thái tài khoản hiện có.
 
 Chạy lại migration hoặc seed trong container:
 
@@ -280,19 +283,28 @@ docker compose exec backend alembic upgrade head
 docker compose exec backend python -m src.backend.seed_auth
 ```
 
-Đăng nhập Maker sẽ mở workflow tại `/workflow/plans`; Checker xem `/workflow/reviews`. Các trang này dùng JWT cookie và route `/api/workflow/*`, không gửi `X-Demo-Actor`. `/api/plans`, `/api/reviews`, Verify và các trang demo vẫn dùng SQLite cùng actor header riêng.
+Đăng nhập Maker sẽ mở workflow tại `/workflow/plans`; Checker xem `/workflow/reviews`; Admin-only vào `/account`. Link nội bộ sau đăng nhập được bảo toàn an toàn. Các trang Auth dùng JWT cookie và `/api/workflow/*`, không gửi `X-Demo-Actor`. `/api/plans`, `/api/reviews`, Verify và `/demo/*` vẫn dùng SQLite cùng actor header riêng.
 
 Auth workflow commit snapshot/version/round trước khi chạy AI. Local VLM chỉ trích xuất OCR/quan sát ảnh. Hai text agent riêng đánh giá bằng chứng Media theo content policy và đánh giá kế hoạch Strategy theo rubric bảy tiêu chí; điểm có trọng số được backend tính bằng Decimal. Các bước có model, protocol, endpoint, timeout, giới hạn output, prompt/schema version và retry riêng. Kết quả từng bước cùng hash cấu hình được lưu theo round; không lưu API key hoặc endpoint thô. Khi cấu hình model hoặc policy thiếu, không phát sinh request cho task đó và giao diện ghi `Chưa cấu hình`. Auto-approval mặc định tắt và không lấy budget/authority/policy từ Judge Demo. Migration `20260930_06` bổ sung persistence riêng cho Media và Strategy; SQLite của Judge Demo không bị đổi.
 
 Để chạy mô phỏng tường minh trong Compose local, đặt `AUTH_WORKFLOW_AI_PROVIDER=MOCK_VLM` và `AUTH_WORKFLOW_MOCK_SCENARIO=pass` (hoặc `review`, `timeout`, `error`, `malformed`, `unknown_media`) trong `.env`. Mock pass vẫn vào Checker review khi dùng Auth policy mặc định; auto-approval chỉ bật với một `ApprovalConfiguration` đã được ứng dụng phê duyệt và inject vào workflow.
 
-Sau khi Compose khởi động và seed PostgreSQL, chạy smoke test với tài khoản `maker`, `checker`, `admin`:
+Chỉ chạy smoke test thủ công sau khi xác nhận API/PostgreSQL là môi trường thử nghiệm
+được phép và Local VLM đã được cấu hình. Script tạo đúng một hồ sơ synthetic, gọi
+AI theo cấu hình hiện tại, rồi thực hiện Maker submit → Checker reject → Maker sửa/
+resubmit → Checker approve. Không chạy script chỉ để kiểm tra deployment; kiểm thử
+tự động đã dùng database cách ly.
 
 ```powershell
 & .\.venv\Scripts\python.exe scripts/smoke_auth_workflow.py
 ```
 
-Script hỏi mật khẩu seed và API base URL, tạo ba kế hoạch có ảnh riêng tư, thử approve, reject và hai quyết định đồng thời trên cùng round; script cũng xác nhận các quyền bị chặn và cookie Auth không thay thế `X-Demo-Actor`. Các bản ghi smoke có tên và ID riêng; xóa dữ liệu sau kiểm thử chỉ khi đã kiểm tra các ID đó.
+Script hỏi mật khẩu seed và API base URL, lưu ID ngay khi tạo hồ sơ và kiểm tra
+Maker self-approval, Checker permissions, rejection reason, version/round history
+và tách biệt Auth cookie với `X-Demo-Actor`. Nếu request tạo hồ sơ timeout, script
+đối chiếu chính xác run marker bằng truy vấn PostgreSQL chỉ đọc; nó dừng nếu không
+tìm thấy hồ sơ và không gửi lại request tạo. Chạy lại state đã hoàn tất chỉ in ID
+cũ, không tạo hồ sơ mới. Kiểm tra concurrency nằm trong pytest với database cách ly.
 
 ## ☁️ Sử Dụng Và Cập Nhật Server Render
 

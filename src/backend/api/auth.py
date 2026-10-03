@@ -184,6 +184,24 @@ def _registration_enabled() -> bool:
     return os.getenv("AUTH_REGISTRATION_ENABLED", "false").strip().lower() == "true"
 
 
+def _client_ip(request: Request) -> str:
+    return request.client.host if request.client else "unknown"
+
+
+def _limit_login_attempt(request: Request, identifier: str) -> None:
+    retry_after = request.app.state.auth_attempt_limiter.record_login(
+        _client_ip(request), identifier,
+    )
+    if retry_after is not None:
+        raise _error(request, "RATE_LIMITED", "Too many login attempts. Please wait before trying again.")
+
+
+def _limit_registration_attempt(request: Request) -> None:
+    retry_after = request.app.state.auth_attempt_limiter.record_registration(_client_ip(request))
+    if retry_after is not None:
+        raise _error(request, "RATE_LIMITED", "Too many registration attempts. Please wait before trying again.")
+
+
 def get_current_principal(
     request: Request,
     session: Session = Depends(get_auth_db),
@@ -243,6 +261,7 @@ def login(
 ) -> AuthResponse:
     _check_browser_origin(request)
     identifier = body.identifier.strip().casefold()
+    _limit_login_attempt(request, identifier)
     users = session.scalars(
         _user_query().where(
             or_(func.lower(User.user_code) == identifier,
@@ -273,6 +292,7 @@ def register(
     _check_browser_origin(request)
     if not _registration_enabled():
         raise _error(request, "FORBIDDEN", "Self-registration is currently disabled.")
+    _limit_registration_attempt(request)
     _auth_settings(request)
 
     try:
@@ -311,6 +331,12 @@ def register(
 
     session.refresh(user)
     return AuthResponse(user=_principal(user).as_response())
+
+
+@router.get("/config")
+def auth_config() -> dict[str, bool]:
+    """Return public Auth feature switches only; secrets and service settings stay server-side."""
+    return {"registration_enabled": _registration_enabled()}
 
 
 @router.get("/me", response_model=AuthResponse)

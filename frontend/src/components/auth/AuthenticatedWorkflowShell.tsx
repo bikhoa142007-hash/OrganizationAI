@@ -1,4 +1,5 @@
 import { ClipboardCheck, FileText, LogOut, UserRound } from 'lucide-react'
+import { useState } from 'react'
 import type { ReactNode } from 'react'
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
@@ -6,10 +7,20 @@ import { useAuth } from '../../context/AuthContext'
 export function AuthenticatedWorkflowShell() {
   const { user, roles, logout } = useAuth()
   const navigate = useNavigate()
+  const [logoutError, setLogoutError] = useState('')
+  const [logoutPending, setLogoutPending] = useState(false)
 
   async function signOut() {
-    await logout()
-    navigate('/login', { replace: true })
+    setLogoutError('')
+    setLogoutPending(true)
+    try {
+      await logout()
+      navigate('/login', { replace: true })
+    } catch {
+      setLogoutError('Không thể đăng xuất vì dịch vụ chưa phản hồi. Phiên hiện tại vẫn được giữ; hãy thử lại.')
+    } finally {
+      setLogoutPending(false)
+    }
   }
 
   return <div className="auth-workflow-shell">
@@ -19,8 +30,9 @@ export function AuthenticatedWorkflowShell() {
         {roles.includes('MAKER') && <NavLink to="/workflow/plans"><FileText /> Kế hoạch của tôi</NavLink>}
         {roles.includes('CHECKER') && <NavLink to="/workflow/reviews"><ClipboardCheck /> Hàng chờ duyệt</NavLink>}
       </nav>
-      <div className="auth-workflow-user"><span><UserRound /> {user?.display_name}<small>{roles.join(', ')}</small></span><button type="button" onClick={() => void signOut()}><LogOut /> Đăng xuất</button></div>
+      <div className="auth-workflow-user"><span><UserRound /> {user?.display_name}<small>{roles.join(', ')}</small></span><button type="button" disabled={logoutPending} onClick={() => void signOut()}><LogOut /> {logoutPending ? 'Đang đăng xuất…' : 'Đăng xuất'}</button></div>
     </header>
+    {logoutError && <p role="alert" className="auth-logout-error">{logoutError}</p>}
     <main className="auth-workflow-main"><Outlet /></main>
   </div>
 }

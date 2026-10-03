@@ -176,18 +176,29 @@ docker compose ps
 ```
 
 The backend startup runs `alembic upgrade head` and the idempotent Auth seed.
-Then execute the HTTP smoke test from the repository root:
+Run the manual smoke only after confirming the target API/PostgreSQL is an
+authorized test environment and the intended Local VLM configuration is ready.
+It creates one synthetic plan and can invoke AI; do not use it solely to test
+deployment. Automated tests use isolated databases. Then execute the HTTP smoke
+test from the repository root:
 
 ```powershell
 & .\.venv\Scripts\python.exe scripts/smoke_auth_workflow.py
 ```
 
 It asks for the seeded password without echoing it, then uses separate Maker,
-Checker and Admin sessions to create three plans, upload images, submit, approve
-one, reject another, and race two opposite decisions on a third round. It also
-checks forbidden actions and demo identity separation. The script leaves the
-three clearly named smoke plans in PostgreSQL; retain them or remove only those
-exact IDs after confirming they are disposable test records.
+Checker and Admin sessions to create one plan, upload a private image, submit,
+reject, revise/resubmit and approve the same plan. It also checks forbidden
+actions and demo identity separation. Concurrency is covered by isolated tests.
+
+The runner checkpoints its run ID and plan ID at
+`runtime/auth-workflow-smoke-state.json` (override with
+`AUTH_WORKFLOW_SMOKE_STATE_FILE`). It refuses a second plan scenario in the same
+state file. If a create request times out before returning an ID, it checks a
+read-only PostgreSQL query for the exact generated run marker, resumes only a
+unique match, and stops without retrying if none is visible. A completed state
+prints the existing plan ID on the next invocation and does not create another
+plan; the checkpoint file is ignored local runtime data.
 
 Pytest with SQLite-backed test sessions checks API logic and permission behavior,
 but it does not prove the PostgreSQL migration ran. Only `alembic upgrade head`
