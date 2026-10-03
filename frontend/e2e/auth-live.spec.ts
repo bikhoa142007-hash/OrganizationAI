@@ -81,7 +81,17 @@ test('live Auth Maker-to-Checker browser workflow preserves a rejected version t
     const resumable = maker.locator('.auth-workflow-table tbody tr')
       .filter({ hasText: 'Synthetic local Auth browser ' })
       .filter({ hasText: 'Chờ duyệt' })
-    if (await resumable.count()) {
+    const resumableCount = await resumable.count()
+    if (resumableCount > 1) {
+      const candidateIds = await resumable.evaluateAll(rows => rows.map(row => {
+        const href = row.querySelector<HTMLAnchorElement>('td a')?.getAttribute('href')
+        return href?.split('/').at(-1) ?? '<missing-id>'
+      }))
+      throw new Error(
+        `Found ${resumableCount} pending synthetic plans; refusing to choose one: ${candidateIds.join(', ')}`,
+      )
+    }
+    if (resumableCount === 1) {
       const row = resumable.first()
       const href = await row.locator('td a').getAttribute('href')
       expect(href).toBeTruthy()

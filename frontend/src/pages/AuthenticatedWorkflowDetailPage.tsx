@@ -49,6 +49,9 @@ export function AuthenticatedWorkflowDetailPage() {
   const isAssignedChecker = roles.includes('CHECKER') && plan.checker_id === user?.id
   const canEdit = isMaker && ['DRAFT', 'REJECTED'].includes(plan.status)
   const canDecide = isAssignedChecker && plan.status === 'PENDING_APPROVAL'
+  const finalCheckerDecision = [...plan.history].reverse().find(event =>
+    event.actor_type === 'HUMAN' && ['APPROVED', 'REJECTED'].includes(event.action),
+  )
 
   return <section className="auth-workflow-page">
     <Link className="auth-back-link" to={isAssignedChecker ? '/workflow/reviews' : '/workflow/plans'}><ArrowLeft /> Quay lại danh sách</Link>
@@ -66,7 +69,7 @@ export function AuthenticatedWorkflowDetailPage() {
         <div><dt>KPI kỳ vọng</dt><dd>{plan.payload.kpi_expected || '—'}</dd></div>
         <div><dt>Kênh</dt><dd>{plan.payload.channels.join(', ') || '—'}</dd></div>
         <div><dt>Ghi chú</dt><dd>{plan.payload.notes || '—'}</dd></div>
-      </dl>{plan.decision_reason && <div className={`auth-workflow-alert ${plan.status === 'REJECTED' ? 'is-error' : 'is-review'}`}><strong>{plan.status === 'REJECTED' ? 'Lý do từ chối' : 'Lý do chuyển Checker'}</strong><p>{plan.decision_reason}</p></div>}
+      </dl>{plan.decision_reason && <div className={`auth-workflow-alert ${plan.status === 'REJECTED' ? 'is-error' : 'is-review'}`}><strong>{plan.status === 'REJECTED' ? 'Lý do từ chối' : plan.status === 'PENDING_APPROVAL' ? 'Lý do chuyển Checker' : 'Lý do chuyển Checker (lịch sử)'}</strong><p>{plan.decision_reason}</p></div>}
         <div className="auth-workflow-attachments"><h3>Ảnh đính kèm</h3>{plan.attachments.length ? plan.attachments.map(item => <div key={item.id} className="auth-workflow-attachment"><AuthAttachmentPreview planId={plan.id} attachmentId={item.id} filename={item.filename} /><span><strong>{item.filename}</strong><small>{item.media_type} · {Math.ceil(item.byte_size / 1024)} KB · SHA-256 {item.content_hash.slice(0, 12)}…</small></span></div>) : <p>Chưa có ảnh đính kèm.</p>}</div>
       </section>
       <section className="auth-workflow-card"><div className="auth-workflow-card-heading"><History /><h2>Lịch sử xử lý</h2></div><ol className="auth-workflow-history">{plan.history.map(event => <li key={event.id}><span className="history-icon">{event.action === 'APPROVED' || event.action === 'AI_AUTO_APPROVED' ? <Check /> : event.action === 'REJECTED' ? <X /> : <Clock3 />}</span><div><strong>{eventLabel(event.action)}</strong><p>{event.actor_name} · {new Date(event.created_at).toLocaleString('vi-VN')}</p>{typeof event.details.reason === 'string' && <blockquote>{event.details.reason}</blockquote>}{typeof event.details.version === 'number' && typeof event.details.round === 'number' && <small>Version {event.details.version} / Round {event.details.round}</small>}</div></li>)}</ol></section>
@@ -74,9 +77,15 @@ export function AuthenticatedWorkflowDetailPage() {
     {plan.ai_evaluations.length > 0 && <section className="auth-workflow-card auth-ai-results"><div className="auth-workflow-card-heading"><History /><h2>Kết quả đánh giá AI</h2></div>{plan.ai_evaluations.map(item => {
       const evaluation = item.evaluation
       const decision = plan.engine_decisions.find(entry => entry.round_number === item.round_number)
+      const strategyResult = item.strategy_evaluation?.status === 'SUCCEEDED'
+        ? item.strategy_evaluation.result : null
+      const stageOnlyStrategyScore = evaluation?.status !== 'SUCCEEDED'
+        && evaluation?.feasibility_score == null
+        && strategyResult?.feasibility_score != null
+      const strategyScore = evaluation?.feasibility_score ?? strategyResult?.feasibility_score ?? null
       return <details key={item.id} open={item.round_number === plan.current_round}>
         <summary>Version {item.version_number} · Round {item.round_number} · {evaluation ? evaluationStatusLabel(evaluation.status) : runStatusLabel(item.status)}</summary>
-        <div className="auth-ai-metadata"><span>{providerLabel(item.provider)}</span><span>Model ID: {item.model_id || item.model_version || 'Chưa xác định'}</span>{item.model_id && item.model_version && <span>Model revision: {item.model_version}</span>}<span>Policy: {item.policy_version}</span><span>Lần thử: {item.attempts}{item.retried ? ' · đã retry' : ''}</span></div>
+        <div className="auth-ai-metadata"><span>{providerLabel(item.provider)}</span><span>Model ID: {item.model_id || item.model_version || 'Chưa xác định'}</span>{item.model_id && item.model_version && <span>Model revision: {item.model_version}</span>}<span>Policy: {item.policy_version}</span><span>Tổng lượt gọi provider qua các stage: {item.attempts}{item.retried ? ' · có retry' : ''}</span></div>
         {item.visual_extraction
           ? <VlmExtractionDetails extraction={item.visual_extraction} plan={plan} />
           : <section className="auth-ai-phase"><h3>Trích xuất ảnh (VLM) · {item.status === 'PROCESSING' ? 'Đang xử lý' : item.status === 'PENDING' ? 'Đang chờ' : 'Chưa có kết quả riêng'}</h3><p>Ảnh chỉ được trích xuất một lần cho snapshot đã gửi. Tải lại trang chỉ đọc kết quả đã lưu.</p></section>}
@@ -84,12 +93,14 @@ export function AuthenticatedWorkflowDetailPage() {
         <TaskEvaluationDetails title="Strategy Evaluation" stage={item.strategy_evaluation} kind="strategy" />
         {evaluation ? <>
           <section className="auth-ai-phase"><h3>Đánh giá tổng thể</h3><p>{evaluation.reason}</p></section>
+          <p>Trạng thái đánh giá AI tổng thể: {evaluationStatusLabel(evaluation.status)}</p>
           <dl className="auth-workflow-definition-grid auth-ai-metrics">
             <div><dt>Media Compliance</dt><dd>{evaluation.media_result || 'Chưa có kết quả'}{evaluation.media_confidence !== null && ` · ${percent(evaluation.media_confidence)}`}</dd></div>
-            <div><dt>Strategy Evaluation</dt><dd>{evaluation.feasibility_score === null ? 'Chưa có điểm' : `${evaluation.feasibility_score} / 100`}{evaluation.feasibility_confidence !== null && ` · ${percent(evaluation.feasibility_confidence)}`}</dd></div>
+            <div><dt>Strategy Evaluation</dt><dd>{strategyScore === null ? 'Chưa có điểm' : `${stageOnlyStrategyScore ? 'Strategy đã đánh giá: ' : ''}${strategyScore} / 100`}{evaluation.feasibility_confidence !== null && ` · ${percent(evaluation.feasibility_confidence)}`}</dd></div>
             <div><dt>Khuyến nghị</dt><dd>{recommendationLabel(evaluation.proposed_action)}</dd></div>
             <div><dt>Input hash</dt><dd className="auth-hash">{item.input_hash}</dd></div>
           </dl>
+          {stageOnlyStrategyScore && <p role="status">Điểm Strategy được lưu thành công ở riêng stage, nhưng không được engine sử dụng vì đánh giá tổng thể chưa hợp lệ ({evaluation.status}).</p>}
           {evaluation.criterion_scores.length > 0 && <div><h3>Strategy Evaluation · điểm theo tiêu chí</h3><ul>{evaluation.criterion_scores.map(score => <li key={score.criterion_id}>{score.criterion_id}: {score.score} / {score.maximum_score} — {score.rationale}</li>)}</ul></div>}
           {evaluation.media_findings.length > 0 && <div><h3>Media Compliance · phát hiện</h3><ul>{evaluation.media_findings.map(finding => <li key={finding.finding_id}><strong>{finding.severity}</strong>: {finding.description}</li>)}</ul></div>}
           {evaluation.evidence_conflicts.length > 0 && <div><h3>Thông tin chưa thống nhất</h3><ul>{evaluation.evidence_conflicts.map(conflict => <li key={conflict.conflict_id}>{conflict.description}</li>)}</ul></div>}
@@ -98,7 +109,7 @@ export function AuthenticatedWorkflowDetailPage() {
           {evaluation.assumptions.length > 0 && <div><h3>Giả định</h3><ul>{evaluation.assumptions.map((assumption, index) => <li key={`${index}-${assumption}`}>{assumption}</li>)}</ul></div>}
           {evaluation.agent_errors.length > 0 && <div className="auth-workflow-alert is-error"><div><strong>Pipeline cần Checker xử lý</strong><ul>{evaluation.agent_errors.map((failure, index) => <li key={`${failure.component}-${index}`}>{failure.component}: {failure.code} — {evaluationErrorLabel(failure.code, failure.message)}</li>)}</ul></div></div>}
         </> : <p>Kết quả xử lý: {item.failure_reason || 'Đang chờ xử lý.'}</p>}
-        {decision && <div className={`auth-ai-decision ${decision.outcome === 'AUTO_APPROVED' ? 'is-approved' : 'is-review'}`}><strong>{decision.outcome === 'AUTO_APPROVED' ? 'Đã tự động phê duyệt theo policy' : 'Đã chuyển Checker theo policy'}</strong><p>{decision.decision.reason}</p><small>Ngân sách: {decision.decision.budget_validation.result}{decision.decision.budget_validation.limit_minor_units && ` · hạn mức ${formatBudget(decision.decision.budget_validation.limit_minor_units, decision.decision.budget_validation.currency || plan.payload.currency)}`}</small>{decision.decision.rule_checks.some(check => check.result !== 'PASS') && <ul>{decision.decision.rule_checks.filter(check => check.result !== 'PASS').map(check => <li key={check.rule_id}>{check.rule_id}: {check.result}</li>)}</ul>}</div>}
+        {decision && <div className={`auth-ai-decision ${decision.outcome === 'AUTO_APPROVED' ? 'is-approved' : 'is-review'}`}><strong>{decision.outcome === 'AUTO_APPROVED' ? 'Engine đã tự động phê duyệt theo policy.' : plan.status === 'PENDING_APPROVAL' ? 'Engine đã chuyển Checker; hồ sơ đang chờ quyết định.' : 'Engine đã chuyển hồ sơ sang Checker (lịch sử).'}</strong><p>{decision.decision.reason}</p>{finalCheckerDecision && ['APPROVED', 'REJECTED'].includes(plan.status) && <p>{finalCheckerDecision.action === 'APPROVED' ? 'Checker đã phê duyệt hồ sơ.' : 'Checker đã từ chối hồ sơ.'}</p>}<small>Ngân sách: {decision.decision.budget_validation.result}{decision.decision.budget_validation.limit_minor_units && ` · hạn mức ${formatBudget(decision.decision.budget_validation.limit_minor_units, decision.decision.budget_validation.currency || plan.payload.currency)}`}</small>{decision.decision.rule_checks.some(check => check.result !== 'PASS') && <ul>{decision.decision.rule_checks.filter(check => check.result !== 'PASS').map(check => <li key={check.rule_id}>{check.rule_id}: {check.result}</li>)}</ul>}</div>}
       </details>
     })}</section>}
     {plan.versions.length > 0 && <section className="auth-workflow-card auth-version-card"><div className="auth-workflow-card-heading"><History /><h2>Snapshot đã gửi</h2></div>{plan.versions.map(version => <details key={version.version_number}><summary>Version {version.version_number} · Round {version.round_number} · {new Date(version.created_at).toLocaleString('vi-VN')}</summary><p>{version.payload.summary}</p><ul>{version.attachments.map(item => <li key={item.id}>{item.filename} · SHA-256 {item.content_hash}</li>)}</ul></details>)}</section>}
@@ -115,21 +126,24 @@ function TaskEvaluationDetails({ title, stage, kind }: {
 }) {
   if (!stage) return <section className="auth-ai-phase"><h3>{title}</h3><p>Phiên xử lý cũ chưa lưu riêng bước này.</p></section>
   const result = stage.result
+  const mediaOutOfScope = kind === 'media' && stage.status === 'REVIEW_REQUIRED'
+    && stage.attempts === 0 && stage.raw_output_hash === null
+    && result?.outcome === 'REVIEW_REQUIRED' && result.confidence == null
   return <section className="auth-ai-phase auth-task-evaluation">
-    <h3>{title} · {taskStatusLabel(stage.status)}</h3>
+    <h3>{title} · {mediaOutOfScope ? 'Không đánh giá: ngoài phạm vi policy' : taskStatusLabel(stage.status)}</h3>
     <div className="auth-ai-metadata">
-      <span>Model: {stage.model_id || 'Chưa cấu hình'}</span>
-      {stage.model_version && <span>Model version: {stage.model_version}</span>}
+      {!mediaOutOfScope && <><span>Model: {stage.model_id || 'Chưa cấu hình'}</span>
+      {stage.model_version && <span>Model version: {stage.model_version}</span>}</>}
       <span>Policy/Rubric: {stage.configuration_id || 'Chưa cấu hình'}{stage.configuration_version ? ` · ${stage.configuration_version}` : ''}</span>
-      {stage.prompt_version && <span>Prompt: {stage.prompt_version}</span>}
-      {stage.schema_version && <span>Schema: {stage.schema_version}</span>}
+      {!mediaOutOfScope && stage.prompt_version && <span>Prompt: {stage.prompt_version}</span>}
+      {!mediaOutOfScope && stage.schema_version && <span>Schema: {stage.schema_version}</span>}
       {stage.raw_output_hash && <span>Output SHA-256: {stage.raw_output_hash}</span>}
-      <span>Lần thử: {stage.attempts}{stage.retried ? ' · đã retry' : ''}</span>
+      <span>{mediaOutOfScope ? 'Provider không được gọi vì kế hoạch nằm ngoài phạm vi policy.' : `Lượt gọi provider của stage: ${stage.attempts}${stage.retried ? ' · có retry' : ''}`}</span>
     </div>
     {stage.reason && <p>{stage.reason}</p>}
     {stage.error_code && <div className="auth-workflow-alert is-review" role="status">{stage.error_code} · Checker cần xem xét bước này.</div>}
-    {result?.reason && <p>{result.reason}</p>}
-    {kind === 'media' && result?.outcome && <p>Kết quả: <strong>{result.outcome === 'PASS' ? 'Đạt policy' : 'Cần Checker xem xét'}</strong>{result.confidence != null && ` · ${percent(result.confidence)}`}</p>}
+    {result?.reason && result.reason !== stage.reason && <p>{result.reason}</p>}
+    {kind === 'media' && result?.outcome && <p>Kết quả: <strong>{mediaOutOfScope ? 'Không đánh giá: ngoài phạm vi policy' : result.outcome === 'PASS' ? 'Đạt policy' : 'Cần Checker xem xét'}</strong>{result.confidence != null && ` · ${percent(result.confidence)}`}</p>}
     {kind === 'media' && result?.findings?.length ? <div><h4>Phát hiện</h4><ul>{result.findings.map(item => <li key={item.finding_id}><strong>{item.severity}</strong>: {item.description}</li>)}</ul></div> : null}
     {kind === 'media' && result?.rule_results?.length ? <div><h4>Kết quả theo quy tắc</h4><ul>{result.rule_results.map(item => <li key={item.rule_id}>{item.rule_id}: {item.result} — {item.rationale}</li>)}</ul></div> : null}
     {kind === 'media' && result?.missing_evidence?.length ? <div><h4>Bằng chứng ảnh còn thiếu</h4><ul>{result.missing_evidence.map(item => <li key={`${item.rule_id}-${item.evidence_kind}`}>{item.rule_id}: cần {item.evidence_kind}</li>)}</ul></div> : null}

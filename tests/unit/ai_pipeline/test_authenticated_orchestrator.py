@@ -115,6 +115,17 @@ class FakeExtractionProvider:
         )
 
 
+class RetryOnceExtractionProvider(FakeExtractionProvider):
+    def __init__(self):
+        self.calls = 0
+
+    def analyze_image(self, request):
+        self.calls += 1
+        if self.calls == 1:
+            raise ProviderTimeout()
+        return super().analyze_image(request)
+
+
 class FakeTaskProvider:
     def __init__(self, task, *, fail=None, score=71):
         self.settings = settings(task)
@@ -212,6 +223,33 @@ def test_unconfigured_media_does_not_fake_pass_and_keeps_strategy_result():
     assert result.evaluation["media_result"] is None
     assert result.evaluation["agent_errors"][0]["code"] == "MEDIA_NOT_CONFIGURED"
     assert strategy.calls == 1
+
+
+def test_out_of_scope_media_skips_provider_and_aggregate_attempts_sum_actual_stage_calls():
+    media_policy = media_policy_from_json(MEDIA_POLICY_JSON.replace('"marketing"', '"nori pilot"'))
+    visual = RetryOnceExtractionProvider()
+    media = FakeTaskProvider("MEDIA_COMPLIANCE")
+    strategy = FakeTaskProvider("STRATEGY_EVALUATION")
+    result = AuthenticatedEvaluationOrchestrator(
+        visual, media_provider=media, strategy_provider=strategy,
+    ).evaluate(request(media_policy=media_policy))
+
+    assert result.visual_extraction["status"] == "SUCCEEDED"
+    assert visual.calls == 2
+    assert result.media_evaluation["status"] == "REVIEW_REQUIRED"
+    assert result.media_evaluation["attempts"] == 0
+    assert result.media_evaluation["retried"] is False
+    assert result.media_evaluation["raw_output_hash"] is None
+    assert media.calls == 0
+    assert result.strategy_evaluation["status"] == "SUCCEEDED"
+    assert result.strategy_evaluation["attempts"] == 1
+    assert result.strategy_evaluation["retried"] is False
+    assert strategy.calls == 1
+    assert result.evaluation["status"] == "FAILED"
+    assert result.evaluation["feasibility_score"] is None
+    assert result.strategy_evaluation["result"]["feasibility_score"] == 71
+    assert result.attempts == 3
+    assert result.retried is True
 
 
 def test_one_successful_step_is_retained_when_the_other_provider_fails():
