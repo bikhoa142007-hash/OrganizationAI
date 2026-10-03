@@ -112,6 +112,8 @@ SQLite restore hoặc backup. Không tạo live plan mới và không chạy mod
 - Rollback web/API bằng cách chọn deployment trước đó trong Render Dashboard. Không
   downgrade migration, drop database hoặc xóa dữ liệu khi rollback; migration role
   catalog là additive.
+- Git handoff: branch `feature/auth-first-staging`; commits `6c4f9f9` (AI stage/smoke
+  runner) và `d323990` (Auth-first/staging); [Draft PR #17](https://github.com/bikhoa142007-hash/OrganizationAI/pull/17).
 - Bước cần quyền: đăng nhập Render trong dashboard, xác nhận project/workspace và
   rằng tạo đúng một PostgreSQL Free staging riêng được phép. Xác nhận slot Free còn
   trống và chấp nhận vòng đời 30 ngày; nếu cần persistence dài hơn, chọn provider/gói
@@ -119,4 +121,4 @@ SQLite restore hoặc backup. Không tạo live plan mới và không chạy mod
 - Sau đó validate Blueprint plan, tạo service/DB, chờ migration/readiness, kiểm tra
   cookie/CORS/deep links trên HTTPS. Chỉ tạo tối đa một live plan synthetic sau khi
   Checker identity và AI behavior được xác nhận; ghi ID/status ngay khi tạo.
-- Trước merge cần code review PR. Chưa có PR/commit/push ở thời điểm cập nhật tài liệu.
+- Trước merge cần code review PR. PR hiện ở trạng thái draft; branch chưa deploy.
