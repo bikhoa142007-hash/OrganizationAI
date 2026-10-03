@@ -13,6 +13,11 @@ def test_auth_migrations_create_registration_ready_identity_tables(tmp_path, mon
 
     engine = create_engine(database_url)
     inspector = inspect(engine)
+    with engine.connect() as connection:
+        assert set(connection.scalars(text("SELECT code FROM roles")).all()) == {
+            "MAKER", "CHECKER", "ADMIN",
+        }
+        assert connection.scalar(text("SELECT count(*) FROM users")) == 0
     assert {
         "users", "roles", "user_roles", "alembic_version",
         "auth_workflow_plans", "auth_workflow_attachments", "auth_workflow_versions",

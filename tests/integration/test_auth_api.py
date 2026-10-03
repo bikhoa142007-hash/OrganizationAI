@@ -14,6 +14,7 @@ from sqlalchemy.pool import StaticPool
 from src.backend.api.app import create_app
 from src.backend.api.dependencies import Settings
 from src.backend.api.auth import AuthenticatedPrincipal, get_auth_db, require_any_role, require_role
+from src.backend.api.auth_rate_limit import AuthAttemptLimiter
 from src.backend.db.base import Base
 from src.backend.db.models.role import Role, UserRole
 from src.backend.db.models.user import User
@@ -100,6 +101,47 @@ def test_login_by_user_code_sets_http_only_cookie_and_me_returns_database_roles(
     me = client.get("/api/auth/me")
     assert me.status_code == 200
     assert me.json() == response.json()
+
+
+def test_public_auth_configuration_reports_registration_without_exposing_credentials(auth_client, monkeypatch):
+    client, _ = auth_client
+
+    enabled = client.get("/api/auth/config")
+    monkeypatch.setenv("AUTH_REGISTRATION_ENABLED", "false")
+    disabled = client.get("/api/auth/config")
+
+    assert enabled.status_code == 200
+    assert enabled.json() == {"registration_enabled": True}
+    assert disabled.status_code == 200
+    assert disabled.json() == {"registration_enabled": False}
+
+
+def test_registration_is_rate_limited_by_client_ip(auth_client):
+    client, _ = auth_client
+    client.app.state.auth_attempt_limiter = AuthAttemptLimiter(register_per_ip=1)
+    payload = {
+        "username": "first.maker", "contact": "first@example.com",
+        "password": "New-local-password-123",
+    }
+
+    first = client.post("/api/auth/register", json=payload)
+    second = client.post("/api/auth/register", json={
+        **payload, "username": "second.maker", "contact": "second@example.com",
+    })
+
+    assert first.status_code == 201
+    assert second.status_code == 429
+    assert second.json()["code"] == "RATE_LIMITED"
+    assert "New-local-password-123" not in second.text
+
+
+def test_auth_database_readiness_uses_the_configured_session(auth_client):
+    client, _ = auth_client
+
+    response = client.get("/api/health/ready")
+
+    assert response.status_code == 200
+    assert response.json()["auth_database"] == "postgresql"
 
 
 def test_login_by_email_is_case_insensitive(auth_client):

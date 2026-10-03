@@ -6,6 +6,8 @@ from fastapi import FastAPI, Depends, File, Form, Header, Query, Request, Upload
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
+from sqlalchemy import text
+from sqlalchemy.orm import Session
 from starlette.exceptions import HTTPException
 
 from src.ai_pipeline.adapters import ApprovalPipelineAdapter
@@ -17,6 +19,8 @@ from src.backend.application.auth_workflow_ai import (
     unconfigured_approval_configuration,
 )
 from src.backend.application.workflow import ApplicationError
+from src.backend.api.auth import get_auth_db
+from src.backend.api.auth_rate_limit import AuthAttemptLimiter
 from src.backend.demo import PRINCIPALS, ENGINE, configuration, CHECKER
 from .dependencies import Settings, open_workflow
 from .errors import error_response
@@ -45,8 +49,9 @@ def create_app(settings=None, *, auth_workflow_provider=None, auth_workflow_conf
     verify_runs = {}
     app = FastAPI(title='OrganizationAI API', version='1.0',
                   description='PostgreSQL authentication and authenticated Maker-Checker workflow, plus a separate SQLite synthetic approval demo. Demo-actor routes are available only in APP_ENV=demo.',
-                  responses={code: {'model': ErrorResponse} for code in (401, 403, 404, 409, 422, 503)})
+                  responses={code: {'model': ErrorResponse} for code in (401, 403, 404, 409, 422, 429, 503)})
     app.state.allowed_origins = tuple(settings.cors_origins)
+    app.state.auth_attempt_limiter = AuthAttemptLimiter()
     app.state.auth_workflow_provider = auth_workflow_provider
     app.state.auth_workflow_media_provider = auth_workflow_media_provider
     app.state.auth_workflow_strategy_provider = auth_workflow_strategy_provider
@@ -102,6 +107,11 @@ def create_app(settings=None, *, auth_workflow_provider=None, auth_workflow_conf
     @app.get('/api/health')
     async def health():
         return {'status': 'ok', 'environment': settings.app_env}
+
+    @app.get('/api/health/ready')
+    def readiness(session: Session = Depends(get_auth_db)):
+        session.execute(text('SELECT 1'))
+        return {'status': 'ok', 'environment': settings.app_env, 'auth_database': 'postgresql'}
 
     @app.get('/api/config')
     async def config(auth=Depends(actor)):

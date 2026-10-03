@@ -8,13 +8,13 @@ import { useSession } from '../services/SessionProvider'
 import { StatePanel } from './ui'
 
 const navigation = [
-  { label: 'Tổng quan', to: '/', icon: LayoutDashboard },
-  { label: 'Kế hoạch', to: '/plans', icon: BriefcaseBusiness },
-  { label: 'Tạo kế hoạch', to: '/plans/new', icon: FilePlus2, roles: ['MAKER'] },
-  { label: 'Chờ tôi duyệt', to: '/review', icon: ClipboardCheck, roles: ['CHECKER'] },
-  { label: 'Lịch sử audit', to: '/audit', icon: Activity },
-  { label: 'Chính sách', to: '/policy', icon: BookOpenCheck },
-  { label: 'Verify', to: '/verify', icon: FlaskConical, section: 'Công cụ demo' },
+  { label: 'Tổng quan demo', to: '/demo', icon: LayoutDashboard },
+  { label: 'Kế hoạch', to: '/demo/plans', icon: BriefcaseBusiness },
+  { label: 'Tạo kế hoạch', to: '/demo/plans/new', icon: FilePlus2, roles: ['MAKER'] },
+  { label: 'Chờ tôi duyệt', to: '/demo/review', icon: ClipboardCheck, roles: ['CHECKER'] },
+  { label: 'Lịch sử audit', to: '/demo/audit', icon: Activity },
+  { label: 'Chính sách', to: '/demo/policy', icon: BookOpenCheck },
+  { label: 'Verify', to: '/demo/verify', icon: FlaskConical, section: 'Công cụ demo' },
 ]
 
 export function AppShell() {
@@ -27,7 +27,7 @@ export function AppShell() {
     () => navigation.filter(item => !item.roles || item.roles.some(role => config?.roles.includes(role))),
     [config?.roles],
   )
-  const current = allowedNavigation.find(item => item.to === '/' ? location.pathname === '/' : location.pathname.startsWith(item.to))
+  const current = allowedNavigation.find(item => item.to === '/demo' ? location.pathname === '/demo' : location.pathname.startsWith(item.to))
 
   return <div className="app-shell">
     <aside className={`sidebar ${open ? 'sidebar-open' : ''}`} aria-label="Điều hướng ứng dụng">
@@ -44,7 +44,7 @@ export function AppShell() {
           const Icon = item.icon
           return <div key={item.to}>
             {showSection && <p className="nav-section-label">{item.section}</p>}
-            <NavLink to={item.to} end={item.to === '/'}><Icon aria-hidden="true" /><span>{item.label}</span></NavLink>
+            <NavLink to={item.to} end={item.to === '/demo'}><Icon aria-hidden="true" /><span>{item.label}</span></NavLink>
           </div>
         })}
       </nav>

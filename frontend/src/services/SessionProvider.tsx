@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import { useLocation } from 'react-router-dom'
 import type { AppConfig } from '../types'
 import { api, demoActor } from './api/client'
+import { isDemoEnabled } from './apiBaseUrl'
 
 interface WireConfig {
   environment: string
@@ -45,8 +46,10 @@ const SessionContext = createContext<SessionValue>(fallbackSession)
 export function SessionProvider({ children }: PropsWithChildren) {
   const location = useLocation()
   const isAuthRoute = location.pathname === '/login'
+    || location.pathname === '/'
     || location.pathname === '/register'
     || location.pathname === '/account'
+    || location.pathname === '/access-denied'
     || location.pathname === '/workflow'
     || location.pathname.startsWith('/workflow/')
   const [config, setConfig] = useState<AppConfig | null>(null)
@@ -54,7 +57,7 @@ export function SessionProvider({ children }: PropsWithChildren) {
   const [error, setError] = useState('')
 
   const refresh = useCallback(async () => {
-    if (isAuthRoute) {
+    if (isAuthRoute || !isDemoEnabled() || !(location.pathname === '/demo' || location.pathname.startsWith('/demo/'))) {
       setConfig(null)
       setError('')
       setLoading(false)
@@ -88,7 +91,7 @@ export function SessionProvider({ children }: PropsWithChildren) {
     } finally {
       setLoading(false)
     }
-  }, [isAuthRoute])
+  }, [isAuthRoute, location.pathname])
 
   useEffect(() => { void refresh() }, [refresh])
 
@@ -100,7 +103,7 @@ export function SessionProvider({ children }: PropsWithChildren) {
     switchActor: (actorId) => {
       if (!actorId || actorId === demoActor()) return
       sessionStorage.setItem('organization-demo-actor', actorId)
-      window.location.assign('/')
+      window.location.assign('/demo')
     },
     hasRole: (role) => Boolean(config?.roles.includes(role)),
   }), [config, error, loading, refresh])

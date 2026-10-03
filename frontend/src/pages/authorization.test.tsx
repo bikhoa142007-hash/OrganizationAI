@@ -11,17 +11,18 @@ import { PlanFormPage } from './PlanFormPage'
 import { ResultPage } from './ResultPage'
 
 function config(role: string) {
+  vi.stubEnv('VITE_DEMO_ENABLED', 'true')
   const actor = `DEMO-${role}-01`
   sessionStorage.setItem('organization-demo-actor', actor)
   vi.spyOn(api, 'request').mockResolvedValue({ actor, roles: [role],
     actors: [{ id: actor, roles: [role] }], environment: 'demo', department: 'DEMO-DEPT-01', checker_id: 'DEMO-CHECKER-01', currency: 'VND', provider: 'MOCK_VLM', mock_mode: 'pass',
     policy: { policy: { allowed_media_types: ['image/png', 'image/jpeg', 'image/webp'], max_attachment_bytes: 5000000 } }, capabilities: { stop: false, retry_evaluation: false, request_changes: false } })
 }
-afterEach(() => { vi.restoreAllMocks(); sessionStorage.clear() })
+afterEach(() => { vi.restoreAllMocks(); vi.unstubAllEnvs(); sessionStorage.clear() })
 
 it.each(['MAKER', 'CHECKER', 'ADMIN'])('shows server roles and role-specific navigation for %s', async role => {
   config(role)
-  render(<MemoryRouter><SessionProvider><Routes><Route element={<AppShell />}><Route index element={<p>Workspace</p>} /></Route></Routes></SessionProvider></MemoryRouter>)
+  render(<MemoryRouter initialEntries={['/demo']}><SessionProvider><Routes><Route path="/demo" element={<AppShell />}><Route index element={<p>Workspace</p>} /></Route></Routes></SessionProvider></MemoryRouter>)
   expect(await screen.findByLabelText(/Demo actor/)).toHaveValue(`DEMO-${role}-01`)
   expect(screen.queryByRole('link', { name: 'Tạo kế hoạch' }) !== null).toBe(role === 'MAKER')
   expect(screen.queryByRole('link', { name: 'Chờ tôi duyệt' }) !== null).toBe(role === 'CHECKER')
@@ -38,7 +39,9 @@ it('explains required inputs and rejects placeholders, zero budget and reversed 
   config('MAKER')
   const services = createApiServices()
   services.plan.saveDraft = vi.fn()
-  render(<MemoryRouter><SessionProvider><ServicesProvider services={services}><PlanFormPage /></ServicesProvider></SessionProvider></MemoryRouter>)
+  render(<MemoryRouter initialEntries={['/demo/plans/new']}><SessionProvider><ServicesProvider services={services}><Routes>
+    <Route path="/demo/plans/new" element={<PlanFormPage />} />
+  </Routes></ServicesProvider></SessionProvider></MemoryRouter>)
   fireEvent.click(await screen.findByRole('button', { name: 'Gửi duyệt' }))
   expect(screen.getAllByText('Trường này bắt buộc khi gửi duyệt.').length).toBeGreaterThan(0)
   for (const [label, value] of [['Tên chiến dịch', 'test'], ['Mục tiêu', 'Tiếp cận khách hàng mới'], ['Tóm tắt', 'Chiến lược quảng bá theo tuần'], ['Ngày bắt đầu', '2026-10-01'], ['Ngày kết thúc', '2026-10-31'], ['Ngân sách', '50000000']]) {

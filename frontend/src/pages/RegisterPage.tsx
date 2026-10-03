@@ -1,8 +1,10 @@
 import { ArrowRight, Eye, EyeOff, LockKeyhole, Mail, ShieldCheck, UserRound } from 'lucide-react'
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { AuthApiError } from '../services/auth'
+import { AuthApiError, authService } from '../services/auth'
+import { StatePanel } from '../components/ui'
+import { homeForRoles } from '../services/authNavigation'
 
 type RegisterField = 'username' | 'contact' | 'password' | 'confirmation'
 type RegisterErrors = Partial<Record<RegisterField, string>>
@@ -44,8 +46,11 @@ function validateConfirmation(value: string, password: string) {
 }
 
 export function RegisterPage() {
-  const { isAuthenticated, isLoading: sessionLoading, register } = useAuth()
+  const { isAuthenticated, isLoading: sessionLoading, register, roles } = useAuth()
   const navigate = useNavigate()
+  const [registrationEnabled, setRegistrationEnabled] = useState<boolean | null>(null)
+  const [configLoading, setConfigLoading] = useState(true)
+  const [configError, setConfigError] = useState('')
   const [username, setUsername] = useState('')
   const [contact, setContact] = useState('')
   const [password, setPassword] = useState('')
@@ -58,6 +63,21 @@ export function RegisterPage() {
   const [errors, setErrors] = useState<RegisterErrors>({})
   const [loading, setLoading] = useState(false)
   const [formError, setFormError] = useState('')
+
+  async function loadRegistrationConfig() {
+    setConfigLoading(true)
+    setConfigError('')
+    try {
+      const config = await authService.getRegistrationConfig()
+      setRegistrationEnabled(config.registration_enabled)
+    } catch {
+      setConfigError('Không thể tải trạng thái đăng ký. Hãy thử lại khi dịch vụ khả dụng.')
+    } finally {
+      setConfigLoading(false)
+    }
+  }
+
+  useEffect(() => { void loadRegistrationConfig() }, [])
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -95,6 +115,8 @@ export function RegisterPage() {
         setFormError('Vui lòng kiểm tra tên đăng nhập, email hoặc số điện thoại và mật khẩu.')
       } else if (reason instanceof AuthApiError && reason.status === 403) {
         setFormError('Hiện chưa thể tự đăng ký tài khoản. Vui lòng liên hệ quản trị viên.')
+      } else if (reason instanceof AuthApiError && reason.status === 429) {
+        setFormError('Có quá nhiều lần đăng ký từ thiết bị này. Vui lòng chờ trước khi thử lại.')
       } else if (reason instanceof AuthApiError && reason.status === 503) {
         setFormError('Dịch vụ đăng ký chưa được cấu hình. Vui lòng thử lại sau.')
       } else {
@@ -113,7 +135,15 @@ export function RegisterPage() {
     : ''
 
   if (sessionLoading) return <p role="status">Đang kiểm tra phiên đăng nhập…</p>
-  if (isAuthenticated) return <Navigate to="/account" replace />
+  if (isAuthenticated) return <Navigate to={homeForRoles(roles)} replace />
+  if (configLoading) return <p role="status">Đang kiểm tra trạng thái đăng ký…</p>
+  if (configError) return <StatePanel kind="error" title="Không thể kiểm tra đăng ký" description={configError} action={<button type="button" onClick={() => void loadRegistrationConfig()}>Thử lại</button>} />
+  if (!registrationEnabled) return <main className="login-page"><section className="login-panel"><div className="login-card">
+    <h1>Đăng ký tài khoản</h1>
+    <p role="status">Tự đăng ký hiện đang tắt. Vui lòng liên hệ quản trị viên OrganizationAI để được cấp tài khoản Maker.</p>
+    <p>Liên hệ được cung cấp khi đăng ký chưa được xác minh.</p>
+    <p><Link to="/login">Quay lại đăng nhập</Link></p>
+  </div></section></main>
 
   return (
     <main className="login-page register-page">

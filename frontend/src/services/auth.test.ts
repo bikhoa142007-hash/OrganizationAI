@@ -54,3 +54,14 @@ it('refreshes the session from the backend rather than a client-side flag', asyn
   expect(fetchMock.mock.calls[0][0]).toContain('/auth/me')
   expect((fetchMock.mock.calls[0][1] as RequestInit).credentials).toBe('include')
 })
+
+it('reads only the server registration feature switch', async () => {
+  const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ registration_enabled: false }), {
+    status: 200, headers: { 'Content-Type': 'application/json' },
+  }))
+  vi.stubGlobal('fetch', fetchMock)
+
+  await expect(authService.getRegistrationConfig()).resolves.toEqual({ registration_enabled: false })
+  expect(fetchMock.mock.calls[0][0]).toContain('/auth/config')
+  expect((fetchMock.mock.calls[0][1] as RequestInit).credentials).toBe('include')
+})

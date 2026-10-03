@@ -1,13 +1,14 @@
 # Public Sprint 1 deployment: Render
 
-Status: configured locally, NOT DEPLOYED. No public URLs have been assigned here.
-Render authentication is unavailable: no CLI/token found; browser control failed
-with a Windows sandbox access error. Sign in to Render directly; never put
-credentials in repository files or chat.
+The existing Judge Demo deployment is separate from the Auth-first staging
+Blueprint. This task has not deployed or changed either service. The Render
+dashboard opened to a sign-in page; no CLI or connected Render account is
+available here. Never put credentials in repository files or chat.
 
 ## Architecture and provisioning
 
-Root render.yaml declares the primary React static site and FastAPI web service.
+Root render.yaml declares only the existing Judge Demo React static site and
+FastAPI service. It has no Auth PostgreSQL configuration.
 The API uses plan: free; the React frontend is a free static site. No disk,
 Postgres or paid service is configured or authorized. Do not upgrade either service.
 Use one instance/worker. SQLite is unsuitable for independent horizontal replicas.
@@ -93,7 +94,9 @@ After deployment, record both public URLs and the deployed commit, then:
    GET /api/config as DEMO-MAKER-01 verifies the authenticated demo path too.
 2. Preflight API requests from the frontend origin must return that exact
    Access-Control-Allow-Origin. An unrelated origin must receive no permission.
-3. Open and refresh /, /plans/new, /plans, /review, /audit, /policy, /verify.
+3. Open and refresh /demo, /demo/plans/new, /demo/plans, /demo/review,
+   /demo/audit, /demo/policy and /demo/verify. Legacy demo URLs redirect under
+   /demo; / is the Auth entry in the reviewed source branch.
    Inspect browser requests: no localhost URLs, mixed content or failed requests.
 4. Actor selector must contain DEMO-MAKER-01, DEMO-CHECKER-01, DEMO-ADMIN-01 and
    DEMO-DUAL-01. Unknown actors/internal evaluator must fail authentication.
@@ -128,6 +131,59 @@ able to stop it. The free service has idle cold starts and deployment downtime.
 Real production identity, company policy and real VLM validation remain out of scope.
 Dependency deprecation warnings remain. Authenticated hosted Linux execution and
 public acceptance are pending.
+
+## Separate Auth staging Blueprint
+
+Use `deployment/render.auth-staging.yaml` only to create a separate staging
+Blueprint. It declares uniquely named API, static web, and PostgreSQL resources;
+it does not sync the root Judge Demo services. Automatic deploys are off. Review
+the Blueprint plan in Render before applying it, and stop if it proposes paid
+resources, touches an existing service/database, or cannot use the exact branch.
+
+The Blueprint uses a free PostgreSQL instance with private-only IP access, one
+API instance, a generated backend-only JWT secret, `APP_ENV=production`, secure
+HttpOnly/SameSite=Lax cookies, exact frontend-origin CORS, per-IP and per-account
+login limits, and per-IP plus service-wide registration limits. The service-wide
+registration limit protects staging even if a caller can vary forwarded IP
+headers. It creates no users. The migrations add the Maker/Checker/Admin role
+catalog only. The frontend has demo routes disabled; the root rewrites to
+`index.html` so Auth and workflow deep links survive refresh. The API readiness
+check runs `SELECT 1` against PostgreSQL. The launcher validates HTTPS origins,
+secure cookies and the database URL, applies Alembic migrations, then starts one
+Uvicorn worker.
+
+Staging deliberately has no inference host or model configured. The provider is
+explicitly `LOCAL_VLM`, remote use is disabled, Mock is unavailable in production,
+and the authenticated auto-approval configuration stays disabled. AI evaluation
+therefore routes to Human Review until an approved local inference service and
+business policy are available. No public tunnel or external provider is created.
+
+Render's current Free Postgres offer expires after 30 days, has a 14-day grace
+period before deletion, and has no managed backups. The workspace also permits
+only one active Free Postgres instance. This is temporary staging storage, not a
+long-lived durable database. Do not delete or replace an existing database to
+make room. If durable staging is required, an owner must approve a paid plan or
+another provider before deployment. See [Render Free plan limits](https://render.com/docs/free).
+
+After access is connected and a stage is confirmed as authorized, use these
+read-only deployment checks first:
+
+1. Record the deployed commit and the actual web/API URLs shown by Render.
+2. GET `/api/health/ready`; require `auth_database=postgresql`.
+3. Open `/`, `/login`, `/register`, and a protected deep link, then refresh each.
+   Confirm Auth entry/login, the server registration switch, secure cookie flags,
+   exact CORS origin and no demo actor header on Auth requests.
+4. Confirm the browser has no localhost/mixed-content requests. Check unrelated
+   origins cannot read credentialed responses and mutation requests validate Origin.
+5. Do not submit a plan merely to validate hosting. Live workflow/AI checks require
+   an independently authorized Checker identity and inference configuration.
+
+Rollback the API/web services to a prior staging deployment through Render. The
+database migration is additive; do not downgrade or delete the database during
+rollback. A migration failure prevents the API from starting and leaves readiness
+failed for operator review. The initial deployment itself remains blocked until
+the Render account is connected and the free database slot/temporary retention
+limit are confirmed.
 
 References consulted: https://render.com/docs/blueprint-spec and
 https://render.com/schema/render.yaml.json.

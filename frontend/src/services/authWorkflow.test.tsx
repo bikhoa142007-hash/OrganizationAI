@@ -26,6 +26,40 @@ it('sends authenticated workflow requests with cookies and without a demo actor 
   expect(JSON.stringify(options)).not.toContain('X-Demo-Actor')
 })
 
+it('distinguishes an expired session from an authenticated authorization denial', async () => {
+  const expired = vi.fn()
+  const denied = vi.fn()
+  window.addEventListener('organizationai:auth-expired', expired)
+  window.addEventListener('organizationai:access-denied', denied)
+  vi.stubGlobal('fetch', vi.fn()
+    .mockResolvedValueOnce(new Response('{}', { status: 401 }))
+    .mockResolvedValueOnce(new Response('{}', { status: 403 })))
+
+  await expect(authWorkflowService.listPlans()).rejects.toMatchObject({ status: 401 })
+  await expect(authWorkflowService.listPlans()).rejects.toMatchObject({ status: 403 })
+  expect(expired).toHaveBeenCalledTimes(1)
+  expect(denied).toHaveBeenCalledTimes(1)
+  window.removeEventListener('organizationai:auth-expired', expired)
+  window.removeEventListener('organizationai:access-denied', denied)
+})
+
+it('distinguishes an expired session from an authenticated authorization denial', async () => {
+  const expired = vi.fn()
+  const denied = vi.fn()
+  window.addEventListener('organizationai:auth-expired', expired)
+  window.addEventListener('organizationai:access-denied', denied)
+  vi.stubGlobal('fetch', vi.fn()
+    .mockResolvedValueOnce(new Response('{}', { status: 401 }))
+    .mockResolvedValueOnce(new Response('{}', { status: 403 })))
+
+  await expect(authWorkflowService.listPlans()).rejects.toMatchObject({ status: 401 })
+  await expect(authWorkflowService.listPlans()).rejects.toMatchObject({ status: 403 })
+  expect(expired).toHaveBeenCalledTimes(1)
+  expect(denied).toHaveBeenCalledTimes(1)
+  window.removeEventListener('organizationai:auth-expired', expired)
+  window.removeEventListener('organizationai:access-denied', denied)
+})
+
 it('loads the Auth session on authenticated workflow routes', async () => {
   vi.spyOn(authService, 'me').mockResolvedValue({
     id: 'maker-id', user_code: 'USR-1', username: 'maker', email: 'maker@example.com',

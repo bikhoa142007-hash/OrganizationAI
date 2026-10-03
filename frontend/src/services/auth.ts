@@ -1,4 +1,5 @@
 import type { AuthUser } from '../types/auth'
+import { resolveApiBaseUrl } from './apiBaseUrl'
 
 export class AuthApiError extends Error {
   constructor(public status: number, message: string) {
@@ -6,8 +7,6 @@ export class AuthApiError extends Error {
     this.name = 'AuthApiError'
   }
 }
-
-const baseUrl = (import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8010/api').replace(/\/$/, '')
 
 function isAuthUser(value: unknown): value is AuthUser {
   if (!value || typeof value !== 'object') return false
@@ -26,7 +25,7 @@ function isAuthUser(value: unknown): value is AuthUser {
 async function request(path: string, method: 'GET' | 'POST', body?: unknown): Promise<unknown> {
   let response: Response
   try {
-    response = await fetch(`${baseUrl}${path}`, {
+    response = await fetch(`${resolveApiBaseUrl()}${path}`, {
       method,
       credentials: 'include',
       headers: body === undefined ? undefined : { 'Content-Type': 'application/json' },
@@ -56,6 +55,15 @@ function parseUser(data: unknown): AuthUser {
 }
 
 export const authService = {
+  async getRegistrationConfig(): Promise<{ registration_enabled: boolean }> {
+    const data = await request('/auth/config', 'GET')
+    if (!data || typeof data !== 'object' || !('registration_enabled' in data) ||
+        typeof data.registration_enabled !== 'boolean') {
+      throw new AuthApiError(502, 'Authentication service returned invalid registration settings.')
+    }
+    return { registration_enabled: data.registration_enabled }
+  },
+
   async login(identifier: string, password: string, rememberMe = false): Promise<AuthUser> {
     return parseUser(await request('/auth/login', 'POST', {
       identifier, password, remember_me: rememberMe,
