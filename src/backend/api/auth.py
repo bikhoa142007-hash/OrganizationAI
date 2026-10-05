@@ -36,6 +36,7 @@ class AuthSettings:
     access_token_minutes: int
     remember_token_days: int
     cookie_secure: bool
+    cookie_samesite: str = "lax"
 
     @classmethod
     def from_environment(cls) -> "AuthSettings":
@@ -56,9 +57,25 @@ class AuthSettings:
             raise ValueError("AUTH_REMEMBER_TOKEN_DAYS must be between 1 and 90.")
 
         secure_value = os.getenv("AUTH_COOKIE_SECURE", "true").strip().lower()
+
         if secure_value not in {"true", "false"}:
             raise ValueError("AUTH_COOKIE_SECURE must be true or false.")
-        return cls(secret, expires, remember_days, secure_value == "true")
+
+        same_site = os.getenv("AUTH_COOKIE_SAMESITE", "lax").strip().lower()
+
+        if same_site not in {"lax", "strict", "none"}:
+            raise ValueError("AUTH_COOKIE_SAMESITE must be lax, strict or none.")
+
+        if same_site == "none" and secure_value != "true":
+            raise ValueError("SameSite=None requires AUTH_COOKIE_SECURE=true.")
+
+        return cls(
+                    secret,
+                    expires,
+                    remember_days,
+                    secure_value == "true",
+                    same_site,
+                    )
 
 
 @dataclass(frozen=True)
@@ -142,7 +159,7 @@ def _set_auth_cookie(response: Response, token: str, settings: AuthSettings,
         value=token,
         httponly=True,
         secure=settings.cookie_secure,
-        samesite="lax",
+        samesite=settings.cookie_samesite,
         path="/",
     )
     if remember_me:
@@ -347,10 +364,14 @@ def me(principal: AuthenticatedPrincipal = Depends(get_current_principal)) -> Au
 @router.post("/logout", status_code=204)
 def logout(request: Request, response: Response) -> Response:
     _check_browser_origin(request)
+    settings = _auth_settings(request)
+
     response.delete_cookie(
-        key=AUTH_COOKIE_NAME, path="/",
-        secure=os.getenv("AUTH_COOKIE_SECURE", "true").strip().lower() == "true",
-        httponly=True, samesite="lax",
+        key=AUTH_COOKIE_NAME,
+        path="/",
+        secure=settings.cookie_secure,
+        httponly=True,
+        samesite=settings.cookie_samesite,
     )
     response.status_code = 204
     return response
