@@ -50,6 +50,7 @@ PNG = (
 def workflow_client(monkeypatch) -> Iterator[tuple[TestClient, sessionmaker[Session], object]]:
     monkeypatch.setenv("JWT_SECRET", "test-only-auth-secret-that-is-at-least-32-bytes")
     monkeypatch.setenv("AUTH_COOKIE_SECURE", "false")
+    monkeypatch.setenv("AUTH_COOKIE_SAMESITE", "lax")
     engine = create_engine(
         "sqlite+pysqlite://",
         connect_args={"check_same_thread": False},
