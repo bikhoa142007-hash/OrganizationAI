@@ -25,6 +25,7 @@ from src.backend.db.security import hash_password
 def auth_client(monkeypatch) -> Iterator[tuple[TestClient, sessionmaker[Session]]]:
     monkeypatch.setenv("JWT_SECRET", "test-only-auth-secret-that-is-at-least-32-bytes")
     monkeypatch.setenv("AUTH_COOKIE_SECURE", "false")
+    monkeypatch.setenv("AUTH_COOKIE_SAMESITE", "lax")
     monkeypatch.setenv("AUTH_REGISTRATION_ENABLED", "true")
     engine = create_engine(
         "sqlite+pysqlite://",
