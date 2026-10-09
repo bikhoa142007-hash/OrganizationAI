@@ -9,11 +9,12 @@
 ![Render](https://img.shields.io/badge/Render-000000?logo=render&logoColor=white)
 ![Pytest](https://img.shields.io/badge/Pytest-0A9EDC?logo=pytest&logoColor=white)
 
-> Source hiện tại mở đầu bằng Auth: đăng nhập/đăng ký và workflow Maker–Checker dùng PostgreSQL. Judge Demo tổng hợp được tách riêng dưới `/demo` và tiếp tục dùng SQLite cùng `X-Demo-Actor`.
+> Source hiện tại mở đầu bằng Auth: đăng nhập/đăng ký và workflow Maker–Checker dùng PostgreSQL. Judge Demo tổng hợp được tách riêng dưới `/demo`, không yêu cầu đăng ký/đăng nhập, và dùng SQLite riêng cùng actor mô phỏng qua `X-Demo-Actor`.
 
 Judge Demo vẫn là một môi trường tổng hợp, không phải hệ thống production. Các URL Render bên dưới là lần triển khai demo được xác minh ngày 2026-09-22; Auth-first branch và PostgreSQL staging riêng chưa được deploy.
 
 Xem [báo cáo Scope 1 ngày 2026-10-03](docs/integration/scope-1-progress-2026-10-03.md)
+và [báo cáo kiểm chứng ngày 2026-10-09](docs/integration/scope-1-review-2026-10-09.md)
 để biết ma trận phạm vi, test evidence, trạng thái bảo toàn dữ liệu và blocker staging.
 
 ---
@@ -46,7 +47,7 @@ Backend Render lưu SQLite tại `/tmp/organizationai/demo-organization.sqlite3`
 | `Implemented` | Human Review | Queue cho Checker được gán; hỗ trợ `APPROVED`/`REJECTED`, reason, override reason và stale-revision handling |
 | `Implemented` | Audit và truy vết | Timeline actor, trạng thái trước/sau, policy/model/version/round, decision và correlation metadata |
 | `Implemented` | Policy view | Màn hình chỉ đọc từ `/api/config`; không có API chỉnh policy trong Sprint 1 |
-| `Implemented` | Verify dashboard | Chạy suite `general` 5 case và `escalation` 15 regression qua workflow thật, không hard-code PASS |
+| `Implemented (local)` | Verify dashboard | General 4 ca, Escalation 5 ca và bộ hồi quy tổng hợp 15 ca; mỗi lần chạy dùng workflow in-memory mới. Provider là Mock có nhãn, không phải bằng chứng inference thật |
 | `Implemented` | Demo seed | Tám scenario tổng hợp, seed idempotent và không xóa database hiện có |
 | `Demo/Mock` | Actor identity | Chọn shared demo actor, gửi qua header `X-Demo-Actor`; server vẫn kiểm tra role và ownership |
 | `Demo/Mock` | AI evaluation | FastAPI đang nối `MockVLMProvider`; timeout/error/malformed evidence đều fail closed sang Human Review |
@@ -361,16 +362,24 @@ Actor được gửi qua header `X-Demo-Actor`, nhưng role directory, Maker own
 Chạy tại repository root:
 
 ```powershell
-& .\.venv\Scripts\python.exe -m pytest -q
+$python = $env:ORGANIZATIONAI_TEST_PYTHON
+if (-not $python) { $python = '.\.venv\Scripts\python.exe' }
+& $python -m pytest -q
 
-& .\.venv\Scripts\python.exe -m src.verify.runner `
-  --suite verify `
-  --output runtime/ba-verify-actual.json
+& $python -m src.verify.runner `
+  --suite general `
+  --output runtime/verify-general-actual.json
 
-& .\.venv\Scripts\python.exe -m src.verify.runner `
-  --suite ground-truth `
-  --output runtime/ba-ground-truth-actual.json
+& $python -m src.verify.runner `
+  --suite escalation `
+  --output runtime/verify-escalation-actual.json
+
+& $python -m src.verify.runner `
+  --suite regression `
+  --output runtime/verify-regression-actual.json
 ```
+
+`general` chạy 4 case, `escalation` chạy 5 case (3 thường quy và 2 chuyển tiếp), còn `regression` chạy đủ 15 fixture tổng hợp. Các ngưỡng/hạn mức của fixture là mô phỏng, không bật cấu hình Auth/live. Có thể đặt `ORGANIZATIONAI_TEST_PYTHON` để dùng một interpreter test riêng mà không sửa `.venv` cũ.
 
 ### Frontend và browser E2E
 
@@ -383,7 +392,15 @@ npx playwright install chromium
 npm run test:e2e
 ```
 
-E2E tự chạy backend tại `127.0.0.1:8008`, frontend tại `127.0.0.1:5178` và dùng database demo riêng. Cần tạo `.venv` ở repository root và bảo đảm hai cổng này đang trống.
+E2E tự chạy backend tại `127.0.0.1:8008`, frontend tại `127.0.0.1:5178` và dùng một SQLite demo mới theo timestamp. Trên Windows, có thể giữ `.venv` cũ và tạo môi trường riêng:
+
+```powershell
+py -3.12 -m venv .venv-test
+& .\.venv-test\Scripts\python.exe -m pip install -r requirements.txt
+$env:ORGANIZATIONAI_TEST_PYTHON = '.venv-test\Scripts\python.exe'
+```
+
+Sau đó chạy các lệnh backend ở trên và E2E như bên dưới.
 
 ### Kết quả xác minh trong phiên cập nhật README
 
@@ -467,7 +484,7 @@ Judge Demo endpoint `/api/plans`, `/api/reviews` và `/api/verify` dùng riêng 
 | `POST` | `/api/plans/{plan_id}/rounds/{number}/evaluate` | Actor có quyền đọc plan | Chạy hoặc replay evaluation qua internal evaluator |
 | `POST` | `/api/plans/{plan_id}/rounds/{number}/decision` | Assigned `CHECKER` | Ghi quyết định human `APPROVED`/`REJECTED` |
 | `GET` | `/api/plans/{plan_id}/rounds/{number}/observation` | Actor có quyền đọc plan | Đọc persisted observation cho Verify/audit |
-| `POST` | `/api/verify/{suite}` | Demo actor hợp lệ | Chạy suite `general` hoặc `escalation` trong in-memory workflow |
+| `POST` | `/api/verify/{suite}` | Demo actor hợp lệ | Chạy suite `general`, `escalation` hoặc `regression` trong in-memory workflow |
 | `GET` | `/api/workflow/plans` | Auth cookie + `MAKER` | Danh sách kế hoạch mà Maker tạo |
 | `GET` | `/api/workflow/checkers` | Auth cookie + `MAKER` | Checker đang hoạt động để giao kế hoạch |
 | `POST` | `/api/workflow/plans` | Auth cookie + `MAKER` | Tạo draft; backend tự gán Maker |

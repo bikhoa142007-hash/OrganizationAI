@@ -189,15 +189,43 @@ export function createApiServices(client: ApiClient = api): FrontendServices {
         type Row = {
           case_id: string; passed: boolean; error: string | null; differences: string[]
           started_at: string; completed_at: string; duration_ms: number
+          case_name?: string; data_classification?: string
           expected: { route: RuntimeOutcome; primary_category: string | null }
-          actual: { decision: Decision; questions: unknown[] } | null
+          actual: {
+            decision: Decision & { policy_version?: string; model_version?: string }
+            questions: Array<{
+              category: string; question: string; disputed_or_missing_fact?: string
+              applicable_rule_or_limit?: string; reason?: string; evidence_reference?: string[]
+            }>
+            plan?: { payload?: unknown; policy_version?: string; input_hash?: string }
+            evaluation?: {
+              policy_version?: string; model_version?: string
+              evidence?: Array<{ evidence_id?: string; kind?: string; observation?: unknown }>
+            }
+            audit?: Array<{ event_id?: string; action?: string }>
+          } | null
         }
         const response = await client.request<{ run_id: string; rows: Row[] }>(`/verify/${suite}`, 'POST', {}, crypto.randomUUID())
-        const rows = response.rows.map(r => ({ caseId: r.case_id, expectedAction: r.expected.route, expectedCategory: r.expected.primary_category,
+        const rows = response.rows.map(r => ({ caseId: r.case_id, caseName: r.case_name, dataClassification: r.data_classification,
+          expectedAction: r.expected.route, expectedCategory: r.expected.primary_category,
           actualAction: r.actual?.decision.outcome, actualCategory: r.actual?.decision.escalation_category,
           status: r.error ? 'ERROR' as const : r.passed ? 'PASS' as const : 'FAIL' as const,
           reason: r.error ?? (r.differences.join('; ') || r.actual?.decision.reason),
-          appliedRuleIds: r.actual?.decision.applied_rule_ids, generatedQuestion: r.actual?.questions,
+          input: r.actual?.plan?.payload == null ? undefined : JSON.stringify(r.actual.plan.payload, null, 2),
+          evidence: (r.actual?.evaluation?.evidence ?? []).map(item => ({
+            reference: item.evidence_id, kind: item.kind,
+            observation: typeof item.observation === 'string' ? item.observation : JSON.stringify(item.observation),
+          })),
+          policyVersion: r.actual?.decision.policy_version ?? r.actual?.evaluation?.policy_version ?? r.actual?.plan?.policy_version,
+          modelVersion: r.actual?.decision.model_version ?? r.actual?.evaluation?.model_version,
+          auditReference: r.actual?.audit?.map(event => event.event_id).filter(Boolean).join(', '),
+          appliedRuleIds: r.actual?.decision.applied_rule_ids,
+          generatedQuestion: (r.actual?.questions ?? []).map(question => ({
+            category: question.category, question: question.question,
+            disputedOrMissingFact: question.disputed_or_missing_fact,
+            applicableRuleOrLimit: question.applicable_rule_or_limit,
+            reason: question.reason, evidenceReferences: question.evidence_reference,
+          })),
           startedAt: r.started_at, completedAt: r.completed_at, durationMs: r.duration_ms, pass: r.passed,
           error: r.error ? { code: 'VERIFY_FAILED', message: r.error } : null }))
         const run: VerifyRun = { runId: response.run_id, suite, status: 'COMPLETED', rows, startedAt: start, completedAt: new Date().toISOString(), dataSource: 'API',

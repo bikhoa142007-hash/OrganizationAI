@@ -74,3 +74,33 @@ Không thay “chưa đo” bằng số 0 để tạo ấn tượng đã đạt.
 Tách ba cột: artifact checks, WP schema compatibility và actual engine regression. Không gộp 192 checks artifact thành 192 app tests. Theo dõi bốn case mục tiêu riêng: expected category, actual category, normalized evidence có bị mất không, factual field/rationale và source refs còn đầy đủ không.
 
 Category accuracy chỉ có mẫu số là case đã chạy engine thật. Bốn case hiện NOT_RUN; không ghi 4/4 engine PASS từ việc expected đúng hoặc validator pass. Giữ metric source/classification errors với counts thực sau khi có app.
+
+## Bổ sung Judge Verify — 2026-10-09
+
+Judge UI exposes three distinct runs: `general` (4 cases), `escalation` (all 5
+Verify inputs), and `regression` (15 ground-truth cases). The first two Verify
+runs share the five input cases and must not be counted as independent
+observations. The 15-case catalog is a synthetic development regression set;
+this repository does not establish that it is blind to system development or
+parameter/prompt changes. No model-accuracy claim may be inferred from Mock
+runs. This local change was made after the 2026-09-22 Sprint 1 packaging
+baseline.
+
+At the 2026-10-09 review, frontend tests/typecheck/build passed, but backend
+suite execution was blocked by missing dependencies after package-index DNS
+failure. Therefore current 4/4, 5/5, and 15/15 actual outcomes remain
+`NOT_RUN`; see the dated
+[Scope 1 review](../../integration/scope-1-review-2026-10-09.md).
+
+### Later verification update — 2026-10-09
+
+The preceding `NOT_RUN` statement describes the earlier checkpoint and is
+superseded by the dated run records: Verify general **4/4**, escalation
+**5/5**, and regression **15/15** have actual case-level results in
+[`verify-run-2026-10-09.md`](../../integration/verify-run-2026-10-09.md).
+These runs use synthetic `MOCK_VLM` observations; they test the application
+rule path and are not model-accuracy evidence. The user subsequently reported
+full backend pytest **305 passed, 84 subtests passed, 1 warning**, then Auth
+E2E **2 passed, 0 skipped** against temporary PostgreSQL using `MOCK_VLM`.
+Neither the Auth run nor this measurement update establishes real AI inference
+or AI auto-approval. See the [latest evidence matrix](../../integration/scope-1-review-2026-10-09.md#latest-evidence-matrix-2026-10-09).

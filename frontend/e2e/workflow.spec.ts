@@ -88,8 +88,12 @@ test('factual evidence and real Verify results render', async ({ page }) => {
   await expect(page.getByText(/form KPI 1200; visual evidence 12000/)).toBeVisible()
   await page.screenshot({ path: 'test-results/factual-review.png', fullPage: true })
   await page.getByRole('link', { name: 'Verify', exact: true }).click()
-  await page.getByRole('button', { name: 'Run all 5' }).click()
+  await page.getByRole('button', { name: 'Run 4 cases', exact: true }).click()
+  await expect(page.getByText('4/4 PASS', { exact: true })).toBeVisible()
+  await page.getByRole('button', { name: /Verify → Escalation · 5 ca/ }).click()
+  await page.getByRole('button', { name: 'Run 5 cases', exact: true }).click()
   await expect(page.getByText('5/5 PASS', { exact: true })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Nhập kế hoạch tổng hợp mới' })).toHaveAttribute('href', '/demo/plans/new')
 })
 
 test('Checker approves a review with an explicit override and persisted audit', async ({ page, request }) => {

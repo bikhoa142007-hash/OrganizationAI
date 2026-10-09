@@ -11,7 +11,7 @@ export type ProcessingStage =
   | 'AI_PROCESSING_FAILED'
 export type RuntimeOutcome = 'AUTO_APPROVED' | 'HUMAN_REVIEW_REQUIRED'
 export type HumanAction = 'APPROVED' | 'REJECTED' | 'REQUEST_CHANGES'
-export type VerifySuite = 'general' | 'escalation'
+export type VerifySuite = 'general' | 'escalation' | 'regression'
 export type ProcessingStatus = 'PROCESSING' | 'STOPPED' | 'COMPLETED' | 'FAILED'
 
 export interface AppCapabilitySet {
@@ -186,16 +186,35 @@ export interface AuditEvent {
   newState?: PlanState | null
 }
 
+export interface VerifyEscalationQuestion {
+  category: string
+  question: string
+  disputedOrMissingFact?: string
+  applicableRuleOrLimit?: string
+  reason?: string
+  evidenceReferences?: string[]
+}
+
+export interface VerifyEvidence {
+  reference?: string
+  kind?: string
+  observation?: string
+}
+
 export interface VerifyResultRow {
   caseId: string
   caseName?: string
   input?: string
+  dataClassification?: string
   expectedAction?: RuntimeOutcome | null
   expectedCategory?: string | null
   actualAction?: RuntimeOutcome | null
   actualCategory?: string | null
-  generatedQuestion?: unknown[]
+  generatedQuestion?: VerifyEscalationQuestion[]
+  evidence?: VerifyEvidence[]
   appliedRuleIds?: string[]
+  policyVersion?: string
+  modelVersion?: string
   status?: 'PENDING' | 'RUNNING' | 'PASS' | 'FAIL' | 'ERROR'
   reason?: string
   startedAt?: string

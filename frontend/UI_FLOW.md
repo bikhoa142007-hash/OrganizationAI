@@ -49,7 +49,7 @@
 | 4 | Kết quả | Hiển thị quyết định và căn cứ |
 | 5 | Human Review Queue | Con người xử lý ca chuyển tiếp |
 | 6 | Audit Timeline | Tra lịch sử hành động |
-| 7 | Verify Dashboard | Chạy 5 case qua backend thật |
+| 7 | Verify Dashboard | Chạy Verify chung 4 ca, Escalation 5 ca hoặc regression 15 ca qua backend |
 | 8 | Policy | Xem quy định (chỉ đọc) |
 
 ---
@@ -71,10 +71,12 @@ Form ──(hợp lệ) [Gửi]──► Đang xử lý
 ### 3.2. Luồng B: Verify
 
 ```text
-Landing ──[Verify]──► Verify Dashboard
-Dashboard ──[Run all 5 cases]──► chạy lần lượt từng case qua backend thật
-   ──► mỗi dòng hiện Actual + Result + Time
-   ──► tổng hợp "x/5 PASS"
+Judge Demo ──[Verify]──► Verify Dashboard
+Dashboard ──[Run suite đã chọn]──► chạy lại từng case qua workflow in-memory
+   ├─ Verify chung: 4 ca ──► 3 thường quy + 1 factual escalation
+   ├─ Verify → Escalation: 5 ca ──► 3 thường quy + 2 chuyển tiếp
+   └─ Regression: 15 ca tổng hợp ──► ba nhóm chuyển tiếp + biên policy
+   ──► mỗi dòng hiện expected, actual, result, lý do và thời gian
    ──► bấm một dòng ──► chi tiết case ──► [Xem audit]
 ```
 
@@ -222,8 +224,9 @@ Hành vi: lọc theo hồ sơ hoặc lần chạy; chọn sự kiện để mở
 ### Màn 7: Verify Dashboard
 
 ```text
-[Chưa chạy] ──[Run all 5 cases]──► [Đang chạy: từng dòng có trạng thái]
-                                ──► [Xong: tổng hợp "x/5 PASS"]
+[Chưa chạy] ──[Verify chung: 4 ca]──────────► [Expected / Actual / câu hỏi]
+           ├──[Verify → Escalation: 5 ca]────► [3 thường quy + 2 chuyển tiếp]
+           └──[Bộ hồi quy tổng hợp: 15 ca]───► [Expected / Actual / audit]
 ```
 
 | Case | Expected | Actual | Category | Question | Time | Result |
@@ -231,7 +234,11 @@ Hành vi: lọc theo hồ sơ hoặc lần chạy; chọn sự kiện để mở
 
 Yêu cầu:
 
-- Một nút `Run all 5 cases` chạy toàn bộ case qua **backend thật**.
+- Mỗi nút chạy lại toàn bộ case được chọn qua workflow backend thật trong database in-memory riêng.
+- General có 4 ca; Verify → Escalation có 5 ca (3 tự động, 2 chuyển tiếp); bộ hồi quy tổng hợp giữ 15 ca.
+- Hiện rõ data tổng hợp và Mock provider; đây không phải bằng chứng inference thật.
+- Ca chuyển tiếp hiển thị category, câu hỏi có ngữ cảnh, quy định/giới hạn và bằng chứng.
+- Cho phép nhập kế hoạch tổng hợp mới qua luồng Maker của Judge Demo; không dùng ID fixture để chọn quyết định.
 - Timestamp thật và duration.
 - `PASS/FAIL` từng dòng, tổng hợp số case đạt.
 - Mở được chi tiết từng case (input, actual, expected, rule, liên kết audit).
@@ -313,7 +320,8 @@ Nếu kết quả phụ thuộc ID hoặc tên case: đánh dấu lỗi **Critic
 - [ ] Ca chờ con người không hiện kết luận khẳng định
 - [ ] Review Queue có đủ cột và 3 nút; nút tắt khi chưa có lý do
 - [ ] Audit hiển thị đủ trường, có stop/undo, không có nút sửa/xóa
-- [ ] Verify: một nút chạy 5 case qua backend thật, có timestamp, duration, PASS/FAIL, tổng hợp, chi tiết từng case
+- [ ] Verify chung: một nút chạy 4 case; Verify → Escalation: một nút chạy 5 case; bộ hồi quy riêng chạy 15 case synthetic
+- [ ] Verify hiển thị expected/actual, timestamp, duration, PASS/FAIL, tổng hợp, evidence, audit reference và câu hỏi chuyển tiếp
 - [ ] Đổi tạm expected thì dòng Verify tương ứng hiện FAIL
 - [ ] Mọi trạng thái lỗi ở mục 6 đều có thông báo, không có trang trắng
 - [ ] Hoàn thành hành trình chính trong 8 phút

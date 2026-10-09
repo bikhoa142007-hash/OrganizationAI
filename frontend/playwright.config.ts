@@ -2,7 +2,11 @@ import { defineConfig } from '@playwright/test'
 import { resolve } from 'node:path'
 
 const root = resolve(import.meta.dirname, '..')
-const python = process.platform === 'win32' ? '.venv\\Scripts\\python.exe' : '.venv/bin/python'
+const configuredPython = process.env.ORGANIZATIONAI_TEST_PYTHON
+const pythonPath = configuredPython
+  ? resolve(root, configuredPython)
+  : process.platform === 'win32' ? '.venv\\Scripts\\python.exe' : '.venv/bin/python'
+const python = configuredPython ? `"${pythonPath}"` : pythonPath
 const database = `runtime/demo-e2e-${Date.now()}.sqlite3`
 export default defineConfig({
   testDir: './e2e', workers: 1, timeout: 45000, retries: 0,

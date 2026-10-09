@@ -1,0 +1,216 @@
+name: Verification
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verification-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend-and-verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: requirements.txt
+      - name: Create isolated test Python environment
+        run: |
+          python -m venv .venv
+          .venv/bin/python -m pip install -r requirements.txt
+      - name: Run backend pytest, then all three Verify suites
+        run: |
+          overall=0
+          if ! .venv/bin/python -m pytest -q; then overall=1; fi
+          for suite in general escalation regression; do
+            output="runtime/ci-verify-${suite}.json"
+            if ! .venv/bin/python -m src.verify.runner --suite "$suite" --output "$output"; then overall=1; fi
+            if [ -f "$output" ]; then
+              jq -c --arg suite "$suite" '.[] | {suite: $suite, case_id, case_name, expected, actual: {provider: .actual.evaluation.provider, model_version: .actual.evaluation.model_version, outcome: .actual.decision.outcome, plan_status: .actual.plan.state.plan_status, processing_stage: .actual.plan.state.processing_stage, escalation_category: .actual.decision.escalation_category, final_decision: .actual.final_decision, decision_source: .actual.decision_source}, passed, differences}' "$output"
+            else
+              echo "No result file was produced for Verify suite: $suite"
+              overall=1
+            fi
+          done
+          exit "$overall"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: verify-expected-actual
+          path: runtime/ci-verify-*.json
+          if-no-files-found: ignore
+
+  frontend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run test
+      - run: npm run typecheck
+      - run: npm run build
+
+  judge-demo-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: requirements.txt
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Create isolated test Python environment
+        run: |
+          python -m venv .venv
+          .venv/bin/python -m pip install -r requirements.txt
+        working-directory: .
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Run isolated Judge Demo browser workflow
+        run: npm run test:e2e -- --config playwright.config.ts workflow.spec.ts
+        env:
+          ORGANIZATIONAI_TEST_PYTHON: .venv/bin/python
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: judge-demo-playwright-report
+          path: frontend/test-results/
+          if-no-files-found: ignore
+
+  postgres-auth-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: organizationai_test
+          POSTGRES_USER: organizationai_test
+          POSTGRES_PASSWORD: ci-only-test-password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U organizationai_test -d organizationai_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: requirements.txt
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Create isolated test Python environment
+        run: |
+          python -m venv .venv
+          .venv/bin/python -m pip install -r requirements.txt
+        working-directory: .
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Verify migrations against disposable PostgreSQL
+        run: |
+          .venv/bin/alembic upgrade head
+          .venv/bin/python - <<'PY'
+          import os
+          from sqlalchemy import create_engine, inspect, text
+
+          engine = create_engine(os.environ['DATABASE_URL'])
+          try:
+              inspector = inspect(engine)
+              with engine.connect() as connection:
+                  revisions = connection.scalars(text('SELECT version_num FROM alembic_version')).all()
+              assert revisions == ['20261009_08'], revisions
+              assert 'auth_workflow_plans' in inspector.get_table_names()
+              assert any(
+                  item['name'] == 'uq_auth_workflow_plans_maker_creation_key' and item['unique']
+                  for item in inspector.get_indexes('auth_workflow_plans')
+              )
+              print('PostgreSQL migration: head 20261009_08; draft idempotency index present.')
+          finally:
+              engine.dispose()
+          PY
+        working-directory: .
+        env:
+          DATABASE_URL: postgresql+psycopg://organizationai_test:ci-only-test-password@127.0.0.1:5432/organizationai_test
+      - name: Seed disposable local Auth users
+        run: .venv/bin/python -m src.backend.seed_auth
+        working-directory: .
+        env:
+          APP_ENV: demo
+          AUTH_SEED_ENABLED: 'true'
+          AUTH_SEED_PASSWORD: ci-only-auth-password
+          DATABASE_URL: postgresql+psycopg://organizationai_test:ci-only-test-password@127.0.0.1:5432/organizationai_test
+      - name: Start Auth API and frontend against disposable PostgreSQL
+        run: |
+          cd ..
+          nohup .venv/bin/python -m uvicorn src.backend.api.app:app --host 127.0.0.1 --port 8010 > "$RUNNER_TEMP/auth-api.log" 2>&1 &
+          nohup npm --prefix frontend run dev -- --host 127.0.0.1 --port 5173 > "$RUNNER_TEMP/auth-frontend.log" 2>&1 &
+          for attempt in $(seq 1 60); do
+            if curl --silent --fail http://127.0.0.1:8010/api/health/ready >/dev/null \
+              && curl --silent --fail http://127.0.0.1:5173/ >/dev/null; then
+              exit 0
+            fi
+            sleep 2
+          done
+          cat "$RUNNER_TEMP/auth-api.log"
+          cat "$RUNNER_TEMP/auth-frontend.log"
+          exit 1
+        env:
+          APP_ENV: demo
+          DATABASE_URL: postgresql+psycopg://organizationai_test:ci-only-test-password@127.0.0.1:5432/organizationai_test
+          AUTH_SEED_PASSWORD: ci-only-auth-password
+          JWT_SECRET: ci-only-test-jwt-secret-at-least-32-characters
+          AUTH_WORKFLOW_AI_PROVIDER: MOCK_VLM
+          AUTH_WORKFLOW_MOCK_SCENARIO: review
+          AUTH_COOKIE_SECURE: 'false'
+          CORS_ORIGINS: http://localhost:5173,http://127.0.0.1:5173
+          VITE_API_BASE_URL: http://localhost:8010/api
+          VITE_DEMO_ENABLED: 'true'
+      - name: Run Auth Maker-Checker browser workflow against PostgreSQL
+        run: npm run test:e2e -- --config playwright.auth-live.config.ts
+        env:
+          AUTH_SEED_PASSWORD: ci-only-auth-password
+          VITE_API_BASE_URL: http://localhost:8010/api
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: auth-postgres-playwright-report
+          path: frontend/test-results/
+          if-no-files-found: ignore

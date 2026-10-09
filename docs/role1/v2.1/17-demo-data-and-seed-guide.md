@@ -21,6 +21,14 @@
 
 Các JSON là **fixture**, không phải migration hay code app. Cần map vào schema repo, seed auth bằng cơ chế dự án và nối test harness; không chỉ copy JSON vào production là có ứng dụng chạy.
 
+## 1.1. Các bộ chạy Judge Verify (2026-10-09)
+
+- `general`: 4 input đầu của `verify-inputs.json`, gồm ba ca thường quy và một ca chuyển tiếp do bất định dữ kiện.
+- `escalation`: toàn bộ 5 input của `verify-inputs.json`, gồm ba ca thường quy và hai ca chuyển tiếp.
+- `regression`: đủ 15 input trong `ground-truth-cases.json`, bao phủ bất định dữ kiện, ngoài phạm vi policy, vượt thẩm quyền và vi phạm cứng.
+
+Mỗi lần chạy chuyển riêng object `input` qua một `ApprovalWorkflow` và repository SQLite `:memory:` mới; runner chỉ đọc oracle expected sau khi xử lý xong. Provider không nhận `case_id` hoặc expected để chọn kết quả. Các ca và nhãn đều tổng hợp. Đây là bộ hồi quy đã công khai cho phát triển; chưa có chứng cứ rằng nó là holdout độc lập với mọi lần điều chỉnh hệ thống. Không dùng PASS của Mock làm bằng chứng chất lượng Local VLM/agent thật.
+
 ## 2. Bộ tài khoản và quyền
 
 Dùng DEMO-MAKER-01, DEMO-CHECKER-01, DEMO-ADMIN-01, DEMO-DUAL-01 như file 03. ID không chứa dữ liệu cá nhân thật. Role cố định cho Sprint; không bắt xây role builder. Mật khẩu demo/cách đăng nhập phải được đội triển khai tạo và ghi trong README môi trường demo, không giả định tài khoản đã tồn tại.

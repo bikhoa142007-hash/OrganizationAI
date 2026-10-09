@@ -72,9 +72,13 @@ Codes: validation 422, unauthenticated 401, forbidden 403, missing resource 404,
 conflict 409, unavailable 503. Error responses do not contain traceback or raw input.
 CORS permits only environment-configured origins; credentials are disabled.
 
-`POST /api/verify/general` runs five BA Verify cases. `escalation` runs the 15
-GT regressions. These demo-only test runs use isolated in-memory repositories and
-return actual report rows; they do not alter the normal demo plan database.
+`POST /api/verify/general` runs four BA Verify cases (three routine and one
+factual escalation). `escalation` runs all five Verify inputs (three routine
+and two escalations). `regression` runs the 15-case synthetic catalog. Every
+case executes in a fresh in-memory workflow; the runner loads its expected
+oracle only after execution. These demo-only test runs return actual report
+rows and do not alter the normal demo plan database. They use the explicitly
+labeled Mock provider, not live inference evidence.
 
 
 ## Authorization correction

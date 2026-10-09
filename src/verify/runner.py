@@ -104,20 +104,30 @@ def compare_observation(actual, expected):
 
 
 def run_suite(suite='verify'):
-    filename = 'verify-inputs.json' if suite == 'verify' else 'ground-truth-cases.json'
+    if suite in ('general', 'escalation', 'verify'):
+        filename = 'verify-inputs.json'
+    elif suite in ('regression', 'ground-truth'):
+        filename = 'ground-truth-cases.json'
+    else:
+        raise ValueError('Unknown Verify suite: ' + str(suite))
     inputs = json.loads((FIXTURES / filename).read_text(encoding='utf-8'))
+    if suite == 'general':
+        # Three routine cases and one factual-escalation boundary.
+        inputs = inputs[:4]
+    expected_filename = 'verify-expected-results.json' if filename == 'verify-inputs.json' else filename
     rows = []
     for case in inputs:
         started_at, started = now(), perf_counter()
         try:
             actual = execute_input(case['input'])
-            rows.append(dict(case_id=case['id'], actual=actual, error=None))
+            rows.append(dict(case_id=case['id'], case_name=case['input']['plan_snapshot']['name'],
+                             data_classification=case['data_classification'], actual=actual, error=None))
         except Exception as exc:
-            rows.append(dict(case_id=case['id'], actual=None, error=str(exc)))
+            rows.append(dict(case_id=case['id'], case_name=case['input']['plan_snapshot']['name'],
+                             data_classification=case['data_classification'], actual=None, error=str(exc)))
         rows[-1].update(started_at=started_at, completed_at=now(), duration_ms=max(0, int((perf_counter() - started) * 1000)))
     # Oracle access happens only after application execution, never in the provider.
-    oracle_file = 'verify-expected-results.json' if suite == 'verify' else filename
-    expected = {c['id']: c['expected'] for c in json.loads((FIXTURES / oracle_file).read_text(encoding='utf-8'))}
+    expected = {c['id']: c['expected'] for c in json.loads((FIXTURES / expected_filename).read_text(encoding='utf-8'))}
     for row in rows:
         row['expected'] = expected[row['case_id']]
         row['differences'] = compare_observation(row['actual'], row['expected']) if row['actual'] else [row['error']]
@@ -128,7 +138,7 @@ def run_suite(suite='verify'):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--suite', choices=('verify', 'ground-truth'), default='verify')
+    parser.add_argument('--suite', choices=('general', 'escalation', 'regression', 'verify', 'ground-truth'), default='verify')
     parser.add_argument('--output', type=Path, default=Path('runtime/ba-actual.json'))
     args = parser.parse_args()
     require(FIXTURES.resolve() not in args.output.resolve().parents, 'Cannot overwrite fixtures')

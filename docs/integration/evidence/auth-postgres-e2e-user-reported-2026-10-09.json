@@ -1,0 +1,46 @@
+{
+  "record_type": "user_reported_result_summary",
+  "recorded_on": "2026-10-09",
+  "provenance": "The user reported running scripts/run-auth-postgres-e2e.ps1 from external Windows PowerShell, outside the Codex sandbox.",
+  "original_playwright_json_and_process_logs_available": false,
+  "artifact_note": "The successful run used the script version whose success cleanup removed its TEMP run directory. This file is a sanitized summary of the user's report, not the original Playwright JSON or raw process logs.",
+  "database": {
+    "type": "temporary isolated PostgreSQL container",
+    "live_database_used": false,
+    "migration": {
+      "result": "PASS",
+      "alembic_head": "20261009_08",
+      "unique_index": "uq_auth_workflow_plans_maker_creation_key"
+    },
+    "seed_verification": {
+      "result": "PASS",
+      "verified": "configured temporary Maker and Checker accounts are active and have the expected roles",
+      "credentials_recorded": false
+    }
+  },
+  "auth_e2e": {
+    "result": "PASS",
+    "passed": 2,
+    "duration_seconds": 11.0,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0,
+    "tests": [
+      "live Auth Maker-to-Checker browser workflow preserves a rejected version through resubmission",
+      "lists retained synthetic Auth plans without changing them"
+    ],
+    "ai_provider": "MOCK_VLM",
+    "real_ai_inference_verified": false,
+    "auto_approval_success_verified": false
+  },
+  "cleanup": {
+    "test_container_cleanup_independently_confirmed": false,
+    "existing_application_containers": [
+      "organizationai-backend-1",
+      "organizationai-frontend-1",
+      "organizationai-db-1"
+    ],
+    "existing_application_containers_modified_by_this_work": false,
+    "detail": "The run script targets a unique organizationai-auth-e2e-<run-id> container and its success path stops that container; this sandbox could not query Docker Engine to independently inspect the external run's final container state."
+  }
+}

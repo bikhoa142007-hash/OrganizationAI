@@ -2,7 +2,13 @@ import { test, expect, type Page } from '@playwright/test'
 import { resolve } from 'node:path'
 
 const password = process.env.AUTH_SEED_PASSWORD
-const apiBase = (process.env.VITE_API_BASE_URL ?? 'http://localhost:8010/api').replace(/\/$/, '')
+const makerUsername = process.env.AUTH_E2E_MAKER_USERNAME ?? 'maker'
+const checkerUsername = process.env.AUTH_E2E_CHECKER_USERNAME ?? 'checker'
+const configuredApiBase = process.env.VITE_API_BASE_URL
+if (!configuredApiBase) {
+  throw new Error('Set VITE_API_BASE_URL explicitly before running the Auth E2E tests.')
+}
+const apiBase = configuredApiBase.replace(/\/$/, '')
 const protectedPlanIds = new Set([
   'c0e31c28-aaca-4a29-b73c-ac50e1029b52',
   '79bba034-53a9-4fb2-b906-e9cee2d8b6b7',
@@ -34,12 +40,33 @@ type LiveEvaluation = {
   strategy_evaluation?: { status?: string; model_id?: string | null; model_version?: string | null; prompt_version?: string | null; schema_version?: string | null } | null
 }
 
-async function login(page: Page, username: 'maker' | 'checker') {
+async function login(
+  page: Page,
+  username: string,
+  expectedDestination: '/workflow/plans' | '/workflow/reviews',
+  expectedRole: 'MAKER' | 'CHECKER',
+) {
   await page.goto('/login')
   await page.getByLabel('Tên đăng nhập, mã người dùng hoặc email').fill(username)
   await page.locator('#login-password').fill(password!)
   await page.getByRole('button', { name: 'Đăng nhập' }).click()
-  await expect(page).toHaveURL(/\/account$/)
+  const expectedUrl = new URL(expectedDestination, new URL(page.url()).origin).href
+  await expect(page).toHaveURL(expectedUrl)
+
+  const session = await page.evaluate(async base => {
+    const response = await fetch(`${base}/auth/me`, { credentials: 'include' })
+    const body = await response.json().catch(() => null) as {
+      user?: { username?: string; roles?: string[] }
+    } | null
+    return {
+      status: response.status,
+      username: body?.user?.username ?? null,
+      roles: body?.user?.roles ?? [],
+    }
+  }, apiBase)
+  expect(session.status).toBe(200)
+  expect(session.username).toBe(username)
+  expect(session.roles).toEqual([expectedRole])
 }
 
 async function readPlan(page: Page, id: string): Promise<LivePlan> {
@@ -73,8 +100,8 @@ test('live Auth Maker-to-Checker browser workflow preserves a rejected version t
   checker.on('pageerror', error => browserErrors.push(error.message))
 
   try {
-    await login(maker, 'maker')
-    await maker.getByRole('link', { name: 'Mở workflow PostgreSQL của Maker' }).click()
+    await login(maker, makerUsername, '/workflow/plans', 'MAKER')
+    await expect(maker.getByRole('heading', { name: 'Kế hoạch của tôi' })).toBeVisible()
     let title: string
     let planId: string
     let firstRound: LivePlan
@@ -137,8 +164,7 @@ test('live Auth Maker-to-Checker browser workflow preserves a rejected version t
     const originalEvaluation = structuredClone(firstRound.ai_evaluations[0])
     const originalSummary = firstRound.versions[0].payload.summary
 
-    await login(checker, 'checker')
-    await checker.goto('/workflow/reviews')
+    await login(checker, checkerUsername, '/workflow/reviews', 'CHECKER')
     await expect(checker.getByRole('heading', { name: 'Kế hoạch chờ tôi duyệt' })).toBeVisible()
     await expect(checker.getByRole('link', { name: new RegExp(title) })).toBeVisible()
     await checker.goto(`/workflow/plans/${planId}`)
@@ -203,8 +229,7 @@ test('live Auth Maker-to-Checker browser workflow preserves a rejected version t
 
 test('lists retained synthetic Auth plans without changing them', async ({ page }) => {
   test.skip(!password, 'Set AUTH_SEED_PASSWORD in the local test process to use the seeded local account.')
-  await login(page, 'maker')
-  await page.goto('/workflow/plans')
+  await login(page, makerUsername, '/workflow/plans', 'MAKER')
   await expect(page.getByRole('heading', { name: 'Kế hoạch của tôi' })).toBeVisible()
   await expect(page.locator('.auth-workflow-table tbody tr').first()).toBeVisible()
   const retained = await page.locator('.auth-workflow-table tbody tr').evaluateAll(rows =>

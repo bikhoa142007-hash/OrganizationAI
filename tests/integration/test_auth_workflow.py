@@ -269,7 +269,7 @@ def test_maker_is_assigned_from_cookie_and_cannot_read_another_makers_plan(workf
     assert other_client.get(f"/api/workflow/plans/{plan['id']}").status_code == 404
 
 
-def test_admin_can_read_all_plan_details_but_cannot_make_checker_decisions(workflow_client):
+def test_admin_can_read_workflow_plans_but_cannot_mutate_or_recover(workflow_client):
     client, factory, app = workflow_client
     maker = create_user(factory, "maker.admin-read", ("MAKER",))
     checker = create_user(factory, "checker.admin-read", ("CHECKER",))
@@ -289,13 +289,28 @@ def test_admin_can_read_all_plan_details_but_cannot_make_checker_decisions(workf
     assert admin_client.get(
         f"/api/workflow/plans/{plan['id']}/attachments/{attachment_id}"
     ).status_code == 404
+    assert admin_client.post("/api/workflow/plans", json={
+        "checker_user_id": str(checker.id),
+        "payload": plan["payload"],
+    }).status_code == 403
     assert admin_client.put(f"/api/workflow/plans/{plan['id']}", json={
         "expected_revision": plan["revision"],
         "payload": plan["payload"],
     }).status_code == 403
     assert admin_client.post(
+        f"/api/workflow/plans/{plan['id']}/submit",
+        json={"expected_revision": plan["revision"]},
+    ).status_code == 403
+    assert admin_client.post(
+        f"/api/workflow/plans/{plan['id']}/rounds/1/decision",
+        json={"action": "REJECTED", "reason": "Admin cannot decide."},
+    ).status_code == 403
+    assert admin_client.post(
         f"/api/workflow/plans/{plan['id']}/rounds/1/decision",
         json={"action": "APPROVED", "override_reason": "Admin cannot decide."},
+    ).status_code == 403
+    assert admin_client.post(
+        f"/api/workflow/plans/{plan['id']}/rounds/1/recovery",
     ).status_code == 403
 
 
@@ -526,6 +541,9 @@ def test_local_vlm_extraction_persists_separately_and_missing_evaluators_route_c
             "ocr_text": "Visible campaign headline",
             "observations": ["A blue campaign banner."],
             "uncertainties": [],
+            "confidence": 0.97,
+            "object_detections": ["campaign banner"],
+            "visual_quality": {"result": "PASS", "findings": []},
         }],
     }
 
@@ -575,6 +593,10 @@ def test_local_vlm_extraction_persists_separately_and_missing_evaluators_route_c
         error["code"] for error in evaluation_run["evaluation"]["agent_errors"]
     }, json.dumps(evaluation_run["evaluation"], indent=2)
     assert visual["status"] == "SUCCEEDED"
+    assert visual["schema_version"] == "visual-extraction-schema-v2"
+    assert visual["attachments"][0]["confidence"] == 0.97
+    assert visual["attachments"][0]["object_detections"] == ["campaign banner"]
+    assert visual["attachments"][0]["visual_quality"] == {"result": "PASS", "findings": []}
     assert visual["model_id"] == "configured-model-id"
     assert visual["model_revision"] == "runtime-revision-1"
     assert visual["attachments"][0]["attachment_id"] == attached["attachments"][0]["id"]
@@ -814,15 +836,10 @@ def test_rejection_needs_reason_and_resubmission_preserves_prior_version(workflo
     assert submitted["versions"][0]["payload"]["title"] == "Spring campaign"
 
 
-def test_non_workflow_role_cannot_create_and_submission_requires_attachment(workflow_client):
+def test_maker_submission_requires_attachment(workflow_client):
     client, factory, app = workflow_client
-    admin = create_user(factory, "admin.one", ("ADMIN",))
     maker = create_user(factory, "maker.one", ("MAKER",))
     checker = create_user(factory, "checker.one", ("CHECKER",))
-    login(client, admin)
-    assert client.get("/api/workflow/plans").status_code == 403
-    assert client.post("/api/workflow/plans", json={"payload": {}}).status_code == 403
-
     maker_client = authenticated_client(app, maker)
     draft = make_plan(maker_client, checker.id)
     response = maker_client.post(
@@ -830,6 +847,8 @@ def test_non_workflow_role_cannot_create_and_submission_requires_attachment(work
         json={"expected_revision": draft["revision"]},
     )
     assert response.status_code == 422
+    current = maker_client.get(f"/api/workflow/plans/{draft['id']}")
+    assert current.json()["status"] == "DRAFT"
 
 
 def test_submission_rejects_incomplete_plan_even_when_attachment_exists(workflow_client):
