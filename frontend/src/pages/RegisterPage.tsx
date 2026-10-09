@@ -11,31 +11,23 @@ type RegisterErrors = Partial<Record<RegisterField, string>>
 type RegisterTouched = Record<RegisterField, boolean>
 
 function validateUsername(value: string) {
-  const username = value.normalize('NFKC').trim().toLowerCase()
+  const username = value.trim()
   if (!username) return 'Vui lòng nhập tên đăng nhập.'
-  if (!/^[a-z0-9][a-z0-9._-]{2,79}$/.test(username)) {
-    return 'Tên đăng nhập cần có 3–80 ký tự; chỉ dùng chữ, số, dấu chấm, gạch dưới hoặc gạch nối.'
-  }
+  if (username.length < 3 || username.length > 80) return 'Tên đăng nhập cần có từ 3 đến 80 ký tự.'
   return ''
 }
 
 function validateContact(value: string) {
-  const contact = value.normalize('NFKC').trim()
+  const contact = value.trim()
   if (!contact) return 'Vui lòng nhập email hoặc số điện thoại.'
-  if (contact.includes('@')) {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact) ? '' : 'Email chưa đúng định dạng.'
-  }
-
-  const digits = contact.replace(/\D/g, '')
-  if (!/^\+[1-9][0-9\s().-]*$/.test(contact) || digits.length < 8 || digits.length > 15) {
-    return 'Số điện thoại cần có mã quốc gia, ví dụ +84901234567.'
-  }
+  if (contact.length > 320) return 'Thông tin liên hệ không được vượt quá 320 ký tự.'
   return ''
 }
 
 function validatePassword(value: string) {
   if (!value) return 'Vui lòng nhập mật khẩu.'
   if (value.length < 12) return 'Mật khẩu cần có ít nhất 12 ký tự.'
+  if (value.length > 1024) return 'Mật khẩu không được vượt quá 1024 ký tự.'
   return ''
 }
 
@@ -45,8 +37,14 @@ function validateConfirmation(value: string, password: string) {
   return ''
 }
 
+function withCorrelation(message: string, reason: unknown) {
+  return reason instanceof AuthApiError && reason.correlationId
+    ? `${message} Mã tham chiếu: ${reason.correlationId}`
+    : message
+}
+
 export function RegisterPage() {
-  const { isAuthenticated, isLoading: sessionLoading, register, roles } = useAuth()
+  const { isAuthenticated, isLoading: sessionLoading, register, roles, sessionError, refresh } = useAuth()
   const navigate = useNavigate()
   const [registrationEnabled, setRegistrationEnabled] = useState<boolean | null>(null)
   const [configLoading, setConfigLoading] = useState(true)
@@ -108,19 +106,19 @@ export function RegisterPage() {
       })
     } catch (reason) {
       if (reason instanceof AuthApiError && reason.status === 0) {
-        setFormError('Không thể kết nối đến dịch vụ đăng ký. Hãy kiểm tra kết nối rồi thử lại.')
+        setFormError(withCorrelation('Không thể kết nối đến dịch vụ đăng ký. Hãy kiểm tra kết nối rồi thử lại.', reason))
       } else if (reason instanceof AuthApiError && reason.status === 409) {
-        setFormError('Tên đăng nhập hoặc thông tin liên hệ đã được sử dụng.')
+        setFormError(withCorrelation('Tên đăng nhập hoặc thông tin liên hệ đã được sử dụng.', reason))
       } else if (reason instanceof AuthApiError && reason.status === 422) {
-        setFormError('Vui lòng kiểm tra tên đăng nhập, email hoặc số điện thoại và mật khẩu.')
+        setFormError(withCorrelation('Vui lòng kiểm tra tên đăng nhập, thông tin liên hệ và mật khẩu.', reason))
       } else if (reason instanceof AuthApiError && reason.status === 403) {
-        setFormError('Hiện chưa thể tự đăng ký tài khoản. Vui lòng liên hệ quản trị viên.')
+        setFormError(withCorrelation('Hiện chưa thể tự đăng ký tài khoản. Vui lòng liên hệ quản trị viên.', reason))
       } else if (reason instanceof AuthApiError && reason.status === 429) {
-        setFormError('Có quá nhiều lần đăng ký từ thiết bị này. Vui lòng chờ trước khi thử lại.')
+        setFormError(withCorrelation('Có quá nhiều lần đăng ký từ thiết bị này. Vui lòng chờ trước khi thử lại.', reason))
       } else if (reason instanceof AuthApiError && reason.status === 503) {
-        setFormError('Dịch vụ đăng ký chưa được cấu hình. Vui lòng thử lại sau.')
+        setFormError(withCorrelation('Dịch vụ đăng ký chưa được cấu hình. Vui lòng thử lại sau.', reason))
       } else {
-        setFormError('Tạo tài khoản chưa thành công. Hãy kiểm tra thông tin và thử lại.')
+        setFormError(withCorrelation('Tạo tài khoản chưa thành công. Hãy kiểm tra thông tin và thử lại.', reason))
       }
     } finally {
       setLoading(false)
@@ -140,8 +138,7 @@ export function RegisterPage() {
   if (configError) return <StatePanel kind="error" title="Không thể kiểm tra đăng ký" description={configError} action={<button type="button" onClick={() => void loadRegistrationConfig()}>Thử lại</button>} />
   if (!registrationEnabled) return <main className="login-page"><section className="login-panel"><div className="login-card">
     <h1>Đăng ký tài khoản</h1>
-    <p role="status">Tự đăng ký hiện đang tắt. Vui lòng liên hệ quản trị viên OrganizationAI để được cấp tài khoản Maker.</p>
-    <p>Liên hệ được cung cấp khi đăng ký chưa được xác minh.</p>
+    <p role="status">Tự đăng ký hiện đang tắt. Vui lòng liên hệ quản trị viên OrganizationAI để được cấp tài khoản.</p>
     <p><Link to="/login">Quay lại đăng nhập</Link></p>
   </div></section></main>
 
@@ -179,6 +176,11 @@ export function RegisterPage() {
             <p>Điền thông tin để bắt đầu sử dụng OrganizationAI.</p>
           </header>
 
+          {sessionError && <div className="login-form-message login-session-error" role="alert">
+            <p>{sessionError} Bạn vẫn có thể tiếp tục đăng ký.</p>
+            <button className="login-session-retry" type="button" onClick={() => void refresh()}>Thử kiểm tra phiên lại</button>
+          </div>}
+
           <form className="login-form register-form" noValidate onSubmit={handleSubmit} aria-busy={loading}>
             <div className={usernameError ? 'login-field login-field-error' : 'login-field'}>
               <label htmlFor="register-username">Tên đăng nhập</label>
@@ -203,12 +205,12 @@ export function RegisterPage() {
             </div>
 
             <div className={contactError ? 'login-field login-field-error' : 'login-field'}>
-              <label htmlFor="register-contact">Email hoặc số điện thoại quốc tế</label>
+              <label htmlFor="register-contact">Email hoặc số điện thoại</label>
               <div className="login-input-wrap">
                 <Mail aria-hidden="true" />
                 <input
                   id="register-contact" name="contact" type="text" autoComplete="email"
-                  placeholder="ten@congty.com hoặc +84 912 345 678" maxLength={320} value={contact}
+                  placeholder="Email hoặc số điện thoại" maxLength={320} value={contact}
                   aria-invalid={Boolean(contactError)}
                   aria-describedby={contactError ? 'register-contact-error' : undefined}
                   disabled={loading}

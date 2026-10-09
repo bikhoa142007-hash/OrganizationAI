@@ -712,13 +712,14 @@ Thay đổi cấu hình chỉ áp dụng cho vòng duyệt bắt đầu sau th�
 | Mã rule | Quy tắc |
 |---|---|
 | BR-AUTH-01 | Người dùng phải đăng nhập và có quyền tương ứng mới được truy cập chức năng |
-| BR-AUTH-02 | Maker chỉ sửa kế hoạch do mình tạo, trừ khi có quyền quản trị riêng |
+| BR-AUTH-02 | Người có quyền MAKER chỉ sửa kế hoạch do chính mình tạo và chỉ ở trạng thái cho phép; quyền ADMIN không mở rộng phạm vi sửa |
 | BR-AUTH-03 | Checker chỉ ra quyết định với kế hoạch được giao |
 | BR-AUTH-04 | Maker và Checker của cùng một vòng duyệt không được là cùng một người |
-| BR-AUTH-05 | Người có cả quyền Maker và Checker vẫn không được tự duyệt kế hoạch của mình |
+| BR-AUTH-05 | Người có quyền MAKER không được duyệt hoặc từ chối kế hoạch do mình tạo, kể cả khi đồng thời có quyền CHECKER hoặc ADMIN |
 | BR-AUTH-06 | Bộ phận, chức danh và vai trò hệ thống là ba thuộc tính độc lập |
 | BR-AUTH-07 | Không được xóa vai trò đang được gán cho nhân viên; chỉ cho ngừng hoạt động hoặc chuyển nhân viên trước |
 | BR-AUTH-08 | Nhân viên ngừng hoạt động hoặc tài khoản bị khóa không được chọn làm Checker mới |
+| BR-AUTH-09 | Quyền từ các role được gán được cộng dồn; ADMIN chỉ cho đọc workflow, ADMIN+MAKER có quyền Maker trên kế hoạch của mình, và ADMIN không tự cấp quyền MAKER hoặc CHECKER |
 
 ### 11.2. Quy tắc kế hoạch và trạng thái
 

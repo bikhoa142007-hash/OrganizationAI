@@ -48,10 +48,14 @@ export function AuthenticatedAuditPage() {
 }
 
 function AuditRow({ event }: { event: WorkflowAuditEvent }) {
+  const reason = typeof event.details.reason === 'string' ? event.details.reason.trim() : ''
+  const overrideReason = typeof event.details.override_reason === 'string' ? event.details.override_reason.trim() : ''
+  const actionReasonLabel = event.action === 'APPROVED' ? 'Lý do phê duyệt' : event.action === 'REJECTED' ? 'Lý do từ chối' : 'Lý do'
   const details = [
     typeof event.details.version === 'number' ? `Version ${event.details.version}` : '',
     typeof event.details.round === 'number' ? `Round ${event.details.round}` : '',
-    typeof event.details.reason === 'string' ? event.details.reason : '',
+    reason ? `${actionReasonLabel}: ${reason}` : '',
+    overrideReason ? `Lý do override AI: ${overrideReason}` : '',
   ].filter(Boolean).join(' · ')
   const transition = event.status_before ? `${event.status_before} → ${event.status_after}` : event.status_after
   return <tr>

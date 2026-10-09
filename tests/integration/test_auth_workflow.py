@@ -51,6 +51,8 @@ def workflow_client(monkeypatch) -> Iterator[tuple[TestClient, sessionmaker[Sess
     monkeypatch.setenv("JWT_SECRET", "test-only-auth-secret-that-is-at-least-32-bytes")
     monkeypatch.setenv("AUTH_COOKIE_SECURE", "false")
     monkeypatch.setenv("AUTH_COOKIE_SAMESITE", "lax")
+    monkeypatch.setenv("AUTH_WORKFLOW_AI_PROVIDER", "MOCK_VLM")
+    monkeypatch.setenv("AUTH_WORKFLOW_MOCK_SCENARIO", "malformed")
     engine = create_engine(
         "sqlite+pysqlite://",
         connect_args={"check_same_thread": False},
@@ -314,6 +316,59 @@ def test_admin_can_read_workflow_plans_but_cannot_mutate_or_recover(workflow_cli
     ).status_code == 403
 
 
+def test_admin_maker_gets_maker_permissions_without_checker_authority(workflow_client):
+    client, factory, app = workflow_client
+    admin_maker = create_user(factory, "admin.maker", ("ADMIN", "MAKER"))
+    other_maker = create_user(factory, "other.maker", ("MAKER",))
+    checker = create_user(factory, "checker.admin-maker", ("CHECKER",))
+
+    login(client, admin_maker)
+    checkers = client.get("/api/workflow/checkers")
+    assert checkers.status_code == 200
+    assert str(admin_maker.id) not in {item["id"] for item in checkers.json()}
+    assert str(checker.id) in {item["id"] for item in checkers.json()}
+
+    own_plan = make_plan(client, checker.id, title="Admin Maker draft")
+    assert own_plan["maker_id"] == str(admin_maker.id)
+    updated_payload = {**own_plan["payload"], "title": "Admin Maker edited draft"}
+    updated = client.put(f"/api/workflow/plans/{own_plan['id']}", json={
+        "expected_revision": own_plan["revision"],
+        "payload": updated_payload,
+    })
+    assert updated.status_code == 200, updated.text
+    assert updated.json()["payload"]["title"] == "Admin Maker edited draft"
+
+    updated_plan = upload_plan_image(client, own_plan["id"], updated.json()["revision"])
+    submitted = submit_plan(client, updated_plan)
+    assert submitted["status"] == "PENDING_APPROVAL"
+    assert submitted["current_version"] == 1
+    assert submitted["current_round"] == 1
+
+    other_client = authenticated_client(app, other_maker)
+    other_plan = make_plan(other_client, checker.id, title="Other Maker draft")
+    all_plans = client.get("/api/workflow/plans")
+    assert all_plans.status_code == 200
+    assert {item["id"] for item in all_plans.json()} >= {own_plan["id"], other_plan["id"]}
+
+    cross_owner_edit = client.put(f"/api/workflow/plans/{other_plan['id']}", json={
+        "expected_revision": other_plan["revision"],
+        "payload": other_plan["payload"],
+    })
+    assert cross_owner_edit.status_code == 404
+
+    self_checker_assignment = other_client.post("/api/workflow/plans", json={
+        "checker_user_id": str(admin_maker.id),
+        "payload": {"title": "Cannot assign Admin Maker as Checker"},
+    })
+    assert self_checker_assignment.status_code == 422
+    assert client.get("/api/workflow/reviews").status_code == 403
+    self_approval = client.post(
+        f"/api/workflow/plans/{own_plan['id']}/rounds/1/decision",
+        json={"action": "APPROVED"},
+    )
+    assert self_approval.status_code == 403
+
+
 def test_admin_audit_endpoint_is_paginated_and_denied_to_maker(workflow_client):
     maker_client, factory, app = workflow_client
     maker = create_user(factory, "maker.audit-view", ("MAKER",))
@@ -387,6 +442,7 @@ def test_maker_submits_and_only_assigned_checker_can_approve(workflow_client):
     maker = create_user(factory, "maker.one", ("MAKER",))
     checker = create_user(factory, "checker.one", ("CHECKER",))
     outsider = create_user(factory, "checker.two", ("CHECKER",))
+    admin = create_user(factory, "admin.audit-reason", ("ADMIN",))
     login(client, maker)
 
     draft = make_plan(client, checker.id)
@@ -399,7 +455,7 @@ def test_maker_submits_and_only_assigned_checker_can_approve(workflow_client):
     assert submitted["versions"][0]["payload"]["title"] == "Spring campaign"
     assert len(submitted["ai_evaluations"]) == 1
     assert submitted["ai_evaluations"][0]["status"] in {"FAILED", "TIMED_OUT"}
-    assert submitted["ai_evaluations"][0]["provider"] == "LOCAL_VLM"
+    assert submitted["ai_evaluations"][0]["provider"] == "MOCK_VLM"
     assert submitted["ai_evaluations"][0]["attempts"] == 1
     assert submitted["ai_evaluations"][0]["retried"] is False
     assert submitted["engine_decisions"][0]["outcome"] == "HUMAN_REVIEW_REQUIRED"
@@ -451,6 +507,15 @@ def test_maker_submits_and_only_assigned_checker_can_approve(workflow_client):
     detail = checker_client.get(f"/api/workflow/plans/{draft['id']}").json()
     assert detail["history"][-1]["action"] == "APPROVED"
     assert detail["history"][-1]["actor_id"] == str(checker.id)
+    audit = authenticated_client(app, admin).get("/api/workflow/audit?offset=0&limit=100").json()
+    decision_event = next(
+        event for event in audit["items"]
+        if event["plan_id"] == draft["id"] and event["action"] == "APPROVED"
+    )
+    assert decision_event["details"]["reason"] == "Reviewed."
+    assert decision_event["details"]["override_reason"] == (
+        "Provider configuration was unavailable; reviewed the submission manually."
+    )
 
 
 def test_authenticated_submission_uses_existing_policy_for_auto_approval(workflow_client):

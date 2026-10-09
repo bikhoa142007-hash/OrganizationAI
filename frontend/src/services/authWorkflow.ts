@@ -4,6 +4,19 @@ import { resolveApiBaseUrl } from './apiBaseUrl'
 
 const pendingDraftKeys = new Map<string, string>()
 
+function planListQuery(offset: number, limit: number) {
+  return new URLSearchParams({ offset: String(offset), limit: String(limit) })
+}
+
+function parseWorkflowPlanList(value: unknown): WorkflowPlan[] {
+  if (!Array.isArray(value) || value.some(plan => !plan || typeof plan !== 'object' || Array.isArray(plan)
+    || typeof (plan as Record<string, unknown>).id !== 'string'
+    || !(plan as Record<string, unknown>).id)) {
+    throw new AuthApiError(200, 'The workflow service returned an invalid plan list.', 'INVALID_RESPONSE')
+  }
+  return value as WorkflowPlan[]
+}
+
 function announceAuthFailure(status: number) {
   if (status === 401) window.dispatchEvent(new Event('organizationai:auth-expired'))
   if (status === 403) window.dispatchEvent(new Event('organizationai:access-denied'))
@@ -24,7 +37,7 @@ async function request<T>(path: string, method: 'GET' | 'POST' | 'PUT', body?: u
       body: body === undefined ? undefined : multipart ? body : JSON.stringify(body),
     })
   } catch {
-    throw new AuthApiError(0, 'Could not connect to the authenticated workflow service.')
+    throw new AuthApiError(0, 'Could not connect to the authenticated workflow service.', 'NETWORK_ERROR')
   }
 
   if (response.status === 204) return undefined as T
@@ -36,12 +49,23 @@ async function request<T>(path: string, method: 'GET' | 'POST' | 'PUT', body?: u
       }
     }
     announceAuthFailure(response.status)
-    const message = data && typeof data === 'object' && 'message' in data && typeof data.message === 'string'
-      ? data.message
-      : 'Authenticated workflow request failed.'
-    throw new AuthApiError(response.status, message)
+    throw workflowApiError(response, data)
   }
   return data as T
+}
+
+function workflowApiError(response: Response, data: unknown): AuthApiError {
+  const field = (key: string) => {
+    if (!data || typeof data !== 'object' || !(key in data)) return null
+    const value = (data as Record<string, unknown>)[key]
+    return typeof value === 'string' && value.length > 0 ? value : null
+  }
+  return new AuthApiError(
+    response.status,
+    field('message') ?? 'Authenticated workflow request failed.',
+    field('code') ?? 'HTTP_ERROR',
+    field('correlation_id') ?? response.headers.get('X-Correlation-ID'),
+  )
 }
 
 function encoded(value: string) {
@@ -53,12 +77,14 @@ export const authWorkflowService = {
     return request(`/workflow/audit?offset=${offset}&limit=${limit}`, 'GET')
   },
 
-  listPlans(): Promise<WorkflowPlan[]> {
-    return request('/workflow/plans', 'GET')
+  listPlans(offset = 0, limit = 100): Promise<WorkflowPlan[]> {
+    const query = planListQuery(offset, limit)
+    return request<unknown>(`/workflow/plans?${query.toString()}`, 'GET').then(parseWorkflowPlanList)
   },
 
-  listReviews(): Promise<WorkflowPlan[]> {
-    return request('/workflow/reviews', 'GET')
+  listReviews(offset = 0, limit = 100): Promise<WorkflowPlan[]> {
+    const query = planListQuery(offset, limit)
+    return request<unknown>(`/workflow/reviews?${query.toString()}`, 'GET').then(parseWorkflowPlanList)
   },
 
   listCheckers(): Promise<WorkflowChecker[]> {
@@ -113,12 +139,18 @@ export const authWorkflowService = {
   },
 
   async getAttachment(planId: string, attachmentId: string): Promise<Blob> {
-    const response = await fetch(`${resolveApiBaseUrl()}/workflow/plans/${encoded(planId)}/attachments/${encoded(attachmentId)}`, {
-      credentials: 'include',
-    })
+    let response: Response
+    try {
+      response = await fetch(`${resolveApiBaseUrl()}/workflow/plans/${encoded(planId)}/attachments/${encoded(attachmentId)}`, {
+        credentials: 'include',
+      })
+    } catch {
+      throw new AuthApiError(0, 'Could not connect to the authenticated workflow service.', 'NETWORK_ERROR')
+    }
     if (!response.ok) {
       announceAuthFailure(response.status)
-      throw new AuthApiError(response.status, 'Could not load this private attachment.')
+      const data: unknown = await response.json().catch(() => null)
+      throw workflowApiError(response, data)
     }
     return response.blob()
   },

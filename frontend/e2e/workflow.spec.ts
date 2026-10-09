@@ -13,7 +13,7 @@ async function fillPlan(page: Page, title: string, budget: string) {
   await page.getByLabel('Ảnh đính kèm', { exact: true }).setInputFiles(image)
 }
 
-test('Maker submits mock pass, then assigned Checker approves with persisted evidence', async ({ page, request }) => {
+test('Maker submits mock pass, then assigned Checker approves with persisted evidence', async ({ page, request }, testInfo) => {
   const errors: string[] = []
   page.on('pageerror', e => errors.push(e.message))
   await fillPlan(page, 'E2E auto campaign', '50000000')
@@ -33,7 +33,7 @@ test('Maker submits mock pass, then assigned Checker approves with persisted evi
   await page.getByRole('link', { name: 'Version / round / history' }).click()
   await expect(page.getByText('Version 1 / Round 1', { exact: true })).toBeVisible()
   await expect(page.getByRole('img')).toBeVisible()
-  await page.screenshot({ path: 'test-results/auto-history.png', fullPage: true })
+  await page.screenshot({ path: testInfo.outputPath('auto-history.png'), fullPage: true })
   await expect(page.getByRole('link', { name: 'Chờ tôi duyệt', exact: true })).toHaveCount(0)
   await page.getByLabel('Demo actor').selectOption('DEMO-CHECKER-01')
   await expect(page.getByRole('link', { name: 'Hồ sơ mới' })).toHaveCount(0)
@@ -82,11 +82,11 @@ test('Human Review: Checker rejects, Maker resubmits and history preserves both 
   expect(history.records.filter((r: { kind: string }) => r.kind === 'human_decision')).toHaveLength(1)
 })
 
-test('factual evidence and real Verify results render', async ({ page }) => {
+test('factual evidence and real Verify results render', async ({ page }, testInfo) => {
   await page.goto('/demo/plans/DEMO-SEED-FACTS/result')
   await expect(page.getByText('PENDING_APPROVAL · POLICY_OUT_OF_SCOPE')).toBeVisible()
   await expect(page.getByText(/form KPI 1200; visual evidence 12000/)).toBeVisible()
-  await page.screenshot({ path: 'test-results/factual-review.png', fullPage: true })
+  await page.screenshot({ path: testInfo.outputPath('factual-review.png'), fullPage: true })
   await page.getByRole('link', { name: 'Verify', exact: true }).click()
   await page.getByRole('button', { name: 'Run 4 cases', exact: true }).click()
   await expect(page.getByText('4/4 PASS', { exact: true })).toBeVisible()
@@ -96,14 +96,14 @@ test('factual evidence and real Verify results render', async ({ page }) => {
   await expect(page.getByRole('link', { name: 'Nhập kế hoạch tổng hợp mới' })).toHaveAttribute('href', '/demo/plans/new')
 })
 
-test('Checker approves a review with an explicit override and persisted audit', async ({ page, request }) => {
+test('Checker approves a review with an explicit override and persisted audit', async ({ page, request }, testInfo) => {
   await page.goto('/demo/plans')
   await page.getByLabel('Demo actor').selectOption('DEMO-CHECKER-01')
   await page.getByRole('link', { name: 'Chờ tôi duyệt', exact: true }).click()
   await page.getByText('Demo review', { exact: true }).click()
   await page.locator('#review-reason').fill('Evidence inspected manually')
   await page.getByLabel('Lý do override').fill('Manual review resolves mock recommendation')
-  await page.screenshot({ path: 'test-results/checker-review.png', fullPage: true })
+  await page.screenshot({ path: testInfo.outputPath('checker-review.png'), fullPage: true })
   await page.getByRole('button', { name: 'Approve', exact: true }).click()
   await page.getByRole('button', { name: 'Xác nhận', exact: true }).click()
   await expect(page.getByText('Quyết định đã được lưu cùng audit.')).toBeVisible()

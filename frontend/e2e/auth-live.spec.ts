@@ -142,7 +142,7 @@ test('live Auth Maker-to-Checker browser workflow preserves a rejected version t
       await maker.getByLabel('Bộ phận').fill('Marketing')
       await maker.getByLabel('Ngày bắt đầu').fill('2026-11-01')
       await maker.getByLabel('Ngày kết thúc').fill('2026-11-30')
-      await maker.getByLabel('Ngân sách (VND)').fill('50000000')
+      await maker.getByLabel('Ngân sách (đơn vị nhỏ nhất)').fill('50000000')
       await maker.getByLabel('Đối tượng mục tiêu').fill('Opted-in customers aged 25 to 40.')
       await maker.getByLabel('Tóm tắt chiến lược').fill('Initial synthetic plan summary for version one.')
       await maker.getByLabel('KPI kỳ vọng').fill('Count verified product trial registrations.')

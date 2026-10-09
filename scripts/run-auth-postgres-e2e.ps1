@@ -343,7 +343,10 @@ finally:
     Write-Host 'Running the two Auth E2E cases against the disposable PostgreSQL-backed API...'
     Push-Location $frontendRoot
     try {
-        $playwrightArgs = @('run', 'test:e2e', '--', '--config', 'playwright.auth-live.config.ts', '--reporter=list,json')
+        $playwrightArgs = @(
+            'run', 'test:e2e', '--', '--config', 'playwright.auth-live.config.ts',
+            '--reporter=list,json', '--output', (Join-Path $runRoot 'playwright-output')
+        )
         & $npmCommand.Source @playwrightArgs
         $playwrightExitCode = $LASTEXITCODE
     }

@@ -1,8 +1,8 @@
 import { afterEach, expect, it, vi } from 'vitest'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { AuthProvider } from '../context/AuthContext'
-import { authService } from '../services/auth'
+import { AuthApiError, authService } from '../services/auth'
 import { authWorkflowService } from '../services/authWorkflow'
 import type { WorkflowPlan } from '../types/authWorkflow'
 import { AuthenticatedWorkflowDetailPage } from './AuthenticatedWorkflowDetailPage'
@@ -287,4 +287,233 @@ it('lets only the assigned Checker explicitly recover an interrupted evaluation'
   await waitFor(() => expect(recover).toHaveBeenCalledWith('plan-1', 1))
   expect(await screen.findByText('Engine đã chuyển Checker; hồ sơ đang chờ quyết định.')).toBeVisible()
   expect(getPlan).toHaveBeenCalledTimes(1)
+})
+
+it('locks decision controls while posting and shows success only after the server confirms approval', async () => {
+  vi.spyOn(authService, 'me').mockResolvedValue(checker)
+  const plan = planFixture()
+  const approved = planFixture()
+  approved.status = 'APPROVED'
+  approved.processing_stage = 'COMPLETED'
+  let resolveDecision: ((value: WorkflowPlan) => void) | undefined
+  const pendingDecision = new Promise<WorkflowPlan>(resolve => { resolveDecision = resolve })
+  vi.spyOn(authWorkflowService, 'getPlan').mockResolvedValue(plan)
+  vi.spyOn(authWorkflowService, 'getAttachment').mockResolvedValue(new Blob())
+  const decide = vi.spyOn(authWorkflowService, 'decide').mockReturnValue(pendingDecision)
+  renderDetail()
+
+  fireEvent.change(await screen.findByLabelText('Lý do override AI'), { target: { value: 'Reviewed the current evidence.' } })
+  const approve = screen.getByRole('button', { name: 'Phê duyệt' })
+  fireEvent.click(approve)
+  await waitFor(() => expect(decide).toHaveBeenCalledWith('plan-1', 1, 'APPROVED', '', 'Reviewed the current evidence.'))
+  expect(screen.getAllByRole('button', { name: 'Đang xử lý…' })).toHaveLength(2)
+  expect(screen.getAllByRole('button', { name: 'Đang xử lý…' }).every(button => (button as HTMLButtonElement).disabled)).toBe(true)
+  expect(screen.queryByText('Máy chủ đã xác nhận phê duyệt hồ sơ.')).not.toBeInTheDocument()
+
+  await act(async () => { resolveDecision?.(approved); await pendingDecision })
+  expect(await screen.findByText('Máy chủ đã xác nhận phê duyệt hồ sơ.')).toBeVisible()
+  expect(screen.getByText('Đã duyệt')).toBeVisible()
+  expect(decide).toHaveBeenCalledTimes(1)
+})
+
+it('requires a rejection reason and sends the selected backend round with the reason', async () => {
+  vi.spyOn(authService, 'me').mockResolvedValue(checker)
+  const plan = planFixture()
+  const rejected = planFixture()
+  rejected.status = 'REJECTED'
+  rejected.processing_stage = 'COMPLETED'
+  vi.spyOn(authWorkflowService, 'getPlan').mockResolvedValue(plan)
+  vi.spyOn(authWorkflowService, 'getAttachment').mockResolvedValue(new Blob())
+  const decide = vi.spyOn(authWorkflowService, 'decide').mockResolvedValue(rejected)
+  renderDetail()
+
+  fireEvent.click(await screen.findByRole('button', { name: 'Từ chối' }))
+  expect(await screen.findByRole('alert')).toHaveTextContent('Nhập lý do từ chối')
+  expect(decide).not.toHaveBeenCalled()
+
+  fireEvent.change(screen.getByLabelText('Lý do hoặc nhận xét'), { target: { value: 'The request needs a measurable KPI.' } })
+  fireEvent.change(screen.getByLabelText('Lý do override AI'), { target: { value: 'Manual review supports rejection.' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Từ chối' }))
+
+  await waitFor(() => expect(decide).toHaveBeenCalledWith(
+    'plan-1', 1, 'REJECTED', 'The request needs a measurable KPI.', 'Manual review supports rejection.',
+  ))
+  expect(await screen.findByText('Máy chủ đã xác nhận từ chối hồ sơ.')).toBeVisible()
+})
+
+it('refetches once on a decision conflict without resubmitting and retains decision text', async () => {
+  vi.spyOn(authService, 'me').mockResolvedValue(checker)
+  const plan = planFixture()
+  const latest = planFixture()
+  latest.current_round = 2
+  latest.revision = 5
+  vi.spyOn(authWorkflowService, 'getPlan').mockResolvedValueOnce(plan).mockResolvedValueOnce(latest)
+  vi.spyOn(authWorkflowService, 'getAttachment').mockResolvedValue(new Blob())
+  const decide = vi.spyOn(authWorkflowService, 'decide').mockRejectedValue(new AuthApiError(409, 'Round changed.', 'CONFLICT', 'trace-conflict'))
+  renderDetail()
+
+  fireEvent.change(await screen.findByLabelText('Lý do hoặc nhận xét'), { target: { value: 'Please clarify the KPI.' } })
+  fireEvent.change(screen.getByLabelText('Lý do override AI'), { target: { value: 'I checked the latest evidence.' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Phê duyệt' }))
+
+  expect(await screen.findByRole('alert')).toHaveTextContent('Đã tải trạng thái mới nhất')
+  expect(screen.getByText('Mã tham chiếu: trace-conflict')).toBeVisible()
+  expect(screen.getByLabelText('Lý do hoặc nhận xét')).toHaveValue('Please clarify the KPI.')
+  expect(screen.getByLabelText('Lý do override AI')).toHaveValue('I checked the latest evidence.')
+  expect(screen.getByText(/Round 2/)).toBeVisible()
+  expect(authWorkflowService.getPlan).toHaveBeenCalledTimes(2)
+  expect(decide).toHaveBeenCalledTimes(1)
+})
+
+it('preserves decision input and correlation details after backend validation failure', async () => {
+  vi.spyOn(authService, 'me').mockResolvedValue(checker)
+  vi.spyOn(authWorkflowService, 'getPlan').mockResolvedValue(planFixture())
+  vi.spyOn(authWorkflowService, 'getAttachment').mockResolvedValue(new Blob())
+  vi.spyOn(authWorkflowService, 'decide').mockRejectedValue(new AuthApiError(422, 'A rejection reason is required.', 'VALIDATION_ERROR', 'trace-validation'))
+  renderDetail()
+
+  fireEvent.change(await screen.findByLabelText('Lý do hoặc nhận xét'), { target: { value: 'Needs more detail.' } })
+  fireEvent.change(screen.getByLabelText('Lý do override AI'), { target: { value: 'Reviewer disagrees.' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Từ chối' }))
+
+  expect(await screen.findByRole('alert')).toHaveTextContent('A rejection reason is required.')
+  expect(screen.getByText('Mã tham chiếu: trace-validation')).toBeVisible()
+  expect(screen.getByLabelText('Lý do hoặc nhận xét')).toHaveValue('Needs more detail.')
+  expect(screen.getByLabelText('Lý do override AI')).toHaveValue('Reviewer disagrees.')
+})
+
+it('disables Checker decisions while the backend reports that AI is still processing', async () => {
+  vi.spyOn(authService, 'me').mockResolvedValue(checker)
+  const plan = planFixture()
+  plan.processing_stage = 'AI_PROCESSING'
+  vi.spyOn(authWorkflowService, 'getPlan').mockResolvedValue(plan)
+  vi.spyOn(authWorkflowService, 'getAttachment').mockResolvedValue(new Blob())
+  const decide = vi.spyOn(authWorkflowService, 'decide')
+  renderDetail()
+
+  expect(await screen.findByText(/AI đang xử lý\. Các quyết định được khóa/)).toBeVisible()
+  expect(screen.getByRole('button', { name: 'Phê duyệt' })).toBeDisabled()
+  expect(screen.getByRole('button', { name: 'Từ chối' })).toBeDisabled()
+  expect(decide).not.toHaveBeenCalled()
+})
+
+it('keeps review detail private while its initial backend request is loading', () => {
+  vi.spyOn(authService, 'me').mockResolvedValue(checker)
+  vi.spyOn(authWorkflowService, 'getPlan').mockReturnValue(new Promise<WorkflowPlan>(() => {}))
+  renderDetail()
+
+  expect(screen.getByRole('status')).toHaveTextContent('Đang tải kế hoạch')
+  expect(screen.queryByRole('heading', { name: 'Nội dung kế hoạch' })).not.toBeInTheDocument()
+  expect(screen.queryByRole('heading', { name: 'Quyết định Checker' })).not.toBeInTheDocument()
+})
+
+it('renders request activity safely in the server-provided order', async () => {
+  vi.spyOn(authService, 'me').mockResolvedValue(checker)
+  const plan = planFixture()
+  const validHistory = [
+    {
+      id: 'event-unknown', actor_id: null, actor_type: 'HUMAN' as const, actor_name: ' ',
+      action: 'UNRECOGNIZED_ACTION', status_before: 'PENDING_APPROVAL', status_after: 'APPROVED',
+      details: { reason: '<img src=x onerror=alert(1) />' }, created_at: '2026-10-05T15:00:00Z',
+    },
+    {
+      id: 'event-stale', actor_id: null, actor_type: 'SYSTEM' as const, actor_name: '',
+      action: 'AI_RESULT_IGNORED_STALE', status_before: null, status_after: 'DRAFT',
+      details: {}, created_at: 'not-a-timestamp',
+    },
+    {
+      id: 'event-approval', actor_id: checker.id, actor_type: 'HUMAN' as const, actor_name: checker.display_name,
+      action: 'APPROVED', status_before: 'PENDING_APPROVAL', status_after: 'APPROVED',
+      details: { reason: 'Đạt mục tiêu đã thống nhất.', override_reason: 'Checker xác nhận ngoại lệ theo brief.' },
+      created_at: '2026-10-06T15:00:00Z',
+    },
+  ]
+  const malformedHistory: unknown = [...validHistory, null, { id: 'bad-actor', action: 'APPROVED', actor_type: 'BOT' }]
+  plan.history = malformedHistory as WorkflowPlan['history']
+  vi.spyOn(authWorkflowService, 'getPlan').mockResolvedValue(plan)
+
+  const { container } = renderDetail()
+
+  const historyList = await screen.findByRole('list', { name: 'Sự kiện của kế hoạch' })
+  const entries = within(historyList).getAllByRole('listitem')
+  expect(entries).toHaveLength(3)
+  expect(entries[0]).toHaveTextContent('Hoạt động khác')
+  expect(entries[1]).toHaveTextContent('Bỏ qua kết quả cũ')
+  expect(screen.getByText('3 sự kiện')).toBeVisible()
+  expect(within(entries[0]).getByText('Người dùng')).toBeVisible()
+  expect(within(entries[0]).getByText('Trạng thái: Chờ duyệt → Đã duyệt')).toBeVisible()
+  expect(within(entries[0]).getByText('<img src=x onerror=alert(1) />')).toBeVisible()
+  expect(entries[0].querySelector('time')).toHaveAttribute('dateTime', '2026-10-05T15:00:00Z')
+  expect(within(entries[1]).getByText('Hệ thống')).toBeVisible()
+  expect(within(entries[1]).getByText('Không rõ thời gian')).toBeVisible()
+  expect(within(entries[1]).getByText('Trạng thái: Bản nháp')).toBeVisible()
+  expect(within(entries[2]).getByText('Lý do phê duyệt')).toBeVisible()
+  expect(within(entries[2]).getByText('Đạt mục tiêu đã thống nhất.')).toBeVisible()
+  expect(within(entries[2]).getByText('Lý do override AI')).toBeVisible()
+  expect(within(entries[2]).getByText('Checker xác nhận ngoại lệ theo brief.')).toBeVisible()
+  expect(within(entries[1]).queryByText('Lý do override AI')).not.toBeInTheDocument()
+  expect(container.querySelector('.auth-workflow-history img')).toBeNull()
+})
+
+it('shows a clear empty state when a plan has no recorded activity', async () => {
+  vi.spyOn(authService, 'me').mockResolvedValue(checker)
+  vi.spyOn(authWorkflowService, 'getPlan').mockResolvedValue(planFixture())
+  renderDetail()
+
+  expect(await screen.findByText('Chưa có sự kiện hoạt động được ghi nhận.')).toBeVisible()
+  expect(screen.getByText('0 sự kiện')).toBeVisible()
+})
+
+it('shows zero budget as a real amount in the submitted plan details', async () => {
+  vi.spyOn(authService, 'me').mockResolvedValue(checker)
+  const plan = planFixture()
+  plan.payload.budget_minor_units = '0'
+  vi.spyOn(authWorkflowService, 'getPlan').mockResolvedValue(plan)
+  renderDetail()
+
+  expect(await screen.findByText('0 VND')).toBeVisible()
+})
+
+it('keeps the current request visible after a transient refresh failure and offers retry', async () => {
+  vi.spyOn(authService, 'me').mockResolvedValue(checker)
+  const current = planFixture()
+  const latest = planFixture()
+  latest.payload.title = 'Latest request title'
+  let rejectRefresh: ((failure: AuthApiError) => void) | undefined
+  const pendingRefresh = new Promise<WorkflowPlan>((_resolve, reject) => { rejectRefresh = reject })
+  vi.spyOn(authWorkflowService, 'getPlan')
+    .mockResolvedValueOnce(current)
+    .mockReturnValueOnce(pendingRefresh)
+    .mockResolvedValueOnce(latest)
+  renderDetail()
+
+  expect(await screen.findByRole('heading', { name: 'Spring campaign' })).toBeVisible()
+  fireEvent.click(screen.getByRole('button', { name: 'Tải lại trạng thái' }))
+  expect(await screen.findByText('Đang cập nhật kế hoạch… Nội dung hiện có vẫn được giữ.')).toBeVisible()
+  expect(screen.getByRole('heading', { name: 'Spring campaign' })).toBeVisible()
+
+  await act(async () => { rejectRefresh?.(new AuthApiError(503, 'Unavailable', 'HTTP_ERROR', 'trace-503')) })
+  expect(await screen.findByRole('alert')).toHaveTextContent('Dịch vụ workflow chưa trả được trạng thái kế hoạch.')
+  expect(screen.getByText('Mã tham chiếu: trace-503')).toBeVisible()
+  expect(screen.getByRole('heading', { name: 'Spring campaign' })).toBeVisible()
+  fireEvent.click(screen.getByRole('button', { name: 'Thử tải lại' }))
+  expect(await screen.findByRole('heading', { name: 'Latest request title' })).toBeVisible()
+  expect(authWorkflowService.getPlan).toHaveBeenCalledTimes(3)
+})
+
+it.each([
+  { status: 401, code: 'UNAUTHENTICATED' },
+  { status: 403, code: 'FORBIDDEN' },
+  { status: 404, code: 'NOT_FOUND' },
+])('clears protected request detail after a $status refresh response', async ({ status, code }) => {
+  vi.spyOn(authService, 'me').mockResolvedValue(checker)
+  vi.spyOn(authWorkflowService, 'getPlan')
+    .mockResolvedValueOnce(planFixture())
+    .mockRejectedValueOnce(new AuthApiError(status, 'Request no longer available.', code))
+  renderDetail()
+
+  expect(await screen.findByRole('heading', { name: 'Spring campaign' })).toBeVisible()
+  fireEvent.click(screen.getByRole('button', { name: 'Tải lại trạng thái' }))
+  expect(await screen.findByRole('heading', { name: 'Không thể mở kế hoạch' })).toBeVisible()
+  expect(screen.queryByRole('heading', { name: 'Spring campaign' })).not.toBeInTheDocument()
 })

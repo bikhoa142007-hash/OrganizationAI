@@ -1,7 +1,7 @@
 # 03 · Ma trận quyền, người duyệt và hạn mức
 
 Bộ BA v2.1; cập nhật runtime Sprint 1 ngày 22/09/2026 theo yêu cầu audit RBAC.
-Đây là ma trận quyền canonical cho HTTP demo. Căn cứ: AGENTS.md,
+Đây là ma trận quyền canonical cho workflow demo và Auth. Căn cứ: AGENTS.md,
 `docs/scope-phase-1.md`, `docs/sprint-1-deliverables.md` và decision contract.
 Không phải xác nhận policy sản xuất đã được PO phê duyệt. Đường dẫn `role1`
 được giữ để bảo toàn liên kết/provenance của gói BA.
@@ -45,6 +45,18 @@ Vai trò kép là hợp quyền theo từng hành động; quy tắc ownership, 
 cấm tự duyệt luôn ưu tiên. Checker đọc được draft được giao nhưng không thể quyết
 định cho tới khi submit và pipeline đã route Human Review. Hidden controls chỉ hỗ
 trợ sử dụng; API/workflow độc lập kiểm tra quyền.
+
+### 2.1. Cộng dồn quyền theo role được gán
+
+| Role được gán | Quyền workflow hiệu lực |
+|---|---|
+| ADMIN | Chỉ đọc danh sách/chi tiết workflow theo phạm vi Admin; không tạo, sửa, upload, submit, recovery hoặc quyết định |
+| ADMIN + MAKER | Giữ quyền đọc của ADMIN và nhận các quyền MAKER trên kế hoạch do chính mình tạo; chỉ sửa ở DRAFT/REJECTED và chỉ submit khi đủ điều kiện. Không có quyền Checker nếu chưa được gán CHECKER |
+
+Quyền được cộng từ các role thực sự được gán; ADMIN không tự cấp MAKER hoặc
+CHECKER. Người có MAKER không được quyết định kế hoạch của mình, kể cả khi được
+gán thêm CHECKER. Checker chỉ được xử lý hồ sơ đang được giao; API tiếp tục kiểm
+tra role, ownership, assignment, trạng thái và vòng duyệt.
 
 ## 3. Danh mục actor và assignment demo
 
