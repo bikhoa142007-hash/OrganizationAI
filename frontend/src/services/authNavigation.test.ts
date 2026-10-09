@@ -5,7 +5,7 @@ describe('authenticated role destinations', () => {
   it('selects Maker as the primary destination for accounts with several roles', () => {
     expect(homeForRoles(['CHECKER', 'MAKER'])).toBe('/workflow/plans')
     expect(homeForRoles(['CHECKER'])).toBe('/workflow/reviews')
-    expect(homeForRoles(['ADMIN'])).toBe('/account')
+    expect(homeForRoles(['ADMIN'])).toBe('/workflow/plans')
     expect(homeForRoles([])).toBe('/access-denied')
   })
 

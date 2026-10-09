@@ -5,6 +5,7 @@ import { AuthenticatedWorkflowShell, AuthWorkflowRoleGuard } from '../components
 import { RequireAuth } from '../components/auth/RequireAuth'
 import { StatePanel } from '../components/ui'
 import { AuthenticatedAccountPage } from '../pages/AuthenticatedAccountPage'
+import { AuthenticatedAuditPage } from '../pages/AuthenticatedAuditPage'
 import { AuthenticatedPlansPage } from '../pages/AuthenticatedPlansPage'
 import { AuthenticatedWorkflowDetailPage } from '../pages/AuthenticatedWorkflowDetailPage'
 import { AuthenticatedWorkflowFormPage } from '../pages/AuthenticatedWorkflowFormPage'
@@ -34,11 +35,12 @@ export function AppRoutes() {
     <Route path="/access-denied" element={<RequireAuth><AccessDeniedPage /></RequireAuth>} />
     <Route path="/workflow" element={<RequireAuth><AuthenticatedWorkflowShell /></RequireAuth>}>
       <Route index element={<RoleHomePage />} />
-      <Route path="plans" element={<AuthWorkflowRoleGuard roles={['MAKER']}><AuthenticatedPlansPage /></AuthWorkflowRoleGuard>} />
+      <Route path="plans" element={<AuthWorkflowRoleGuard roles={['MAKER', 'ADMIN']}><AuthenticatedPlansPage /></AuthWorkflowRoleGuard>} />
       <Route path="plans/new" element={<AuthWorkflowRoleGuard roles={['MAKER']}><AuthenticatedWorkflowFormPage /></AuthWorkflowRoleGuard>} />
-      <Route path="plans/:planId" element={<AuthWorkflowRoleGuard roles={['MAKER', 'CHECKER']}><AuthenticatedWorkflowDetailPage /></AuthWorkflowRoleGuard>} />
+      <Route path="plans/:planId" element={<AuthWorkflowRoleGuard roles={['MAKER', 'CHECKER', 'ADMIN']}><AuthenticatedWorkflowDetailPage /></AuthWorkflowRoleGuard>} />
       <Route path="plans/:planId/edit" element={<AuthWorkflowRoleGuard roles={['MAKER']}><AuthenticatedWorkflowFormPage /></AuthWorkflowRoleGuard>} />
       <Route path="reviews" element={<AuthWorkflowRoleGuard roles={['CHECKER']}><AuthenticatedPlansPage reviews /></AuthWorkflowRoleGuard>} />
+      <Route path="audit" element={<AuthWorkflowRoleGuard roles={['ADMIN']}><AuthenticatedAuditPage /></AuthWorkflowRoleGuard>} />
     </Route>
 
     <Route path="/demo" element={isDemoEnabled() ? <AppShell /> : <Navigate to="/" replace />}>

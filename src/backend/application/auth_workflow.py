@@ -77,7 +77,7 @@ def _require_role(principal: AuthenticatedPrincipal, role: str, correlation_id: 
 
 
 def _require_workflow_role(principal: AuthenticatedPrincipal, correlation_id: str) -> None:
-    if not {"MAKER", "CHECKER"}.intersection(principal.roles):
+    if not {"MAKER", "CHECKER", "ADMIN"}.intersection(principal.roles):
         _fail("FORBIDDEN", "You do not have permission to perform this action.", correlation_id)
 
 
@@ -135,6 +135,8 @@ def _maker_plan(plan: AuthWorkflowPlan, principal: AuthenticatedPrincipal, corre
 
 def _readable_plan(plan: AuthWorkflowPlan, principal: AuthenticatedPrincipal, correlation_id: str) -> None:
     _require_workflow_role(principal, correlation_id)
+    if "ADMIN" in principal.roles:
+        return
     owns = "MAKER" in principal.roles and plan.maker_id == principal.id
     assigned = "CHECKER" in principal.roles and plan.checker_id == principal.id
     if not owns and not assigned:
@@ -342,18 +344,14 @@ def list_plans(
         conditions.append(AuthWorkflowPlan.maker_id == principal.id)
     if "CHECKER" in principal.roles:
         conditions.append(AuthWorkflowPlan.checker_id == principal.id)
+    if "ADMIN" in principal.roles and not reviews_only:
+        conditions.append(AuthWorkflowPlan.id.is_not(None))
     if reviews_only:
         _require_role(principal, "CHECKER", correlation_id)
         conditions = [
             AuthWorkflowPlan.checker_id == principal.id,
             AuthWorkflowPlan.status == "PENDING_APPROVAL",
         ]
-    visible_ids = tuple(session.scalars(
-        select(AuthWorkflowPlan.id).where(or_(*conditions))
-    ).all())
-    recover_stale_evaluations(
-        session, correlation_id, visible_plan_ids=visible_ids,
-    )
     plans = session.scalars(
         select(AuthWorkflowPlan)
         .where(or_(*conditions))
@@ -373,9 +371,50 @@ def get_plan(
     _require_workflow_role(principal, correlation_id)
     plan = _plan_or_404(session, plan_id, correlation_id)
     _readable_plan(plan, principal, correlation_id)
-    recover_stale_evaluations(session, correlation_id, visible_plan_ids=(plan.id,))
-    session.refresh(plan)
     return _plan_dict(session, plan)
+
+
+def list_audit_events(
+    session: Session,
+    principal: AuthenticatedPrincipal,
+    correlation_id: str,
+    *,
+    offset: int = 0,
+    limit: int = 100,
+) -> dict[str, Any]:
+    if "ADMIN" not in principal.roles:
+        _fail("FORBIDDEN", "You do not have permission to view the audit log.", correlation_id)
+    total = session.scalar(select(func.count(AuthWorkflowEvent.id))) or 0
+    rows = session.execute(
+        select(AuthWorkflowEvent, AuthWorkflowPlan.code, User.display_name)
+        .join(AuthWorkflowPlan, AuthWorkflowPlan.id == AuthWorkflowEvent.plan_id)
+        .outerjoin(User, User.id == AuthWorkflowEvent.actor_id)
+        .order_by(
+            AuthWorkflowEvent.created_at.desc(),
+            AuthWorkflowEvent.plan_id,
+            AuthWorkflowEvent.sequence_number.desc(),
+        )
+        .offset(offset)
+        .limit(limit)
+    ).all()
+    return {
+        "items": [{
+            "id": str(event.id),
+            "plan_id": str(event.plan_id),
+            "plan_code": plan_code,
+            "actor_id": str(event.actor_id) if event.actor_id else None,
+            "actor_type": event.actor_type,
+            "actor_name": actor_name or "System",
+            "action": event.action,
+            "status_before": event.status_before,
+            "status_after": event.status_after,
+            "details": event.details,
+            "created_at": event.created_at,
+        } for event, plan_code, actor_name in rows],
+        "offset": offset,
+        "limit": limit,
+        "total": total,
+    }
 
 
 def create_plan(
@@ -384,36 +423,64 @@ def create_plan(
     payload: dict[str, Any],
     checker_id: UUID | None,
     correlation_id: str,
+    *,
+    idempotency_key: str | None = None,
 ):
     _require_role(principal, "MAKER", correlation_id)
+    request_hash = canonical_hash({
+        "payload": payload,
+        "checker_user_id": str(checker_id) if checker_id is not None else None,
+    })
     try:
         with _write_transaction(session):
-            _validate_checker(session, principal, checker_id, correlation_id)
-            plan_id = uuid4()
-            plan = AuthWorkflowPlan(
-                id=plan_id,
-                code=f"MKT-{plan_id.hex[:12].upper()}",
-                maker_id=principal.id,
-                checker_id=checker_id,
-                payload=payload,
-                status="DRAFT",
-                processing_stage="DRAFT",
-                current_version=0,
-                current_round=0,
-                revision=0,
-            )
-            session.add(plan)
-            session.flush()
-            _record_event(
-                session, plan_id=plan.id, actor_id=principal.id,
-                action="CREATED", status_before=None, status_after=plan.status,
-                details={"code": plan.code},
-            )
-            session.flush()
-            session.refresh(plan)
-            result = _plan_dict(session, plan)
+            existing = None
+            if idempotency_key is not None:
+                existing = session.scalar(select(AuthWorkflowPlan).where(
+                    AuthWorkflowPlan.maker_id == principal.id,
+                    AuthWorkflowPlan.creation_idempotency_key == idempotency_key,
+                ))
+            if existing is not None:
+                if existing.creation_request_hash != request_hash:
+                    _fail("CONFLICT", "The draft request key was already used for different plan data.", correlation_id)
+                result = _plan_dict(session, existing)
+            else:
+                _validate_checker(session, principal, checker_id, correlation_id)
+                plan_id = uuid4()
+                plan = AuthWorkflowPlan(
+                    id=plan_id,
+                    code=f"MKT-{plan_id.hex[:12].upper()}",
+                    maker_id=principal.id,
+                    checker_id=checker_id,
+                    payload=payload,
+                    creation_idempotency_key=idempotency_key,
+                    creation_request_hash=request_hash if idempotency_key is not None else None,
+                    status="DRAFT",
+                    processing_stage="DRAFT",
+                    current_version=0,
+                    current_round=0,
+                    revision=0,
+                )
+                session.add(plan)
+                session.flush()
+                _record_event(
+                    session, plan_id=plan.id, actor_id=principal.id,
+                    action="CREATED", status_before=None, status_after=plan.status,
+                    details={"code": plan.code},
+                )
+                session.flush()
+                session.refresh(plan)
+                result = _plan_dict(session, plan)
     except IntegrityError:
         session.rollback()
+        if idempotency_key is not None:
+            existing = session.scalar(select(AuthWorkflowPlan).where(
+                AuthWorkflowPlan.maker_id == principal.id,
+                AuthWorkflowPlan.creation_idempotency_key == idempotency_key,
+            ))
+            if existing is not None:
+                if existing.creation_request_hash != request_hash:
+                    _fail("CONFLICT", "The draft request key was already used for different plan data.", correlation_id)
+                return _plan_dict(session, existing)
         _fail("CONFLICT", "Could not create the plan; retry with a new request.", correlation_id)
     return result
 
@@ -649,8 +716,8 @@ def _validate_submission(payload: dict[str, Any], correlation_id: str) -> None:
     if date.fromisoformat(payload["end_date"]) < date.fromisoformat(payload["start_date"]):
         _fail("VALIDATION_ERROR", "The end date must be on or after the start date.", correlation_id)
     amount = payload.get("budget_minor_units", "")
-    if not re.fullmatch(r"[1-9][0-9]{0,23}", amount):
-        _fail("VALIDATION_ERROR", "Budget must be a positive whole-number amount.", correlation_id)
+    if not re.fullmatch(r"(?:0|[1-9][0-9]{0,23})", amount):
+        _fail("VALIDATION_ERROR", "Budget must be a non-negative whole-number amount.", correlation_id)
 
 
 def evaluate_submission(
@@ -973,8 +1040,9 @@ def recover_stale_evaluations(
     *,
     age_seconds: int = 240,
     visible_plan_ids: tuple[UUID, ...] | None = None,
+    round_number: int | None = None,
 ) -> None:
-    """Move interrupted durable runs to Checker review when a user returns."""
+    """Move interrupted durable runs to Checker review after an explicit command."""
     cutoff = _now_datetime() - timedelta(seconds=age_seconds)
     query = select(AuthWorkflowEvaluationRun.id).where(
         AuthWorkflowEvaluationRun.status.in_(("PENDING", "PROCESSING")),
@@ -984,6 +1052,8 @@ def recover_stale_evaluations(
         if not visible_plan_ids:
             return
         query = query.where(AuthWorkflowEvaluationRun.plan_id.in_(visible_plan_ids))
+    if round_number is not None:
+        query = query.where(AuthWorkflowEvaluationRun.round_number == round_number)
     run_ids = session.scalars(query.order_by(AuthWorkflowEvaluationRun.created_at)).all()
     for run_id in run_ids:
         try:
@@ -1119,6 +1189,32 @@ def recover_stale_evaluations(
             continue
 
 
+def recover_stale_round(
+    session: Session,
+    principal: AuthenticatedPrincipal,
+    plan_id: UUID,
+    round_number: int,
+    correlation_id: str,
+) -> dict[str, Any]:
+    """Explicit, idempotent Checker command; GET requests never recover runs."""
+    _require_role(principal, "CHECKER", correlation_id)
+    plan = _plan_or_404(session, plan_id, correlation_id)
+    _readable_plan(plan, principal, correlation_id)
+    if plan.checker_id != principal.id or plan.maker_id == principal.id:
+        _fail("NOT_FOUND", "Plan not found.", correlation_id)
+    if plan.status != "PENDING_APPROVAL" or plan.current_round != round_number:
+        _fail("CONFLICT", "This approval round is not active.", correlation_id)
+    if plan.processing_stage in {"AI_PENDING", "AI_PROCESSING"}:
+        recover_stale_evaluations(
+            session,
+            correlation_id,
+            visible_plan_ids=(plan.id,),
+            round_number=round_number,
+        )
+        session.refresh(plan)
+    return _plan_dict(session, plan)
+
+
 def decide_plan(
     session: Session,
     principal: AuthenticatedPrincipal,
@@ -1231,6 +1327,14 @@ def get_attachment(
     _require_workflow_role(principal, correlation_id)
     plan = _plan_or_404(session, plan_id, correlation_id)
     _readable_plan(plan, principal, correlation_id)
+    if (
+        "ADMIN" in principal.roles
+        and not (
+            ("MAKER" in principal.roles and plan.maker_id == principal.id)
+            or ("CHECKER" in principal.roles and plan.checker_id == principal.id)
+        )
+    ):
+        _fail("NOT_FOUND", "Plan not found.", correlation_id)
     attachment = session.scalar(select(AuthWorkflowAttachment).where(
         AuthWorkflowAttachment.id == attachment_id,
         AuthWorkflowAttachment.plan_id == plan.id,

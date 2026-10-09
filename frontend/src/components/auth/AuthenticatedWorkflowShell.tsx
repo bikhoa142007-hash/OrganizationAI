@@ -1,4 +1,4 @@
-import { ClipboardCheck, FileText, LogOut, UserRound } from 'lucide-react'
+import { ClipboardCheck, FileText, History, LogOut, UserRound } from 'lucide-react'
 import { useState } from 'react'
 import type { ReactNode } from 'react'
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
@@ -27,8 +27,9 @@ export function AuthenticatedWorkflowShell() {
     <header className="auth-workflow-header">
       <Link className="auth-workflow-brand" to="/workflow/plans"><span>OA</span><strong>OrganizationAI<small>Authenticated workspace</small></strong></Link>
       <nav aria-label="Authenticated workflow">
-        {roles.includes('MAKER') && <NavLink to="/workflow/plans"><FileText /> Kế hoạch của tôi</NavLink>}
+        {(roles.includes('MAKER') || roles.includes('ADMIN')) && <NavLink to="/workflow/plans"><FileText /> {roles.includes('ADMIN') ? 'Toàn bộ kế hoạch' : 'Kế hoạch của tôi'}</NavLink>}
         {roles.includes('CHECKER') && <NavLink to="/workflow/reviews"><ClipboardCheck /> Hàng chờ duyệt</NavLink>}
+        {roles.includes('ADMIN') && <NavLink to="/workflow/audit"><History /> Nhật ký kiểm toán</NavLink>}
       </nav>
       <div className="auth-workflow-user"><span><UserRound /> {user?.display_name}<small>{roles.join(', ')}</small></span><button type="button" disabled={logoutPending} onClick={() => void signOut()}><LogOut /> {logoutPending ? 'Đang đăng xuất…' : 'Đăng xuất'}</button></div>
     </header>

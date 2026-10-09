@@ -148,6 +148,12 @@ class AuthenticatedMockVLMProvider(VisualModelProvider):
                 "ocr_text": "Mock extracted campaign text.",
                 "observations": [] if review else ["Mock observed a campaign banner."],
                 "uncertainties": ["Mock scenario requires Checker visual review."] if review else [],
+                "confidence": 0.80 if review else 0.95,
+                "object_detections": [] if review else ["campaign banner"],
+                "visual_quality": {
+                    "result": "REVIEW_REQUIRED" if review else "PASS",
+                    "findings": ["Mock scenario requires visual-quality review."] if review else [],
+                },
             })
         output = {"images": images}
         raw = json.dumps(output, sort_keys=True, separators=(",", ":")).encode("utf-8")

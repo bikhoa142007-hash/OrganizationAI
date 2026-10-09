@@ -18,9 +18,17 @@ export function AuthenticatedPlansPage({ reviews = false }: { reviews?: boolean 
   }, [reviews])
   useEffect(() => { void load() }, [load])
 
-  const title = reviews ? 'Kế hoạch chờ tôi duyệt' : 'Kế hoạch của tôi'
+  const isAdmin = roles.includes('ADMIN')
+  const title = reviews ? 'Kế hoạch chờ tôi duyệt' : isAdmin ? 'Toàn bộ kế hoạch' : 'Kế hoạch của tôi'
+  const description = reviews
+    ? 'Chỉ các hồ sơ đang chờ và được giao cho tài khoản hiện tại.'
+    : isAdmin && !roles.includes('MAKER')
+      ? 'Chế độ chỉ đọc cho kế hoạch trong phạm vi marketing.'
+      : isAdmin
+        ? 'Tài khoản quản trị xem toàn bộ kế hoạch và chỉ tạo bản nháp theo quyền Maker.'
+        : 'Các bản nháp, hồ sơ đã gửi và lịch sử do tài khoản hiện tại tạo.'
   return <section className="auth-workflow-page">
-    <div className="auth-workflow-page-heading"><div><p className="page-eyebrow">Workflow PostgreSQL · {reviews ? 'Checker' : 'Maker'}</p><h1>{title}</h1><p>{reviews ? 'Chỉ các hồ sơ đang chờ và được giao cho tài khoản hiện tại.' : 'Các bản nháp, hồ sơ đã gửi và lịch sử do tài khoản hiện tại tạo.'}</p></div><div className="button-row"><button className="button button-secondary" onClick={() => void load()} disabled={loading}><RefreshCw /> Tải lại</button>{!reviews && roles.includes('MAKER') && <Link className="button button-primary" to="/workflow/plans/new"><FilePlus2 /> Tạo kế hoạch</Link>}</div></div>
+    <div className="auth-workflow-page-heading"><div><p className="page-eyebrow">Workflow PostgreSQL · {reviews ? 'Checker' : isAdmin ? 'Administrator' : 'Maker'}</p><h1>{title}</h1><p>{description}</p></div><div className="button-row"><button className="button button-secondary" onClick={() => void load()} disabled={loading}><RefreshCw /> Tải lại</button>{!reviews && roles.includes('MAKER') && <Link className="button button-primary" to="/workflow/plans/new"><FilePlus2 /> Tạo kế hoạch</Link>}</div></div>
     {loading ? <p className="auth-workflow-state" role="status">Đang tải dữ liệu từ PostgreSQL…</p>
       : error ? <section className="auth-workflow-state is-error" role="alert"><h2>Không tải được danh sách</h2><p>{error}</p><button className="button button-secondary" onClick={() => void load()}>Thử lại</button></section>
         : plans.length === 0 ? <section className="auth-workflow-state"><h2>{reviews ? 'Chưa có hồ sơ được giao' : 'Chưa có kế hoạch'}</h2><p>{reviews ? 'Các kế hoạch được gửi tới tài khoản này sẽ xuất hiện tại đây.' : 'Tạo bản nháp đầu tiên để bắt đầu workflow Auth.'}</p></section>

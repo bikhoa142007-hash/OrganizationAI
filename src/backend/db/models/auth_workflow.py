@@ -33,6 +33,12 @@ class AuthWorkflowPlan(Base):
         ),
         Index("ix_auth_workflow_plans_maker_status", "maker_id", "status"),
         Index("ix_auth_workflow_plans_checker_status", "checker_id", "status"),
+        Index(
+            "uq_auth_workflow_plans_maker_creation_key",
+            "maker_id",
+            "creation_idempotency_key",
+            unique=True,
+        ),
     )
 
     id: Mapped[UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid4)
@@ -44,6 +50,8 @@ class AuthWorkflowPlan(Base):
         Uuid(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"), nullable=True
     )
     payload: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
+    creation_idempotency_key: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    creation_request_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
     status: Mapped[str] = mapped_column(String(24), nullable=False, default="DRAFT")
     processing_stage: Mapped[str] = mapped_column(String(40), nullable=False, default="DRAFT")
     current_version: Mapped[int] = mapped_column(Integer, nullable=False, default=0)

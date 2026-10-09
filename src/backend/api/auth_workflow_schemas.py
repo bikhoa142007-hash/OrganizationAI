@@ -139,3 +139,24 @@ class WorkflowPlanResponse(AuthWorkflowDTO):
 class WorkflowCheckerResponse(AuthWorkflowDTO):
     id: str
     display_name: str
+
+
+class WorkflowAuditEventResponse(AuthWorkflowDTO):
+    id: str
+    plan_id: str
+    plan_code: str
+    actor_id: str | None
+    actor_type: Literal["HUMAN", "SYSTEM"]
+    actor_name: str
+    action: str
+    status_before: str | None
+    status_after: str
+    details: dict[str, Any]
+    created_at: datetime
+
+
+class WorkflowAuditPageResponse(AuthWorkflowDTO):
+    items: list[WorkflowAuditEventResponse]
+    offset: int
+    limit: int
+    total: int

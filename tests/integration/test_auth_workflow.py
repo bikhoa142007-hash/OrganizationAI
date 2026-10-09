@@ -269,6 +269,104 @@ def test_maker_is_assigned_from_cookie_and_cannot_read_another_makers_plan(workf
     assert other_client.get(f"/api/workflow/plans/{plan['id']}").status_code == 404
 
 
+def test_admin_can_read_all_plan_details_but_cannot_make_checker_decisions(workflow_client):
+    client, factory, app = workflow_client
+    maker = create_user(factory, "maker.admin-read", ("MAKER",))
+    checker = create_user(factory, "checker.admin-read", ("CHECKER",))
+    admin = create_user(factory, "admin.read-only", ("ADMIN",))
+    login(client, maker)
+    plan = make_plan(client, checker.id, title="Admin-readable plan")
+    plan = upload_plan_image(client, plan["id"], plan["revision"])
+
+    admin_client = authenticated_client(app, admin)
+    listed = admin_client.get("/api/workflow/plans")
+    assert listed.status_code == 200
+    assert [item["id"] for item in listed.json()] == [plan["id"]]
+    detail = admin_client.get(f"/api/workflow/plans/{plan['id']}")
+    assert detail.status_code == 200
+    assert detail.json()["payload"]["title"] == "Admin-readable plan"
+    attachment_id = detail.json()["attachments"][0]["id"]
+    assert admin_client.get(
+        f"/api/workflow/plans/{plan['id']}/attachments/{attachment_id}"
+    ).status_code == 404
+    assert admin_client.put(f"/api/workflow/plans/{plan['id']}", json={
+        "expected_revision": plan["revision"],
+        "payload": plan["payload"],
+    }).status_code == 403
+    assert admin_client.post(
+        f"/api/workflow/plans/{plan['id']}/rounds/1/decision",
+        json={"action": "APPROVED", "override_reason": "Admin cannot decide."},
+    ).status_code == 403
+
+
+def test_admin_audit_endpoint_is_paginated_and_denied_to_maker(workflow_client):
+    maker_client, factory, app = workflow_client
+    maker = create_user(factory, "maker.audit-view", ("MAKER",))
+    checker = create_user(factory, "checker.audit-view", ("CHECKER",))
+    admin = create_user(factory, "admin.audit-view", ("ADMIN",))
+    login(maker_client, maker)
+    plan = make_plan(maker_client, checker.id, title="Audited plan")
+
+    denied = maker_client.get("/api/workflow/audit")
+    assert denied.status_code == 403
+    admin_client = authenticated_client(app, admin)
+    response = admin_client.get("/api/workflow/audit?offset=0&limit=10")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["total"] >= 1
+    assert data["offset"] == 0
+    assert data["limit"] == 10
+    created = next(item for item in data["items"] if item["action"] == "CREATED")
+    assert created["plan_id"] == plan["id"]
+    assert created["plan_code"] == plan["code"]
+    assert created["actor_name"] == maker.display_name
+
+
+def test_draft_creation_replays_an_idempotency_key_without_duplicate_plan_or_event(workflow_client):
+    client, factory, _app = workflow_client
+    maker = create_user(factory, "maker.idempotent-create", ("MAKER",))
+    checker = create_user(factory, "checker.idempotent-create", ("CHECKER",))
+    login(client, maker)
+    headers = {"Idempotency-Key": "draft-intent-1"}
+    body = {
+        "checker_user_id": str(checker.id),
+        "payload": {"title": "Retry-safe draft"},
+    }
+
+    first = client.post("/api/workflow/plans", json=body, headers=headers)
+    replay = client.post("/api/workflow/plans", json=body, headers=headers)
+    assert first.status_code == replay.status_code == 201
+    assert first.json()["id"] == replay.json()["id"]
+
+    changed_body = {**body, "payload": {"title": "Different draft"}}
+    conflict = client.post("/api/workflow/plans", json=changed_body, headers=headers)
+    assert conflict.status_code == 409
+    with factory() as session:
+        assert session.query(AuthWorkflowPlan).filter_by(maker_id=maker.id).count() == 1
+        assert session.query(auth_workflow_application.AuthWorkflowEvent).filter_by(
+            plan_id=UUID(first.json()["id"]), action="CREATED",
+        ).count() == 1
+
+
+def test_checker_picker_includes_active_checkers_and_excludes_self_and_disabled_accounts(workflow_client):
+    client, factory, _app = workflow_client
+    dual_user = create_user(factory, "maker.checker-picker", ("MAKER", "CHECKER"))
+    active_checker = create_user(factory, "checker.active-picker", ("CHECKER",))
+    disabled_checker = create_user(factory, "checker.disabled-picker", ("CHECKER",))
+    with factory.begin() as session:
+        session.get(User, disabled_checker.id).status = "DISABLED"
+    login(client, dual_user)
+
+    response = client.get("/api/workflow/checkers")
+    assert response.status_code == 200
+    assert [item["id"] for item in response.json()] == [str(active_checker.id)]
+    self_assignment = client.post("/api/workflow/plans", json={
+        "checker_user_id": str(dual_user.id),
+        "payload": {"title": "Cannot self-check"},
+    })
+    assert self_assignment.status_code == 422
+
+
 def test_maker_submits_and_only_assigned_checker_can_approve(workflow_client):
     client, factory, app = workflow_client
     maker = create_user(factory, "maker.one", ("MAKER",))
@@ -487,7 +585,7 @@ def test_local_vlm_extraction_persists_separately_and_missing_evaluators_route_c
 
 
 def test_stale_run_with_invalid_policy_routes_to_checker_review(workflow_client, monkeypatch):
-    client, factory, _app = workflow_client
+    client, factory, app = workflow_client
     maker = create_user(factory, "maker.recovery", ("MAKER",))
     checker = create_user(factory, "checker.recovery", ("CHECKER",))
     login(client, maker)
@@ -501,6 +599,16 @@ def test_stale_run_with_invalid_policy_routes_to_checker_review(workflow_client,
     draft = upload_plan_image(client, draft["id"], draft["revision"])
     queued = submit_plan(client, draft)
     assert queued["processing_stage"] == "AI_PENDING"
+    checker_client = authenticated_client(app, checker)
+    early_recovery = checker_client.post(
+        f"/api/workflow/plans/{queued['id']}/rounds/1/recovery",
+    )
+    assert early_recovery.status_code == 200
+    assert early_recovery.json()["processing_stage"] == "AI_PENDING"
+    assert len(early_recovery.json()["history"]) == len(queued["history"])
+    assert client.post(
+        f"/api/workflow/plans/{queued['id']}/rounds/1/recovery",
+    ).status_code == 403
 
     with factory.begin() as session:
         run = session.scalar(select(AuthWorkflowEvaluationRun).where(
@@ -510,9 +618,34 @@ def test_stale_run_with_invalid_policy_routes_to_checker_review(workflow_client,
         run.created_at = datetime.now(timezone.utc) - timedelta(minutes=5)
         run.policy_snapshot = {"invalid": True}
 
+    with factory() as session:
+        event_count_before = len(session.scalars(select(auth_workflow_application.AuthWorkflowEvent).where(
+            auth_workflow_application.AuthWorkflowEvent.plan_id == UUID(queued["id"]),
+        )).all())
+        decision_count_before = len(session.scalars(select(auth_workflow_application.AuthWorkflowEngineDecision).where(
+            auth_workflow_application.AuthWorkflowEngineDecision.plan_id == UUID(queued["id"]),
+        )).all())
+
     detail = client.get(f"/api/workflow/plans/{queued['id']}")
     assert detail.status_code == 200, detail.text
-    recovered = detail.json()
+    still_queued = detail.json()
+    assert still_queued["processing_stage"] == "AI_PENDING"
+    assert still_queued["ai_evaluations"][0]["status"] == "PENDING"
+    with factory() as session:
+        event_count_after_get = len(session.scalars(select(auth_workflow_application.AuthWorkflowEvent).where(
+            auth_workflow_application.AuthWorkflowEvent.plan_id == UUID(queued["id"]),
+        )).all())
+        decision_count_after_get = len(session.scalars(select(auth_workflow_application.AuthWorkflowEngineDecision).where(
+            auth_workflow_application.AuthWorkflowEngineDecision.plan_id == UUID(queued["id"]),
+        )).all())
+    assert event_count_after_get == event_count_before
+    assert decision_count_after_get == decision_count_before
+
+    recovered_response = checker_client.post(
+        f"/api/workflow/plans/{queued['id']}/rounds/1/recovery",
+    )
+    assert recovered_response.status_code == 200, recovered_response.text
+    recovered = recovered_response.json()
     assert recovered["processing_stage"] == "HUMAN_REVIEW_REQUIRED"
     assert recovered["status"] == "PENDING_APPROVAL"
     assert recovered["ai_evaluations"][0]["status"] == "FAILED"
@@ -520,6 +653,44 @@ def test_stale_run_with_invalid_policy_routes_to_checker_review(workflow_client,
         "POLICY_SNAPSHOT_INVALID"
     )
     assert recovered["history"][-1]["action"] == "AI_RECOVERY_REVIEW_ROUTED"
+
+    # A retry after the recovery is committed is an idempotent read of that result.
+    replay = checker_client.post(f"/api/workflow/plans/{queued['id']}/rounds/1/recovery")
+    assert replay.status_code == 200
+    assert replay.json()["history"] == recovered["history"]
+
+
+def test_submission_accepts_zero_budget_but_rejects_negative_budget(workflow_client):
+    client, factory, _app = workflow_client
+    maker = create_user(factory, "maker.zero-budget", ("MAKER",))
+    checker = create_user(factory, "checker.zero-budget", ("CHECKER",))
+    login(client, maker)
+
+    zero_budget = make_plan(client, checker.id, title="Zero budget plan")
+    payload = {**zero_budget["payload"], "budget_minor_units": "0"}
+    zero_budget = client.put(f"/api/workflow/plans/{zero_budget['id']}", json={
+        "payload": payload,
+        "checker_user_id": str(checker.id),
+        "expected_revision": zero_budget["revision"],
+    }).json()
+    zero_budget = upload_plan_image(client, zero_budget["id"], zero_budget["revision"])
+    submitted = submit_plan(client, zero_budget)
+    assert submitted["status"] == "PENDING_APPROVAL"
+    assert submitted["versions"][0]["payload"]["budget_minor_units"] == "0"
+
+    negative_budget = make_plan(client, checker.id, title="Negative budget plan")
+    payload = {**negative_budget["payload"], "budget_minor_units": "-1"}
+    negative_budget = client.put(f"/api/workflow/plans/{negative_budget['id']}", json={
+        "payload": payload,
+        "checker_user_id": str(checker.id),
+        "expected_revision": negative_budget["revision"],
+    }).json()
+    negative_budget = upload_plan_image(client, negative_budget["id"], negative_budget["revision"])
+    response = client.post(f"/api/workflow/plans/{negative_budget['id']}/submit", json={
+        "expected_revision": negative_budget["revision"],
+    })
+    assert response.status_code == 422
+    assert client.get(f"/api/workflow/plans/{negative_budget['id']}").json()["status"] == "DRAFT"
 
 
 def test_late_vlm_result_cannot_replace_a_run_recovered_during_inference(workflow_client):

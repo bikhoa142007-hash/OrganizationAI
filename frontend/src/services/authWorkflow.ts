@@ -1,20 +1,26 @@
 import { AuthApiError } from './auth'
-import type { WorkflowChecker, WorkflowPayload, WorkflowPlan } from '../types/authWorkflow'
+import type { WorkflowAuditPage, WorkflowChecker, WorkflowPayload, WorkflowPlan } from '../types/authWorkflow'
 import { resolveApiBaseUrl } from './apiBaseUrl'
+
+const pendingDraftKeys = new Map<string, string>()
 
 function announceAuthFailure(status: number) {
   if (status === 401) window.dispatchEvent(new Event('organizationai:auth-expired'))
   if (status === 403) window.dispatchEvent(new Event('organizationai:access-denied'))
 }
 
-async function request<T>(path: string, method: 'GET' | 'POST' | 'PUT', body?: unknown): Promise<T> {
+async function request<T>(path: string, method: 'GET' | 'POST' | 'PUT', body?: unknown, idempotencyKey?: string): Promise<T> {
   const multipart = body instanceof FormData
+  const headers = {
+    ...(body !== undefined && !multipart ? { 'Content-Type': 'application/json' } : {}),
+    ...(idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : {}),
+  }
   let response: Response
   try {
     response = await fetch(`${resolveApiBaseUrl()}${path}`, {
       method,
       credentials: 'include',
-      headers: body === undefined || multipart ? undefined : { 'Content-Type': 'application/json' },
+      headers: Object.keys(headers).length ? headers : undefined,
       body: body === undefined ? undefined : multipart ? body : JSON.stringify(body),
     })
   } catch {
@@ -24,6 +30,11 @@ async function request<T>(path: string, method: 'GET' | 'POST' | 'PUT', body?: u
   if (response.status === 204) return undefined as T
   const data: unknown = await response.json().catch(() => null)
   if (!response.ok) {
+    if (response.status < 500 && idempotencyKey) {
+      for (const [fingerprint, key] of pendingDraftKeys) {
+        if (key === idempotencyKey) pendingDraftKeys.delete(fingerprint)
+      }
+    }
     announceAuthFailure(response.status)
     const message = data && typeof data === 'object' && 'message' in data && typeof data.message === 'string'
       ? data.message
@@ -38,6 +49,10 @@ function encoded(value: string) {
 }
 
 export const authWorkflowService = {
+  listAuditEvents(offset = 0, limit = 100): Promise<WorkflowAuditPage> {
+    return request(`/workflow/audit?offset=${offset}&limit=${limit}`, 'GET')
+  },
+
   listPlans(): Promise<WorkflowPlan[]> {
     return request('/workflow/plans', 'GET')
   },
@@ -55,7 +70,19 @@ export const authWorkflowService = {
   },
 
   createPlan(payload: WorkflowPayload, checkerUserId: string | null): Promise<WorkflowPlan> {
-    return request('/workflow/plans', 'POST', { payload, checker_user_id: checkerUserId })
+    const fingerprint = JSON.stringify({ payload, checkerUserId })
+    const idempotencyKey = pendingDraftKeys.get(fingerprint) ?? crypto.randomUUID()
+    pendingDraftKeys.set(fingerprint, idempotencyKey)
+    return request<WorkflowPlan>('/workflow/plans', 'POST', { payload, checker_user_id: checkerUserId }, idempotencyKey)
+      .then(plan => {
+        pendingDraftKeys.delete(fingerprint)
+        return plan
+      })
+      .catch(failure => {
+        if (failure instanceof AuthApiError && failure.status >= 500) throw failure
+        if (!(failure instanceof AuthApiError) || failure.status !== 0) pendingDraftKeys.delete(fingerprint)
+        throw failure
+      })
   },
 
   updatePlan(planId: string, payload: WorkflowPayload, checkerUserId: string | null, expectedRevision: number): Promise<WorkflowPlan> {
@@ -73,6 +100,10 @@ export const authWorkflowService = {
 
   submitPlan(planId: string, expectedRevision: number): Promise<WorkflowPlan> {
     return request(`/workflow/plans/${encoded(planId)}/submit`, 'POST', { expected_revision: expectedRevision })
+  },
+
+  recoverStaleEvaluation(planId: string, round: number): Promise<WorkflowPlan> {
+    return request(`/workflow/plans/${encoded(planId)}/rounds/${round}/recovery`, 'POST')
   },
 
   decide(planId: string, round: number, action: 'APPROVED' | 'REJECTED', reason: string, overrideReason: string): Promise<WorkflowPlan> {

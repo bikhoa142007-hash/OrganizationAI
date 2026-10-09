@@ -135,7 +135,7 @@ export interface WorkflowTaskEvaluation {
 
 export interface WorkflowVlmEvidence {
   evidence_id: string
-  kind: 'OCR_TEXT' | 'OBSERVATION'
+  kind: 'OCR_TEXT' | 'OBSERVATION' | 'OBJECT_DETECTION' | 'VISUAL_QUALITY'
   text: string
   source_attachment_id: string
   source_content_hash: string
@@ -153,6 +153,12 @@ export interface WorkflowVlmAttachmentExtraction {
   media_type: string
   status: 'COMPLETE' | 'PARTIAL' | 'UNREADABLE' | 'FAILED'
   ocr_text: string
+  confidence?: number | null
+  object_detections?: string[]
+  visual_quality?: {
+    result: 'PASS' | 'REVIEW_REQUIRED' | 'UNKNOWN'
+    findings: string[]
+  } | null
   evidence: WorkflowVlmEvidence[]
   uncertainties: WorkflowVlmUncertainty[]
   error_code?: string
@@ -161,6 +167,7 @@ export interface WorkflowVlmAttachmentExtraction {
 export interface WorkflowVlmExtraction {
   status: 'SUCCEEDED' | 'PARTIAL' | 'UNREADABLE' | 'FAILED'
   error_code?: string
+  confidence?: number | null
   provider: 'LOCAL_VLM'
   model_id: string | null
   model_revision: string | null
@@ -220,4 +227,25 @@ export interface WorkflowPlan {
 export interface WorkflowChecker {
   id: string
   display_name: string
+}
+
+export interface WorkflowAuditEvent {
+  id: string
+  plan_id: string
+  plan_code: string
+  actor_id: string | null
+  actor_type: 'HUMAN' | 'SYSTEM'
+  actor_name: string
+  action: string
+  status_before: string | null
+  status_after: string
+  details: Record<string, unknown>
+  created_at: string
+}
+
+export interface WorkflowAuditPage {
+  items: WorkflowAuditEvent[]
+  offset: number
+  limit: number
+  total: number
 }
