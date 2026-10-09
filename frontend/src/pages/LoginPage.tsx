@@ -1,8 +1,8 @@
 import { ArrowRight, Eye, EyeOff, LockKeyhole, Mail, ShieldCheck } from 'lucide-react'
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { AuthApiError } from '../services/auth'
+import { AuthApiError, authService } from '../services/auth'
 import { safeReturnPath } from '../services/authNavigation'
 
 type FieldErrors = { identifier?: string; password?: string }
@@ -10,28 +10,43 @@ type FieldErrors = { identifier?: string; password?: string }
 function validateIdentifier(value: string) {
   const identifier = value.trim()
   if (!identifier) return 'Vui lòng nhập email, tên đăng nhập hoặc mã người dùng.'
-  if (identifier.includes('@') && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier)) {
-    return 'Email chưa đúng định dạng.'
-  }
+  if (identifier.length > 320) return 'Thông tin đăng nhập không được vượt quá 320 ký tự.'
   return ''
 }
 
 function validatePassword(value: string) {
-  return value ? '' : 'Vui lòng nhập mật khẩu.'
+  if (!value) return 'Vui lòng nhập mật khẩu.'
+  if (value.length > 1024) return 'Mật khẩu không được vượt quá 1024 ký tự.'
+  return ''
+}
+
+function withCorrelation(message: string, reason: unknown) {
+  return reason instanceof AuthApiError && reason.correlationId
+    ? `${message} Mã tham chiếu: ${reason.correlationId}`
+    : message
 }
 
 export function LoginPage() {
-  const { isAuthenticated, isLoading: sessionLoading, login, roles } = useAuth()
+  const { isAuthenticated, isLoading: sessionLoading, login, roles, sessionError, sessionNotice, refresh } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
   const [identifier, setIdentifier] = useState('')
   const [password, setPassword] = useState('')
   const [remember, setRemember] = useState(false)
+  const [registrationEnabled, setRegistrationEnabled] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [touched, setTouched] = useState({ identifier: false, password: false })
   const [errors, setErrors] = useState<FieldErrors>({})
   const [loading, setLoading] = useState(false)
   const [formError, setFormError] = useState('')
+
+  useEffect(() => {
+    let active = true
+    authService.getRegistrationConfig()
+      .then(config => { if (active) setRegistrationEnabled(config.registration_enabled) })
+      .catch(() => { if (active) setRegistrationEnabled(false) })
+    return () => { active = false }
+  }, [])
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -56,15 +71,17 @@ export function LoginPage() {
       navigate(safeReturnPath(location.state, authenticatedUser.roles), { replace: true })
     } catch (reason) {
       if (reason instanceof AuthApiError && reason.status === 0) {
-        setFormError('Không thể kết nối đến dịch vụ đăng nhập. Hãy kiểm tra kết nối rồi thử lại.')
+        setFormError(withCorrelation('Không thể kết nối đến dịch vụ đăng nhập. Hãy kiểm tra kết nối rồi thử lại.', reason))
       } else if (reason instanceof AuthApiError && reason.status === 401) {
-        setFormError('Thông tin đăng nhập không chính xác hoặc tài khoản đã bị vô hiệu hóa.')
+        setFormError(withCorrelation('Thông tin đăng nhập không chính xác hoặc tài khoản đã bị vô hiệu hóa.', reason))
+      } else if (reason instanceof AuthApiError && reason.status === 403) {
+        setFormError(withCorrelation('Dịch vụ đã từ chối yêu cầu đăng nhập. Hãy thử lại hoặc liên hệ quản trị viên.', reason))
       } else if (reason instanceof AuthApiError && reason.status === 503) {
-        setFormError('Dịch vụ đăng nhập chưa được cấu hình. Vui lòng thử lại sau.')
+        setFormError(withCorrelation('Dịch vụ đăng nhập chưa được cấu hình. Vui lòng thử lại sau.', reason))
       } else if (reason instanceof AuthApiError && reason.status === 429) {
-        setFormError('Có quá nhiều lần đăng nhập từ thiết bị này. Vui lòng chờ trước khi thử lại.')
+        setFormError(withCorrelation('Có quá nhiều lần đăng nhập từ thiết bị này. Vui lòng chờ trước khi thử lại.', reason))
       } else {
-        setFormError('Đăng nhập chưa thành công. Hãy kiểm tra thông tin và thử lại.')
+        setFormError(withCorrelation('Đăng nhập chưa thành công. Hãy kiểm tra thông tin và thử lại.', reason))
       }
     } finally {
       setLoading(false)
@@ -76,7 +93,7 @@ export function LoginPage() {
   const notice = location.state && typeof location.state === 'object'
     && 'notice' in location.state && typeof location.state.notice === 'string'
     ? location.state.notice
-    : ''
+    : sessionNotice
 
   if (sessionLoading) return <p role="status">Đang kiểm tra phiên đăng nhập…</p>
   if (isAuthenticated) return <Navigate to={safeReturnPath(location.state, roles)} replace />
@@ -121,6 +138,10 @@ export function LoginPage() {
           </header>
 
           {notice && <p className="login-form-message" role="status">{notice}</p>}
+          {sessionError && <div className="login-form-message login-session-error" role="alert">
+            <p>{sessionError} Bạn vẫn có thể thử đăng nhập.</p>
+            <button className="login-session-retry" type="button" onClick={() => void refresh()}>Thử kiểm tra phiên lại</button>
+          </div>}
 
           <form className="login-form" noValidate onSubmit={handleSubmit} aria-busy={loading}>
             <div className={identifierError ? 'login-field login-field-error' : 'login-field'}>
@@ -200,7 +221,7 @@ export function LoginPage() {
             </button>
           </form>
 
-          <p className="register-auth-switch login-auth-switch">Chưa có tài khoản? <Link to="/register">Đăng ký</Link></p>
+          {registrationEnabled && <p className="register-auth-switch login-auth-switch">Chưa có tài khoản? <Link to="/register">Đăng ký</Link></p>}
         </div>
 
         <p className="login-panel-footer">OrganizationAI <span aria-hidden="true">·</span> Quản lý phê duyệt marketing</p>

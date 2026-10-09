@@ -1,5 +1,5 @@
 import { afterEach, expect, it, vi } from 'vitest'
-import { authService } from './auth'
+import { AuthApiError, authService } from './auth'
 
 const user = {
   id: 'user-1', user_code: 'USR-000001', username: 'maker', email: null,
@@ -64,4 +64,46 @@ it('reads only the server registration feature switch', async () => {
   await expect(authService.getRegistrationConfig()).resolves.toEqual({ registration_enabled: false })
   expect(fetchMock.mock.calls[0][0]).toContain('/auth/config')
   expect((fetchMock.mock.calls[0][1] as RequestInit).credentials).toBe('include')
+})
+
+it('parses the API error envelope without losing status, code, message, or correlation id', async () => {
+  const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+    code: 'CONFLICT', message: 'The account already exists.', correlation_id: 'auth-trace-42', http_status: 409,
+  }), { status: 409, headers: { 'Content-Type': 'application/json' } }))
+  vi.stubGlobal('fetch', fetchMock)
+
+  const failure = await authService.register('maker', 'maker@example.com', 'a sufficiently long password')
+    .catch(error => error)
+
+  expect(failure).toBeInstanceOf(AuthApiError)
+  expect(failure).toMatchObject({
+    status: 409, code: 'CONFLICT', message: 'The account already exists.',
+    correlationId: 'auth-trace-42', correlation_id: 'auth-trace-42',
+  })
+})
+
+it('sends logout with the cookie session and resolves only for HTTP 204', async () => {
+  const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 204 }))
+  vi.stubGlobal('fetch', fetchMock)
+
+  await expect(authService.logout()).resolves.toBeUndefined()
+
+  const [url, options] = fetchMock.mock.calls[0] as [string, RequestInit]
+  expect(url).toContain('/auth/logout')
+  expect(options.method).toBe('POST')
+  expect(options.credentials).toBe('include')
+  expect(options.body).toBeUndefined()
+})
+
+it('rejects a successful non-204 logout response', async () => {
+  const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 200 }))
+  vi.stubGlobal('fetch', fetchMock)
+
+  await expect(authService.logout()).rejects.toMatchObject({ status: 200, code: 'UNEXPECTED_STATUS' })
+})
+
+it('marks a failed fetch as a network error with no fabricated HTTP status', async () => {
+  vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('offline')))
+
+  await expect(authService.me()).rejects.toMatchObject({ status: 0, code: 'NETWORK_ERROR' })
 })

@@ -1,5 +1,5 @@
-import { afterEach, expect, it, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { afterEach, beforeEach, expect, it, vi } from 'vitest'
+import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { AuthProvider, useAuth } from '../context/AuthContext'
@@ -44,6 +44,9 @@ function renderAuthApp(initialPath: string) {
 }
 
 afterEach(() => vi.restoreAllMocks())
+beforeEach(() => {
+  vi.spyOn(authService, 'getRegistrationConfig').mockResolvedValue({ registration_enabled: false })
+})
 
 it('renders labeled login inputs and submits user code and password through the auth service', async () => {
   const user = userEvent.setup()
@@ -62,6 +65,14 @@ it('renders labeled login inputs and submits user code and password through the 
   expect(await screen.findByText('Logged in as: Demo Maker')).toBeVisible()
 })
 
+it('shows the registration link only when the server enables registration', async () => {
+  vi.spyOn(authService, 'me').mockRejectedValue(new AuthApiError(401, 'Authentication is required.'))
+  vi.spyOn(authService, 'getRegistrationConfig').mockResolvedValue({ registration_enabled: true })
+  renderAuthApp('/login')
+
+  expect(await screen.findByRole('link', { name: 'Đăng ký' })).toHaveAttribute('href', '/register')
+})
+
 it('shows a generic error when login fails', async () => {
   const user = userEvent.setup()
   vi.spyOn(authService, 'me').mockRejectedValue(new AuthApiError(401, 'Authentication is required.'))
@@ -75,6 +86,49 @@ it('shows a generic error when login fails', async () => {
   await user.click(screen.getByRole('button', { name: 'Đăng nhập' }))
 
   expect(await screen.findByRole('alert')).toHaveTextContent('Thông tin đăng nhập không chính xác')
+  expect(screen.getByLabelText('Tên đăng nhập, mã người dùng hoặc email')).toHaveValue('nobody')
+  expect(screen.getByLabelText('Mật khẩu')).toHaveValue('bad-password')
+})
+
+it('shows and retries a non-401 session restoration error without blocking login', async () => {
+  const user = userEvent.setup()
+  const me = vi.spyOn(authService, 'me').mockRejectedValue(new AuthApiError(503, 'Unavailable.'))
+  renderAuthApp('/login')
+
+  expect(await screen.findByRole('alert')).toHaveTextContent('Không thể kiểm tra phiên đăng nhập')
+  expect(screen.getByRole('button', { name: 'Đăng nhập' })).toBeEnabled()
+  await user.click(screen.getByRole('button', { name: 'Thử kiểm tra phiên lại' }))
+
+  expect(await screen.findByRole('alert')).toHaveTextContent('Không thể kiểm tra phiên đăng nhập')
+  expect(me).toHaveBeenCalledTimes(2)
+})
+
+it('trims the identifier while preserving whitespace in a non-empty password', async () => {
+  const user = userEvent.setup()
+  vi.spyOn(authService, 'me').mockRejectedValue(new AuthApiError(401, 'Authentication is required.'))
+  const login = vi.spyOn(authService, 'login').mockResolvedValue(maker)
+  renderAuthApp('/login')
+
+  await user.type(await screen.findByLabelText('Tên đăng nhập, mã người dùng hoặc email'), ' maker ')
+  await user.type(screen.getByLabelText('Mật khẩu'), '  ')
+  await user.click(screen.getByRole('button', { name: 'Đăng nhập' }))
+
+  expect(login).toHaveBeenCalledWith('maker', '  ', false)
+})
+
+it('enforces the 320-character login identifier contract before calling the API', async () => {
+  const user = userEvent.setup()
+  vi.spyOn(authService, 'me').mockRejectedValue(new AuthApiError(401, 'Authentication is required.'))
+  const login = vi.spyOn(authService, 'login')
+  renderAuthApp('/login')
+
+  const identifier = await screen.findByLabelText('Tên đăng nhập, mã người dùng hoặc email')
+  fireEvent.change(identifier, { target: { value: 'a'.repeat(321) } })
+  await user.type(screen.getByLabelText('Mật khẩu'), 'p')
+  await user.click(screen.getByRole('button', { name: 'Đăng nhập' }))
+
+  expect(await screen.findByText('Thông tin đăng nhập không được vượt quá 320 ký tự.')).toBeVisible()
+  expect(login).not.toHaveBeenCalled()
 })
 
 it('redirects unauthenticated visitors from the protected account page to login', async () => {
@@ -113,7 +167,7 @@ it('registers an account through the backend and directs the new Maker to login'
   renderAuthApp('/register')
 
   await user.type(await screen.findByLabelText('Tên đăng nhập'), 'new.maker')
-  await user.type(screen.getByLabelText('Email hoặc số điện thoại quốc tế'), 'new@example.com')
+  await user.type(screen.getByLabelText('Email hoặc số điện thoại'), 'new@example.com')
   await user.type(screen.getByLabelText('Mật khẩu'), 'New-local-password-123')
   await user.type(screen.getByLabelText('Nhập lại mật khẩu'), 'New-local-password-123')
   await user.click(screen.getByRole('button', { name: 'Đăng ký' }))
@@ -131,7 +185,7 @@ it('rejects mismatched password confirmation before making a registration reques
   renderAuthApp('/register')
 
   await user.type(await screen.findByLabelText('Tên đăng nhập'), 'new.maker')
-  await user.type(screen.getByLabelText('Email hoặc số điện thoại quốc tế'), 'new@example.com')
+  await user.type(screen.getByLabelText('Email hoặc số điện thoại'), 'new@example.com')
   await user.type(screen.getByLabelText('Mật khẩu'), 'New-local-password-123')
   await user.type(screen.getByLabelText('Nhập lại mật khẩu'), 'different-password')
   await user.click(screen.getByRole('button', { name: 'Đăng ký' }))
@@ -139,6 +193,44 @@ it('rejects mismatched password confirmation before making a registration reques
   expect(await screen.findByText('Mật khẩu nhập lại chưa khớp.')).toBeVisible()
   expect(screen.getByLabelText('Nhập lại mật khẩu')).toHaveAttribute('aria-invalid', 'true')
   expect(register).not.toHaveBeenCalled()
+})
+
+it.each([
+  [409, 'Tên đăng nhập hoặc thông tin liên hệ đã được sử dụng.'],
+  [422, 'Vui lòng kiểm tra tên đăng nhập, thông tin liên hệ và mật khẩu.'],
+] as const)('keeps registration inputs and reports HTTP %i', async (status, expectedMessage) => {
+  const user = userEvent.setup()
+  vi.spyOn(authService, 'me').mockRejectedValue(new AuthApiError(401, 'Authentication is required.'))
+  vi.spyOn(authService, 'getRegistrationConfig').mockResolvedValue({ registration_enabled: true })
+  vi.spyOn(authService, 'register').mockRejectedValue(new AuthApiError(status, 'API detail', 'REQUEST_ERROR', 'trace-123'))
+  renderAuthApp('/register')
+
+  await user.type(await screen.findByLabelText('Tên đăng nhập'), 'new.maker')
+  await user.type(screen.getByLabelText('Email hoặc số điện thoại'), 'contact value')
+  await user.type(screen.getByLabelText('Mật khẩu'), 'New-local-password-123')
+  await user.type(screen.getByLabelText('Nhập lại mật khẩu'), 'New-local-password-123')
+  await user.click(screen.getByRole('button', { name: 'Đăng ký' }))
+
+  expect(await screen.findByRole('alert')).toHaveTextContent(expectedMessage)
+  expect(screen.getByRole('alert')).toHaveTextContent('trace-123')
+  expect(screen.getByLabelText('Tên đăng nhập')).toHaveValue('new.maker')
+  expect(screen.getByLabelText('Email hoặc số điện thoại')).toHaveValue('contact value')
+})
+
+it('validates register contract lengths but lets the backend validate contact format', async () => {
+  const user = userEvent.setup()
+  vi.spyOn(authService, 'me').mockRejectedValue(new AuthApiError(401, 'Authentication is required.'))
+  vi.spyOn(authService, 'getRegistrationConfig').mockResolvedValue({ registration_enabled: true })
+  const register = vi.spyOn(authService, 'register').mockResolvedValue(maker)
+  renderAuthApp('/register')
+
+  await user.type(await screen.findByLabelText('Tên đăng nhập'), 'abc')
+  await user.type(screen.getByLabelText('Email hoặc số điện thoại'), 'x')
+  await user.type(screen.getByLabelText('Mật khẩu'), '123456789012')
+  await user.type(screen.getByLabelText('Nhập lại mật khẩu'), '123456789012')
+  await user.click(screen.getByRole('button', { name: 'Đăng ký' }))
+
+  expect(register).toHaveBeenCalledWith('abc', 'x', '123456789012')
 })
 
 it('returns to an internal protected deep link including query and hash after login', async () => {
@@ -171,13 +263,52 @@ it('keeps the current account session when logout cannot reach the server', asyn
   vi.spyOn(authService, 'me').mockResolvedValue(maker)
   vi.spyOn(authService, 'logout').mockRejectedValue(new AuthApiError(0, 'network error'))
   render(<MemoryRouter initialEntries={['/account']}><AuthProvider><Routes>
-    <Route path="/account" element={<AuthenticatedAccountPage />} />
+    <Route path="/account" element={<RequireAuth><AuthenticatedAccountPage /></RequireAuth>} />
     <Route path="/login" element={<p>Login page</p>} />
   </Routes></AuthProvider></MemoryRouter>)
 
-  expect(await screen.findByText('Tên hiển thị: Demo Maker')).toBeVisible()
+  expect(await screen.findByText('Demo Maker')).toBeVisible()
   await user.click(screen.getByRole('button', { name: 'Đăng xuất' }))
 
   expect(await screen.findByRole('alert')).toHaveTextContent('Phiên hiện tại vẫn được giữ')
-  expect(screen.getByText('Tên hiển thị: Demo Maker')).toBeVisible()
+  expect(screen.getByText('Demo Maker')).toBeVisible()
+  expect(screen.getByRole('button', { name: 'Thử đăng xuất lại' })).toBeEnabled()
+})
+
+it('shows separate contact fields, the empty phone state, and granted roles on the account page', async () => {
+  vi.spyOn(authService, 'me').mockResolvedValue(maker)
+  render(<MemoryRouter initialEntries={['/account']}><AuthProvider><Routes>
+    <Route path="/account" element={<RequireAuth><AuthenticatedAccountPage /></RequireAuth>} />
+  </Routes></AuthProvider></MemoryRouter>)
+
+  expect(await screen.findByText('Demo Maker')).toBeVisible()
+  expect(screen.getByText('maker@example.com')).toBeVisible()
+  expect(screen.getAllByText('Chưa cung cấp')).toHaveLength(1)
+  expect(screen.getByText('Maker')).toBeVisible()
+  expect(screen.queryByRole('link', { name: /Judge Demo|Demo/ })).not.toBeInTheDocument()
+})
+
+it('shows the account empty states when no contact details or roles are returned', async () => {
+  vi.spyOn(authService, 'me').mockResolvedValue({ ...maker, email: null, phone: null, roles: [] })
+  render(<MemoryRouter initialEntries={['/account']}><AuthProvider><Routes>
+    <Route path="/account" element={<RequireAuth><AuthenticatedAccountPage /></RequireAuth>} />
+  </Routes></AuthProvider></MemoryRouter>)
+
+  expect(await screen.findAllByText('Chưa cung cấp')).toHaveLength(2)
+  expect(screen.getByText('Chưa có vai trò được cấp')).toBeVisible()
+})
+
+it('clears the account session only after logout confirms HTTP 204', async () => {
+  const user = userEvent.setup()
+  vi.spyOn(authService, 'me').mockResolvedValue(maker)
+  vi.spyOn(authService, 'logout').mockResolvedValue(undefined)
+  render(<MemoryRouter initialEntries={['/account']}><AuthProvider><Routes>
+    <Route path="/account" element={<RequireAuth><AuthenticatedAccountPage /></RequireAuth>} />
+    <Route path="/login" element={<p>Login page</p>} />
+  </Routes></AuthProvider></MemoryRouter>)
+
+  expect(await screen.findByText('Demo Maker')).toBeVisible()
+  await user.click(screen.getByRole('button', { name: 'Đăng xuất' }))
+
+  expect(await screen.findByText('Login page')).toBeVisible()
 })

@@ -2,9 +2,17 @@ import type { AuthUser } from '../types/auth'
 import { resolveApiBaseUrl } from './apiBaseUrl'
 
 export class AuthApiError extends Error {
-  constructor(public status: number, message: string) {
+  public correlation_id: string | null
+
+  constructor(
+    public status: number,
+    message: string,
+    public code: string | null = null,
+    public correlationId: string | null = null,
+  ) {
     super(message)
     this.name = 'AuthApiError'
+    this.correlation_id = correlationId
   }
 }
 
@@ -22,7 +30,18 @@ function isAuthUser(value: unknown): value is AuthUser {
     && candidate.roles.every(role => typeof role === 'string')
 }
 
-async function request(path: string, method: 'GET' | 'POST', body?: unknown): Promise<unknown> {
+function stringProperty(value: unknown, key: string): string | null {
+  if (!value || typeof value !== 'object' || !(key in value)) return null
+  const property = (value as Record<string, unknown>)[key]
+  return typeof property === 'string' && property.length > 0 ? property : null
+}
+
+async function request(
+  path: string,
+  method: 'GET' | 'POST',
+  body?: unknown,
+  expectedStatus?: number,
+): Promise<unknown> {
   let response: Response
   try {
     response = await fetch(`${resolveApiBaseUrl()}${path}`, {
@@ -32,24 +51,39 @@ async function request(path: string, method: 'GET' | 'POST', body?: unknown): Pr
       body: body === undefined ? undefined : JSON.stringify(body),
     })
   } catch {
-    throw new AuthApiError(0, 'Could not connect to the authentication service.')
+    throw new AuthApiError(0, 'Could not connect to the authentication service.', 'NETWORK_ERROR')
   }
 
-  if (response.status === 204) return undefined
+  const headerCorrelationId = response.headers.get('X-Correlation-ID')
+  if (response.status === 204) {
+    if (expectedStatus === undefined || expectedStatus === 204) return undefined
+    throw new AuthApiError(response.status, 'Authentication service returned an unexpected response.', 'UNEXPECTED_STATUS', headerCorrelationId)
+  }
+
   const data: unknown = await response.json().catch(() => null)
   if (!response.ok) {
-    const message = data && typeof data === 'object' && 'message' in data
-      && typeof data.message === 'string'
-      ? data.message
-      : 'Authentication request failed.'
-    throw new AuthApiError(response.status, message)
+    throw new AuthApiError(
+      response.status,
+      stringProperty(data, 'message') ?? 'Authentication request failed.',
+      stringProperty(data, 'code') ?? 'HTTP_ERROR',
+      stringProperty(data, 'correlation_id') ?? headerCorrelationId,
+    )
+  }
+
+  if (expectedStatus !== undefined && response.status !== expectedStatus) {
+    throw new AuthApiError(
+      response.status,
+      'Authentication service returned an unexpected response.',
+      'UNEXPECTED_STATUS',
+      stringProperty(data, 'correlation_id') ?? headerCorrelationId,
+    )
   }
   return data
 }
 
 function parseUser(data: unknown): AuthUser {
   if (!data || typeof data !== 'object' || !('user' in data) || !isAuthUser(data.user)) {
-    throw new AuthApiError(502, 'Authentication service returned an invalid response.')
+    throw new AuthApiError(502, 'Authentication service returned an invalid response.', 'INVALID_RESPONSE')
   }
   return data.user
 }
@@ -59,7 +93,7 @@ export const authService = {
     const data = await request('/auth/config', 'GET')
     if (!data || typeof data !== 'object' || !('registration_enabled' in data) ||
         typeof data.registration_enabled !== 'boolean') {
-      throw new AuthApiError(502, 'Authentication service returned invalid registration settings.')
+      throw new AuthApiError(502, 'Authentication service returned invalid registration settings.', 'INVALID_RESPONSE')
     }
     return { registration_enabled: data.registration_enabled }
   },
@@ -79,6 +113,6 @@ export const authService = {
   },
 
   async logout(): Promise<void> {
-    await request('/auth/logout', 'POST')
+    await request('/auth/logout', 'POST', undefined, 204)
   },
 }

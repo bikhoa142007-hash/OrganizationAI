@@ -1,7 +1,7 @@
 import { ClipboardCheck, FileText, History, LogOut, UserRound } from 'lucide-react'
 import { useState } from 'react'
 import type { ReactNode } from 'react'
-import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { Link, Navigate, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 
 export function AuthenticatedWorkflowShell() {
@@ -17,7 +17,7 @@ export function AuthenticatedWorkflowShell() {
       await logout()
       navigate('/login', { replace: true })
     } catch {
-      setLogoutError('Không thể đăng xuất vì dịch vụ chưa phản hồi. Phiên hiện tại vẫn được giữ; hãy thử lại.')
+      setLogoutError('Không thể xác nhận đăng xuất với máy chủ. Phiên hiện tại vẫn được giữ; hãy thử lại.')
     } finally {
       setLogoutPending(false)
     }
@@ -25,13 +25,14 @@ export function AuthenticatedWorkflowShell() {
 
   return <div className="auth-workflow-shell">
     <header className="auth-workflow-header">
-      <Link className="auth-workflow-brand" to="/workflow/plans"><span>OA</span><strong>OrganizationAI<small>Authenticated workspace</small></strong></Link>
-      <nav aria-label="Authenticated workflow">
-        {(roles.includes('MAKER') || roles.includes('ADMIN')) && <NavLink to="/workflow/plans"><FileText /> {roles.includes('ADMIN') ? 'Toàn bộ kế hoạch' : 'Kế hoạch của tôi'}</NavLink>}
-        {roles.includes('CHECKER') && <NavLink to="/workflow/reviews"><ClipboardCheck /> Hàng chờ duyệt</NavLink>}
-        {roles.includes('ADMIN') && <NavLink to="/workflow/audit"><History /> Nhật ký kiểm toán</NavLink>}
+      <Link className="auth-workflow-brand" to="/workflow"><span>OA</span><strong>OrganizationAI<small>Không gian làm việc</small></strong></Link>
+      <nav aria-label="Điều hướng không gian làm việc">
+        {(roles.includes('MAKER') || roles.includes('ADMIN')) && <NavLink to="/workflow/plans"><FileText aria-hidden="true" /> {roles.includes('ADMIN') ? 'Toàn bộ kế hoạch' : 'Kế hoạch của tôi'}</NavLink>}
+        {roles.includes('CHECKER') && <NavLink to="/workflow/reviews"><ClipboardCheck aria-hidden="true" /> Hàng chờ duyệt</NavLink>}
+        {roles.includes('ADMIN') && <NavLink to="/workflow/audit"><History aria-hidden="true" /> Nhật ký kiểm toán</NavLink>}
+        <NavLink to="/account"><UserRound aria-hidden="true" /> Tài khoản</NavLink>
       </nav>
-      <div className="auth-workflow-user"><span><UserRound /> {user?.display_name}<small>{roles.join(', ')}</small></span><button type="button" disabled={logoutPending} onClick={() => void signOut()}><LogOut /> {logoutPending ? 'Đang đăng xuất…' : 'Đăng xuất'}</button></div>
+      <div className="auth-workflow-user"><span><UserRound aria-hidden="true" /> {user?.display_name}<small>{roles.join(', ') || 'Chưa có vai trò được cấp'}</small></span><button type="button" disabled={logoutPending} aria-busy={logoutPending} onClick={() => void signOut()}><LogOut aria-hidden="true" /> {logoutPending ? 'Đang đăng xuất…' : logoutError ? 'Thử đăng xuất lại' : 'Đăng xuất'}</button></div>
     </header>
     {logoutError && <p role="alert" className="auth-logout-error">{logoutError}</p>}
     <main className="auth-workflow-main"><Outlet /></main>
@@ -40,8 +41,9 @@ export function AuthenticatedWorkflowShell() {
 
 export function AuthWorkflowRoleGuard({ roles, children }: { roles: string[]; children: ReactNode }) {
   const { roles: currentRoles } = useAuth()
+  const location = useLocation()
   if (!roles.some(role => currentRoles.includes(role))) {
-    return <section className="auth-workflow-panel" role="alert"><h1>Không có quyền truy cập</h1><p>Tài khoản này không có vai trò phù hợp với trang workflow.</p><Link to="/account">Quay lại tài khoản</Link></section>
+    return <Navigate to="/access-denied" replace state={{ from: location }} />
   }
   return children
 }

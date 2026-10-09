@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, type PropsWithChildren } from 'react'
+import { createContext, useContext, useEffect, useLayoutEffect, useState, type PropsWithChildren } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { AuthApiError, authService } from '../services/auth'
 import type { AuthUser } from '../types/auth'
@@ -9,6 +9,7 @@ interface AuthContextValue {
   isAuthenticated: boolean
   isLoading: boolean
   sessionError: string
+  sessionNotice: string
   login: (identifier: string, password: string, rememberMe: boolean) => Promise<AuthUser>
   logout: () => Promise<void>
   register: (username: string, contact: string, password: string) => ReturnType<typeof authService.register>
@@ -24,18 +25,16 @@ export function AuthProvider({ children }: PropsWithChildren) {
     || location.pathname === '/workflow'
     || location.pathname.startsWith('/workflow/')
   const [user, setUser] = useState<AuthUser | null>(null)
-  const [isLoading, setIsLoading] = useState(requiresSession)
+  const [sessionInitialized, setSessionInitialized] = useState(false)
+  const [isRefreshing, setIsRefreshing] = useState(false)
   const [sessionError, setSessionError] = useState('')
+  const [sessionNotice, setSessionNotice] = useState('')
+  const isLoading = (requiresSession && !sessionInitialized) || isRefreshing
 
   useEffect(() => {
-    if (!requiresSession) {
-      setIsLoading(false)
-      setSessionError('')
-      return
-    }
+    if (!requiresSession || sessionInitialized) return
 
     let active = true
-    setIsLoading(true)
     setSessionError('')
     authService.me()
       .then(currentUser => { if (active) { setUser(currentUser); setSessionError('') } })
@@ -46,23 +45,27 @@ export function AuthProvider({ children }: PropsWithChildren) {
           setSessionError('Không thể kiểm tra phiên đăng nhập. Hãy thử lại khi dịch vụ khả dụng.')
         }
       })
-      .finally(() => { if (active) setIsLoading(false) })
+      .finally(() => { if (active) setSessionInitialized(true) })
     return () => { active = false }
-  }, [requiresSession, location.pathname])
+  }, [requiresSession, sessionInitialized])
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     function handleExpired() {
       setUser(null)
+      setSessionError('')
+      setSessionNotice('Phiên đăng nhập đã hết hạn. Đăng nhập lại để tiếp tục.')
       navigate('/login', {
         replace: true,
         state: {
           from: { pathname: location.pathname, search: location.search, hash: location.hash },
-          notice: 'Phiên đăng nhập đã hết hạn. Đăng nhập lại để tiếp tục.',
         },
       })
     }
     function handleAccessDenied() {
-      navigate('/access-denied', { replace: true })
+      navigate('/access-denied', {
+        replace: true,
+        state: { from: { pathname: location.pathname, search: location.search, hash: location.hash } },
+      })
     }
     window.addEventListener('organizationai:auth-expired', handleExpired)
     window.addEventListener('organizationai:access-denied', handleAccessDenied)
@@ -76,14 +79,18 @@ export function AuthProvider({ children }: PropsWithChildren) {
     const authenticatedUser = await authService.login(identifier, password, rememberMe)
     setUser(authenticatedUser)
     setSessionError('')
+    setSessionNotice('')
     return authenticatedUser
   }
 
   async function register(username: string, contact: string, password: string) {
-    return authService.register(username, contact, password)
+    const createdUser = await authService.register(username, contact, password)
+    setSessionError('')
+    return createdUser
   }
 
   async function refresh(): Promise<AuthUser | null> {
+    setIsRefreshing(true)
     try {
       const currentUser = await authService.me()
       setUser(currentUser)
@@ -95,6 +102,8 @@ export function AuthProvider({ children }: PropsWithChildren) {
         ? ''
         : 'Không thể kiểm tra phiên đăng nhập. Hãy thử lại khi dịch vụ khả dụng.')
       return null
+    } finally {
+      setIsRefreshing(false)
     }
   }
 
@@ -102,6 +111,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     await authService.logout()
     setUser(null)
     setSessionError('')
+    setSessionNotice('')
   }
 
   const value: AuthContextValue = {
@@ -110,6 +120,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     isAuthenticated: user !== null,
     isLoading,
     sessionError,
+    sessionNotice,
     login,
     logout,
     register,
