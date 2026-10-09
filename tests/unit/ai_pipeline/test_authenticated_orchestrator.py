@@ -54,7 +54,10 @@ def configuration(*, media_policy=None):
     return ApprovalConfiguration(policy, (), None, media_policy, rubric)
 
 
-def request(*, extraction_status="COMPLETE", media_policy=None, image_observation=True):
+def request(
+    *, extraction_status="COMPLETE", media_policy=None, image_observation=True,
+    extraction_confidence=0.97, visual_quality=None,
+):
     content = b"synthetic-image-bytes"
     attachment_id = "attachment-1"
     plan = MarketingPlan(
@@ -75,7 +78,9 @@ def request(*, extraction_status="COMPLETE", media_policy=None, image_observatio
         configuration=configuration(media_policy=media_policy or media_policy_from_json(MEDIA_POLICY_JSON)),
         metadata={"model_id": "qwen3-vl:4b", "attachment_contents": {attachment_id: content},
                   "fake_extraction_status": extraction_status,
-                  "fake_visual_observation": image_observation},
+                  "fake_visual_observation": image_observation,
+                  "fake_visual_confidence": extraction_confidence,
+                  "fake_visual_quality": visual_quality or {"result": "PASS", "findings": []}},
     )
 
 
@@ -110,6 +115,9 @@ class FakeExtractionProvider:
                                  if _request.metadata["fake_visual_observation"] else []),
                 "uncertainties": (["Small disclaimer text is unreadable"]
                                   if _request.metadata["fake_extraction_status"] == "PARTIAL" else []),
+                "confidence": _request.metadata["fake_visual_confidence"],
+                "object_detections": ["logo", "banner"],
+                "visual_quality": _request.metadata["fake_visual_quality"],
             }]},
             model_revision="vlm-rev-1", reported_model_id="qwen3-vl:4b",
         )
@@ -133,9 +141,11 @@ class FakeTaskProvider:
         self.fail = fail
         self.score = score
         self.calls = 0
+        self.last_evidence = ()
 
     def evaluate(self, task_request):
         self.calls += 1
+        self.last_evidence = task_request.evidence
         if self.fail == "timeout":
             raise ProviderTimeout()
         if self.fail == "error":
@@ -208,6 +218,9 @@ def test_authenticated_orchestrator_reuses_extraction_and_builds_weighted_strate
     assert len(result.evaluation["criterion_scores"]) == 7
     assert EvaluationResult.from_dict(result.evaluation).feasibility_score == 71
     assert media.calls == strategy.calls == 1
+    assert {item["kind"] for item in media.last_evidence} >= {
+        "OBJECT_DETECTION", "VISUAL_QUALITY",
+    }
     assert ("media_evaluation", "PROCESSING") in updates
     assert ("strategy_evaluation", "SUCCEEDED") in updates
 
@@ -341,6 +354,40 @@ def test_partial_extraction_uncertainty_blocks_auto_recommendation():
     assert result.visual_extraction["status"] == "PARTIAL"
 
 
+def test_low_visual_confidence_routes_to_human_review_even_when_other_agents_pass():
+    result = make_orchestrator(
+        media=FakeTaskProvider("MEDIA_COMPLIANCE"),
+        strategy=FakeTaskProvider("STRATEGY_EVALUATION"),
+    ).evaluate(request(extraction_confidence=0.84))
+
+    assert result.visual_extraction["confidence"] == 0.84
+    assert result.evaluation["status"] == "SUCCEEDED"
+    assert result.evaluation["proposed_action"] == "RECOMMEND_HUMAN_REVIEW"
+    assert any("confidence" in item.lower() for item in result.evaluation["missing_facts"])
+
+
+def test_visual_confidence_at_threshold_remains_eligible_for_other_auto_approval_gates():
+    result = make_orchestrator(
+        media=FakeTaskProvider("MEDIA_COMPLIANCE"),
+        strategy=FakeTaskProvider("STRATEGY_EVALUATION"),
+    ).evaluate(request(extraction_confidence=0.85))
+
+    assert result.evaluation["proposed_action"] == "RECOMMEND_AUTO_APPROVAL"
+
+
+def test_visual_quality_review_routes_to_checker_and_retains_findings():
+    result = make_orchestrator(
+        media=FakeTaskProvider("MEDIA_COMPLIANCE"),
+        strategy=FakeTaskProvider("STRATEGY_EVALUATION"),
+    ).evaluate(request(visual_quality={
+        "result": "REVIEW_REQUIRED", "findings": ["The campaign text is too blurred to inspect."],
+    }))
+
+    assert result.visual_extraction["attachments"][0]["visual_quality"]["result"] == "REVIEW_REQUIRED"
+    assert result.evaluation["proposed_action"] == "RECOMMEND_HUMAN_REVIEW"
+    assert any("blurred" in item.lower() for item in result.evaluation["missing_facts"])
+
+
 def test_score_exactly_seventy_and_missing_media_evidence_require_checker_review():
     media = FakeTaskProvider("MEDIA_COMPLIANCE")
     strategy = FakeTaskProvider("STRATEGY_EVALUATION", score=70)
@@ -366,8 +413,13 @@ def test_authenticated_mock_vlm_is_extraction_only_and_supports_review_timeout_a
     reviewed = AuthenticatedMockVLMProvider("review").analyze_image(submitted)
     assert isinstance(passed, ProviderAnalysis)
     assert passed.output["images"][0]["status"] == "COMPLETE"
+    assert passed.output["images"][0]["confidence"] == 0.95
+    assert passed.output["images"][0]["object_detections"]
+    assert passed.output["images"][0]["visual_quality"]["result"] == "PASS"
     assert reviewed.output["images"][0]["status"] == "PARTIAL"
     assert reviewed.output["images"][0]["uncertainties"]
+    assert reviewed.output["images"][0]["confidence"] < 0.85
+    assert reviewed.output["images"][0]["visual_quality"]["result"] == "REVIEW_REQUIRED"
     with pytest.raises(ProviderTimeout):
         AuthenticatedMockVLMProvider("timeout").analyze_image(submitted)
     with pytest.raises(ProviderError):

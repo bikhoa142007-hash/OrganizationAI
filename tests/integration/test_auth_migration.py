@@ -45,6 +45,13 @@ def test_auth_migrations_create_registration_ready_identity_tables(tmp_path, mon
     assert {"maker_id", "checker_id", "status", "current_version", "current_round", "revision"} <= {
         column["name"] for column in inspector.get_columns("auth_workflow_plans")
     }
+    assert {"creation_idempotency_key", "creation_request_hash"} <= {
+        column["name"] for column in inspector.get_columns("auth_workflow_plans")
+    }
+    assert any(
+        index["name"] == "uq_auth_workflow_plans_maker_creation_key" and index["unique"]
+        for index in inspector.get_indexes("auth_workflow_plans")
+    )
     assert {"content", "content_hash", "uploaded_by"} <= {
         column["name"] for column in inspector.get_columns("auth_workflow_attachments")
     }

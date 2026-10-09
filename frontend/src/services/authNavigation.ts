@@ -1,7 +1,7 @@
 export function homeForRoles(roles: readonly string[]): string {
+  if (roles.includes('ADMIN')) return '/workflow/plans'
   if (roles.includes('MAKER')) return '/workflow/plans'
   if (roles.includes('CHECKER')) return '/workflow/reviews'
-  if (roles.includes('ADMIN')) return '/account'
   return '/access-denied'
 }
 

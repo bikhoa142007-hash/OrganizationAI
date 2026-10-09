@@ -13,6 +13,7 @@ export function AuthenticatedWorkflowDetailPage() {
   const [reason, setReason] = useState('')
   const [overrideReason, setOverrideReason] = useState('')
   const [busy, setBusy] = useState(false)
+  const [recoveryBusy, setRecoveryBusy] = useState(false)
   const [reload, setReload] = useState(0)
 
   useEffect(() => {
@@ -44,9 +45,22 @@ export function AuthenticatedWorkflowDetailPage() {
     finally { setBusy(false) }
   }
 
+  async function recoverInterruptedEvaluation() {
+    if (!plan) return
+    setRecoveryBusy(true); setError('')
+    try {
+      setPlan(await authWorkflowService.recoverStaleEvaluation(planId, plan.current_round))
+    } catch (failure) {
+      setError(failure instanceof Error ? failure.message : String(failure))
+    } finally {
+      setRecoveryBusy(false)
+    }
+  }
+
   if (!plan) return <section className={`auth-workflow-state${error ? ' is-error' : ''}`} role={error ? 'alert' : 'status'}><h1>{error ? 'Không thể mở kế hoạch' : 'Đang tải kế hoạch…'}</h1>{error && <><p>{error}</p><Link to="/workflow/plans">Quay lại danh sách</Link></>}</section>
   const isMaker = roles.includes('MAKER') && plan.maker_id === user?.id
   const isAssignedChecker = roles.includes('CHECKER') && plan.checker_id === user?.id
+  const canViewAttachments = isMaker || isAssignedChecker
   const canEdit = isMaker && ['DRAFT', 'REJECTED'].includes(plan.status)
   const canDecide = isAssignedChecker && plan.status === 'PENDING_APPROVAL'
   const finalCheckerDecision = [...plan.history].reverse().find(event =>
@@ -57,7 +71,7 @@ export function AuthenticatedWorkflowDetailPage() {
     <Link className="auth-back-link" to={isAssignedChecker ? '/workflow/reviews' : '/workflow/plans'}><ArrowLeft /> Quay lại danh sách</Link>
     <div className="auth-workflow-page-heading"><div><p className="page-eyebrow">{plan.code} · Version {plan.current_version || '—'} · Round {plan.current_round || '—'}</p><h1>{plan.payload.title || 'Kế hoạch chưa có tên'}</h1><p>Maker: {plan.maker_name} <span aria-hidden="true">·</span> Checker: {plan.checker_name || 'Chưa gán'}</p></div><span className={`workflow-status status-${plan.status.toLowerCase()}`}>{statusLabel(plan.status)}</span></div>
     {error && <div className="auth-workflow-alert is-error" role="alert"><p>{error}</p></div>}
-    {['AI_PENDING', 'AI_PROCESSING'].includes(plan.processing_stage) && <div className="auth-workflow-alert is-progress" role="status"><Clock3 /><div><strong>Đang đánh giá kế hoạch</strong><p>Snapshot đã được lưu. Tải lại để xem trạng thái mới nhất.</p></div></div>}
+    {['AI_PENDING', 'AI_PROCESSING'].includes(plan.processing_stage) && <div className="auth-workflow-alert is-progress" role="status"><Clock3 /><div><strong>Đang đánh giá kế hoạch</strong><p>Snapshot đã được lưu. Tải lại để xem trạng thái mới nhất. Checker được phân công có thể kiểm tra tác vụ đã gián đoạn; hệ thống chỉ chuyển sang Human Review sau 4 phút không hoàn tất.</p>{isAssignedChecker && <button type="button" className="button button-secondary" disabled={recoveryBusy} onClick={() => void recoverInterruptedEvaluation()}>{recoveryBusy ? 'Đang kiểm tra…' : 'Kiểm tra pipeline bị gián đoạn'}</button>}</div></div>}
     <div className="auth-workflow-detail-grid">
       <section className="auth-workflow-card"><div className="auth-workflow-card-heading"><FileText /><h2>Nội dung kế hoạch</h2></div><dl className="auth-workflow-definition-grid">
         <div><dt>Mục tiêu</dt><dd>{plan.payload.objective || '—'}</dd></div>
@@ -70,7 +84,7 @@ export function AuthenticatedWorkflowDetailPage() {
         <div><dt>Kênh</dt><dd>{plan.payload.channels.join(', ') || '—'}</dd></div>
         <div><dt>Ghi chú</dt><dd>{plan.payload.notes || '—'}</dd></div>
       </dl>{plan.decision_reason && <div className={`auth-workflow-alert ${plan.status === 'REJECTED' ? 'is-error' : 'is-review'}`}><strong>{plan.status === 'REJECTED' ? 'Lý do từ chối' : plan.status === 'PENDING_APPROVAL' ? 'Lý do chuyển Checker' : 'Lý do chuyển Checker (lịch sử)'}</strong><p>{plan.decision_reason}</p></div>}
-        <div className="auth-workflow-attachments"><h3>Ảnh đính kèm</h3>{plan.attachments.length ? plan.attachments.map(item => <div key={item.id} className="auth-workflow-attachment"><AuthAttachmentPreview planId={plan.id} attachmentId={item.id} filename={item.filename} /><span><strong>{item.filename}</strong><small>{item.media_type} · {Math.ceil(item.byte_size / 1024)} KB · SHA-256 {item.content_hash.slice(0, 12)}…</small></span></div>) : <p>Chưa có ảnh đính kèm.</p>}</div>
+        <div className="auth-workflow-attachments"><h3>Ảnh đính kèm</h3>{plan.attachments.length ? plan.attachments.map(item => <div key={item.id} className="auth-workflow-attachment">{canViewAttachments && <AuthAttachmentPreview planId={plan.id} attachmentId={item.id} filename={item.filename} />}<span><strong>{item.filename}</strong><small>{item.media_type} · {Math.ceil(item.byte_size / 1024)} KB · SHA-256 {item.content_hash.slice(0, 12)}…</small></span></div>) : <p>Chưa có ảnh đính kèm.</p>}</div>
       </section>
       <section className="auth-workflow-card"><div className="auth-workflow-card-heading"><History /><h2>Lịch sử xử lý</h2></div><ol className="auth-workflow-history">{plan.history.map(event => <li key={event.id}><span className="history-icon">{event.action === 'APPROVED' || event.action === 'AI_AUTO_APPROVED' ? <Check /> : event.action === 'REJECTED' ? <X /> : <Clock3 />}</span><div><strong>{eventLabel(event.action)}</strong><p>{event.actor_name} · {new Date(event.created_at).toLocaleString('vi-VN')}</p>{typeof event.details.reason === 'string' && <blockquote>{event.details.reason}</blockquote>}{typeof event.details.version === 'number' && typeof event.details.round === 'number' && <small>Version {event.details.version} / Round {event.details.round}</small>}</div></li>)}</ol></section>
     </div>
@@ -167,6 +181,7 @@ function VlmExtractionDetails({ extraction, plan }: {
       <span>Runtime revision: {extraction.model_revision || 'Runtime không cung cấp'}</span>
       <span>Prompt: {extraction.prompt_version}</span>
       <span>Schema: {extraction.schema_version}</span>
+      {extraction.confidence != null && <span>Confidence trích xuất (tự báo, chưa hiệu chuẩn): {percent(extraction.confidence)}</span>}
       {extraction.raw_output_hash && <span>Output SHA-256: {extraction.raw_output_hash}</span>}
     </div>
     {extraction.status === 'FAILED' && extraction.error_code && <div className="auth-workflow-alert is-error" role="status">
@@ -178,6 +193,7 @@ function VlmExtractionDetails({ extraction, plan }: {
         return <li key={attachment.attachment_id}>
           <h4>{source?.filename || `Ảnh ${attachment.attachment_id}`} · {extractionStatusLabel(attachment.status)}</h4>
           <p>Attachment ID: {attachment.attachment_id} · SHA-256 {attachment.content_hash}</p>
+          {attachment.confidence != null && <p>Confidence ảnh (tự báo, chưa hiệu chuẩn): {percent(attachment.confidence)}</p>}
           {attachment.error_code && <p className="auth-vlm-error">{extractionErrorLabel(attachment.error_code)}</p>}
           {attachment.ocr_text && <div><strong>Văn bản OCR</strong><blockquote>{attachment.ocr_text}</blockquote></div>}
           {attachment.evidence.filter(item => item.kind === 'OBSERVATION').length > 0 && <div>
@@ -186,6 +202,12 @@ function VlmExtractionDetails({ extraction, plan }: {
             </li>)}</ul>
           </div>}
           {attachment.evidence.filter(item => item.kind === 'OCR_TEXT').map(item => <small key={item.evidence_id}>OCR evidence ID: {item.evidence_id}</small>)}
+          {attachment.object_detections?.length ? <div><strong>Đối tượng nhận diện</strong><ul>
+            {attachment.object_detections.map((item, index) => <li key={`${attachment.attachment_id}-object-${index}`}>{item}</li>)}
+          </ul></div> : null}
+          {attachment.visual_quality && <div><strong>Chất lượng kỹ thuật ảnh: {visualQualityLabel(attachment.visual_quality.result)}</strong>
+            {attachment.visual_quality.findings.length > 0 && <ul>{attachment.visual_quality.findings.map((item, index) => <li key={`${attachment.attachment_id}-quality-${index}`}>{item}</li>)}</ul>}
+          </div>}
           {attachment.uncertainties.length > 0 && <div><strong>Chưa đọc được hoặc chưa chắc chắn</strong><ul>
             {attachment.uncertainties.map((item, index) => <li key={`${attachment.attachment_id}-${index}`}>{item.text}</li>)}
           </ul></div>}
@@ -227,6 +249,10 @@ function extractionStatusLabel(status: string) {
     UNREADABLE: 'Ảnh không đọc được',
     FAILED: 'Trích xuất ảnh thất bại',
   } as Record<string, string>)[status] ?? status
+}
+
+function visualQualityLabel(result: 'PASS' | 'REVIEW_REQUIRED' | 'UNKNOWN') {
+  return ({ PASS: 'Đủ rõ để kiểm tra', REVIEW_REQUIRED: 'Cần Checker xem lại', UNKNOWN: 'Chưa đánh giá' })[result]
 }
 
 function extractionErrorLabel(code: string) {

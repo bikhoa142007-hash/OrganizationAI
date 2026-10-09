@@ -7,7 +7,7 @@ The local Compose backend can call Ollama on the Windows host through
 
 | Pipeline step | Local model | Purpose |
 |---|---|---|
-| Visual extraction | `qwen3-vl:4b` | OCR and direct visual observations from the submitted-version image snapshot |
+| Visual extraction | `qwen3-vl:4b` | OCR, direct observations, object labels, technical image-quality checks, and extraction confidence from the submitted-version image snapshot |
 | Media Compliance | `organizationai-qwen3:4b-ctx8192` | Evaluate extracted evidence against the configured content policy |
 | Strategy Evaluation | `organizationai-qwen3:4b-ctx8192` | Score the fixed seven-criterion BA rubric and surface assumptions/gaps |
 
@@ -44,6 +44,16 @@ to the active submitted snapshot and distinguish missing facts from conflicts,
 require two references per conflict, require each criterion to cite a supplied
 evidence ID, and keep local-model output concise. The
 backend Compose service passes these settings into the container.
+
+The current visual-extraction contract is prompt/schema v2. It requires a
+per-image confidence from 0 to 1, visible object labels, and a technical
+quality result with findings when review is required. The confidence is a
+self-report, not a calibrated probability; values below 0.85, non-PASS image
+quality, or extraction uncertainty route the plan to Human Review. A missing
+field or invalid response fails schema validation. This signal never decides
+approval by itself. The previously recorded Ollama smoke predates this v2
+contract, so rerun it with the new schema before treating current extraction
+compatibility as verified.
 
 The local smoke policy in `.env` is named `LOCAL_MEDIA_RULESET_1`, is scoped
 only to department `Nori Pilot` and channel `social`, and contains one synthetic

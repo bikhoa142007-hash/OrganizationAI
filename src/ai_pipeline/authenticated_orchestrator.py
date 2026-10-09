@@ -295,7 +295,11 @@ class AuthenticatedEvaluationOrchestrator:
 
         media_output = media_step["result"]
         strategy_output = strategy_step["result"]
-        uncertainty = self._extraction_uncertainties(extraction)
+        # The snapshotted media confidence gate is also the extraction-confidence floor;
+        # missing or lower VLM confidence remains advisory and routes to a Checker.
+        uncertainty = self._extraction_uncertainties(
+            extraction, configuration.policy.media_confidence_threshold,
+        )
         missing_facts = list(uncertainty)
         missing_facts.extend(strategy_output["missing_facts"])
         missing_facts.extend(strategy_output["critical_gaps"])
@@ -517,9 +521,28 @@ class AuthenticatedEvaluationOrchestrator:
         ]
 
     @staticmethod
-    def _extraction_uncertainties(extraction):
-        return [item["text"] for attachment in extraction.get("attachments", [])
-                for item in attachment.get("uncertainties", [])]
+    def _extraction_uncertainties(extraction, confidence_threshold):
+        uncertainties = [
+            item["text"]
+            for attachment in extraction.get("attachments", [])
+            for item in attachment.get("uncertainties", [])
+        ]
+        confidence = extraction.get("confidence")
+        if (isinstance(confidence, bool) or not isinstance(confidence, (int, float))
+                or not 0 <= confidence <= 1):
+            uncertainties.append("Visual extraction confidence is missing or invalid; Checker review is required.")
+        elif confidence < confidence_threshold:
+            uncertainties.append(
+                f"Visual extraction confidence {confidence:.2f} is below the required "
+                f"{confidence_threshold:.2f} threshold."
+            )
+
+        for attachment in extraction.get("attachments", []):
+            quality = attachment.get("visual_quality") or {}
+            if quality.get("result") != "PASS":
+                findings = quality.get("findings") or ["The image requires a technical quality check."]
+                uncertainties.extend(f"Visual quality review required: {finding}" for finding in findings)
+        return uncertainties
 
     @staticmethod
     def _agent_errors(media, strategy):

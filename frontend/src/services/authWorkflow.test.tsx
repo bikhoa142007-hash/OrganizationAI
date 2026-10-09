@@ -6,6 +6,7 @@ import { AuthenticatedWorkflowFormPage } from '../pages/AuthenticatedWorkflowFor
 import { api } from './api/client'
 import { authService } from './auth'
 import { authWorkflowService } from './authWorkflow'
+import type { WorkflowPayload } from '../types/authWorkflow'
 import { SessionProvider, useSession } from './SessionProvider'
 
 afterEach(() => {
@@ -24,6 +25,43 @@ it('sends authenticated workflow requests with cookies and without a demo actor 
   expect(options.credentials).toBe('include')
   expect(options.headers).toBeUndefined()
   expect(JSON.stringify(options)).not.toContain('X-Demo-Actor')
+})
+
+it('uses an explicit authenticated POST for stale evaluation recovery', async () => {
+  const fetchMock = vi.fn().mockResolvedValue(new Response('{}', { status: 200 }))
+  vi.stubGlobal('fetch', fetchMock)
+
+  await authWorkflowService.recoverStaleEvaluation('plan/1', 2)
+
+  const [url, options] = fetchMock.mock.calls[0] as [string, RequestInit]
+  expect(url).toContain('/workflow/plans/plan%2F1/rounds/2/recovery')
+  expect(options.method).toBe('POST')
+  expect(options.credentials).toBe('include')
+  expect(options.body).toBeUndefined()
+})
+
+it('reuses a draft creation key after a network error and rotates it after success', async () => {
+  const fetchMock = vi.fn()
+    .mockRejectedValueOnce(new TypeError('offline'))
+    .mockResolvedValueOnce(new Response('{}', { status: 201 }))
+    .mockResolvedValueOnce(new Response('{}', { status: 201 }))
+  vi.stubGlobal('fetch', fetchMock)
+  const payload: WorkflowPayload = {
+    title: 'Retry-safe draft', objective: '', summary: '', department: '',
+    start_date: '', end_date: '', budget_minor_units: '', currency: 'VND',
+    target_audience: '', channels: [], kpi_expected: '', notes: '',
+  }
+
+  await expect(authWorkflowService.createPlan(payload, null)).rejects.toMatchObject({ status: 0 })
+  await authWorkflowService.createPlan(payload, null)
+  await authWorkflowService.createPlan(payload, null)
+
+  const keys = fetchMock.mock.calls.map(([, options]) => (options as RequestInit).headers as Record<string, string>)
+    .map(headers => headers['Idempotency-Key'])
+  expect(keys[0]).toBeTruthy()
+  expect(keys[1]).toBe(keys[0])
+  expect(keys[2]).toBeTruthy()
+  expect(keys[2]).not.toBe(keys[1])
 })
 
 it('distinguishes an expired session from an authenticated authorization denial', async () => {

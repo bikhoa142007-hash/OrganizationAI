@@ -1,7 +1,7 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, File, Form, Query, Request, UploadFile
+from fastapi import APIRouter, Depends, File, Form, Header, Query, Request, UploadFile
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
@@ -11,6 +11,7 @@ from src.backend.api.auth import (
     _check_browser_origin,
     get_current_principal,
     get_auth_db,
+    require_any_role,
     require_role,
 )
 from src.backend.application import auth_workflow as workflow
@@ -22,6 +23,7 @@ from .auth_workflow_schemas import (
     WorkflowDecisionRequest,
     WorkflowPlanResponse,
     WorkflowCheckerResponse,
+    WorkflowAuditPageResponse,
 )
 
 router = APIRouter(prefix="/api/workflow", tags=["authenticated workflow"])
@@ -29,6 +31,19 @@ router = APIRouter(prefix="/api/workflow", tags=["authenticated workflow"])
 
 def _correlation(request: Request) -> str:
     return getattr(request.state, "correlation_id", "workflow-request")
+
+
+@router.get("/audit", response_model=WorkflowAuditPageResponse)
+def audit_events(
+    request: Request,
+    principal: AuthenticatedPrincipal = Depends(require_role("ADMIN")),
+    session: Session = Depends(get_auth_db),
+    offset: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=200),
+):
+    return workflow.list_audit_events(
+        session, principal, _correlation(request), offset=offset, limit=limit
+    )
 
 
 @router.get("/checkers", response_model=list[WorkflowCheckerResponse])
@@ -43,7 +58,7 @@ def checkers(
 @router.get("/plans", response_model=list[WorkflowPlanResponse])
 def plans(
     request: Request,
-    principal: AuthenticatedPrincipal = Depends(require_role("MAKER")),
+    principal: AuthenticatedPrincipal = Depends(require_any_role("MAKER", "ADMIN")),
     session: Session = Depends(get_auth_db),
     offset: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=200),
@@ -73,6 +88,7 @@ def create_plan(
     request: Request,
     principal: AuthenticatedPrincipal = Depends(require_role("MAKER")),
     session: Session = Depends(get_auth_db),
+    idempotency_key: Annotated[str | None, Header(min_length=1, max_length=200)] = None,
 ):
     _check_browser_origin(request)
     return workflow.create_plan(
@@ -81,6 +97,7 @@ def create_plan(
         body.payload.model_dump(),
         body.checker_user_id,
         _correlation(request),
+        idempotency_key=idempotency_key,
     )
 
 
@@ -92,6 +109,24 @@ def detail(
     session: Session = Depends(get_auth_db),
 ):
     return workflow.get_plan(session, principal, plan_id, _correlation(request))
+
+
+@router.post(
+    "/plans/{plan_id}/rounds/{round_number}/recovery",
+    response_model=WorkflowPlanResponse,
+)
+def recover_interrupted_round(
+    plan_id: UUID,
+    round_number: int,
+    request: Request,
+    principal: AuthenticatedPrincipal = Depends(require_role("CHECKER")),
+    session: Session = Depends(get_auth_db),
+):
+    """Explicitly route a stale evaluation to Checker review; safe to replay."""
+    _check_browser_origin(request)
+    return workflow.recover_stale_round(
+        session, principal, plan_id, round_number, _correlation(request)
+    )
 
 
 @router.put("/plans/{plan_id}", response_model=WorkflowPlanResponse)

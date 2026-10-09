@@ -41,6 +41,29 @@ delete operation for these records. Uploads are decoded server-side as PNG,
 JPEG or WebP, must match their declared media type, stay below 25 million pixels
 and 5 MB, and are stored with a SHA-256 hash.
 
+Plan list/detail GETs only read persisted state; refresh never creates an
+evaluation, recovery event, or decision. If a durable evaluation remains pending
+for more than four minutes after a process interruption, the assigned Checker
+can explicitly POST to
+`/api/workflow/plans/{plan_id}/rounds/{round_number}/recovery`. The command
+rechecks assignment/current-round state, uses the saved snapshot, and routes an
+interrupted run to Human Review. Replaying it after recovery is safe and does not
+append another event or engine decision. Before four minutes it returns the
+current state without changing it.
+
+Administrators can list all Auth workflow plans and open read-only plan details;
+this does not grant Maker edit/submit or Checker decision rights. Private
+attachment bytes remain available only to the Maker or assigned Checker under
+the file-access rule. This is the narrow interpretation of the current scope's
+different actor lists for “view all plans” and attachment download.
+
+Draft creation accepts an optional `Idempotency-Key` header (1–200 characters),
+scoped to the authenticated Maker. The server stores a hash of the submitted
+payload and Checker assignment under a unique constraint: retrying the same
+intent returns the original draft, while reusing a key with changed data returns
+409. The Auth frontend retains the key across network/5xx retries for the same
+form data and clears it after a success or client error.
+
 Submission commits the immutable version and approval round before starting AI
 evaluation. The bounded orchestrator loads only private media whose hashes
 appear in that snapshot; provider I/O runs outside the database transaction.
@@ -126,10 +149,13 @@ remains operator-selected; no model is bundled or downloaded by this project.
 The adapter sends image bytes as base64 `image_url` content parts and requests a
 strict JSON Schema response. A runtime that lacks image or schema support is
 classified and routed to Checker. It does not send permanent attachment URLs.
-VLM confidence and bounding boxes are omitted because no calibrated confidence
-or supported coordinate source is configured. These extraction facts are not
-media confidence or strategy confidence. Verify the selected runtime's official
-documentation before enabling it; OpenAI protocol references for [image input](https://developers.openai.com/api/docs/guides/images-vision) and [structured output](https://developers.openai.com/api/docs/guides/structured-outputs) describe the request shape, not compatibility of a particular local runtime.
+Visual-extraction schema v2 preserves per-image confidence as a self-reported,
+uncalibrated value, plus object labels and technical quality findings; it does
+not return bounding boxes. Confidence below the applied 0.85 policy threshold,
+non-PASS image quality, or extraction uncertainty routes to Checker. This signal
+is separate from Media Compliance and Strategy confidence and never decides
+approval. Verify the selected runtime's official documentation before enabling
+it; OpenAI protocol references for [image input](https://developers.openai.com/api/docs/guides/images-vision) and [structured output](https://developers.openai.com/api/docs/guides/structured-outputs) describe the request shape, not compatibility of a particular local runtime.
 
 Checker actions that differ from the AI recommendation, or are made without a
 recommendation, require an override reason. Every Checker rejection requires a

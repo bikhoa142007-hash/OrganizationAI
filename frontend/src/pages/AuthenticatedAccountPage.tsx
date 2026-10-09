@@ -32,6 +32,7 @@ export function AuthenticatedAccountPage() {
     {logoutError && <p role="alert">{logoutError}</p>}
     {roles.includes('MAKER') && <p><Link to="/workflow/plans">Mở workflow PostgreSQL của Maker</Link></p>}
     {roles.includes('CHECKER') && <p><Link to="/workflow/reviews">Mở hàng chờ Checker</Link></p>}
+    {roles.includes('ADMIN') && <p><Link to="/workflow/plans">Mở danh sách kế hoạch quản trị (chỉ đọc)</Link></p>}
     <p>Workflow Auth lưu dữ liệu trong PostgreSQL. Judge Demo bên dưới giữ actor tổng hợp riêng.</p>
     <p><Link to="/demo">Mở Judge Demo</Link></p>
   </main>
