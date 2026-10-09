@@ -10,8 +10,10 @@ changed here.
 
 Work is on local branch `codex/scope1-phase1-20261009`, started from
 `93145a0e0828c4a9783dd99ba8d32705627e81e5`. The prior uncommitted VLM work was
-preserved. This checkpoint has not been deployed, committed, pushed, or opened as
-a PR. Existing PRs #17 and #19 are merged; the old report's Draft PR #17 status
+preserved. The implementation checkpoint is commit `199e97f`, pushed to the
+branch. Draft PR [#20](https://github.com/bikhoa142007-hash/OrganizationAI/pull/20)
+is open against `main` and has no merge conflicts. It has not been deployed or
+merged. Existing PRs #17 and #19 are merged; the old report's Draft PR #17 status
 is stale.
 
 ## Work completed in this checkpoint
@@ -123,7 +125,7 @@ suite, typecheck and build passed.
    test DB. Preserve scores and route unsupported/invalid results to Checker.
 4. Obtain staging service identity and disposable PG access before a two-user
    Maker/Checker browser workflow or migration compatibility run.
-5. Before deployment, review and commit the branch, push it and create/update a
-   draft PR if remote access works. Roll back application code through the
-   deployment history; retain additive schema and all DB records (no downgrade,
-   reset or deletion).
+5. Continue review in draft PR #20. Before any deployment, confirm the exact
+   authorized staging service and disposable PostgreSQL access, then run all
+   blocked gates. Roll back application code through deployment history; retain
+   additive schema and all DB records (no downgrade, reset or deletion).

@@ -58,6 +58,6 @@ exists. The source Phase 1 baseline remains pending PO/stakeholder approval.
       actual deployed commit and browser flow only on approved staging.
 - [ ] Recheck data preservation read-only; no live test data unless authorized
       test identities/service are confirmed and each generated ID is recorded.
-- [ ] Review diff and secrets, commit/push and update/create draft PR if network
-      access is available; never force-push/merge.
-- [ ] Update progress report and mark every unresolved row PARTIAL/BLOCKED.
+- [x] Review diff and secrets, commit/push and open draft PR #20; no force-push
+      or merge.
+- [x] Update progress report and mark every unresolved row PARTIAL/BLOCKED.

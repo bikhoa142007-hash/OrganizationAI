@@ -12,10 +12,12 @@ versions, AI results and audit records intact.
 The starting branch was `feature/auth-first-staging`, HEAD was
 `93145a0e0828c4a9783dd99ba8d32705627e81e5`, and 11 working-tree files contained
 uncommitted VLM extraction changes from the prior turn. Those changes were
-preserved on `codex/scope1-phase1-20261009`; additional implementation is still
-uncommitted at this checkpoint.
-The prior report's PR #17 is stale: GitHub shows PR #17 and PR #19 merged; PR #19
-contains the current HEAD. Remote shell access previously failed DNS resolution.
+preserved on `codex/scope1-phase1-20261009`. The implementation checkpoint is
+committed as `199e97f` and pushed. Draft PR #20 targets `main`; it remains open
+for review and has no merge conflicts. No deployment was made. The prior
+report's PR #17 is stale: GitHub shows PR #17 and PR #19 merged; PR #19 contains
+the original starting HEAD. Remote shell access initially failed DNS resolution
+but later recovered.
 
 ## Repository baseline
 
@@ -59,6 +61,9 @@ contains the current HEAD. Remote shell access previously failed DNS resolution.
 - Changes at this checkpoint add explicit Checker stale-run recovery (GET is
   read-only), Admin read-only plan visibility and workflow audit, draft-create
   idempotency, and zero-budget validation. They are not deployed.
+- The checkpoint is committed and pushed on `codex/scope1-phase1-20261009`;
+  draft PR [#20](https://github.com/bikhoa142007-hash/OrganizationAI/pull/20)
+  is open against `main`.
 - Full Phase 1 remains incomplete; see the dated progress report and traceability
   checklist for remaining gaps and external decisions.
 
