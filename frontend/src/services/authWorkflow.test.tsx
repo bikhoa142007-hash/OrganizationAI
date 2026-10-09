@@ -45,7 +45,7 @@ it('uses an explicit authenticated POST for stale evaluation recovery', async ()
   expect(options.body).toBeUndefined()
 })
 
-it('reuses a draft creation key after a network error and rotates it after success', async () => {
+it('reuses a draft creation key for a retry and rotates it for a new intent', async () => {
   const fetchMock = vi.fn()
     .mockRejectedValueOnce(new TypeError('offline'))
     .mockResolvedValueOnce(new Response('{}', { status: 201 }))
@@ -57,9 +57,9 @@ it('reuses a draft creation key after a network error and rotates it after succe
     target_audience: '', channels: [], kpi_expected: '', notes: '',
   }
 
-  await expect(authWorkflowService.createPlan(payload, null)).rejects.toMatchObject({ status: 0 })
-  await authWorkflowService.createPlan(payload, null)
-  await authWorkflowService.createPlan(payload, null)
+  await expect(authWorkflowService.createPlan(payload, null, 'retry-intent')).rejects.toMatchObject({ status: 0 })
+  await authWorkflowService.createPlan(payload, null, 'retry-intent')
+  await authWorkflowService.createPlan(payload, null, 'new-intent')
 
   const keys = fetchMock.mock.calls.map(([, options]) => (options as RequestInit).headers as Record<string, string>)
     .map(headers => headers['Idempotency-Key'])
@@ -67,6 +67,50 @@ it('reuses a draft creation key after a network error and rotates it after succe
   expect(keys[1]).toBe(keys[0])
   expect(keys[2]).toBeTruthy()
   expect(keys[2]).not.toBe(keys[1])
+})
+
+it('replays a server-created draft after a reload and isolates separate intents', async () => {
+  const server = new Map<string, { body: string; plan: { id: string } }>()
+  const observedKeys: string[] = []
+  let created = 0
+  let dropFirstResponse = true
+  const fetchMock = vi.fn(async (_url: string, options: RequestInit) => {
+    const key = (options.headers as Record<string, string>)['Idempotency-Key']
+    const body = String(options.body)
+    observedKeys.push(key)
+    const prior = server.get(key)
+    if (prior) {
+      if (prior.body !== body) return new Response('{}', { status: 409 })
+      return new Response(JSON.stringify(prior.plan), { status: 201 })
+    }
+
+    const plan = { id: `server-plan-${++created}` }
+    server.set(key, { body, plan })
+    if (dropFirstResponse) {
+      dropFirstResponse = false
+      throw new TypeError('response lost after commit')
+    }
+    return new Response(JSON.stringify(plan), { status: 201 })
+  })
+  vi.stubGlobal('fetch', fetchMock)
+  const payload: WorkflowPayload = {
+    title: 'Reload-safe draft', objective: '', summary: '', department: '',
+    start_date: '', end_date: '', budget_minor_units: '', currency: 'VND',
+    target_audience: '', channels: [], kpi_expected: '', notes: '',
+  }
+
+  await expect(authWorkflowService.createPlan(payload, null, 'intent-one')).rejects.toMatchObject({ status: 0 })
+  vi.resetModules()
+  const { authWorkflowService: reloadedService } = await import('./authWorkflow')
+  await expect(reloadedService.createPlan(payload, null, 'intent-one')).resolves.toEqual({ id: 'server-plan-1' })
+  await expect(reloadedService.createPlan(payload, null, 'intent-two')).resolves.toEqual({ id: 'server-plan-2' })
+  await expect(reloadedService.createPlan({ ...payload, title: 'Changed request' }, null, 'intent-one'))
+    .rejects.toMatchObject({ status: 409 })
+
+  expect(created).toBe(2)
+  expect(observedKeys[1]).toBe(observedKeys[0])
+  expect(observedKeys[2]).not.toBe(observedKeys[1])
+  expect(observedKeys[3]).toBe(observedKeys[0])
 })
 
 it('distinguishes an expired session from an authenticated authorization denial', async () => {
@@ -184,7 +228,7 @@ it('sends create, update and submit to the existing workflow endpoints with cont
     target_audience: '', channels: ['Email'], kpi_expected: '', notes: '',
   }
 
-  await authWorkflowService.createPlan(payload, 'checker-1')
+  await authWorkflowService.createPlan(payload, 'checker-1', 'contract-test-intent')
   await authWorkflowService.updatePlan('plan/one', payload, null, 4)
   await authWorkflowService.submitPlan('plan/one', 5)
 

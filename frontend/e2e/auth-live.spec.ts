@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test'
+import { test, expect, type Page, type Route } from '@playwright/test'
 import { resolve } from 'node:path'
 
 const password = process.env.AUTH_SEED_PASSWORD
@@ -75,6 +75,32 @@ async function readPlan(page: Page, id: string): Promise<LivePlan> {
     if (!response.ok) throw new Error(`Could not reload the synthetic plan (HTTP ${response.status}: ${(await response.text()).slice(0, 240)}).`)
     return await response.json() as LivePlan
   }, { base: apiBase, planId: id })
+}
+
+async function readMakerPlans(page: Page) {
+  return page.evaluate(async base => {
+    const response = await fetch(`${base}/workflow/plans?offset=0&limit=100`, { credentials: 'include' })
+    if (!response.ok) throw new Error(`Could not reload the Maker plan list (HTTP ${response.status}).`)
+    return await response.json() as Array<{ id: string; status: string; payload: { title: string } }>
+  }, apiBase)
+}
+
+async function enterDraftTitle(page: Page, title: string, checkerId?: string): Promise<string> {
+  await expect(page.getByLabel('Tên kế hoạch')).toBeVisible()
+  await page.getByLabel('Tên kế hoạch').fill(title)
+  const checkerSelect = page.getByLabel('Người phê duyệt')
+  await expect(checkerSelect.locator('option').nth(1)).toBeAttached()
+  const selectedCheckerId = checkerId ?? await checkerSelect.locator('option').nth(1).getAttribute('value')
+  if (!selectedCheckerId) throw new Error('The seeded Auth E2E has no available Checker account.')
+  await checkerSelect.selectOption(selectedCheckerId)
+  return selectedCheckerId
+}
+
+async function saveDraftResponse(page: Page) {
+  const responsePromise = page.waitForResponse(response => response.url() === `${apiBase}/workflow/plans`
+    && response.request().method() === 'POST')
+  await page.getByRole('button', { name: 'Lưu bản nháp' }).click()
+  return responsePromise
 }
 
 async function waitForReview(page: Page, id: string): Promise<LivePlan> {
@@ -276,4 +302,127 @@ test('lists retained synthetic Auth plans without changing them', async ({ page 
       },
     })))}`)
   }
+})
+
+test('creation intent replays a lost PostgreSQL draft response and rejects changed content', async ({ page, request }) => {
+  test.skip(!password, 'Set AUTH_SEED_PASSWORD in the local test process to use the seeded local account.')
+  await login(page, makerUsername, '/workflow/plans', 'MAKER')
+
+  const title = `Synthetic lost-response ${new Date().toISOString()}`
+  const changedTitle = `${title} changed`
+  await page.goto('/workflow/plans/new')
+  await page.waitForURL(/creation_intent=[\da-f-]{36}/i)
+  const intentId = new URL(page.url()).searchParams.get('creation_intent')
+  if (!intentId) throw new Error('The new form did not receive a creation intent.')
+  expect(intentId).toMatch(/^[\da-f]{8}-[\da-f]{4}-4[\da-f]{3}-[89ab][\da-f]{3}-[\da-f]{12}$/i)
+
+  const checkerId = await enterDraftTitle(page, title)
+  const requestBody = { payload: { title, objective: '', summary: '', department: '', start_date: '', end_date: '',
+    budget_minor_units: '', currency: 'VND', target_audience: '', channels: [], kpi_expected: '', notes: '' },
+  checker_user_id: checkerId }
+  const unauthenticatedIntentAttempt = await request.post(`${apiBase}/workflow/plans`, {
+    data: requestBody,
+    headers: { 'Idempotency-Key': `workflow-create:${intentId}` },
+  })
+  expect(unauthenticatedIntentAttempt.status()).toBe(401)
+
+  let serverCreatedId = ''
+  let serverCreatedStatus = 0
+  const interceptedBody: { value?: Record<string, unknown> } = {}
+  const abortCommittedResponse = async (route: Route) => {
+    if (route.request().method() !== 'POST') {
+      await route.continue()
+      return
+    }
+    interceptedBody.value = route.request().postDataJSON() as Record<string, unknown>
+    const committedResponse = await route.fetch()
+    serverCreatedStatus = committedResponse.status()
+    const body = await committedResponse.json() as { id: string }
+    serverCreatedId = body.id
+    await route.abort('failed')
+  }
+  await page.route(`${apiBase}/workflow/plans`, abortCommittedResponse)
+  await page.getByRole('button', { name: 'Lưu bản nháp' }).click()
+  await expect(page.getByRole('alert').filter({ hasText: 'Không nhận được xác nhận từ máy chủ' })).toBeVisible()
+  expect(serverCreatedStatus).toBe(201)
+  expect(serverCreatedId).toMatch(/^[0-9a-f-]{36}$/i)
+  expect((interceptedBody.value?.payload as { title?: string } | undefined)?.title).toBe(title)
+  expect(interceptedBody.value?.checker_user_id).toBe(checkerId)
+  await page.unroute(`${apiBase}/workflow/plans`, abortCommittedResponse)
+
+  await expect.poll(() => new URL(page.url()).searchParams.get('creation_pending')).toBe('1')
+  const lostResponseUrl = page.url()
+  await page.reload()
+  expect(page.url()).toBe(lostResponseUrl)
+  expect(new URL(page.url()).searchParams.get('creation_intent')).toBe(intentId)
+  await expect(page.getByRole('heading', { name: 'Chưa xác định được kết quả tạo bản nháp' })).toBeVisible()
+
+  const listPagePromise = page.context().waitForEvent('page')
+  await page.getByRole('link', { name: 'Mở danh sách trong tab mới' }).click()
+  const listPage = await listPagePromise
+  await expect(listPage.getByRole('heading', { name: 'Kế hoạch của tôi' })).toBeVisible()
+  await expect(listPage.getByRole('link', { name: new RegExp(title) })).toBeVisible()
+  await listPage.close()
+  expect((await readMakerPlans(page)).filter(plan => plan.payload.title === title)).toHaveLength(1)
+
+  await enterDraftTitle(page, title, checkerId)
+  await page.getByRole('button', { name: 'Tôi đã kiểm tra — cho phép thử lại' }).click()
+  const replayResponse = await saveDraftResponse(page)
+  expect(replayResponse.status()).toBe(201)
+  const replayedPlan = await replayResponse.json() as { id: string }
+  expect(replayedPlan.id).toBe(serverCreatedId)
+  await expect(page).toHaveURL(new RegExp(`/workflow/plans/${serverCreatedId}$`))
+
+  await page.goto('/workflow/plans/new')
+  await page.waitForURL(/creation_intent=[\da-f-]{36}/i)
+  const freshIntentId = new URL(page.url()).searchParams.get('creation_intent')
+  if (!freshIntentId) throw new Error('A new form did not receive a creation intent.')
+  expect(freshIntentId).toMatch(/^[\da-f-]{36}$/i)
+  expect(freshIntentId).not.toBe(intentId)
+  await enterDraftTitle(page, title, checkerId)
+  const freshIntentResponse = await saveDraftResponse(page)
+  expect(freshIntentResponse.status()).toBe(201)
+  const freshPlan = await freshIntentResponse.json() as { id: string }
+  expect(freshPlan.id).not.toBe(serverCreatedId)
+  await expect(page).toHaveURL(new RegExp(`/workflow/plans/${freshPlan.id}$`))
+
+  await page.goto(`/workflow/plans/new?creation_intent=${encodeURIComponent(intentId)}&creation_pending=1`)
+  await expect(page.getByRole('heading', { name: 'Chưa xác định được kết quả tạo bản nháp' })).toBeVisible()
+  await enterDraftTitle(page, changedTitle, checkerId)
+  await page.getByRole('button', { name: 'Tôi đã kiểm tra — cho phép thử lại' }).click()
+  const changedPayloadResponse = await saveDraftResponse(page)
+  expect(changedPayloadResponse.status()).toBe(409)
+  const conflict = await changedPayloadResponse.json() as { code: string }
+  expect(conflict.code).toBe('IDEMPOTENCY_CONFLICT')
+  await expect(page.getByRole('heading', { name: 'Ý định tạo này đã được dùng với nội dung khác' })).toBeVisible()
+  await expect(page.getByText(/Máy chủ không tạo thêm bản nháp/)).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Mở biểu mẫu mới' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Lưu bản nháp' })).toBeDisabled()
+  await page.getByRole('link', { name: 'Mở biểu mẫu mới' }).click()
+  await page.waitForURL(/creation_intent=[\da-f-]{36}/i)
+  expect(new URL(page.url()).searchParams.get('creation_intent')).not.toBe(intentId)
+
+  const matchingDrafts = (await readMakerPlans(page)).filter(plan => plan.payload.title === title)
+  expect(matchingDrafts).toHaveLength(2)
+  expect(matchingDrafts.every(plan => plan.status === 'DRAFT')).toBe(true)
+  expect((await readMakerPlans(page)).filter(plan => plan.payload.title === changedTitle)).toHaveLength(0)
+  const createdEventCounts: number[] = []
+  for (const draft of matchingDrafts) {
+    const persisted = await readPlan(page, draft.id)
+    const createdEvents = persisted.history.filter(event => event.action === 'CREATED').length
+    expect(createdEvents).toBe(1)
+    createdEventCounts.push(createdEvents)
+  }
+
+  console.log(`Creation intent E2E evidence: ${JSON.stringify({
+    committedResponseAbortedBeforeBrowser: serverCreatedStatus === 201,
+    reloadKeptIntent: true,
+    sameIntentReturnedSamePlan: replayedPlan.id === serverCreatedId,
+    freshIntentCreatedDifferentPlan: freshPlan.id !== serverCreatedId,
+    changedPayloadStatus: changedPayloadResponse.status(),
+    draftCountForOriginalPayload: matchingDrafts.length,
+    changedPayloadDraftCount: 0,
+    createdEventCountPerDraft: createdEventCounts,
+    unauthenticatedSameIntentStatus: unauthenticatedIntentAttempt.status(),
+  })}`)
 })

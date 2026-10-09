@@ -340,7 +340,7 @@ finally:
         throw 'Auth E2E URL, API URL, and trusted-origin configuration do not match the isolated ports.'
     }
 
-    Write-Host 'Running the two Auth E2E cases against the disposable PostgreSQL-backed API...'
+    Write-Host 'Running the three Auth E2E cases against the disposable PostgreSQL-backed API...'
     Push-Location $frontendRoot
     try {
         $playwrightArgs = @(
@@ -360,7 +360,7 @@ finally:
 
     $report = Get-Content -LiteralPath $playwrightReport -Raw | ConvertFrom-Json
     $stats = $report.stats
-    if ($null -eq $stats -or $stats.expected -ne 2 -or $stats.skipped -ne 0 -or
+    if ($null -eq $stats -or $stats.expected -ne 3 -or $stats.skipped -ne 0 -or
         $stats.unexpected -ne 0 -or $stats.flaky -ne 0) {
         $expected = if ($null -ne $stats) { $stats.expected } else { 'unknown' }
         $skipped = if ($null -ne $stats) { $stats.skipped } else { 'unknown' }
@@ -369,7 +369,7 @@ finally:
         throw "Auth E2E did not meet the pass gate (expected=$expected, skipped=$skipped, unexpected=$unexpected, flaky=$flaky)."
     }
 
-    Write-Host 'AUTH E2E PASS: 2 passed; 0 skipped; 0 unexpected; 0 flaky.'
+    Write-Host 'AUTH E2E PASS: 3 passed; 0 skipped; 0 unexpected; 0 flaky.'
     $completed = $true
 }
 catch {

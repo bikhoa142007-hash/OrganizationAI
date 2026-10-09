@@ -138,3 +138,23 @@ Không chạy kiểm tra trong lượt này. Vì vậy khả năng build/test c�
 - **Assumptions:** `e85363e` là baseline đích theo yêu cầu; lấy remote-tracking ref vừa fetch của nhánh đồng đội làm trạng thái cần review; không xem tên “microservices” là kiến trúc đã được chứng minh.
 - **Known limitations:** chưa thực thi tree teammate; chưa chứng minh inference Local VLM thật; artifact save mới của Auth E2E chưa được verify; còn hai quyết định role/recommendation cần xác nhận.
 - **Next safe work package:** sau khi người dùng cho phép tích hợp, xử lý budget zero và audit override trước; giữ nguyên thay đổi e853; sau đó hòa nhập từng nhóm frontend và chạy verification trong môi trường cô lập.
+
+## Follow-up 2026-10-10 — Auth creation intent sau reload
+
+### Hành vi và quyền
+
+- Query `creation_intent` là UUID gắn với một ý định tạo form. Frontend chuyển nó thành header `Idempotency-Key: workflow-create:<UUID>`; đây không phải cookie, bearer token hay thông tin đăng nhập. `creation_pending=1` chỉ giúp UI cảnh báo khi reload sau kết quả mạng không rõ.
+- `POST /api/workflow/plans` vẫn yêu cầu Maker session và kiểm tra Checker ở backend. Backend truy vấn key cùng `maker_id`, so sánh hash chuẩn hóa của payload và Checker. Cùng chủ sở hữu/key/body trả lại draft đã tồn tại; body khác trả HTTP 409 với `IDEMPOTENCY_CONFLICT`, không thêm draft hoặc `CREATED` event. Form dùng intent UUID mới khi bắt đầu ý định tạo mới.
+- UI hiện hướng dẫn kiểm tra danh sách sau phản hồi không rõ. Nếu cùng intent được gửi với nội dung khác, UI báo máy chủ không tạo thêm draft, khóa thao tác tạo tiếp bằng intent đó và dẫn tới danh sách hoặc form mới.
+- Test quyền gửi cùng key dưới Maker khác: backend tạo draft riêng cho Maker đó, không trả draft của người đầu; đọc draft người khác vẫn 404. Gửi cùng key không có session vẫn 401. Các kiểm tra này xác nhận key không cấp quyền và không vượt qua owner check.
+
+### Hồi quy E2E và bằng chứng
+
+- `frontend/e2e/auth-live.spec.ts` có thêm một ca trình duyệt trên API thật: `route.fetch()` gửi POST tới backend PostgreSQL tạm, đợi response 201 chứa plan ID rồi cố ý abort response trước khi trình duyệt nhận. Sau reload URL và intent phải giữ nguyên; Maker kiểm tra danh sách, nhập lại đúng payload, retry và nhận cùng plan ID. Ca này tiếp tục tạo form mới với cùng payload nhưng intent mới, rồi gửi payload khác dưới intent cũ để kiểm tra 409, UI guidance, số draft và `CREATED` event đã lưu.
+- Ca E2E gửi cùng idempotency header từ API context không có cookie và yêu cầu 401. Test tích hợp backend kiểm tra thêm key cùng chủ sở hữu, khác body, và phạm vi Maker khác.
+- `scripts/run-auth-postgres-e2e.ps1` nay yêu cầu đúng 3 test kỳ vọng, 0 skipped, 0 unexpected và 0 flaky; retries Playwright vẫn bằng 0. Test reporter JSON và process logs được archive qua bộ lọc redaction của script sau lượt chạy thành công.
+- Auth E2E trên container PostgreSQL 16 dùng tmpfs: **3 passed, 0 skipped, 0 unexpected, 0 flaky**. Migration xác nhận ở `20261009_08` và unique index `uq_auth_workflow_plans_maker_creation_key` tồn tại. Cấu hình dùng `MOCK_VLM`, SQLite Demo riêng trong temp; script dừng container riêng của lần chạy thành công, không báo lỗi cleanup. Không dùng DB/container ứng dụng có sẵn hoặc model thật.
+- JSON Playwright và logs đã lưu tại `docs/integration/evidence/auth-postgres-e2e/dad1ec0cfc874550b95b983eaf3d0d31/`. Bản archive xác nhận `expected=3`, `skipped=0`, `unexpected=0`, `flaky=0`; bản ghi E2E cho thấy response đã commit rồi bị chặn khỏi browser, reload giữ intent, retry trả cùng plan, intent mới tạo plan khác, payload đổi nhận 409, hai draft gốc có một `CREATED` event mỗi bản, payload đổi không tạo draft và request không cookie nhận 401. Quét 5 file archive không thấy raw credential, JWT, chuỗi PostgreSQL có mật khẩu hoặc private key.
+- Backend: `.venv-test-20261009\\Scripts\\python.exe -m pytest tests/integration/test_auth_workflow.py tests/integration/test_rbac_validation.py -q` — **56 passed**, 1 Starlette/httpx deprecation warning. Bộ focused test idempotency chạy riêng cũng **1 passed**.
+- Frontend: `npm run test -- --maxWorkers=1 --pool=threads --reporter=verbose` — **17 files / 142 tests passed**; `npm run typecheck` — pass; `npm run build` — pass. Playwright discovery thấy đúng 3 ca; Auth E2E spec TypeScript được kiểm tra độc lập — pass. PowerShell parser và `git diff --check` — pass.
+- Các kết quả trên là lượt chạy của tree local sau follow-up, không lấy lại kết quả baseline/user-reported trước đó. Không commit, push, merge main hoặc deploy trong lượt này.

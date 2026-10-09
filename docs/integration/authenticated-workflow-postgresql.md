@@ -61,8 +61,13 @@ Draft creation accepts an optional `Idempotency-Key` header (1–200 characters)
 scoped to the authenticated Maker. The server stores a hash of the submitted
 payload and Checker assignment under a unique constraint: retrying the same
 intent returns the original draft, while reusing a key with changed data returns
-409. The Auth frontend retains the key across network/5xx retries for the same
-form data and clears it after a success or client error.
+409 with code `IDEMPOTENCY_CONFLICT`. The Auth frontend stores a per-form intent
+UUID in the `creation_intent` query parameter and sends it as
+`workflow-create:<UUID>`. After an uncertain network result, it retains that
+intent across reload; the Maker re-enters the same payload to retry. A new form
+gets a new intent, even when its payload matches an earlier plan. The UUID is
+only an idempotency identifier: every request still requires the Maker session
+and backend ownership checks.
 
 Submission commits the immutable version and approval round before starting AI
 evaluation. The bounded orchestrator loads only private media whose hashes

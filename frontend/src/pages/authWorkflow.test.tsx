@@ -270,6 +270,45 @@ it('requires an override explanation and shows Checker API errors', async () => 
   expect(await screen.findByRole('alert')).toHaveTextContent('Round is no longer active.')
 })
 
+it('keeps a human-review recommendation separate from the Checker final action', async () => {
+  vi.spyOn(authService, 'me').mockResolvedValue(checker)
+  const plan = planFixture()
+  const evaluation = plan.ai_evaluations[0].evaluation!
+  plan.ai_evaluations[0].status = 'SUCCEEDED'
+  plan.ai_evaluations[0].failure_reason = null
+  evaluation.status = 'SUCCEEDED'
+  evaluation.model_version = 'mock-1'
+  evaluation.media_result = 'PASS'
+  evaluation.media_confidence = 0.8
+  evaluation.feasibility_score = 71
+  evaluation.feasibility_confidence = 0.9
+  evaluation.proposed_action = 'RECOMMEND_HUMAN_REVIEW'
+  evaluation.agent_errors = []
+  plan.engine_decisions[0].decision.reason = 'Human Review required: MEDIA_CONFIDENCE.'
+  plan.engine_decisions[0].decision.rule_checks = [{
+    rule_id: 'MEDIA_CONFIDENCE', result: 'FAIL', observed_value: 0.8,
+    applicable_rule_or_limit: 'media_confidence >= 0.85', evidence_refs: [],
+  }]
+  vi.spyOn(authWorkflowService, 'getPlan').mockResolvedValue(plan)
+  vi.spyOn(authWorkflowService, 'getAttachment').mockResolvedValue(new Blob())
+  const rejected = { ...plan, status: 'REJECTED' as const, processing_stage: 'COMPLETED' as const }
+  const decide = vi.spyOn(authWorkflowService, 'decide').mockResolvedValue(rejected)
+  renderDetail()
+
+  expect(await screen.findByText('Đề xuất Checker xem xét')).toBeVisible()
+  expect(screen.getByText('Engine đã chuyển Checker; hồ sơ đang chờ quyết định.')).toBeVisible()
+  fireEvent.click(screen.getByRole('button', { name: 'Phê duyệt' }))
+  expect(await screen.findByRole('alert')).toHaveTextContent('Nhập lý do override')
+  expect(decide).not.toHaveBeenCalled()
+
+  fireEvent.change(screen.getByLabelText('Lý do hoặc nhận xét'), { target: { value: 'The review found no blocking issue.' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Từ chối' }))
+  await waitFor(() => expect(decide).toHaveBeenCalledWith(
+    'plan-1', 1, 'REJECTED', 'The review found no blocking issue.', '',
+  ))
+  expect(await screen.findByText('Máy chủ đã xác nhận từ chối hồ sơ.')).toBeVisible()
+})
+
 it('lets only the assigned Checker explicitly recover an interrupted evaluation', async () => {
   vi.spyOn(authService, 'me').mockResolvedValue(checker)
   const queued = planFixture()

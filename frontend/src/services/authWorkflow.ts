@@ -2,8 +2,6 @@ import { AuthApiError } from './auth'
 import type { WorkflowAuditPage, WorkflowChecker, WorkflowPayload, WorkflowPlan } from '../types/authWorkflow'
 import { resolveApiBaseUrl } from './apiBaseUrl'
 
-const pendingDraftKeys = new Map<string, string>()
-
 function planListQuery(offset: number, limit: number) {
   return new URLSearchParams({ offset: String(offset), limit: String(limit) })
 }
@@ -43,11 +41,6 @@ async function request<T>(path: string, method: 'GET' | 'POST' | 'PUT', body?: u
   if (response.status === 204) return undefined as T
   const data: unknown = await response.json().catch(() => null)
   if (!response.ok) {
-    if (response.status < 500 && idempotencyKey) {
-      for (const [fingerprint, key] of pendingDraftKeys) {
-        if (key === idempotencyKey) pendingDraftKeys.delete(fingerprint)
-      }
-    }
     announceAuthFailure(response.status)
     throw workflowApiError(response, data)
   }
@@ -70,6 +63,10 @@ function workflowApiError(response: Response, data: unknown): AuthApiError {
 
 function encoded(value: string) {
   return encodeURIComponent(value)
+}
+
+function creationIntentKey(intentId: string) {
+  return `workflow-create:${intentId}`
 }
 
 export const authWorkflowService = {
@@ -95,20 +92,9 @@ export const authWorkflowService = {
     return request(`/workflow/plans/${encoded(planId)}`, 'GET')
   },
 
-  createPlan(payload: WorkflowPayload, checkerUserId: string | null): Promise<WorkflowPlan> {
-    const fingerprint = JSON.stringify({ payload, checkerUserId })
-    const idempotencyKey = pendingDraftKeys.get(fingerprint) ?? crypto.randomUUID()
-    pendingDraftKeys.set(fingerprint, idempotencyKey)
+  createPlan(payload: WorkflowPayload, checkerUserId: string | null, intentId: string): Promise<WorkflowPlan> {
+    const idempotencyKey = creationIntentKey(intentId)
     return request<WorkflowPlan>('/workflow/plans', 'POST', { payload, checker_user_id: checkerUserId }, idempotencyKey)
-      .then(plan => {
-        pendingDraftKeys.delete(fingerprint)
-        return plan
-      })
-      .catch(failure => {
-        if (failure instanceof AuthApiError && failure.status >= 500) throw failure
-        if (!(failure instanceof AuthApiError) || failure.status !== 0) pendingDraftKeys.delete(fingerprint)
-        throw failure
-      })
   },
 
   updatePlan(planId: string, payload: WorkflowPayload, checkerUserId: string | null, expectedRevision: number): Promise<WorkflowPlan> {

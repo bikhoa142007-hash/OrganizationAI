@@ -1,6 +1,6 @@
 import { ArrowLeft, Check, FileImage, RefreshCw, Send, UploadCloud } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { AuthApiError } from '../services/auth'
 import { authWorkflowService } from '../services/authWorkflow'
 import type { WorkflowChecker, WorkflowPayload, WorkflowPlan } from '../types/authWorkflow'
@@ -22,9 +22,17 @@ const textFieldLimits: Array<[Exclude<keyof WorkflowPayload, 'channels'>, number
   ['target_audience', 2000, 'Đối tượng mục tiêu'], ['kpi_expected', 2000, 'KPI kỳ vọng'], ['notes', 5000, 'Ghi chú'],
 ]
 
+function isCreationIntentId(value: string | null): value is string {
+  return Boolean(value && /^[\da-f]{8}-[\da-f]{4}-4[\da-f]{3}-[89ab][\da-f]{3}-[\da-f]{12}$/i.test(value))
+}
+
 export function AuthenticatedWorkflowFormPage() {
   const { planId } = useParams()
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const [creationIntentId] = useState(() => isCreationIntentId(searchParams.get('creation_intent'))
+    ? searchParams.get('creation_intent')! : crypto.randomUUID())
+  const resumedCreateIntent = useRef(!planId && searchParams.get('creation_pending') === '1')
   const [plan, setPlan] = useState<WorkflowPlan | null>(null)
   const [payload, setPayload] = useState<WorkflowPayload>(emptyPayload)
   const [channelsText, setChannelsText] = useState('')
@@ -43,7 +51,23 @@ export function AuthenticatedWorkflowFormPage() {
   const [planLoading, setPlanLoading] = useState(Boolean(planId))
   const [busyAction, setBusyAction] = useState<BusyAction>(null)
   const [revisionConflict, setRevisionConflict] = useState(false)
-  const [unknownCreate, setUnknownCreate] = useState(false)
+  const [creationIntentConflict, setCreationIntentConflict] = useState(false)
+  const [unknownCreate, setUnknownCreate] = useState(resumedCreateIntent.current)
+
+  useEffect(() => {
+    if (planId || searchParams.get('creation_intent') === creationIntentId) return
+    const next = new URLSearchParams(searchParams)
+    next.set('creation_intent', creationIntentId)
+    setSearchParams(next, { replace: true })
+  }, [creationIntentId, planId, searchParams, setSearchParams])
+
+  function setCreatePending(pending: boolean) {
+    const next = new URLSearchParams(searchParams)
+    next.set('creation_intent', creationIntentId)
+    if (pending) next.set('creation_pending', '1')
+    else next.delete('creation_pending')
+    setSearchParams(next, { replace: true })
+  }
 
   const loadCheckers = useCallback(async () => {
     setCheckersLoading(true)
@@ -68,7 +92,7 @@ export function AuthenticatedWorkflowFormPage() {
     setPlanError(null)
     setApiError(null)
     setRevisionConflict(false)
-    setUnknownCreate(false)
+    setUnknownCreate(!planId && resumedCreateIntent.current)
     setPlanLoading(Boolean(planId))
 
     if (planId) {
@@ -158,11 +182,16 @@ export function AuthenticatedWorkflowFormPage() {
     let currentAction: WorkflowAction = 'saving'
     setBusyAction('saving')
     try {
-      let saved = currentPlan
-        ? hasUnsavedChanges
+      let saved: WorkflowPlan
+      if (currentPlan) {
+        saved = hasUnsavedChanges
           ? await authWorkflowService.updatePlan(currentPlan.id, payload, checkerId || null, currentPlan.revision)
           : currentPlan
-        : await authWorkflowService.createPlan(payload, checkerId || null)
+      } else {
+        setCreatePending(true)
+        saved = await authWorkflowService.createPlan(payload, checkerId || null, creationIntentId)
+        setCreatePending(false)
+      }
       currentPlan = saved
       setPlan(saved)
 
@@ -193,8 +222,13 @@ export function AuthenticatedWorkflowFormPage() {
       const failure = asApiError(reason, 'Không thể hoàn tất thao tác với kế hoạch.')
       setApiError(failure)
       setFailedAction(currentAction)
-      setRevisionConflict(failure.status === 409 || failure.code === 'CONFLICT')
-      setUnknownCreate(!currentPlan && currentAction === 'saving' && failure.status === 0 && failure.code === 'NETWORK_ERROR')
+      setRevisionConflict(failure.code === 'CONFLICT')
+      const intentConflict = !currentPlan && currentAction === 'saving' && failure.code === 'IDEMPOTENCY_CONFLICT'
+      setCreationIntentConflict(intentConflict)
+      const createResultUnresolved = !currentPlan && currentAction === 'saving'
+        && (failure.status === 0 || failure.status >= 500 || failure.status === 409)
+      setUnknownCreate(createResultUnresolved && !intentConflict)
+      if (!currentPlan && currentAction === 'saving' && (!createResultUnresolved || intentConflict)) setCreatePending(false)
 
       if (currentPlan) {
         try {
@@ -256,9 +290,15 @@ export function AuthenticatedWorkflowFormPage() {
     </section>}
     {unknownCreate && <section className="auth-workflow-state is-error" aria-labelledby="unknown-create-title">
       <h2 id="unknown-create-title">Chưa xác định được kết quả tạo bản nháp</h2>
-      <p>Kết nối đã ngắt trước khi xác nhận phản hồi. Hãy kiểm tra danh sách trước khi thử tạo lại để tránh tạo bản nháp trùng.</p>
+      <p>Ý định tạo này vẫn được giữ trong địa chỉ trang sau khi tải lại. Hãy kiểm tra danh sách trước khi gửi lại cùng nội dung; mở một biểu mẫu mới nếu muốn tạo kế hoạch khác.</p>
       <div className="button-row"><Link className="button button-secondary" to="/workflow/plans" target="_blank" rel="noreferrer">Mở danh sách trong tab mới</Link>
         <button className="button button-secondary" type="button" onClick={() => setUnknownCreate(false)}>Tôi đã kiểm tra — cho phép thử lại</button></div>
+    </section>}
+    {creationIntentConflict && <section className="auth-workflow-state is-conflict" role="alert" aria-labelledby="creation-intent-conflict-title">
+      <h2 id="creation-intent-conflict-title">Ý định tạo này đã được dùng với nội dung khác</h2>
+      <p>Máy chủ không tạo thêm bản nháp. Mở danh sách để kiểm tra bản đã tạo; nếu muốn tạo kế hoạch khác, hãy bắt đầu một biểu mẫu mới.</p>
+      <div className="button-row"><Link className="button button-secondary" to="/workflow/plans" target="_blank" rel="noreferrer">Mở danh sách kế hoạch</Link>
+        <Link className="button button-primary" to="/workflow/plans/new" reloadDocument>Mở biểu mẫu mới</Link></div>
     </section>}
     {notice && <div className="auth-workflow-alert is-success" role="status"><Check /><p>{notice}</p></div>}
     {locked && <div className="auth-workflow-alert is-review" role="status"><p>Kế hoạch đã gửi hoặc đã duyệt nên biểu mẫu chỉ đọc. Trạng thái hiện tại: {plan?.status}.</p></div>}
@@ -269,7 +309,7 @@ export function AuthenticatedWorkflowFormPage() {
     </section>}
 
     <form className="auth-workflow-form" noValidate onSubmit={(event: FormEvent) => { event.preventDefault(); void save(true) }}>
-      <fieldset disabled={busyAction !== null || locked}>
+      <fieldset disabled={busyAction !== null || locked || creationIntentConflict}>
         <div className="auth-workflow-fields">
           <label className="auth-field" htmlFor="workflow-title">Tên kế hoạch
             <input id="workflow-title" maxLength={200} value={payload.title} aria-invalid={Boolean(fieldErrors.title)} aria-describedby={fieldErrors.title ? 'workflow-title-error' : undefined} onChange={event => update('title', event.target.value)} />
@@ -347,8 +387,8 @@ export function AuthenticatedWorkflowFormPage() {
       {fileValidationPending && <p className="auth-workflow-operation" role="status" aria-live="polite">Đang kiểm tra kích thước ảnh…</p>}
       {busyAction && <p className="auth-workflow-operation" role="status" aria-live="polite">{operationLabel(busyAction)}</p>}
       <div className="auth-workflow-form-footer"><p>Gửi duyệt sẽ lưu snapshot và chạy đánh giá theo cấu hình backend. Giao diện không ước lượng phần trăm tiến độ.</p><div className="button-row">
-        <button className="button button-secondary" type="button" disabled={busyAction !== null || fileValidationPending || locked || unknownCreate} onClick={() => void save(false)}>{busyAction === 'saving' ? 'Đang lưu…' : 'Lưu bản nháp'}</button>
-        <button className="button button-primary" type="submit" disabled={busyAction !== null || fileValidationPending || locked || unknownCreate || checkersLoading || checkers.length === 0}><Send /> {busyAction === 'submitting' ? 'Đang gửi và chờ phản hồi…' : busyAction === 'uploading' ? 'Đang tải ảnh lên…' : 'Gửi duyệt'}</button>
+        <button className="button button-secondary" type="button" disabled={busyAction !== null || fileValidationPending || locked || unknownCreate || creationIntentConflict} onClick={() => void save(false)}>{busyAction === 'saving' ? 'Đang lưu…' : 'Lưu bản nháp'}</button>
+        <button className="button button-primary" type="submit" disabled={busyAction !== null || fileValidationPending || locked || unknownCreate || creationIntentConflict || checkersLoading || checkers.length === 0}><Send /> {busyAction === 'submitting' ? 'Đang gửi và chờ phản hồi…' : busyAction === 'uploading' ? 'Đang tải ảnh lên…' : 'Gửi duyệt'}</button>
       </div></div>
     </form>
   </section>
@@ -410,6 +450,7 @@ function asApiError(reason: unknown, fallback: string) {
 }
 
 function apiFailureHeading(error: AuthApiError | null, action: WorkflowAction) {
+  if (error?.code === 'IDEMPOTENCY_CONFLICT') return 'Ý định tạo bản nháp đã được dùng với nội dung khác'
   if (error?.status === 404) return 'Không tìm thấy kế hoạch'
   if (error?.status === 409 || error?.code === 'CONFLICT') return 'Kế hoạch đã thay đổi trên máy chủ'
   if (error?.status === 422 || error?.code === 'VALIDATION_ERROR') return 'Dữ liệu chưa được chấp nhận'
@@ -420,6 +461,7 @@ function apiFailureHeading(error: AuthApiError | null, action: WorkflowAction) {
 }
 
 function apiFailureText(error: AuthApiError | null, action: WorkflowAction) {
+  if (error?.code === 'IDEMPOTENCY_CONFLICT') return 'Ý định này đã lưu nội dung khác trước đó. Máy chủ không tạo bản nháp mới. Kiểm tra danh sách hoặc mở một biểu mẫu mới để bắt đầu ý định khác.'
   if (error?.status === 404) return 'Kế hoạch không còn tồn tại hoặc không thuộc phạm vi tài khoản hiện tại.'
   if (error?.status === 409 || error?.code === 'CONFLICT') return `${error.message} Các giá trị bạn đang nhập vẫn được giữ; hãy kiểm tra revision mới nhất trước khi lưu lại.`
   if (error?.status === 422 || error?.code === 'VALIDATION_ERROR') return error.message

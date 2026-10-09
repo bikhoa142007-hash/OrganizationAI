@@ -57,6 +57,16 @@ RuleCheck = { rule_id, result: PASS | FAIL | UNKNOWN, observed_value: JSON value
 
 budget_validation = { configuration_id: string | null, configuration_hash: InputHash | null, currency: string | null, budget_minor_units: decimal integer string | null, limit_minor_units: decimal integer string | null, result: PASS | FAIL | UNKNOWN }. Use same-currency integer minor units, never floating-point or LLM arithmetic. Values must be nonnegative, currency must have configured precision, and missing/ambiguous/inactive configuration means UNKNOWN. Select the uniquely applicable active configuration; persist the exact configuration and calculation per round. Equality passes. An exceeded limit requires Human Review, not rejection. Unknown policy configuration still produces a versioned fallback policy snapshot describing the missing configuration; it must not masquerade as the applicable business policy.
 
+## Recommendation, routing and final Checker decision
+
+These fields represent different parts of the workflow:
+
+- `Evaluation.proposed_action` is an advisory evaluation recommendation (`RECOMMEND_AUTO_APPROVAL` or `RECOMMEND_HUMAN_REVIEW`). `RECOMMEND_HUMAN_REVIEW` means the submission needs a Checker; it is not a rejection recommendation.
+- `DecisionResult.outcome` is the deterministic policy engine result. `AUTO_APPROVED` is a final automatic approval. `HUMAN_REVIEW_REQUIRED` routes the still-pending, active round to a Checker and is not a final decision.
+- `processing_stage` records that workflow routing state. The Checker later records a separate `HumanDecision.action` (`APPROVED` or `REJECTED`), which closes the round.
+
+The current override rule compares the Checker action with the stored evaluation recommendation: an approval without `override_reason` requires `RECOMMEND_AUTO_APPROVAL`; a rejection without `override_reason` requires `RECOMMEND_HUMAN_REVIEW`. This pairing controls whether the Checker action is recorded as an override; it does not turn `RECOMMEND_HUMAN_REVIEW` into a rejection or force the Checker to choose either action. An absent/failed recommendation requires a nonblank override reason for either action. The API and UI must apply the same rule, and the deterministic engine continues to decide automatic approval versus Checker routing independently.
+
 ## Auto-approval gates and rule IDs
 
 For an eligible submitted plan, AUTO_APPROVED requires every following condition. Any FAIL or UNKNOWN means HUMAN_REVIEW_REQUIRED.
@@ -103,7 +113,7 @@ Before committing any engine or human decision, atomically recheck plan/version/
 
 A stale/closed-round invocation returns CONFLICT (or replays the same successful intent); it cannot reopen an APPROVED/REJECTED plan or overwrite an earlier decision. Failed state guards block mutation, rather than applying Human Review to an already completed round. For an otherwise eligible pending submission, all unmet evaluation/policy gates route to Human Review.
 
-Claim each idempotency key atomically in the authenticated actor/resource/operation scope with a canonical request hash. Same key and same input replays the recorded result; different input or an in-flight duplicate returns CONFLICT. Keep keys for the round's retained history. A fresh retry run creates a new evaluation/run ID without changing old results. Evaluation retries never duplicate final decisions or review notifications (if later implemented); deduplicate review routing effects per round. Final state changes, final-decision record and corresponding audit event commit together. Audit-write failure must prevent an unaudited successful mutation.
+Claim each idempotency key atomically in the authenticated actor/resource/operation scope with a canonical request hash. Same key and same input replays the recorded result; different input or an in-flight duplicate returns CONFLICT. Create clients retain a random per-intent token across reloads; the backend binds that key to the canonical request hash. Each new plan intent gets a fresh token, even when its payload matches a previous plan. This lets a retry after a lost response replay the same draft without sharing a key between separate create intentions. Editing an unresolved request under the old token returns CONFLICT; start a new intent to submit different content. Keep keys for the round's retained history. A fresh retry run creates a new evaluation/run ID without changing old results. Evaluation retries never duplicate final decisions or review notifications (if later implemented); deduplicate review routing effects per round. Final state changes, final-decision record and corresponding audit event commit together. Audit-write failure must prevent an unaudited successful mutation.
 
 ## HumanDecision (separate from EngineDecision outcomes)
 

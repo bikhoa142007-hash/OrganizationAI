@@ -71,7 +71,7 @@ it('creates an incomplete draft and navigates to the server-assigned detail rout
   fireEvent.change(screen.getByLabelText('Tên kế hoạch'), { target: { value: 'Campaign draft' } })
   fireEvent.click(screen.getByRole('button', { name: 'Lưu bản nháp' }))
 
-  await waitFor(() => expect(create).toHaveBeenCalledWith({ ...blankPayload, title: 'Campaign draft' }, null))
+  await waitFor(() => expect(create).toHaveBeenCalledWith({ ...blankPayload, title: 'Campaign draft' }, null, expect.any(String)))
   expect(await screen.findByTestId('current-route')).toHaveTextContent('/workflow/plans/plan-1')
 })
 
@@ -180,11 +180,55 @@ it('submits only after create, upload and submit succeed, using returned revisio
   fireEvent.click(screen.getByRole('button', { name: 'Gửi duyệt' }))
 
   await waitFor(() => expect(submit).toHaveBeenCalledWith('plan-1', 3))
-  expect(create).toHaveBeenCalledWith(requestPayload, checker.id)
+  expect(create).toHaveBeenCalledWith(requestPayload, checker.id, expect.any(String))
   expect(upload).toHaveBeenCalledWith('plan-1', image, 2)
   expect(create.mock.invocationCallOrder[0]).toBeLessThan(upload.mock.invocationCallOrder[0]!)
   expect(upload.mock.invocationCallOrder[0]).toBeLessThan(submit.mock.invocationCallOrder[0]!)
   expect(await screen.findByTestId('current-route')).toHaveTextContent('/workflow/plans/plan-1')
+})
+
+it('reuses the URL creation intent after a reload', async () => {
+  readyCheckers()
+  const intentId = '11111111-1111-4111-8111-111111111111'
+  const create = vi.spyOn(authWorkflowService, 'createPlan')
+    .mockRejectedValueOnce(new AuthApiError(0, 'Connection lost.', 'NETWORK_ERROR'))
+    .mockResolvedValueOnce(planFixture({ payload: { ...blankPayload, title: 'Same intent' } }))
+  const firstPage = renderForm(`/workflow/plans/new?creation_intent=${intentId}`)
+
+  fireEvent.change(screen.getByLabelText('Tên kế hoạch'), { target: { value: 'Same intent' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Lưu bản nháp' }))
+  expect(await screen.findByRole('alert')).toHaveTextContent('Không nhận được xác nhận từ máy chủ')
+  firstPage.unmount()
+
+  renderForm(`/workflow/plans/new?creation_intent=${intentId}&creation_pending=1`)
+  expect(await screen.findByRole('heading', { name: 'Chưa xác định được kết quả tạo bản nháp' })).toBeVisible()
+  fireEvent.click(screen.getByRole('button', { name: 'Tôi đã kiểm tra — cho phép thử lại' }))
+  fireEvent.change(await screen.findByLabelText('Tên kế hoạch'), { target: { value: 'Same intent' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Lưu bản nháp' }))
+  await waitFor(() => expect(create).toHaveBeenCalledTimes(2))
+
+  expect(create).toHaveBeenNthCalledWith(1, { ...blankPayload, title: 'Same intent' }, null, intentId)
+  expect(create).toHaveBeenNthCalledWith(2, { ...blankPayload, title: 'Same intent' }, null, intentId)
+})
+
+it('explains that changed data cannot reuse a consumed creation intent', async () => {
+  readyCheckers()
+  const create = vi.spyOn(authWorkflowService, 'createPlan').mockRejectedValue(new AuthApiError(
+    409, 'The draft request key was already used for different plan data.', 'IDEMPOTENCY_CONFLICT', 'trace-intent-conflict',
+  ))
+  renderForm('/workflow/plans/new?creation_intent=11111111-1111-4111-8111-111111111111&creation_pending=1')
+
+  await screen.findByRole('option', { name: 'Checker One' })
+  fireEvent.change(screen.getByLabelText('Tên kế hoạch'), { target: { value: 'Different content' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Tôi đã kiểm tra — cho phép thử lại' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Lưu bản nháp' }))
+
+  expect(await screen.findByRole('heading', { name: 'Ý định tạo này đã được dùng với nội dung khác' })).toBeVisible()
+  expect(screen.getByText(/Máy chủ không tạo thêm bản nháp/)).toBeVisible()
+  expect(screen.getByRole('link', { name: 'Mở danh sách kế hoạch' })).toHaveAttribute('href', '/workflow/plans')
+  expect(screen.getByRole('link', { name: 'Mở biểu mẫu mới' })).toHaveAttribute('href', '/workflow/plans/new')
+  expect(screen.getByRole('button', { name: 'Lưu bản nháp' })).toBeDisabled()
+  expect(create).toHaveBeenCalledWith({ ...blankPayload, title: 'Different content' }, null, '11111111-1111-4111-8111-111111111111')
 })
 
 it('accepts a zero budget for submission and describes it as a non-negative integer', async () => {
@@ -208,7 +252,7 @@ it('accepts a zero budget for submission and describes it as a non-negative inte
   fireEvent.click(screen.getByRole('button', { name: 'Gửi duyệt' }))
 
   await waitFor(() => expect(submit).toHaveBeenCalledWith('plan-1', 3))
-  expect(create).toHaveBeenCalledWith(payload, checker.id)
+  expect(create).toHaveBeenCalledWith(payload, checker.id, expect.any(String))
   expect(authWorkflowService.uploadAttachment).toHaveBeenCalledWith('plan-1', image, 2)
 })
 

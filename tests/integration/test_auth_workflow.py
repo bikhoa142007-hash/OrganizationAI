@@ -212,6 +212,15 @@ class FakeAuthenticatedTaskProvider:
                                 reported_model_id=self.settings.model_id)
 
 
+class LowConfidenceMediaProvider(FakeAuthenticatedTaskProvider):
+    def evaluate(self, request):
+        analysis = super().evaluate(request)
+        output = dict(analysis.output)
+        output["confidence"] = 0.80
+        return ProviderAnalysis(output, model_revision=analysis.model_revision,
+                                reported_model_id=analysis.reported_model_id)
+
+
 def upload_plan_image(client: TestClient, plan_id: str, revision: int) -> dict:
     response = client.post(
         f"/api/workflow/plans/{plan_id}/attachments",
@@ -393,9 +402,10 @@ def test_admin_audit_endpoint_is_paginated_and_denied_to_maker(workflow_client):
 
 
 def test_draft_creation_replays_an_idempotency_key_without_duplicate_plan_or_event(workflow_client):
-    client, factory, _app = workflow_client
+    client, factory, app = workflow_client
     maker = create_user(factory, "maker.idempotent-create", ("MAKER",))
     checker = create_user(factory, "checker.idempotent-create", ("CHECKER",))
+    other_maker = create_user(factory, "maker.other-idempotent-create", ("MAKER",))
     login(client, maker)
     headers = {"Idempotency-Key": "draft-intent-1"}
     body = {
@@ -408,11 +418,25 @@ def test_draft_creation_replays_an_idempotency_key_without_duplicate_plan_or_eve
     assert first.status_code == replay.status_code == 201
     assert first.json()["id"] == replay.json()["id"]
 
+    client.cookies.clear()
+    unauthenticated_retry = client.post("/api/workflow/plans", json=body, headers=headers)
+    assert unauthenticated_retry.status_code == 401
+    login(client, maker)
+
+    other_client = authenticated_client(app, other_maker)
+    other_owner_same_key = other_client.post("/api/workflow/plans", json=body, headers=headers)
+    assert other_owner_same_key.status_code == 201
+    assert other_owner_same_key.json()["id"] != first.json()["id"]
+    assert other_owner_same_key.json()["maker_id"] == str(other_maker.id)
+    assert other_client.get(f"/api/workflow/plans/{first.json()['id']}").status_code == 404
+
     changed_body = {**body, "payload": {"title": "Different draft"}}
     conflict = client.post("/api/workflow/plans", json=changed_body, headers=headers)
     assert conflict.status_code == 409
+    assert conflict.json()["code"] == "IDEMPOTENCY_CONFLICT"
     with factory() as session:
         assert session.query(AuthWorkflowPlan).filter_by(maker_id=maker.id).count() == 1
+        assert session.query(AuthWorkflowPlan).filter_by(maker_id=other_maker.id).count() == 1
         assert session.query(auth_workflow_application.AuthWorkflowEvent).filter_by(
             plan_id=UUID(first.json()["id"]), action="CREATED",
         ).count() == 1
@@ -588,6 +612,44 @@ def test_authenticated_provider_failure_is_persisted_and_checker_can_review(work
     assert decision.json()["history"][-1]["details"]["override_reason"] == (
         "Approved after checking the submitted media manually."
     )
+
+
+def test_review_recommendation_routes_to_checker_without_deciding_the_final_action(workflow_client):
+    client, _factory, app = workflow_client
+    maker = create_user(_factory, "maker.review-recommendation", ("MAKER",))
+    checker = create_user(_factory, "checker.review-recommendation", ("CHECKER",))
+    login(client, maker)
+    app.state.auth_workflow_configuration = auto_approval_configuration(checker.id)
+    app.state.auth_workflow_provider = AuthenticatedMockVLMProvider("pass", model_version="mock-1")
+    app.state.auth_workflow_media_provider = LowConfidenceMediaProvider("MEDIA_COMPLIANCE")
+    app.state.auth_workflow_strategy_provider = FakeAuthenticatedTaskProvider("STRATEGY_EVALUATION")
+
+    draft = make_plan(client, checker.id, title="Human review recommendation", channels=("social",))
+    draft = upload_plan_image(client, draft["id"], draft["revision"])
+    submitted = submit_plan(client, draft)
+    evaluation = submitted["ai_evaluations"][0]["evaluation"]
+    assert evaluation is not None, json.dumps(submitted, indent=2)
+    assert evaluation["proposed_action"] == "RECOMMEND_HUMAN_REVIEW", json.dumps(submitted, indent=2)
+    assert submitted["engine_decisions"][0]["outcome"] == "HUMAN_REVIEW_REQUIRED"
+    assert submitted["processing_stage"] == "HUMAN_REVIEW_REQUIRED"
+    assert submitted["status"] == "PENDING_APPROVAL"
+
+    checker_client = authenticated_client(app, checker)
+    decision_url = f"/api/workflow/plans/{draft['id']}/rounds/1/decision"
+    approval_without_override = checker_client.post(decision_url, json={
+        "action": "APPROVED", "reason": "Review completed.",
+    })
+    assert approval_without_override.status_code == 422
+
+    rejection = checker_client.post(decision_url, json={
+        "action": "REJECTED", "reason": "The plan needs a measurable KPI.",
+    })
+    assert rejection.status_code == 200, rejection.text
+    assert rejection.json()["status"] == "REJECTED"
+    assert rejection.json()["processing_stage"] == "COMPLETED"
+    final_event = rejection.json()["history"][-1]
+    assert final_event["action"] == "REJECTED"
+    assert final_event["details"]["override_reason"] is None
 
 
 def test_local_vlm_extraction_persists_separately_and_missing_evaluators_route_checker(workflow_client):
