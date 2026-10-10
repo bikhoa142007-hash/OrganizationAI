@@ -32,6 +32,39 @@ it('sends authenticated workflow requests with cookies and without a demo actor 
   expect(JSON.stringify(options)).not.toContain('X-Demo-Actor')
 })
 
+it('lists validated employee pages with encoded filters and cookie authentication', async () => {
+  const employeePage = {
+    items: [{
+      id: 'employee-1', account_id: 'user-1', user_code: 'USR-0001', username: 'maker.one',
+      display_name: 'Maker One', email: 'maker@example.com', phone: null,
+      department: 'Marketing', job_title: 'Planner', employment_start_date: '2022-04-15',
+      employment_status: 'ACTIVE', status: 'ACTIVE', account_status: 'ACTIVE', roles: ['MAKER'], effective_permissions: [],
+    }],
+    offset: 25, limit: 25, total: 26,
+  }
+  const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify(employeePage), { status: 200 }))
+  vi.stubGlobal('fetch', fetchMock)
+
+  await expect(authWorkflowService.listEmployees({
+    query: 'Maker & Plan', role: 'MAKER', status: 'ACTIVE', department: 'Marketing',
+    job_title: 'Planner', employment_status: 'ACTIVE', offset: 25, limit: 25,
+  })).resolves.toEqual(employeePage)
+
+  const [url, options] = fetchMock.mock.calls[0] as [string, RequestInit]
+  const parsed = new URL(url)
+  expect(parsed.pathname).toContain('/workflow/employees')
+  expect(parsed.searchParams.get('query')).toBe('Maker & Plan')
+  expect(parsed.searchParams.get('role')).toBe('MAKER')
+  expect(parsed.searchParams.get('status')).toBe('ACTIVE')
+  expect(parsed.searchParams.get('department')).toBe('Marketing')
+  expect(parsed.searchParams.get('job_title')).toBe('Planner')
+  expect(parsed.searchParams.get('employment_status')).toBe('ACTIVE')
+  expect(parsed.searchParams.get('offset')).toBe('25')
+  expect(options.method).toBe('GET')
+  expect(options.credentials).toBe('include')
+  expect(options.body).toBeUndefined()
+})
+
 it('uses an explicit authenticated POST for stale evaluation recovery', async () => {
   const fetchMock = vi.fn().mockResolvedValue(new Response('{}', { status: 200 }))
   vi.stubGlobal('fetch', fetchMock)

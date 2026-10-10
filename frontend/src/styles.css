@@ -806,6 +806,24 @@ h1, h2, h3, h4 { letter-spacing: 0; }
 .auth-plan-filter-controls input, .auth-plan-filter-controls select { width: 100%; min-height: 40px; min-width: 0; border: 1px solid var(--line-strong); border-radius: 5px; background: white; padding: 8px 10px; color: var(--ink); font: inherit; font-weight: 450; }
 .auth-plan-filter-controls input:focus-visible, .auth-plan-filter-controls select:focus-visible, .auth-plan-filter-controls button:focus-visible, .auth-plan-filter-chips button:focus-visible, .auth-plan-filter-disclosure > summary:focus-visible { outline: 3px solid rgba(22, 131, 114, .35); outline-offset: 2px; }
 .auth-plan-filter-controls small { color: var(--muted); font-size: .7rem; font-weight: 450; }
+.auth-employee-filter-actions { display: flex; flex-wrap: wrap; align-items: end; gap: 8px; }
+.auth-employee-table-caption { padding: 10px 16px; color: var(--muted); font-size: .76rem; text-align: left; }
+.auth-employee-create { border: 1px solid var(--line); border-radius: 8px; background: var(--surface); padding: 14px 16px; }
+.auth-employee-create > summary { color: var(--ink); font-weight: 750; cursor: pointer; }
+.auth-employee-actions { display: grid; min-width: 180px; gap: 8px; }
+.auth-employee-actions details { display: grid; gap: 6px; }
+.auth-employee-actions details > summary { color: var(--brand-dark); font-weight: 700; cursor: pointer; }
+.auth-employee-actions details label, .auth-role-permissions label { display: flex; align-items: flex-start; gap: 7px; color: var(--ink); font-size: .78rem; font-weight: 550; white-space: normal; }
+.auth-employee-actions details input[type="checkbox"], .auth-role-permissions input[type="checkbox"] { width: 16px; min-height: 16px; flex: 0 0 16px; accent-color: var(--brand-dark); }
+.auth-employee-actions details form { display: grid; gap: 7px; min-width: 230px; }
+.auth-employee-actions details form label { display: grid; gap: 4px; }
+.auth-employee-actions details form input { min-height: 34px; border: 1px solid var(--line-strong); border-radius: 5px; padding: 6px 8px; font: inherit; }
+.auth-role-permissions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 16px; margin: 14px 0; border: 1px solid var(--line); border-radius: 7px; padding: 12px; }
+.auth-role-permissions legend { padding: 0 5px; color: var(--ink); font-weight: 750; }
+.auth-role-permissions code { display: block; color: var(--muted); font-size: .67rem; }
+.auth-handover-link { display: grid; gap: 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); padding: 16px; }
+.auth-handover-link h2, .auth-handover-link p { margin: 0; }
+.auth-handover-link input { width: 100%; min-width: 0; border: 1px solid var(--line-strong); border-radius: 5px; padding: 9px; font: inherit; }
 .auth-plan-search-field { grid-column: span 2; }
 .auth-plan-clear-filters { align-self: end; min-height: 40px; }
 .auth-plan-filter-notice { margin: 10px 0 0; color: #714b00; font-size: .76rem; }
@@ -954,6 +972,7 @@ h1, h2, h3, h4 { letter-spacing: 0; }
   .auth-workflow-form, .auth-workflow-card, .auth-workflow-state { padding: 16px; }
   .auth-plan-filters { padding: 12px; }
   .auth-plan-filter-controls { grid-template-columns: minmax(0, 1fr); }
+  .auth-role-permissions { grid-template-columns: minmax(0, 1fr); }
   .auth-plan-search-field { grid-column: auto; }
   .auth-plan-clear-filters { width: 100%; }
   .auth-plan-result-count { flex-direction: column; }

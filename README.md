@@ -487,6 +487,7 @@ Judge Demo endpoint `/api/plans`, `/api/reviews` và `/api/verify` dùng riêng 
 | `POST` | `/api/verify/{suite}` | Demo actor hợp lệ | Chạy suite `general`, `escalation` hoặc `regression` trong in-memory workflow |
 | `GET` | `/api/workflow/plans` | Auth cookie + `MAKER` | Danh sách kế hoạch mà Maker tạo |
 | `GET` | `/api/workflow/checkers` | Auth cookie + `MAKER` | Checker đang hoạt động để giao kế hoạch |
+| `GET` | `/api/workflow/employees` | Auth cookie + `ADMIN` | Danh bạ nhân viên chỉ đọc, phân trang; tìm tên/mã/tài khoản/liên hệ; lọc bộ phận, chức danh, role, trạng thái nhân viên và tài khoản |
 | `POST` | `/api/workflow/plans` | Auth cookie + `MAKER` | Tạo draft; backend tự gán Maker |
 | `PUT` | `/api/workflow/plans/{plan_id}` | Maker sở hữu, DRAFT/REJECTED | Cập nhật draft với optimistic revision |
 | `POST` | `/api/workflow/plans/{plan_id}/attachments` | Maker sở hữu, DRAFT/REJECTED | Lưu ảnh riêng tư và SHA-256 trong PostgreSQL |
@@ -518,7 +519,8 @@ Xem thêm [API examples](docs/integration/api-examples.md) và [generated OpenAP
 - Render Free có cold start và có thể gián đoạn trong lúc deploy.
 - Chưa có rate limiting toàn diện; `--limit-concurrency 32` chỉ giới hạn concurrency, không phải rate limit.
 - Không có Stop/Undo hoặc action `request_changes` riêng; chỉnh sửa được thực hiện sau human rejection rồi resubmit.
-- Policy UI chỉ đọc; chưa có API quản trị policy, user directory, notification hoặc SLA.
+- Admin có thể quản lý hồ sơ nhân viên tách biệt với tài khoản, cấp luồng kích hoạt/đặt lại mật khẩu bằng link bàn giao riêng, khóa tài khoản và quản lý role Maker/Checker cùng catalog role tùy chỉnh. Cấp/thu hồi ADMIN vẫn bị khóa chờ chỉ định system owner/operator; catalog quyền không đồng nghĩa mọi hành vi API đã được triển khai.
+- Policy UI chỉ đọc; chưa có API quản trị policy, notification hoặc SLA.
 - UI list hiện lấy tối đa 100 plan đầu; Verify cache và UI run state không bền vững qua process/page session.
 - Public URL đã reachable nhưng deployed commit/hash vẫn `TBD`; chưa tuyên bố public deployment khớp hoàn toàn với working tree hiện tại.
 

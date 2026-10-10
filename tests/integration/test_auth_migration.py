@@ -23,10 +23,15 @@ def test_auth_migrations_create_registration_ready_identity_tables(tmp_path, mon
         "auth_workflow_plans", "auth_workflow_attachments", "auth_workflow_versions",
         "auth_workflow_events", "auth_workflow_decisions",
         "auth_workflow_evaluation_runs", "auth_workflow_engine_decisions",
+        "employee_profiles", "role_permissions", "auth_management_tokens", "admin_audit_events",
     } <= set(inspector.get_table_names())
     assert {"id", "user_code", "username", "email", "phone", "password_hash", "display_name", "status",
-            "created_at", "updated_at"} == {column["name"] for column in inspector.get_columns("users")}
+            "department", "job_title", "employment_start_date", "employment_status",
+            "activation_pending", "session_version", "created_at", "updated_at"} == {
+        column["name"] for column in inspector.get_columns("users")
+    }
     columns = {column["name"]: column for column in inspector.get_columns("users")}
+    assert {"activation_pending", "session_version"} <= set(columns)
     assert columns["username"]["nullable"] is False
     assert columns["email"]["nullable"] is True
     assert columns["phone"]["nullable"] is True
@@ -35,6 +40,14 @@ def test_auth_migrations_create_registration_ready_identity_tables(tmp_path, mon
         "uq_users_username", "uq_users_phone",
     }
     assert any(constraint["column_names"] == ["email"] for constraint in unique_constraints)
+    role_columns = {column["name"] for column in inspector.get_columns("roles")}
+    assert {"is_builtin", "status"} <= role_columns
+    with engine.connect() as connection:
+        assert connection.scalar(text("SELECT count(*) FROM role_permissions")) == 19
+        assert connection.scalar(text("SELECT count(*) FROM roles WHERE is_builtin = 1")) == 3
+    assert "ck_roles_status" in {
+        constraint["name"] for constraint in inspector.get_check_constraints("roles")
+    }
     assert "ck_users_exactly_one_contact" in {
         constraint["name"] for constraint in inspector.get_check_constraints("users")
     }
@@ -113,10 +126,24 @@ def test_registration_migration_backfills_legacy_usernames_and_preserves_email_u
 
     with engine.connect() as connection:
         users = connection.execute(text(
-            "SELECT user_code, username, email, phone FROM users ORDER BY user_code"
+            "SELECT id, user_code, username, email, phone, department, job_title, "
+            "employment_start_date, employment_status FROM users ORDER BY user_code"
+        )).mappings().all()
+        profiles = connection.execute(text(
+            "SELECT user_code, user_id, department, job_title, employment_start_date, employment_status "
+            "FROM employee_profiles ORDER BY user_code"
         )).mappings().all()
     assert [(user["username"], user["email"], user["phone"]) for user in users] == [
         ("maker", "maker@example.com", None),
         ("maker_000002", "maker@other.example", None),
     ]
+    assert all(user["department"] is None and user["job_title"] is None for user in users)
+    assert all(user["employment_start_date"] is None for user in users)
+    assert all(user["employment_status"] == "ACTIVE" for user in users)
+    assert {profile["user_code"]: profile["user_id"] for profile in profiles} == {
+        user["user_code"]: user["id"] for user in users
+    }
+    assert all(profile["department"] is None and profile["job_title"] is None for profile in profiles)
+    assert all(profile["employment_start_date"] is None for profile in profiles)
+    assert all(profile["employment_status"] == "ACTIVE" for profile in profiles)
     engine.dispose()

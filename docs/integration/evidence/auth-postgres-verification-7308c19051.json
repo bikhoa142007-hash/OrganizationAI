@@ -1,0 +1,392 @@
+{
+  "run_id": "7308c19051174d34a707ad6b3164eed5",
+  "started_at": "2026-10-10T14:33:02.553Z",
+  "status": "PASS",
+  "source": "caller-run; synthetic PostgreSQL only; no live database",
+  "revision": {
+    "branch": "codex/scope1-phase1-continuation-20261010",
+    "head": "f27e6ba0e9d96fa8d1b420c140a43a7e8cd466e0",
+    "origin_main_local_ref": "f27e6ba0e9d96fa8d1b420c140a43a7e8cd466e0",
+    "working_tree": {
+      "dirty": true,
+      "changed_paths": [
+        "README.md",
+        "docs/integration/local-media-strategy-inference.md",
+        "frontend/src/components/auth/AuthenticatedWorkflowShell.tsx",
+        "frontend/src/routes/AppRoutes.test.tsx",
+        "frontend/src/routes/AppRoutes.tsx",
+        "frontend/src/services/auth.ts",
+        "frontend/src/services/authWorkflow.test.tsx",
+        "frontend/src/services/authWorkflow.ts",
+        "frontend/src/styles.css",
+        "frontend/src/types/auth.ts",
+        "frontend/src/types/authWorkflow.ts",
+        "scripts/run-auth-postgres-e2e.ps1",
+        "src/ai_pipeline/authenticated_orchestrator.py",
+        "src/ai_pipeline/task_evaluation.py",
+        "src/backend/api/auth.py",
+        "src/backend/api/auth_schemas.py",
+        "src/backend/api/auth_workflow.py",
+        "src/backend/api/auth_workflow_schemas.py",
+        "src/backend/application/auth_workflow.py",
+        "src/backend/db/models/__init__.py",
+        "src/backend/db/models/role.py",
+        "src/backend/db/models/user.py",
+        "tests/integration/test_auth_migration.py",
+        "tests/integration/test_auth_workflow.py",
+        "tests/unit/ai_pipeline/test_authenticated_orchestrator.py",
+        "tests/unit/ai_pipeline/test_task_evaluations.py",
+        ".pytest-codex-full-backend-current/test_create_saves_plan_id_and_0/state.json",
+        ".pytest-codex-full-backend-current/test_ids_and_filename_do_not_s0/images/renamed.png",
+        ".pytest-codex-full-backend-current/test_image_bytes_hash_and_refe0/images/budget-conflict.png",
+        ".pytest-codex-full-backend-current/test_image_bytes_hash_and_refe0/images/creative-low-quality.png",
+        ".pytest-codex-full-backend-current/test_image_bytes_hash_and_refe0/images/creative-pass.png",
+        ".pytest-codex-full-backend-current/test_image_bytes_hash_and_refe0/images/hard-claim-demo.png",
+        ".pytest-codex-full-backend-current/test_image_bytes_hash_and_refe0/images/kpi-conflict.png",
+        ".pytest-codex-full-backend-current/test_image_bytes_hash_and_refe0/images/scope-missing.png",
+        ".pytest-codex-full-backend-current/test_image_bytes_hash_and_refe0/images/synthetic-private-demo.png",
+        ".pytest-codex-full-backend-current/test_multiple_run_marker_candi0/state.json",
+        ".pytest-codex-full-backend-current/test_smoke_state_refuses_a_sec0/state.json",
+        ".pytest-codex-full-backend-current/test_timeout_recovers_created_0/state.json",
+        ".pytest-codex-full-backend-current/test_timeout_without_match_sto0/state.json",
+        ".pytest-codex-full-backend-final/test_create_saves_plan_id_and_0/state.json",
+        ".pytest-codex-full-backend-final/test_ids_and_filename_do_not_s0/images/renamed.png",
+        ".pytest-codex-full-backend-final/test_image_bytes_hash_and_refe0/images/budget-conflict.png",
+        ".pytest-codex-full-backend-final/test_image_bytes_hash_and_refe0/images/creative-low-quality.png",
+        ".pytest-codex-full-backend-final/test_image_bytes_hash_and_refe0/images/creative-pass.png",
+        ".pytest-codex-full-backend-final/test_image_bytes_hash_and_refe0/images/hard-claim-demo.png",
+        ".pytest-codex-full-backend-final/test_image_bytes_hash_and_refe0/images/kpi-conflict.png",
+        ".pytest-codex-full-backend-final/test_image_bytes_hash_and_refe0/images/scope-missing.png",
+        ".pytest-codex-full-backend-final/test_image_bytes_hash_and_refe0/images/synthetic-private-demo.png",
+        ".pytest-codex-full-backend-final/test_multiple_run_marker_candi0/state.json",
+        ".pytest-codex-full-backend-final/test_smoke_state_refuses_a_sec0/state.json",
+        ".pytest-codex-full-backend-final/test_timeout_recovers_created_0/state.json",
+        ".pytest-codex-full-backend-final/test_timeout_without_match_sto0/state.json",
+        ".pytest-codex-full-backend-unsandboxed/test_create_saves_plan_id_and_0/state.json",
+        ".pytest-codex-full-backend-unsandboxed/test_ids_and_filename_do_not_s0/images/renamed.png",
+        ".pytest-codex-full-backend-unsandboxed/test_image_bytes_hash_and_refe0/images/budget-conflict.png",
+        ".pytest-codex-full-backend-unsandboxed/test_image_bytes_hash_and_refe0/images/creative-low-quality.png",
+        ".pytest-codex-full-backend-unsandboxed/test_image_bytes_hash_and_refe0/images/creative-pass.png",
+        ".pytest-codex-full-backend-unsandboxed/test_image_bytes_hash_and_refe0/images/hard-claim-demo.png",
+        ".pytest-codex-full-backend-unsandboxed/test_image_bytes_hash_and_refe0/images/kpi-conflict.png",
+        ".pytest-codex-full-backend-unsandboxed/test_image_bytes_hash_and_refe0/images/scope-missing.png",
+        ".pytest-codex-full-backend-unsandboxed/test_image_bytes_hash_and_refe0/images/synthetic-private-demo.png",
+        ".pytest-codex-full-backend-unsandboxed/test_multiple_run_marker_candi0/state.json",
+        ".pytest-codex-full-backend-unsandboxed/test_smoke_state_refuses_a_sec0/state.json",
+        ".pytest-codex-full-backend-unsandboxed/test_timeout_recovers_created_0/state.json",
+        ".pytest-codex-full-backend-unsandboxed/test_timeout_without_match_sto0/state.json",
+        "alembic/versions/20261010_09_employee_profile_fields.py",
+        "alembic/versions/20261010_10_employee_account_management.py",
+        "docs/competition/challenge-a-brief.pdf.pdf",
+        "docs/integration/auth-postgres-concurrent-token-fix-2026-10-10.md",
+        "docs/integration/evidence/auth-postgres-run-1c63bb6795/legacy-before.json",
+        "docs/integration/evidence/auth-postgres-run-221830c926/legacy-before.json",
+        "docs/integration/evidence/auth-postgres-run-68eac26d09/legacy-before.json",
+        "docs/integration/evidence/auth-postgres-run-7c89ca90c5/legacy-before.json",
+        "docs/integration/evidence/auth-postgres-run-a26d0c378f/legacy-before.json",
+        "docs/integration/evidence/auth-postgres-run-a26d0c378f/playwright-report.json",
+        "docs/integration/evidence/auth-postgres-run-b6fe7f14e3/legacy-before.json",
+        "docs/integration/evidence/auth-postgres-run-d8dec041b4/legacy-before.json",
+        "docs/integration/evidence/auth-postgres-sandbox-precheck-2026-10-10.json",
+        "docs/integration/evidence/auth-postgres-verification-1c63bb6795.json",
+        "docs/integration/evidence/auth-postgres-verification-221830c926.json",
+        "docs/integration/evidence/auth-postgres-verification-68eac26d09.json",
+        "docs/integration/evidence/auth-postgres-verification-6c6fd6d1c9.json",
+        "docs/integration/evidence/auth-postgres-verification-7b9e846900.json",
+        "docs/integration/evidence/auth-postgres-verification-7c89ca90c5.json",
+        "docs/integration/evidence/auth-postgres-verification-9a9aaf85cd.json",
+        "docs/integration/evidence/auth-postgres-verification-a26d0c378f.json",
+        "docs/integration/evidence/auth-postgres-verification-b6fe7f14e3.json",
+        "docs/integration/evidence/auth-postgres-verification-d8dec041b4.json",
+        "docs/integration/evidence/auth-postgres-verification-dd41dd5e78.json",
+        "docs/integration/evidence/auth-postgres-verification-f4802d9b15.json",
+        "docs/integration/evidence/emp-role-local-verification-2026-10-10.json",
+        "docs/integration/evidence/local-ai-pipeline-2026-10-10.json",
+        "docs/integration/evidence/local-task-evaluators-2026-10-10.json",
+        "docs/integration/evidence/media-invalid-schema-diagnostic-2026-10-10.json",
+        "frontend/src/pages/AccountHandoverPage.test.tsx",
+        "frontend/src/pages/AccountHandoverPage.tsx",
+        "frontend/src/pages/AuthenticatedEmployeesPage.test.tsx",
+        "frontend/src/pages/AuthenticatedEmployeesPage.tsx",
+        "frontend/src/pages/AuthenticatedRolesPage.tsx",
+        "scripts/run_auth_postgres_verification.py",
+        "scripts/smoke_local_ai_pipeline.py",
+        "scripts/smoke_local_task_evaluators.py",
+        "src/backend/application/employee_admin.py",
+        "src/backend/application/role_admin.py",
+        "src/backend/db/models/employee.py",
+        "tasks/scope1-employee-role-decisions-2026-10-10.md",
+        "tasks/scope1-phase1-pr-description-2026-10-10.md",
+        "tasks/scope1-phase1-traceability-2026-10-10.md",
+        "tests/unit/test_auth_postgres_verification_runner.py",
+        "tests/unit/test_employee_admin.py"
+      ],
+      "content_sha256": "b488befbf4727f435310ca2398612f819ddaa4b524e0600f16852d6f74a0b3be",
+      "fingerprint_scope": "tracked and non-ignored untracked file contents at runner start"
+    }
+  },
+  "migration_head": "20261010_10 (head)",
+  "environment": {
+    "os": "win32",
+    "python": "3.12.0",
+    "docker_client": "29.8.0",
+    "docker_engine": {
+      "ServerVersion": "29.8.0",
+      "OSType": "linux",
+      "OperatingSystem": "Docker Desktop",
+      "Architecture": "x86_64",
+      "NCPU": 20
+    },
+    "postgres_image": "postgres:16",
+    "postgres_image_id": "sha256:ca0bd484cb98bf4b24eb1010e73fb3fcbd6714d240fbc1a10eea5b7dbecb641d",
+    "node": "v24.17.0"
+  },
+  "port_preflight": {
+    "5173": false,
+    "5433": false,
+    "8010": false,
+    "15173": true,
+    "18010": true,
+    "occupied": [
+      5173,
+      5433,
+      8010
+    ]
+  },
+  "migration_empty_database": {
+    "status": "PASS",
+    "revision": "20261010_10",
+    "users": 0,
+    "user_roles": 0,
+    "workflow_plans": 0,
+    "employee_profiles": 0,
+    "role_codes": [
+      "ADMIN",
+      "CHECKER",
+      "MAKER"
+    ],
+    "profile_columns": [
+      "activation_pending",
+      "department",
+      "employment_start_date",
+      "employment_status",
+      "job_title",
+      "session_version"
+    ],
+    "role_permission_rows": 19,
+    "management_tokens": 0,
+    "admin_audit_events": 0,
+    "postgres_version": "16.15 (Debian 16.15-1.pgdg13+2)"
+  },
+  "migration_legacy_database": {
+    "seed": {
+      "status": "PASS",
+      "snapshot_file": "C:\\Users\\KHOABI~1\\AppData\\Local\\Temp\\oa-pgverify-7308c190-eq2p1b31\\run\\legacy-before.json",
+      "user_count": 2,
+      "workflow_plan_count": 1
+    },
+    "upgrade": {
+      "status": "PASS",
+      "revision": "20261010_10",
+      "preserved": [
+        "users",
+        "roles",
+        "user_roles",
+        "auth_workflow_plans",
+        "auth_workflow_versions",
+        "auth_workflow_events",
+        "employee_profiles"
+      ],
+      "employee_profiles_backfilled": 2,
+      "unknown_profile_fields_null": true,
+      "employment_status_default": "ACTIVE",
+      "account_defaults_preserved": true,
+      "builtin_roles_marked_and_active": true,
+      "role_permission_rows": 19,
+      "management_tokens": 0,
+      "admin_audit_events": 0,
+      "postgres_version": "16.15 (Debian 16.15-1.pgdg13+2)"
+    }
+  },
+  "admin_directory_postgres": {
+    "status": "PASS",
+    "authorization": {
+      "anonymous": 401,
+      "maker": 403,
+      "checker": 403,
+      "admin": 200
+    },
+    "filters": [
+      "search",
+      "role",
+      "account_status",
+      "department",
+      "job_title",
+      "employment_status"
+    ],
+    "pagination": "offset/limit returned distinct rows with total=2",
+    "inactive_and_locked_checkers_excluded": true,
+    "safe_response_fields": true,
+    "workflow_event_count_unchanged": true,
+    "synthetic_records": 4
+  },
+  "employee_account_postgres": {
+    "status": "PASS",
+    "source": "synthetic PostgreSQL-backed HTTP/service checks",
+    "employee_account_identity": {
+      "employee_id": "a7b6d0e7-69cc-4ff4-b3a8-2b814de9fa1a",
+      "account_id": "34b800cd-2ba9-42a0-92e7-7a84d82d46af",
+      "profile_account_ids_distinct": true,
+      "profile_visible_before_account_creation": true,
+      "profile_link_verified": true,
+      "account_visible_from_independent_postgresql_session": true,
+      "api_and_verification_sessions_share_temporary_engine": true,
+      "all_management_token_account_and_purpose_checks_passed": true
+    },
+    "activation": {
+      "one_time": true,
+      "expiry_minutes": 30,
+      "stored_as_sha256_only": true,
+      "recipient_selected_password": true,
+      "replay_rejected": true,
+      "reissue_invalidates_old": true
+    },
+    "password_reset": {
+      "reissue_invalidates_old": true,
+      "expiry_enforced": true,
+      "replay_rejected": true,
+      "unknown_purpose_rejected": true,
+      "old_sessions_revoked_on_success": true,
+      "concurrent_consumption": {
+        "requests": [
+          {
+            "request_id": "token-use-1",
+            "http_status": 422,
+            "error_code": "VALIDATION_ERROR",
+            "exception": null
+          },
+          {
+            "request_id": "token-use-2",
+            "http_status": 204,
+            "error_code": null,
+            "exception": null
+          }
+        ],
+        "clients_independent": true,
+        "sessions_independent": true,
+        "transactions_and_connections_independent": true,
+        "request_barrier_synchronized": true,
+        "database_state": {
+          "token_account_matches": true,
+          "token_purpose_matches": true,
+          "token_consumed": true,
+          "session_version_delta": 1,
+          "password_reset_audit_delta": 1,
+          "matching_candidate_request_ids": [
+            "token-use-2"
+          ],
+          "prior_password_still_matches": false,
+          "prior_session_revoked": true
+        },
+        "post_race_replay": {
+          "request_id": "token-post-race-replay",
+          "http_status": 422,
+          "error_code": "VALIDATION_ERROR",
+          "exception": null
+        },
+        "post_race_replay_no_side_effects": true,
+        "new_session_survived_replay": true
+      }
+    },
+    "management_token_purpose_constraint": {
+      "status": "PASS",
+      "invalid_catalog_value_rejected": true,
+      "database_error_type": "CheckViolation",
+      "sqlstate": "23514",
+      "constraint_name": "ck_auth_management_tokens_purpose",
+      "savepoint_rollback_preserved_purpose": "RESET",
+      "savepoint_rollback_preserved_unconsumed_state": true,
+      "verification_point": "_verify_employee_account_lifecycle purpose-constraint savepoint"
+    },
+    "management_token_purpose_contract": {
+      "consumer_endpoint": "/api/auth/activate",
+      "valid_purposes": [
+        "ACTIVATE",
+        "RESET"
+      ],
+      "operation_selected_by": "stored token purpose",
+      "separate_reset_consumer_endpoint": false,
+      "wrong_operation_endpoint_case": "not_applicable_to_shared_endpoint_contract"
+    },
+    "checker_lifecycle": {
+      "lock_with_pending_blocked": true,
+      "role_revoke_with_pending_blocked": true,
+      "deactivation_requires_each_replacement": true,
+      "invalid_reassignment_rollback": true,
+      "reassignment_deactivation_account_lock_audit_atomic": true,
+      "old_session_revoked": true,
+      "outstanding_tokens_invalidated": true
+    },
+    "reactivation": {
+      "account_remains_disabled": true,
+      "revoked_roles_not_restored": true
+    },
+    "raw_handover_values_in_audit": false
+  },
+  "auth_e2e": {
+    "status": "PASS",
+    "expected": 3,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0,
+    "idempotency_reload_case_present": true,
+    "provider": "MOCK_VLM deterministic workflow fixture; not local model inference",
+    "report_file": "C:\\Users\\Khoa Bi\\VS Studio\\repos\\OrganizationAI\\docs\\integration\\evidence\\auth-postgres-run-7308c19051\\playwright-report.json"
+  },
+  "focused_gate": null,
+  "gates_not_run": [],
+  "existing_containers_before": {
+    "a0a63927e404326af438b45c3bb7c5ae9ae417793b96e4a14b2dc929913538ca": {
+      "name": "organizationai-frontend-1",
+      "state": "running"
+    },
+    "9eb63901ad4cfe5ea5c373b2281d2d3ce0baa985cc04bad9aca23ac5cf6ba65c": {
+      "name": "organizationai-backend-1",
+      "state": "running"
+    },
+    "eca52945ccd183449c8dc8f2c23316127714971b84c1c70c4ba58ddcdd56f704": {
+      "name": "organizationai-db-1",
+      "state": "running"
+    }
+  },
+  "existing_containers_after": {
+    "a0a63927e404326af438b45c3bb7c5ae9ae417793b96e4a14b2dc929913538ca": {
+      "name": "organizationai-frontend-1",
+      "state": "running"
+    },
+    "9eb63901ad4cfe5ea5c373b2281d2d3ce0baa985cc04bad9aca23ac5cf6ba65c": {
+      "name": "organizationai-backend-1",
+      "state": "running"
+    },
+    "eca52945ccd183449c8dc8f2c23316127714971b84c1c70c4ba58ddcdd56f704": {
+      "name": "organizationai-db-1",
+      "state": "running"
+    }
+  },
+  "temporary_container_name": "organizationai-pgverify-7308c19051174d34a707ad6b3164eed5",
+  "cleanup": {
+    "owned_container_removed": true,
+    "temporary_files_removed": true,
+    "preexisting_container_ids_preserved": true,
+    "missing_preexisting_container_ids": [],
+    "changed_preexisting_container_ids": []
+  },
+  "errors": [],
+  "ports": {
+    "temporary_postgres": 58843,
+    "api": 58841,
+    "frontend": 58842
+  },
+  "completed_at": "2026-10-10T14:33:37.142Z",
+  "logs": "C:\\Users\\Khoa Bi\\VS Studio\\repos\\OrganizationAI\\docs\\integration\\evidence\\auth-postgres-run-7308c19051"
+}

@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any, Literal
 from uuid import UUID
 
@@ -160,3 +160,141 @@ class WorkflowAuditPageResponse(AuthWorkflowDTO):
     offset: int
     limit: int
     total: int
+
+
+class WorkflowEmployeeResponse(AuthWorkflowDTO):
+    id: str
+    account_id: str | None
+    user_code: str
+    username: str | None
+    display_name: str
+    email: str | None
+    phone: str | None
+    department: str | None
+    job_title: str | None
+    employment_start_date: str | None
+    employment_status: Literal["ACTIVE", "INACTIVE"]
+    status: Literal["ACTIVE", "DISABLED"] | None
+    account_status: Literal["ACTIVE", "DISABLED", "PENDING_ACTIVATION"] | None
+    roles: list[str]
+    effective_permissions: list[str]
+
+
+class WorkflowEmployeePageResponse(AuthWorkflowDTO):
+    items: list[WorkflowEmployeeResponse]
+    offset: int
+    limit: int
+    total: int
+
+
+class EmployeeProfileCreateRequest(AuthWorkflowDTO):
+    user_code: str = Field(min_length=1, max_length=32)
+    display_name: str = Field(min_length=1, max_length=160)
+    email: str | None = Field(default=None, max_length=320)
+    phone: str | None = Field(default=None, max_length=16)
+    department: str | None = Field(default=None, max_length=120)
+    job_title: str | None = Field(default=None, max_length=120)
+    employment_start_date: date | None = None
+
+
+class EmployeeRoleRequest(AuthWorkflowDTO):
+    role_codes: list[str] = Field(max_length=32)
+
+
+class AdminRoleCreateRequest(AuthWorkflowDTO):
+    code: str = Field(min_length=8, max_length=40)
+    name: str = Field(min_length=1, max_length=100)
+    description: str | None = Field(default=None, max_length=500)
+    permissions: list[str] = Field(max_length=32)
+
+
+class AdminRoleUpdateRequest(AuthWorkflowDTO):
+    name: str = Field(min_length=1, max_length=100)
+    description: str | None = Field(default=None, max_length=500)
+    permissions: list[str] = Field(max_length=32)
+
+
+class AdminRoleResponse(AuthWorkflowDTO):
+    id: str
+    code: str
+    name: str
+    description: str | None
+    is_builtin: bool
+    status: Literal["ACTIVE", "INACTIVE"]
+    permissions: list[str]
+    assigned_users: int
+
+
+class AdminPermissionResponse(AuthWorkflowDTO):
+    code: str
+    name: str
+
+
+class AdminRolePageResponse(AuthWorkflowDTO):
+    items: list[AdminRoleResponse]
+    permission_catalog: list[AdminPermissionResponse]
+
+
+class AdminAuditEventResponse(AuthWorkflowDTO):
+    id: str
+    actor_id: str
+    actor_name: str
+    employee_id: str | None
+    employee_code: str | None
+    action: str
+    before_state: dict[str, Any] | None
+    after_state: dict[str, Any] | None
+    created_at: datetime
+
+
+class AdminAuditPageResponse(AuthWorkflowDTO):
+    items: list[AdminAuditEventResponse]
+    offset: int
+    limit: int
+    total: int
+
+
+class EmployeeProfileUpdateRequest(AuthWorkflowDTO):
+    user_code: str | None = Field(default=None, min_length=1, max_length=32)
+    display_name: str | None = Field(default=None, min_length=1, max_length=160)
+    email: str | None = Field(default=None, max_length=320)
+    phone: str | None = Field(default=None, max_length=16)
+    department: str | None = Field(default=None, max_length=120)
+    job_title: str | None = Field(default=None, max_length=120)
+    employment_start_date: date | None = None
+
+
+class EmployeeDeactivateRequest(AuthWorkflowDTO):
+    reassignments: dict[str, str] = Field(default_factory=dict)
+
+
+class EmployeePendingPlanResponse(AuthWorkflowDTO):
+    id: str
+    code: str
+    maker_id: str
+
+
+class EmployeePendingPlanPageResponse(AuthWorkflowDTO):
+    items: list[EmployeePendingPlanResponse]
+    offset: int
+    limit: int
+    total: int
+
+
+class EmployeeAccountCreateRequest(AuthWorkflowDTO):
+    username: str = Field(min_length=3, max_length=80)
+
+
+class AccountHandoverResponse(AuthWorkflowDTO):
+    handover_token: str
+    purpose: Literal["ACTIVATE", "RESET"]
+    expires_at: datetime
+
+
+class EmployeeAccountCreateResponse(AccountHandoverResponse):
+    employee: WorkflowEmployeeResponse
+
+
+class AccountTokenRequest(AuthWorkflowDTO):
+    token: str = Field(min_length=20, max_length=200)
+    password: str = Field(min_length=12, max_length=1024)

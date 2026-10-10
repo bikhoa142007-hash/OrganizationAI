@@ -17,6 +17,11 @@ class RegisterRequest(AuthDTO):
     password: str = Field(min_length=12, max_length=1024)
 
 
+class AccountTokenRequest(AuthDTO):
+    token: str = Field(min_length=20, max_length=200)
+    password: str = Field(min_length=12, max_length=1024)
+
+
 class AuthenticatedUser(AuthDTO):
     id: str
     user_code: str

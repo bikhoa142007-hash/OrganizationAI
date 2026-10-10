@@ -113,6 +113,10 @@ try {
     if (-not (Test-Path -LiteralPath $viteCli -PathType Leaf)) {
         throw "Frontend dependencies are missing. Run npm ci in $frontendRoot before retrying."
     }
+    $postgresImageId = & $dockerCommand.Source image inspect 'postgres:16' --format '{{.Id}}' 2>$null
+    if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace(($postgresImageId -join ''))) {
+        throw 'The local postgres:16 image is required. This E2E script does not pull container images.'
+    }
 
     # These are the only fixed application ports used by this run. The existing
     # 8010, 5173 and 5433 services are intentionally not queried or modified.
@@ -172,7 +176,7 @@ try {
     [Environment]::SetEnvironmentVariable('VITE_DEMO_ENABLED', 'true', 'Process')
 
     Write-Host 'Starting a disposable PostgreSQL 16 container on a random loopback port...'
-    $dockerRunOutput = & $dockerCommand.Source run --detach --rm --name $containerName `
+    $dockerRunOutput = & $dockerCommand.Source run --pull=never --detach --rm --name $containerName `
         --tmpfs '/var/lib/postgresql/data:rw,size=1g' `
         --env "POSTGRES_USER=$dbUser" `
         --env "POSTGRES_PASSWORD=$dbPassword" `
@@ -220,13 +224,17 @@ try:
     inspector = inspect(engine)
     with engine.connect() as connection:
         revisions = connection.scalars(text("SELECT version_num FROM alembic_version")).all()
-    assert revisions == ["20261009_08"], revisions
+    assert revisions == ["20261010_10"], revisions
     assert "auth_workflow_plans" in inspector.get_table_names()
+    assert "employee_profiles" in inspector.get_table_names()
+    assert {
+        "department", "job_title", "employment_start_date", "employment_status",
+    } <= {column["name"] for column in inspector.get_columns("users")}
     assert any(
         item["name"] == "uq_auth_workflow_plans_maker_creation_key" and item["unique"]
         for item in inspector.get_indexes("auth_workflow_plans")
     )
-    print("PostgreSQL migration verified: head 20261009_08 and unique draft idempotency index.")
+    print("PostgreSQL migration verified: head 20261010_10, employee profile tables/columns, and unique draft idempotency index.")
 finally:
     engine.dispose()
 '@
