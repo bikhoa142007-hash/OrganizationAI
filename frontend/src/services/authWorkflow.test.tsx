@@ -242,9 +242,10 @@ it('sends create, update and submit to the existing workflow endpoints with cont
 })
 
 it('uploads multipart attachments and downloads private attachment bytes through backend routes', async () => {
+  const attachmentBytes = new TextEncoder().encode('image-bytes')
   const fetchMock = vi.fn()
     .mockResolvedValueOnce(new Response('{"id":"p1"}', { status: 200 }))
-    .mockResolvedValueOnce(new Response('image-bytes', { status: 200, headers: { 'Content-Type': 'image/png' } }))
+    .mockResolvedValueOnce(new Response(attachmentBytes, { status: 200, headers: { 'Content-Type': 'image/png' } }))
   vi.stubGlobal('fetch', fetchMock)
   const file = new File(['pixels'], 'campaign.png', { type: 'image/png' })
 
@@ -257,9 +258,15 @@ it('uploads multipart attachments and downloads private attachment bytes through
   expect((uploadedOptions.body as FormData).get('file')).toBe(file)
   expect((uploadedOptions.body as FormData).get('expected_revision')).toBe('7')
 
-  await expect(authWorkflowService.getAttachment('plan-1', 'attachment-1')).resolves.toBeInstanceOf(Blob)
+  const downloadedAttachment = await authWorkflowService.getAttachment('plan-1', 'attachment-1')
+  expect(downloadedAttachment.type).toBe('image/png')
+  expect(downloadedAttachment.size).toBe(attachmentBytes.byteLength)
+  expect(Array.from(new Uint8Array(await downloadedAttachment.arrayBuffer())))
+    .toEqual(Array.from(attachmentBytes))
   expect(fetchMock.mock.calls[1]?.[0]).toContain('/workflow/plans/plan-1/attachments/attachment-1')
-  expect((fetchMock.mock.calls[1]?.[1] as RequestInit).credentials).toBe('include')
+  const downloadOptions = fetchMock.mock.calls[1]?.[1] as RequestInit
+  expect(downloadOptions.credentials).toBe('include')
+  expect(downloadOptions.headers).toBeUndefined()
 })
 
 it.each([404, 409, 422, 503])('retains workflow API error fields and header correlation ID for HTTP %s', async status => {
