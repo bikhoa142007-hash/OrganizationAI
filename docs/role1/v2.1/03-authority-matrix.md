@@ -1,7 +1,7 @@
 # 03 · Ma trận quyền, người duyệt và hạn mức
 
 Bộ BA v2.1; cập nhật runtime Sprint 1 ngày 22/09/2026 theo yêu cầu audit RBAC.
-Đây là ma trận quyền canonical cho HTTP demo. Căn cứ: AGENTS.md,
+Đây là ma trận quyền canonical cho workflow demo và Auth. Căn cứ: AGENTS.md,
 `docs/scope-phase-1.md`, `docs/sprint-1-deliverables.md` và decision contract.
 Không phải xác nhận policy sản xuất đã được PO phê duyệt. Đường dẫn `role1`
 được giữ để bảo toàn liên kết/provenance của gói BA.
@@ -10,7 +10,7 @@ Không phải xác nhận policy sản xuất đã được PO phê duyệt. Đ�
 
 - MAKER: tạo, sửa và gửi kế hoạch của mình.
 - CHECKER: người duyệt cuối cùng, chỉ với hồ sơ được giao và không do mình lập.
-- ADMIN: actor quản trị demo, hiện chỉ xem cấu hình và chạy Verify; không có quyền đọc mọi hồ sơ.
+- ADMIN: actor quản trị demo; được đọc danh sách và chi tiết hồ sơ workflow ở chế độ chỉ đọc, xem cấu hình và chạy Verify.
 - EVALUATOR: danh tính nội bộ đã đăng ký; không đăng nhập bằng X-Demo-Actor.
 - DEMO-DUAL-01 có MAKER + CHECKER; vẫn cấm tự duyệt và không tự có assignment.
 
@@ -23,18 +23,20 @@ Judge Demo Mode là nhãn môi trường, không phải một role có toàn quy
 
 | Hành động / màn hình | Maker | Checker | Admin | Evaluator nội bộ |
 |---|---|---|---|---|
-| Landing, danh sách | Có; chỉ hồ sơ của mình | Có; chỉ hồ sơ được giao | Có; danh sách rỗng nếu không có quyền bổ sung | Không có UI |
-| Chi tiết, ảnh riêng tư, lịch sử, observation | Hồ sơ của mình | Hồ sơ được giao | Không mặc định | Theo nhiệm vụ pipeline |
+| Landing, danh sách | Có; chỉ hồ sơ của mình | Có; chỉ hồ sơ được giao | Đọc danh sách mọi hồ sơ | Không có UI |
+| Chi tiết, lịch sử, observation | Hồ sơ của mình | Hồ sơ được giao | Đọc chi tiết mọi hồ sơ | Theo nhiệm vụ pipeline |
+| Tải byte ảnh riêng tư | Hồ sơ của mình | Hồ sơ được giao | Không | Theo nhiệm vụ pipeline |
 | Hồ sơ mới / tạo draft | Có | Chỉ nếu có thêm MAKER | Không | Không |
 | Sửa draft / attachment | Của mình, DRAFT hoặc REJECTED | Không sửa hồ sơ người khác | Không | Không |
 | Submit / resubmit | Của mình; dữ liệu hợp lệ | Không thay Maker | Không | Không |
+| Recovery vòng AI bị gián đoạn | Không | Chỉ hồ sơ được giao | Không | Không |
 | Review Queue / xem để quyết định | Không, trừ CHECKER được giao hồ sơ khác | Được giao, PENDING_APPROVAL + HUMAN_REVIEW_REQUIRED | Không | Không |
 | Approve / reject | Không tự duyệt, kể cả có CHECKER | Được giao, khác Maker, round ACTIVE, đã có routing | Không | Không có quyết định người dùng |
 | Escalate | Không có lệnh riêng | Xem câu hỏi escalation; từ chối có lý do để yêu cầu sửa | Không có lệnh riêng | Engine tạo routing và câu hỏi |
 | Chạy/tiếp tục evaluation chưa commit | Hồ sơ của mình | Hồ sơ được giao | Không | Chạy bằng danh tính evaluator |
 | Policy (chỉ đọc) | Có | Có | Có | Áp dụng snapshot |
 | Sửa policy / limit | Không có API | Không có API | Chưa triển khai UI/API; cấu hình server | Không tự sửa |
-| Audit | Theo quyền đọc hồ sơ | Theo quyền đọc hồ sơ | Không toàn cục | Append sự kiện hợp lệ |
+| Audit | Theo quyền đọc hồ sơ | Theo quyền đọc hồ sơ | Toàn cục, chỉ đọc | Append sự kiện hợp lệ |
 | Verify | Chạy fixture tổng hợp riêng | Như Maker | Như Maker | Không endpoint demo |
 | Actor management / đổi assignment sau submit | Không | Không | Chưa triển khai | Không |
 | Sửa final decision / audit / version cũ | Không | Không | Không | Không |
@@ -44,13 +46,25 @@ cấm tự duyệt luôn ưu tiên. Checker đọc được draft được giao 
 định cho tới khi submit và pipeline đã route Human Review. Hidden controls chỉ hỗ
 trợ sử dụng; API/workflow độc lập kiểm tra quyền.
 
+### 2.1. Cộng dồn quyền theo role được gán
+
+| Role được gán | Quyền workflow hiệu lực |
+|---|---|
+| ADMIN | Chỉ đọc danh sách/chi tiết workflow theo phạm vi Admin; không tạo, sửa, upload, submit, recovery hoặc quyết định |
+| ADMIN + MAKER | Giữ quyền đọc của ADMIN và nhận các quyền MAKER trên kế hoạch do chính mình tạo; chỉ sửa ở DRAFT/REJECTED và chỉ submit khi đủ điều kiện. Không có quyền Checker nếu chưa được gán CHECKER |
+
+Quyền được cộng từ các role thực sự được gán; ADMIN không tự cấp MAKER hoặc
+CHECKER. Người có MAKER không được quyết định kế hoạch của mình, kể cả khi được
+gán thêm CHECKER. Checker chỉ được xử lý hồ sơ đang được giao; API tiếp tục kiểm
+tra role, ownership, assignment, trạng thái và vòng duyệt.
+
 ## 3. Danh mục actor và assignment demo
 
 | ID tổng hợp | Quyền | Phạm vi |
 |---|---|---|
 | DEMO-MAKER-01 | MAKER | Kế hoạch của mình |
 | DEMO-CHECKER-01 | CHECKER | Assignment DEMO-DEPT-01 |
-| DEMO-ADMIN-01 | ADMIN | Policy chỉ đọc và Verify; không tự có quyền hồ sơ |
+| DEMO-ADMIN-01 | ADMIN | Hồ sơ workflow chỉ đọc, policy và Verify; không tạo, sửa, submit, quyết định hoặc recovery |
 | DEMO-DUAL-01 | MAKER, CHECKER | Tạo hồ sơ; queue rỗng khi chưa được giao |
 | DEMO-EVALUATOR-01 | EVALUATOR | Chỉ nội bộ, bị HTTP demo-auth từ chối |
 

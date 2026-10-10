@@ -1,5 +1,7 @@
 import { defineConfig } from '@playwright/test'
 
+const baseURL = process.env.AUTH_E2E_BASE_URL ?? 'http://localhost:5173'
+
 export default defineConfig({
   testDir: './e2e',
   testMatch: 'auth-live.spec.ts',
@@ -9,7 +11,7 @@ export default defineConfig({
   retries: 0,
   reporter: 'list',
   use: {
-    baseURL: 'http://localhost:5173',
+    baseURL,
     headless: true,
     trace: 'off',
     screenshot: 'off',

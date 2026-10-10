@@ -1,0 +1,165 @@
+{
+  "config": {
+    "argv": [
+      "C:\\Program Files\\nodejs\\node.exe",
+      "C:\\Users\\Khoa Bi\\VS Studio\\repos\\OrganizationAI\\frontend\\node_modules\\@playwright\\test\\cli.js",
+      "test",
+      "--config",
+      "playwright.auth-live.config.ts",
+      "--reporter=list,json",
+      "--output",
+      "C:\\Users\\Khoa Bi\\AppData\\Local\\Temp\\organizationai-auth-e2e-da59bb9d83a44731b0c746fcaa2ddd66\\playwright-output"
+    ],
+    "configFile": "C:\\Users\\Khoa Bi\\VS Studio\\repos\\OrganizationAI\\frontend\\playwright.auth-live.config.ts",
+    "rootDir": "C:/Users/Khoa Bi/VS Studio/repos/OrganizationAI/frontend/e2e",
+    "failOnFlakyTests": false,
+    "forbidOnly": false,
+    "fullyParallel": false,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "C:/Users/Khoa Bi/AppData/Local/Temp/organizationai-auth-e2e-da59bb9d83a44731b0c746fcaa2ddd66/playwright-output",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "",
+        "name": "",
+        "testDir": "C:/Users/Khoa Bi/VS Studio/repos/OrganizationAI/frontend/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "auth-live.spec.ts"
+        ],
+        "timeout": 600000
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "list"
+      ],
+      [
+        "json"
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.63.0",
+    "workers": 1,
+    "webServer": null
+  },
+  "suites": [
+    {
+      "title": "auth-live.spec.ts",
+      "file": "auth-live.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "live Auth Maker-to-Checker browser workflow preserves a rejected version through resubmission",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 600000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "",
+              "projectName": "",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 11397,
+                  "errors": [],
+                  "stdout": [
+                    {
+                      "text": "Synthetic Auth plans retained: [{\"id\":\"176e84b0-ecf8-43e6-a520-81648b1cc86c\",\"title\":\"Synthetic local Auth browser 2026-10-09T16:32:06.331Z\",\"status\":\"Đã duyệt\"}]\n"
+                    }
+                  ],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-09T16:32:04.337Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "681e1e672f6c85246e3d-5334832a91db0da45332",
+          "file": "auth-live.spec.ts",
+          "line": 92,
+          "column": 1
+        },
+        {
+          "title": "lists retained synthetic Auth plans without changing them",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 600000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "",
+              "projectName": "",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 2838,
+                  "errors": [],
+                  "stdout": [
+                    {
+                      "text": "Synthetic Auth plans retained: [{\"id\":\"176e84b0-ecf8-43e6-a520-81648b1cc86c\",\"title\":\"Synthetic local Auth browser 2026-10-09T16:32:06.331Z\",\"status\":\"Đã duyệt\"}]\n"
+                    },
+                    {
+                      "text": "Synthetic Auth evaluation steps: [{\"run_id\":\"run-d928102fb46e434199908536ab62e419\",\"version\":1,\"round\":1,\"provider\":\"MOCK_VLM\",\"status\":\"FAILED\",\"model_id\":\"mock-image-extractor\",\"visual_extraction\":{\"status\":\"PARTIAL\",\"model_id\":\"mock-image-extractor\"},\"media_evaluation\":{\"status\":\"NOT_CONFIGURED\",\"model_id\":null,\"model_version\":null,\"prompt_version\":\"media-compliance-prompt-v5\",\"schema_version\":\"media-compliance-schema-v3\"},\"strategy_evaluation\":{\"status\":\"NOT_CONFIGURED\",\"model_id\":null,\"model_version\":null,\"prompt_version\":\"strategy-evaluation-prompt-v5\",\"schema_version\":\"strategy-evaluation-schema-v5\"}},{\"run_id\":\"run-7236a05555bb4bc7835c399824765c04\",\"version\":2,\"round\":2,\"provider\":\"MOCK_VLM\",\"status\":\"FAILED\",\"model_id\":\"mock-image-extractor\",\"visual_extraction\":{\"status\":\"PARTIAL\",\"model_id\":\"mock-image-extractor\"},\"media_evaluation\":{\"status\":\"NOT_CONFIGURED\",\"model_id\":null,\"model_version\":null,\"prompt_version\":\"media-compliance-prompt-v5\",\"schema_version\":\"media-compliance-schema-v3\"},\"strategy_evaluation\":{\"status\":\"NOT_CONFIGURED\",\"model_id\":null,\"model_version\":null,\"prompt_version\":\"strategy-evaluation-prompt-v5\",\"schema_version\":\"strategy-evaluation-schema-v5\"}}]\n"
+                    }
+                  ],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-09T16:32:16.019Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "681e1e672f6c85246e3d-cfe34b6774797c800522",
+          "file": "auth-live.spec.ts",
+          "line": 230,
+          "column": 1
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-10-09T16:32:03.874Z",
+    "duration": 15529.428,
+    "expected": 2,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}

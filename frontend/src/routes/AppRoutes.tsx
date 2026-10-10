@@ -83,9 +83,16 @@ function RoleHomePage() {
 }
 
 function AccessDeniedPage() {
-  return <main className="auth-account"><h1>Không có quyền truy cập</h1>
-    <p>Tài khoản này không có vai trò được cấp cho trang hoặc thao tác bạn yêu cầu.</p>
-    <p><Link to="/account">Quay lại tài khoản</Link></p>
+  const { roles } = useAuth()
+  const home = homeForRoles(roles)
+  return <main className="auth-account auth-access-denied" aria-labelledby="access-denied-title">
+    <p className="login-card-kicker">OrganizationAI</p>
+    <h1 id="access-denied-title">Không có quyền truy cập</h1>
+    <p>Tài khoản hiện tại không có vai trò được cấp cho trang hoặc thao tác bạn yêu cầu.</p>
+    <div className="auth-account-actions">
+      {home !== '/access-denied' && home !== '/account' && <Link className="button button-primary" to={home}>Mở không gian làm việc</Link>}
+      <Link className="button button-secondary" to="/account">Xem tài khoản</Link>
+    </div>
   </main>
 }
 

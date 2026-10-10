@@ -441,7 +441,7 @@ def create_plan(
                 ))
             if existing is not None:
                 if existing.creation_request_hash != request_hash:
-                    _fail("CONFLICT", "The draft request key was already used for different plan data.", correlation_id)
+                    _fail("IDEMPOTENCY_CONFLICT", "The draft request key was already used for different plan data.", correlation_id)
                 result = _plan_dict(session, existing)
             else:
                 _validate_checker(session, principal, checker_id, correlation_id)
@@ -479,7 +479,7 @@ def create_plan(
             ))
             if existing is not None:
                 if existing.creation_request_hash != request_hash:
-                    _fail("CONFLICT", "The draft request key was already used for different plan data.", correlation_id)
+                    _fail("IDEMPOTENCY_CONFLICT", "The draft request key was already used for different plan data.", correlation_id)
                 return _plan_dict(session, existing)
         _fail("CONFLICT", "Could not create the plan; retry with a new request.", correlation_id)
     return result

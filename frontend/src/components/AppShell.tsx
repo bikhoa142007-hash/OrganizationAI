@@ -50,9 +50,9 @@ export function AppShell() {
       </nav>
 
       <div className="sidebar-session">
-        <div className="session-label"><span className="status-dot" /> Phiên demo đã xác thực</div>
+        <div className="session-label"><span className="status-dot" /> Actor demo dùng chung · không cần đăng nhập</div>
         {loading ? <p className="session-loading">Đang tải phiên...</p> : error ? <button className="text-button" type="button" onClick={() => void refresh()}>Tải lại phiên</button> : config && <>
-          <label htmlFor="demo-actor">Tài khoản hiện tại</label>
+          <label htmlFor="demo-actor">Actor demo</label>
           <div className="actor-select-wrap">
             <select id="demo-actor" aria-label="Demo actor" value={config.actor} onChange={event => switchActor(event.target.value)}>
               {config.actors.map(actor => <option key={actor.id} value={actor.id}>{actor.id}</option>)}

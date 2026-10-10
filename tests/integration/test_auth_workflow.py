@@ -51,6 +51,8 @@ def workflow_client(monkeypatch) -> Iterator[tuple[TestClient, sessionmaker[Sess
     monkeypatch.setenv("JWT_SECRET", "test-only-auth-secret-that-is-at-least-32-bytes")
     monkeypatch.setenv("AUTH_COOKIE_SECURE", "false")
     monkeypatch.setenv("AUTH_COOKIE_SAMESITE", "lax")
+    monkeypatch.setenv("AUTH_WORKFLOW_AI_PROVIDER", "MOCK_VLM")
+    monkeypatch.setenv("AUTH_WORKFLOW_MOCK_SCENARIO", "malformed")
     engine = create_engine(
         "sqlite+pysqlite://",
         connect_args={"check_same_thread": False},
@@ -210,6 +212,15 @@ class FakeAuthenticatedTaskProvider:
                                 reported_model_id=self.settings.model_id)
 
 
+class LowConfidenceMediaProvider(FakeAuthenticatedTaskProvider):
+    def evaluate(self, request):
+        analysis = super().evaluate(request)
+        output = dict(analysis.output)
+        output["confidence"] = 0.80
+        return ProviderAnalysis(output, model_revision=analysis.model_revision,
+                                reported_model_id=analysis.reported_model_id)
+
+
 def upload_plan_image(client: TestClient, plan_id: str, revision: int) -> dict:
     response = client.post(
         f"/api/workflow/plans/{plan_id}/attachments",
@@ -269,7 +280,7 @@ def test_maker_is_assigned_from_cookie_and_cannot_read_another_makers_plan(workf
     assert other_client.get(f"/api/workflow/plans/{plan['id']}").status_code == 404
 
 
-def test_admin_can_read_all_plan_details_but_cannot_make_checker_decisions(workflow_client):
+def test_admin_can_read_workflow_plans_but_cannot_mutate_or_recover(workflow_client):
     client, factory, app = workflow_client
     maker = create_user(factory, "maker.admin-read", ("MAKER",))
     checker = create_user(factory, "checker.admin-read", ("CHECKER",))
@@ -289,14 +300,82 @@ def test_admin_can_read_all_plan_details_but_cannot_make_checker_decisions(workf
     assert admin_client.get(
         f"/api/workflow/plans/{plan['id']}/attachments/{attachment_id}"
     ).status_code == 404
+    assert admin_client.post("/api/workflow/plans", json={
+        "checker_user_id": str(checker.id),
+        "payload": plan["payload"],
+    }).status_code == 403
     assert admin_client.put(f"/api/workflow/plans/{plan['id']}", json={
         "expected_revision": plan["revision"],
         "payload": plan["payload"],
     }).status_code == 403
     assert admin_client.post(
+        f"/api/workflow/plans/{plan['id']}/submit",
+        json={"expected_revision": plan["revision"]},
+    ).status_code == 403
+    assert admin_client.post(
+        f"/api/workflow/plans/{plan['id']}/rounds/1/decision",
+        json={"action": "REJECTED", "reason": "Admin cannot decide."},
+    ).status_code == 403
+    assert admin_client.post(
         f"/api/workflow/plans/{plan['id']}/rounds/1/decision",
         json={"action": "APPROVED", "override_reason": "Admin cannot decide."},
     ).status_code == 403
+    assert admin_client.post(
+        f"/api/workflow/plans/{plan['id']}/rounds/1/recovery",
+    ).status_code == 403
+
+
+def test_admin_maker_gets_maker_permissions_without_checker_authority(workflow_client):
+    client, factory, app = workflow_client
+    admin_maker = create_user(factory, "admin.maker", ("ADMIN", "MAKER"))
+    other_maker = create_user(factory, "other.maker", ("MAKER",))
+    checker = create_user(factory, "checker.admin-maker", ("CHECKER",))
+
+    login(client, admin_maker)
+    checkers = client.get("/api/workflow/checkers")
+    assert checkers.status_code == 200
+    assert str(admin_maker.id) not in {item["id"] for item in checkers.json()}
+    assert str(checker.id) in {item["id"] for item in checkers.json()}
+
+    own_plan = make_plan(client, checker.id, title="Admin Maker draft")
+    assert own_plan["maker_id"] == str(admin_maker.id)
+    updated_payload = {**own_plan["payload"], "title": "Admin Maker edited draft"}
+    updated = client.put(f"/api/workflow/plans/{own_plan['id']}", json={
+        "expected_revision": own_plan["revision"],
+        "payload": updated_payload,
+    })
+    assert updated.status_code == 200, updated.text
+    assert updated.json()["payload"]["title"] == "Admin Maker edited draft"
+
+    updated_plan = upload_plan_image(client, own_plan["id"], updated.json()["revision"])
+    submitted = submit_plan(client, updated_plan)
+    assert submitted["status"] == "PENDING_APPROVAL"
+    assert submitted["current_version"] == 1
+    assert submitted["current_round"] == 1
+
+    other_client = authenticated_client(app, other_maker)
+    other_plan = make_plan(other_client, checker.id, title="Other Maker draft")
+    all_plans = client.get("/api/workflow/plans")
+    assert all_plans.status_code == 200
+    assert {item["id"] for item in all_plans.json()} >= {own_plan["id"], other_plan["id"]}
+
+    cross_owner_edit = client.put(f"/api/workflow/plans/{other_plan['id']}", json={
+        "expected_revision": other_plan["revision"],
+        "payload": other_plan["payload"],
+    })
+    assert cross_owner_edit.status_code == 404
+
+    self_checker_assignment = other_client.post("/api/workflow/plans", json={
+        "checker_user_id": str(admin_maker.id),
+        "payload": {"title": "Cannot assign Admin Maker as Checker"},
+    })
+    assert self_checker_assignment.status_code == 422
+    assert client.get("/api/workflow/reviews").status_code == 403
+    self_approval = client.post(
+        f"/api/workflow/plans/{own_plan['id']}/rounds/1/decision",
+        json={"action": "APPROVED"},
+    )
+    assert self_approval.status_code == 403
 
 
 def test_admin_audit_endpoint_is_paginated_and_denied_to_maker(workflow_client):
@@ -323,9 +402,10 @@ def test_admin_audit_endpoint_is_paginated_and_denied_to_maker(workflow_client):
 
 
 def test_draft_creation_replays_an_idempotency_key_without_duplicate_plan_or_event(workflow_client):
-    client, factory, _app = workflow_client
+    client, factory, app = workflow_client
     maker = create_user(factory, "maker.idempotent-create", ("MAKER",))
     checker = create_user(factory, "checker.idempotent-create", ("CHECKER",))
+    other_maker = create_user(factory, "maker.other-idempotent-create", ("MAKER",))
     login(client, maker)
     headers = {"Idempotency-Key": "draft-intent-1"}
     body = {
@@ -338,11 +418,25 @@ def test_draft_creation_replays_an_idempotency_key_without_duplicate_plan_or_eve
     assert first.status_code == replay.status_code == 201
     assert first.json()["id"] == replay.json()["id"]
 
+    client.cookies.clear()
+    unauthenticated_retry = client.post("/api/workflow/plans", json=body, headers=headers)
+    assert unauthenticated_retry.status_code == 401
+    login(client, maker)
+
+    other_client = authenticated_client(app, other_maker)
+    other_owner_same_key = other_client.post("/api/workflow/plans", json=body, headers=headers)
+    assert other_owner_same_key.status_code == 201
+    assert other_owner_same_key.json()["id"] != first.json()["id"]
+    assert other_owner_same_key.json()["maker_id"] == str(other_maker.id)
+    assert other_client.get(f"/api/workflow/plans/{first.json()['id']}").status_code == 404
+
     changed_body = {**body, "payload": {"title": "Different draft"}}
     conflict = client.post("/api/workflow/plans", json=changed_body, headers=headers)
     assert conflict.status_code == 409
+    assert conflict.json()["code"] == "IDEMPOTENCY_CONFLICT"
     with factory() as session:
         assert session.query(AuthWorkflowPlan).filter_by(maker_id=maker.id).count() == 1
+        assert session.query(AuthWorkflowPlan).filter_by(maker_id=other_maker.id).count() == 1
         assert session.query(auth_workflow_application.AuthWorkflowEvent).filter_by(
             plan_id=UUID(first.json()["id"]), action="CREATED",
         ).count() == 1
@@ -372,6 +466,7 @@ def test_maker_submits_and_only_assigned_checker_can_approve(workflow_client):
     maker = create_user(factory, "maker.one", ("MAKER",))
     checker = create_user(factory, "checker.one", ("CHECKER",))
     outsider = create_user(factory, "checker.two", ("CHECKER",))
+    admin = create_user(factory, "admin.audit-reason", ("ADMIN",))
     login(client, maker)
 
     draft = make_plan(client, checker.id)
@@ -384,7 +479,7 @@ def test_maker_submits_and_only_assigned_checker_can_approve(workflow_client):
     assert submitted["versions"][0]["payload"]["title"] == "Spring campaign"
     assert len(submitted["ai_evaluations"]) == 1
     assert submitted["ai_evaluations"][0]["status"] in {"FAILED", "TIMED_OUT"}
-    assert submitted["ai_evaluations"][0]["provider"] == "LOCAL_VLM"
+    assert submitted["ai_evaluations"][0]["provider"] == "MOCK_VLM"
     assert submitted["ai_evaluations"][0]["attempts"] == 1
     assert submitted["ai_evaluations"][0]["retried"] is False
     assert submitted["engine_decisions"][0]["outcome"] == "HUMAN_REVIEW_REQUIRED"
@@ -436,6 +531,15 @@ def test_maker_submits_and_only_assigned_checker_can_approve(workflow_client):
     detail = checker_client.get(f"/api/workflow/plans/{draft['id']}").json()
     assert detail["history"][-1]["action"] == "APPROVED"
     assert detail["history"][-1]["actor_id"] == str(checker.id)
+    audit = authenticated_client(app, admin).get("/api/workflow/audit?offset=0&limit=100").json()
+    decision_event = next(
+        event for event in audit["items"]
+        if event["plan_id"] == draft["id"] and event["action"] == "APPROVED"
+    )
+    assert decision_event["details"]["reason"] == "Reviewed."
+    assert decision_event["details"]["override_reason"] == (
+        "Provider configuration was unavailable; reviewed the submission manually."
+    )
 
 
 def test_authenticated_submission_uses_existing_policy_for_auto_approval(workflow_client):
@@ -510,6 +614,44 @@ def test_authenticated_provider_failure_is_persisted_and_checker_can_review(work
     )
 
 
+def test_review_recommendation_routes_to_checker_without_deciding_the_final_action(workflow_client):
+    client, _factory, app = workflow_client
+    maker = create_user(_factory, "maker.review-recommendation", ("MAKER",))
+    checker = create_user(_factory, "checker.review-recommendation", ("CHECKER",))
+    login(client, maker)
+    app.state.auth_workflow_configuration = auto_approval_configuration(checker.id)
+    app.state.auth_workflow_provider = AuthenticatedMockVLMProvider("pass", model_version="mock-1")
+    app.state.auth_workflow_media_provider = LowConfidenceMediaProvider("MEDIA_COMPLIANCE")
+    app.state.auth_workflow_strategy_provider = FakeAuthenticatedTaskProvider("STRATEGY_EVALUATION")
+
+    draft = make_plan(client, checker.id, title="Human review recommendation", channels=("social",))
+    draft = upload_plan_image(client, draft["id"], draft["revision"])
+    submitted = submit_plan(client, draft)
+    evaluation = submitted["ai_evaluations"][0]["evaluation"]
+    assert evaluation is not None, json.dumps(submitted, indent=2)
+    assert evaluation["proposed_action"] == "RECOMMEND_HUMAN_REVIEW", json.dumps(submitted, indent=2)
+    assert submitted["engine_decisions"][0]["outcome"] == "HUMAN_REVIEW_REQUIRED"
+    assert submitted["processing_stage"] == "HUMAN_REVIEW_REQUIRED"
+    assert submitted["status"] == "PENDING_APPROVAL"
+
+    checker_client = authenticated_client(app, checker)
+    decision_url = f"/api/workflow/plans/{draft['id']}/rounds/1/decision"
+    approval_without_override = checker_client.post(decision_url, json={
+        "action": "APPROVED", "reason": "Review completed.",
+    })
+    assert approval_without_override.status_code == 422
+
+    rejection = checker_client.post(decision_url, json={
+        "action": "REJECTED", "reason": "The plan needs a measurable KPI.",
+    })
+    assert rejection.status_code == 200, rejection.text
+    assert rejection.json()["status"] == "REJECTED"
+    assert rejection.json()["processing_stage"] == "COMPLETED"
+    final_event = rejection.json()["history"][-1]
+    assert final_event["action"] == "REJECTED"
+    assert final_event["details"]["override_reason"] is None
+
+
 def test_local_vlm_extraction_persists_separately_and_missing_evaluators_route_checker(workflow_client):
     import json
 
@@ -526,6 +668,9 @@ def test_local_vlm_extraction_persists_separately_and_missing_evaluators_route_c
             "ocr_text": "Visible campaign headline",
             "observations": ["A blue campaign banner."],
             "uncertainties": [],
+            "confidence": 0.97,
+            "object_detections": ["campaign banner"],
+            "visual_quality": {"result": "PASS", "findings": []},
         }],
     }
 
@@ -575,6 +720,10 @@ def test_local_vlm_extraction_persists_separately_and_missing_evaluators_route_c
         error["code"] for error in evaluation_run["evaluation"]["agent_errors"]
     }, json.dumps(evaluation_run["evaluation"], indent=2)
     assert visual["status"] == "SUCCEEDED"
+    assert visual["schema_version"] == "visual-extraction-schema-v2"
+    assert visual["attachments"][0]["confidence"] == 0.97
+    assert visual["attachments"][0]["object_detections"] == ["campaign banner"]
+    assert visual["attachments"][0]["visual_quality"] == {"result": "PASS", "findings": []}
     assert visual["model_id"] == "configured-model-id"
     assert visual["model_revision"] == "runtime-revision-1"
     assert visual["attachments"][0]["attachment_id"] == attached["attachments"][0]["id"]
@@ -814,15 +963,10 @@ def test_rejection_needs_reason_and_resubmission_preserves_prior_version(workflo
     assert submitted["versions"][0]["payload"]["title"] == "Spring campaign"
 
 
-def test_non_workflow_role_cannot_create_and_submission_requires_attachment(workflow_client):
+def test_maker_submission_requires_attachment(workflow_client):
     client, factory, app = workflow_client
-    admin = create_user(factory, "admin.one", ("ADMIN",))
     maker = create_user(factory, "maker.one", ("MAKER",))
     checker = create_user(factory, "checker.one", ("CHECKER",))
-    login(client, admin)
-    assert client.get("/api/workflow/plans").status_code == 403
-    assert client.post("/api/workflow/plans", json={"payload": {}}).status_code == 403
-
     maker_client = authenticated_client(app, maker)
     draft = make_plan(maker_client, checker.id)
     response = maker_client.post(
@@ -830,6 +974,8 @@ def test_non_workflow_role_cannot_create_and_submission_requires_attachment(work
         json={"expected_revision": draft["revision"]},
     )
     assert response.status_code == 422
+    current = maker_client.get(f"/api/workflow/plans/{draft['id']}")
+    assert current.json()["status"] == "DRAFT"
 
 
 def test_submission_rejects_incomplete_plan_even_when_attachment_exists(workflow_client):

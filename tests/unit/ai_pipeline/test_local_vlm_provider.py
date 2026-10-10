@@ -284,6 +284,25 @@ def test_invalid_extraction_schema_fails_closed(payload):
     assert result.evaluation["agent_errors"][0]["code"] == "INVALID_SCHEMA"
 
 
+@pytest.mark.parametrize("missing_field", ["confidence", "object_detections", "visual_quality"])
+def test_v2_extraction_missing_required_field_fails_safely(missing_field):
+    incomplete_item = {
+        key: value for key, value in extraction_item().items() if key != missing_field
+    }
+
+    def handler(_request):
+        return chat_response({"images": [incomplete_item]})
+
+    result = EvaluationOrchestrator(configured_provider(handler)).evaluate(make_request())
+
+    assert result.visual_extraction["status"] == "FAILED"
+    assert result.visual_extraction["schema_version"] == "visual-extraction-schema-v2"
+    assert result.visual_extraction["error_code"] == "INVALID_SCHEMA"
+    assert result.visual_extraction["attachments"][0]["evidence"] == []
+    assert result.evaluation["status"] == "FAILED"
+    assert result.evaluation["agent_errors"][0]["code"] == "INVALID_SCHEMA"
+
+
 def test_unverified_attachment_hash_is_never_sent_to_runtime():
     calls = []
 

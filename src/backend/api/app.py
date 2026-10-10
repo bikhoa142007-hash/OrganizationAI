@@ -172,7 +172,7 @@ def create_app(settings=None, *, auth_workflow_provider=None, auth_workflow_conf
 
     @app.post('/api/verify/{suite}', response_model=VerifyResponse)
     async def verify(suite: str, body: DTO, auth=Depends(actor), meta=Depends(intent)):
-        if suite not in ('general', 'escalation'):
+        if suite not in ('general', 'escalation', 'regression'):
             raise ApplicationError('VALIDATION_ERROR', 'Unknown Verify suite.', meta['correlation_id'])
         scope = (auth, meta['idempotency_key'])
         if scope in verify_runs:
@@ -180,7 +180,7 @@ def create_app(settings=None, *, auth_workflow_provider=None, auth_workflow_conf
                 raise ApplicationError('CONFLICT', 'Verify intent reused for another suite.', meta['correlation_id'])
             return verify_runs[scope]
         from src.verify.runner import run_suite
-        result = {'run_id': meta['idempotency_key'], 'suite': suite, 'rows': run_suite('verify' if suite == 'general' else 'ground-truth')}
+        result = {'run_id': meta['idempotency_key'], 'suite': suite, 'rows': run_suite(suite)}
         verify_runs[scope] = result
         return result
 
