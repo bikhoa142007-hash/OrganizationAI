@@ -28,6 +28,8 @@ function isAuthUser(value: unknown): value is AuthUser {
     && (candidate.status === 'ACTIVE' || candidate.status === 'DISABLED')
     && Array.isArray(candidate.roles)
     && candidate.roles.every(role => typeof role === 'string')
+    && (candidate.effective_permissions === undefined || (Array.isArray(candidate.effective_permissions)
+      && candidate.effective_permissions.every(permission => typeof permission === 'string')))
 }
 
 function stringProperty(value: unknown, key: string): string | null {
@@ -114,5 +116,9 @@ export const authService = {
 
   async logout(): Promise<void> {
     await request('/auth/logout', 'POST', undefined, 204)
+  },
+
+  async completeAccountHandover(token: string, password: string): Promise<void> {
+    await request('/auth/activate', 'POST', { token, password }, 204)
   },
 }

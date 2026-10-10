@@ -1,5 +1,5 @@
 from collections.abc import Iterator
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 import json
 import struct
 from uuid import UUID, uuid4
@@ -21,7 +21,7 @@ from src.backend.api.auth import get_auth_db
 from src.backend.api.dependencies import Settings
 from src.backend.application import auth_workflow as auth_workflow_application
 from src.backend.db.base import Base
-from src.backend.db.models import AuthWorkflowEvaluationRun, AuthWorkflowPlan, Role, User, UserRole
+from src.backend.db.models import AuthWorkflowEvaluationRun, AuthWorkflowEvent, AuthWorkflowPlan, EmployeeProfile, Role, User, UserRole
 from src.backend.db.security import hash_password
 from src.backend.domain.policy import (
     ApprovalConfiguration,
@@ -92,6 +92,10 @@ def create_user(factory, username: str, roles: tuple[str, ...]) -> User:
         for code in roles:
             role = session.scalar(select(Role).where(Role.code == code))
             session.add(UserRole(user_id=user.id, role_id=role.id))
+        session.add(EmployeeProfile(
+            id=user.id, user_code=user.user_code, display_name=user.display_name,
+            email=user.email, phone=user.phone, user_id=user.id,
+        ))
         session.flush()
         session.expunge(user)
     return user
@@ -109,6 +113,104 @@ def authenticated_client(app, user: User) -> TestClient:
     client = TestClient(app)
     login(client, user)
     return client
+
+
+def test_admin_employee_directory_is_authorized_filtered_paginated_and_read_only(workflow_client):
+    client, factory, app = workflow_client
+    maker_alpha = create_user(factory, "directory.alpha", ("MAKER",))
+    maker_beta = create_user(factory, "directory.beta", ("MAKER",))
+    checker = create_user(factory, "directory.checker", ("CHECKER",))
+    inactive_employee_checker = create_user(factory, "directory.inactive-employee", ("CHECKER",))
+    admin = create_user(factory, "directory.admin", ("ADMIN",))
+    with factory.begin() as session:
+        checker_user = session.get(User, checker.id)
+        checker_user.status = "DISABLED"
+        checker_user.employment_status = "INACTIVE"
+        checker_user.department = "Sales"
+        checker_user.job_title = "Team Lead"
+        checker_user.employment_start_date = date(2020, 1, 2)
+        checker_profile = session.get(EmployeeProfile, checker.id)
+        checker_profile.employment_status = "INACTIVE"
+        checker_profile.department = "Sales"
+        checker_profile.job_title = "Team Lead"
+        checker_profile.employment_start_date = date(2020, 1, 2)
+        inactive_employee_user = session.get(User, inactive_employee_checker.id)
+        inactive_employee_user.employment_status = "INACTIVE"
+        inactive_employee_user.department = "Sales"
+        inactive_employee_user.job_title = "Coordinator"
+        inactive_profile = session.get(EmployeeProfile, inactive_employee_checker.id)
+        inactive_profile.employment_status = "INACTIVE"
+        inactive_profile.department = "Sales"
+        inactive_profile.job_title = "Coordinator"
+        # The directory orders by employee code; make this pagination fixture
+        # deterministic instead of comparing randomly generated codes.
+        for user, employee_code in ((maker_alpha, "DIR-ALPHA"), (maker_beta, "DIR-BETA")):
+            directory_user = session.get(User, user.id)
+            directory_user.user_code = employee_code
+            session.get(EmployeeProfile, user.id).user_code = employee_code
+        for username in (maker_alpha.username, maker_beta.username):
+            user = session.scalar(select(User).where(User.username == username))
+            user.department = "Marketing"
+            user.job_title = "Campaign Planner"
+            user.employment_start_date = date(2022, 4, 15)
+            profile = session.get(EmployeeProfile, user.id)
+            profile.department = "Marketing"
+            profile.job_title = "Campaign Planner"
+            profile.employment_start_date = date(2022, 4, 15)
+
+    admin_client = authenticated_client(app, admin)
+    maker_client = authenticated_client(app, maker_alpha)
+    with factory() as session:
+        events_before = session.query(AuthWorkflowEvent).count()
+
+    first_page = admin_client.get("/api/workflow/employees", params={
+        "query": "DIRECTORY", "role": "MAKER", "status": "ACTIVE",
+        "department": "Marketing", "job_title": "Campaign Planner",
+        "employment_status": "ACTIVE", "offset": 0, "limit": 1,
+    })
+    second_page = admin_client.get("/api/workflow/employees", params={
+        "query": "directory", "role": "MAKER", "status": "ACTIVE",
+        "department": "Marketing", "job_title": "Campaign Planner",
+        "employment_status": "ACTIVE", "offset": 1, "limit": 1,
+    })
+    inactive_checker = admin_client.get("/api/workflow/employees", params={
+        "query": "directory.checker", "role": "CHECKER", "status": "DISABLED",
+        "department": "Sales", "employment_status": "INACTIVE",
+    })
+    inactive_employee = admin_client.get("/api/workflow/employees", params={
+        "query": "directory.inactive-employee", "role": "CHECKER", "status": "ACTIVE",
+        "employment_status": "INACTIVE",
+    })
+    selectable_checkers = maker_client.get("/api/workflow/checkers")
+
+    assert first_page.status_code == 200
+    assert first_page.json()["total"] == 2
+    assert first_page.json()["items"][0]["username"] == "directory.alpha"
+    assert first_page.json()["items"][0]["roles"] == ["MAKER"]
+    assert first_page.json()["items"][0]["department"] == "Marketing"
+    assert first_page.json()["items"][0]["job_title"] == "Campaign Planner"
+    assert first_page.json()["items"][0]["employment_start_date"] == "2022-04-15"
+    assert first_page.json()["items"][0]["employment_status"] == "ACTIVE"
+    assert "password_hash" not in first_page.json()["items"][0]
+    assert second_page.status_code == 200
+    assert second_page.json()["items"][0]["username"] == "directory.beta"
+    assert inactive_checker.status_code == 200
+    assert inactive_checker.json()["total"] == 1
+    assert inactive_checker.json()["items"][0]["status"] == "DISABLED"
+    assert inactive_checker.json()["items"][0]["employment_status"] == "INACTIVE"
+    assert inactive_employee.status_code == 200
+    assert inactive_employee.json()["total"] == 1
+    assert inactive_employee.json()["items"][0]["status"] == "ACTIVE"
+    assert inactive_employee.json()["items"][0]["employment_status"] == "INACTIVE"
+    assert selectable_checkers.status_code == 200
+    assert all(item["id"] not in {str(checker.id), str(inactive_employee_checker.id)}
+               for item in selectable_checkers.json())
+    assert maker_client.get("/api/workflow/employees").status_code == 403
+    assert client.get("/api/workflow/employees").status_code == 401
+
+    with factory() as session:
+        assert session.query(AuthWorkflowEvent).count() == events_before == 0
+        assert session.get(User, maker_beta.id) is not None
 
 
 def make_plan(client: TestClient, checker_id: UUID, *, title: str = "Spring campaign",

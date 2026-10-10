@@ -7,4 +7,5 @@ export interface AuthUser {
   display_name: string
   status: 'ACTIVE' | 'DISABLED'
   roles: string[]
+  effective_permissions?: string[]
 }

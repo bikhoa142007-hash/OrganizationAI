@@ -249,3 +249,51 @@ export interface WorkflowAuditPage {
   limit: number
   total: number
 }
+
+export interface WorkflowEmployee {
+  id: string
+  account_id: string | null
+  user_code: string
+  username: string | null
+  display_name: string
+  email: string | null
+  phone: string | null
+  department: string | null
+  job_title: string | null
+  employment_start_date: string | null
+  employment_status: 'ACTIVE' | 'INACTIVE'
+  status: 'ACTIVE' | 'DISABLED' | null
+  account_status: 'ACTIVE' | 'DISABLED' | 'PENDING_ACTIVATION' | null
+  roles: string[]
+  effective_permissions: string[]
+}
+
+export interface WorkflowEmployeePage {
+  items: WorkflowEmployee[]
+  offset: number
+  limit: number
+  total: number
+}
+
+export interface EmployeePendingPlanPage {
+  items: Array<{ id: string; code: string; maker_id: string }>
+  offset: number
+  limit: number
+  total: number
+}
+
+export interface AdminRole {
+  id: string
+  code: string
+  name: string
+  description: string | null
+  is_builtin: boolean
+  status: 'ACTIVE' | 'INACTIVE'
+  permissions: string[]
+  assigned_users: number
+}
+
+export interface AdminRoleCatalog {
+  items: AdminRole[]
+  permission_catalog: Array<{ code: string; name: string }>
+}

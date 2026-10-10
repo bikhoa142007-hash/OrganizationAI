@@ -1,0 +1,128 @@
+{
+  "run_id": "emp-role-local-verification-2026-10-10",
+  "completed_at": "2026-10-10T12:36:55Z",
+  "source": "local-agent-run; local test suites only; no database or Docker used",
+  "revision": {
+    "branch": "codex/scope1-phase1-continuation-20261010",
+    "head": "f27e6ba0e9d96fa8d1b420c140a43a7e8cd466e0",
+    "working_tree_dirty": true,
+    "working_tree_content_sha256": "5e6c998bd014a4f6a2575a105ee32c607501261ed97f7d6ae9390f2ccaccfafa",
+    "working_tree_fingerprint_scope": "tracked and non-ignored untracked file contents, excluding this evidence JSON itself; captured after test gates and documentation updates",
+    "note": "HEAD alone does not identify all tested files; application source did not change after the final test runs."
+  },
+  "environment": {
+    "os": "Windows",
+    "python": "3.12.0",
+    "node": "v24.17.0",
+    "npm": "11.13.0",
+    "postgresql": "not used",
+    "docker": "not used"
+  },
+  "gates": {
+    "backend_full": {
+      "status": "PASS",
+      "command": ".venv-test-20261009\\Scripts\\python.exe -m pytest -q --basetemp=.pytest-codex-full-backend-current",
+      "database_url": "removed from process environment",
+      "passed": 326,
+      "subtests_passed": 84,
+      "skipped": 0,
+      "warnings": ["One existing Starlette/httpx deprecation warning."],
+      "duration_seconds": 97.9
+    },
+    "employee_role_focused": {
+      "status": "PASS",
+      "command": ".venv-test-20261009\\Scripts\\python.exe -m pytest -q --basetemp=.pytest-codex-emp-role-final tests/unit/test_employee_admin.py tests/unit/test_auth_postgres_verification_runner.py tests/integration/test_auth_migration.py",
+      "passed": 19,
+      "database": "local test fixtures only; not PostgreSQL"
+    },
+    "frontend_full_serial": {
+      "status": "PASS",
+      "command": "npm.cmd run test --prefix frontend -- --maxWorkers=1 --fileParallelism=false --reporter=dot",
+      "files_passed": 19,
+      "tests_passed": 150,
+      "skipped": 0,
+      "timeouts": 0,
+      "duration_seconds": 201.97
+    },
+    "frontend_origin_assertion_diagnostic": {
+      "initial_full_attempt": {
+        "status": "FAIL",
+        "tests_passed": 149,
+        "tests_failed": 1,
+        "test": "AuthenticatedEmployeesPage: Admin reissues an activation link for an active employee awaiting activation",
+        "cause": "The test hard-coded http://localhost while jsdom used http://localhost:3000; the app-generated fragment link was correct.",
+        "fix": "The assertion now uses window.location.origin. No product behavior or business assertion changed."
+      },
+      "focused_rerun": "AuthenticatedEmployeesPage test file: 5 passed."
+    },
+    "frontend_full_default_parallel": {
+      "status": "PASS",
+      "command": "npm.cmd run test --prefix frontend -- --reporter=verbose",
+      "files_passed": 19,
+      "tests_passed": 150,
+      "skipped": 0,
+      "timeouts": 0,
+      "duration_seconds": 40.92
+    },
+    "frontend_timeout_investigation": {
+      "status": "PRIOR_TIMEOUTS_NOT_REPRODUCED",
+      "prior_report": "Three timeouts were reported in an earlier broad parallel run with 143 tests passing.",
+      "current_reproduction": "No timeout in either 150-test full rerun.",
+      "root_cause": "Unconfirmed; the original failure names and output were not retained. Worker contention is possible but unproven.",
+      "timeouts_or_assertions_changed": false
+    },
+    "frontend_typecheck": {
+      "status": "PASS",
+      "command": "npm.cmd run typecheck --prefix frontend"
+    },
+    "frontend_build": {
+      "status": "PASS",
+      "command": "npm.cmd run build --prefix frontend",
+      "warning": "Vite reports a 509.81 kB main chunk above its 500 kB advisory threshold."
+    },
+    "python_compile": {
+      "status": "PASS",
+      "files": [
+        "src/backend/application/employee_admin.py",
+        "src/backend/application/role_admin.py",
+        "src/backend/application/auth_workflow.py",
+        "src/backend/api/auth_workflow.py",
+        "scripts/run_auth_postgres_verification.py",
+        "alembic/versions/20261010_10_employee_account_management.py"
+      ]
+    },
+    "alembic_head": {
+      "status": "PASS",
+      "head": "20261010_10",
+      "head_count": 1
+    },
+    "postgresql_verification": {
+      "status": "NOT_RUN",
+      "reason": "The latest sandbox Docker precheck recorded permission denied for npipe:////./pipe/dockerDesktopLinuxEngine. No container or database was started by this run.",
+      "expected_head": "20261010_10",
+      "pending_gates": [
+        "Empty PostgreSQL database upgrade to head",
+        "Synthetic legacy schema upgrade with account/role/workflow preservation and unknown profile fields null",
+        "Admin employee directory authorization, filters and pagination",
+        "EMP/account/token/reassignment lifecycle including concurrent one-time token use",
+        "Current Auth PostgreSQL E2E suite"
+      ],
+      "cmd_from_repository_root": "\".venv-test-20261009\\Scripts\\python.exe\" scripts\\run_auth_postgres_verification.py",
+      "runner_limits": "Unique temporary no-volume PostgreSQL container and dynamic loopback ports; cleans only resources created by that run."
+    }
+  },
+  "historical_external_evidence": {
+    "run_id": "a26d0c378f6b4b948633d4b8a2fee5af",
+    "provenance": "User supplied; user reports running outside the sandbox.",
+    "migration_head": "20261010_09",
+    "scope": "Only gates present in that JSON; does not cover migration 10, current EMP mutations, or this dirty working tree."
+  },
+  "safety": {
+    "live_database_touched": false,
+    "existing_application_container_touched": false,
+    "commit_push_merge_deploy": false,
+    "admin_role_granted_or_revoked": false,
+    "employee_assignment_or_password_changed": false
+  },
+  "scope_status": "EMP/Role local code and local gates pass; current PostgreSQL verification and other Scope 1 requirements remain open. Do not report Scope 1 complete."
+}

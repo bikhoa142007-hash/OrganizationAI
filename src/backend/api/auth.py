@@ -14,7 +14,9 @@ from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session, selectinload
 
 from src.backend.application.workflow import ApplicationError
-from src.backend.db.models import Role, User, UserRole
+from src.backend.db.models import EmployeeProfile, Role, User, UserRole
+from src.backend.application import employee_admin
+from src.backend.application.role_admin import PERMISSION_ROLE_REQUIREMENTS
 from src.backend.db.security import (
     dummy_password_hash,
     hash_password,
@@ -22,7 +24,7 @@ from src.backend.db.security import (
     verify_password,
 )
 from src.backend.db.session import get_db
-from .auth_schemas import AuthResponse, AuthenticatedUser, LoginRequest, RegisterRequest
+from .auth_schemas import AccountTokenRequest, AuthResponse, AuthenticatedUser, LoginRequest, RegisterRequest
 
 AUTH_COOKIE_NAME = "organizationai_access_token"
 TOKEN_ISSUER = "organizationai"
@@ -88,6 +90,7 @@ class AuthenticatedPrincipal:
     display_name: str
     status: str
     roles: tuple[str, ...]
+    permissions: tuple[str, ...]
 
     def as_response(self) -> AuthenticatedUser:
         return AuthenticatedUser(
@@ -125,27 +128,40 @@ def _check_browser_origin(request: Request) -> None:
 
 
 def _user_roles(user: User) -> tuple[str, ...]:
-    return tuple(sorted({link.role.code for link in user.user_roles}))
+    roles = {link.role.code for link in user.user_roles if link.role.status == "ACTIVE"}
+    permissions = set(_user_permissions(user))
+    roles.update(role for role, required in PERMISSION_ROLE_REQUIREMENTS.items() if required <= permissions)
+    return tuple(sorted(roles))
+
+
+def _user_permissions(user: User) -> tuple[str, ...]:
+    return tuple(sorted({
+        permission.permission_code
+        for link in user.user_roles if link.role.status == "ACTIVE"
+        for permission in link.role.permissions
+    }))
 
 
 def _principal(user: User) -> AuthenticatedPrincipal:
     return AuthenticatedPrincipal(
         id=user.id, user_code=user.user_code, username=user.username,
         email=user.email, phone=user.phone, display_name=user.display_name,
-        status=user.status, roles=_user_roles(user),
+        status=user.status, roles=_user_roles(user), permissions=_user_permissions(user),
     )
 
 
 def _user_query():
-    return select(User).options(selectinload(User.user_roles).selectinload(UserRole.role))
+    return select(User).options(
+        selectinload(User.user_roles).selectinload(UserRole.role).selectinload(Role.permissions)
+    )
 
 
-def _new_access_token(user_id: UUID, settings: AuthSettings, remember_me: bool) -> str:
+def _new_access_token(user_id: UUID, settings: AuthSettings, remember_me: bool, session_version: int) -> str:
     now = datetime.now(timezone.utc)
     lifetime = (timedelta(days=settings.remember_token_days) if remember_me
                 else timedelta(minutes=settings.access_token_minutes))
     return jwt.encode(
-        {"sub": str(user_id), "iss": TOKEN_ISSUER, "iat": now,
+        {"sub": str(user_id), "sv": session_version, "iss": TOKEN_ISSUER, "iat": now,
          "exp": now + lifetime},
         settings.jwt_secret,
         algorithm="HS256",
@@ -237,7 +253,8 @@ def get_current_principal(
         raise _error(request, "UNAUTHENTICATED", "Authentication is required.") from exc
 
     user = session.scalar(_user_query().where(User.id == user_id))
-    if user is None or user.status != "ACTIVE":
+    if (user is None or user.status != "ACTIVE" or user.activation_pending
+            or claims.get("sv", 0) != user.session_version):
         raise _error(request, "UNAUTHENTICATED", "Authentication is required.")
     return _principal(user)
 
@@ -295,7 +312,7 @@ def login(
     if password_hash_needs_rehash(user.password_hash):
         user.password_hash = hash_password(body.password)
         session.commit()
-    _set_auth_cookie(response, _new_access_token(user.id, settings, body.remember_me),
+    _set_auth_cookie(response, _new_access_token(user.id, settings, body.remember_me, user.session_version),
                      settings, body.remember_me)
     return AuthResponse(user=_principal(user).as_response())
 
@@ -341,6 +358,11 @@ def register(
         session.add(user)
         session.flush()
         session.add(UserRole(user_id=user.id, role_id=maker_role.id, assigned_by=None))
+        session.add(EmployeeProfile(
+            id=user.id, user_code=user.user_code, display_name=user.display_name,
+            email=user.email, phone=user.phone, employment_status=user.employment_status,
+            user_id=user.id,
+        ))
         session.commit()
     except IntegrityError as exc:
         session.rollback()
@@ -348,6 +370,19 @@ def register(
 
     session.refresh(user)
     return AuthResponse(user=_principal(user).as_response())
+
+
+@router.post("/activate", status_code=204)
+def activate_or_reset_account(
+    body: AccountTokenRequest,
+    request: Request,
+    session: Session = Depends(get_auth_db),
+) -> Response:
+    """Consume a single-use Admin handover link and set the recipient's password."""
+    _check_browser_origin(request)
+    employee_admin.consume_management_token(session, body.token, body.password,
+                                            getattr(request.state, "correlation_id", "auth-request"))
+    return Response(status_code=204)
 
 
 @router.get("/config")

@@ -1,5 +1,5 @@
 import { AuthApiError } from './auth'
-import type { WorkflowAuditPage, WorkflowChecker, WorkflowPayload, WorkflowPlan } from '../types/authWorkflow'
+import type { AdminRoleCatalog, AdminRole, EmployeePendingPlanPage, WorkflowAuditPage, WorkflowChecker, WorkflowEmployee, WorkflowEmployeePage, WorkflowPayload, WorkflowPlan } from '../types/authWorkflow'
 import { resolveApiBaseUrl } from './apiBaseUrl'
 
 function planListQuery(offset: number, limit: number) {
@@ -15,12 +15,44 @@ function parseWorkflowPlanList(value: unknown): WorkflowPlan[] {
   return value as WorkflowPlan[]
 }
 
+function parseEmployeePage(value: unknown): WorkflowEmployeePage {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new AuthApiError(200, 'The workflow service returned an invalid employee page.', 'INVALID_RESPONSE')
+  }
+  const page = value as Record<string, unknown>
+  const validItem = (item: unknown) => {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) return false
+    const employee = item as Record<string, unknown>
+    return typeof employee.id === 'string'
+      && (employee.account_id === null || typeof employee.account_id === 'string')
+      && typeof employee.user_code === 'string'
+      && (employee.username === null || typeof employee.username === 'string')
+      && typeof employee.display_name === 'string'
+      && (employee.email === null || typeof employee.email === 'string')
+      && (employee.phone === null || typeof employee.phone === 'string')
+      && (employee.department === null || typeof employee.department === 'string')
+      && (employee.job_title === null || typeof employee.job_title === 'string')
+      && (employee.employment_start_date === null || typeof employee.employment_start_date === 'string')
+      && (employee.employment_status === 'ACTIVE' || employee.employment_status === 'INACTIVE')
+      && (employee.status === null || employee.status === 'ACTIVE' || employee.status === 'DISABLED')
+      && (employee.account_status === null || employee.account_status === 'ACTIVE'
+        || employee.account_status === 'DISABLED' || employee.account_status === 'PENDING_ACTIVATION')
+      && Array.isArray(employee.roles) && employee.roles.every(role => typeof role === 'string')
+      && Array.isArray(employee.effective_permissions) && employee.effective_permissions.every(permission => typeof permission === 'string')
+  }
+  if (!Array.isArray(page.items) || !page.items.every(validItem)
+    || !Number.isInteger(page.offset) || !Number.isInteger(page.limit) || !Number.isInteger(page.total)) {
+    throw new AuthApiError(200, 'The workflow service returned an invalid employee page.', 'INVALID_RESPONSE')
+  }
+  return value as WorkflowEmployeePage
+}
+
 function announceAuthFailure(status: number) {
   if (status === 401) window.dispatchEvent(new Event('organizationai:auth-expired'))
   if (status === 403) window.dispatchEvent(new Event('organizationai:access-denied'))
 }
 
-async function request<T>(path: string, method: 'GET' | 'POST' | 'PUT', body?: unknown, idempotencyKey?: string): Promise<T> {
+async function request<T>(path: string, method: 'GET' | 'POST' | 'PUT' | 'PATCH', body?: unknown, idempotencyKey?: string): Promise<T> {
   const multipart = body instanceof FormData
   const headers = {
     ...(body !== undefined && !multipart ? { 'Content-Type': 'application/json' } : {}),
@@ -72,6 +104,100 @@ function creationIntentKey(intentId: string) {
 export const authWorkflowService = {
   listAuditEvents(offset = 0, limit = 100): Promise<WorkflowAuditPage> {
     return request(`/workflow/audit?offset=${offset}&limit=${limit}`, 'GET')
+  },
+
+  listEmployees(filters: {
+    query?: string
+    role?: string
+    status?: 'ACTIVE' | 'DISABLED' | 'PENDING_ACTIVATION'
+    department?: string
+    job_title?: string
+    employment_status?: 'ACTIVE' | 'INACTIVE'
+    offset?: number
+    limit?: number
+  } = {}): Promise<WorkflowEmployeePage> {
+    const params = new URLSearchParams({
+      offset: String(filters.offset ?? 0),
+      limit: String(filters.limit ?? 50),
+    })
+    if (filters.query?.trim()) params.set('query', filters.query.trim())
+    if (filters.role) params.set('role', filters.role)
+    if (filters.status) params.set('status', filters.status)
+    if (filters.department?.trim()) params.set('department', filters.department.trim())
+    if (filters.job_title?.trim()) params.set('job_title', filters.job_title.trim())
+    if (filters.employment_status) params.set('employment_status', filters.employment_status)
+    return request<unknown>(`/workflow/employees?${params.toString()}`, 'GET').then(parseEmployeePage)
+  },
+
+  createEmployee(payload: {
+    user_code: string; display_name: string; email?: string | null; phone?: string | null
+    department?: string | null; job_title?: string | null; employment_start_date?: string | null
+  }): Promise<WorkflowEmployee> {
+    return request('/workflow/employees', 'POST', payload)
+  },
+
+  updateEmployee(employeeId: string, payload: Partial<{
+    user_code: string; display_name: string; email: string | null; phone: string | null
+    department: string | null; job_title: string | null; employment_start_date: string | null
+  }>): Promise<WorkflowEmployee> {
+    return request(`/workflow/employees/${encoded(employeeId)}`, 'PUT', payload)
+  },
+
+  deactivateEmployee(employeeId: string, reassignments: Record<string, string>): Promise<WorkflowEmployee> {
+    return request(`/workflow/employees/${encoded(employeeId)}/deactivation`, 'POST', { reassignments })
+  },
+
+  reactivateEmployee(employeeId: string): Promise<WorkflowEmployee> {
+    return request(`/workflow/employees/${encoded(employeeId)}/reactivation`, 'POST')
+  },
+
+  listPendingCheckerPlans(employeeId: string, offset = 0, limit = 100): Promise<EmployeePendingPlanPage> {
+    return request(`/workflow/employees/${encoded(employeeId)}/pending-plans?offset=${offset}&limit=${limit}`, 'GET')
+  },
+
+  createEmployeeAccount(employeeId: string, username: string): Promise<{ employee: WorkflowEmployee; handover_token: string; purpose: 'ACTIVATE'; expires_at: string }> {
+    return request(`/workflow/employees/${encoded(employeeId)}/account`, 'POST', { username })
+  },
+
+  reissueEmployeeActivation(employeeId: string): Promise<{ handover_token: string; purpose: 'ACTIVATE'; expires_at: string }> {
+    return request(`/workflow/employees/${encoded(employeeId)}/account/activation`, 'POST')
+  },
+
+  requestPasswordReset(employeeId: string): Promise<{ handover_token: string; purpose: 'RESET'; expires_at: string }> {
+    return request(`/workflow/employees/${encoded(employeeId)}/account/password-reset`, 'POST')
+  },
+
+  lockEmployeeAccount(employeeId: string): Promise<WorkflowEmployee> {
+    return request(`/workflow/employees/${encoded(employeeId)}/account/lock`, 'POST')
+  },
+
+  unlockEmployeeAccount(employeeId: string): Promise<WorkflowEmployee> {
+    return request(`/workflow/employees/${encoded(employeeId)}/account/unlock`, 'POST')
+  },
+
+  replaceEmployeeRoles(employeeId: string, roleCodes: string[]): Promise<{ employee_id: string; roles: string[] }> {
+    return request(`/workflow/employees/${encoded(employeeId)}/roles`, 'PUT', { role_codes: roleCodes })
+  },
+
+  listRoles(filters: { query?: string; status?: 'ACTIVE' | 'INACTIVE'; builtin?: boolean } = {}): Promise<AdminRoleCatalog> {
+    const params = new URLSearchParams()
+    if (filters.query?.trim()) params.set('query', filters.query.trim())
+    if (filters.status) params.set('status', filters.status)
+    if (filters.builtin !== undefined) params.set('builtin', String(filters.builtin))
+    const suffix = params.size ? `?${params.toString()}` : ''
+    return request(`/workflow/roles${suffix}`, 'GET')
+  },
+
+  createRole(payload: { code: string; name: string; description: string | null; permissions: string[] }): Promise<AdminRole> {
+    return request('/workflow/roles', 'POST', payload)
+  },
+
+  updateRole(roleId: string, payload: { name: string; description: string | null; permissions: string[] }): Promise<AdminRole> {
+    return request(`/workflow/roles/${encoded(roleId)}`, 'PUT', payload)
+  },
+
+  deactivateRole(roleId: string): Promise<AdminRole> {
+    return request(`/workflow/roles/${encoded(roleId)}/deactivation`, 'POST')
   },
 
   listPlans(offset = 0, limit = 100): Promise<WorkflowPlan[]> {

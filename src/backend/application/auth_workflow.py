@@ -15,6 +15,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from src.backend.application.workflow import ApplicationError
+from src.backend.application.role_admin import effective_role_filter
 from src.backend.db.models import (
     AuthWorkflowAttachment,
     AuthWorkflowDecision,
@@ -23,9 +24,7 @@ from src.backend.db.models import (
     AuthWorkflowEvaluationRun,
     AuthWorkflowPlan,
     AuthWorkflowVersion,
-    Role,
     User,
-    UserRole,
 )
 from src.ai_pipeline.models import EvaluationRequest
 from src.ai_pipeline.orchestrator import EvaluationOrchestrator
@@ -94,9 +93,13 @@ def _checker_user(session: Session, checker_id: UUID | None) -> User | None:
         return None
     return session.scalar(
         select(User)
-        .join(UserRole, UserRole.user_id == User.id)
-        .join(Role, Role.id == UserRole.role_id)
-        .where(User.id == checker_id, User.status == "ACTIVE", Role.code == "CHECKER")
+        .where(
+            User.id == checker_id,
+            User.status == "ACTIVE",
+            User.activation_pending.is_(False),
+            User.employment_status == "ACTIVE",
+            effective_role_filter("CHECKER"),
+        ).with_for_update()
     )
 
 
@@ -321,9 +324,11 @@ def list_checkers(session: Session, principal: AuthenticatedPrincipal, correlati
     _require_role(principal, "MAKER", correlation_id)
     users = session.scalars(
         select(User)
-        .join(UserRole, UserRole.user_id == User.id)
-        .join(Role, Role.id == UserRole.role_id)
-        .where(User.status == "ACTIVE", Role.code == "CHECKER", User.id != principal.id)
+        .where(
+            User.status == "ACTIVE", User.activation_pending.is_(False),
+            User.employment_status == "ACTIVE", effective_role_filter("CHECKER"),
+            User.id != principal.id,
+        )
         .order_by(User.display_name, User.user_code)
     ).unique().all()
     return [{"id": str(user.id), "display_name": user.display_name} for user in users]
@@ -921,9 +926,10 @@ def evaluate_submission(
             config = ApprovalConfiguration.from_dict(run.policy_snapshot)
             valid_checkers = session.scalars(
                 select(User.id)
-                .join(UserRole, UserRole.user_id == User.id)
-                .join(Role, Role.id == UserRole.role_id)
-                .where(User.status == "ACTIVE", Role.code == "CHECKER")
+                .where(
+                    User.status == "ACTIVE", User.activation_pending.is_(False),
+                    User.employment_status == "ACTIVE", effective_role_filter("CHECKER"),
+                )
             ).all()
             context = DecisionContext(
                 evaluation_id=run.evaluation_id,
@@ -1116,9 +1122,10 @@ def recover_stale_evaluations(
                 )
                 checker_ids = session.scalars(
                     select(User.id)
-                    .join(UserRole, UserRole.user_id == User.id)
-                    .join(Role, Role.id == UserRole.role_id)
-                    .where(User.status == "ACTIVE", Role.code == "CHECKER")
+                    .where(
+                        User.status == "ACTIVE", User.activation_pending.is_(False),
+                        User.employment_status == "ACTIVE", effective_role_filter("CHECKER"),
+                    )
                 ).all()
                 verified = tuple(sorted(
                     (str(item["id"]), str(item["content_hash"]))

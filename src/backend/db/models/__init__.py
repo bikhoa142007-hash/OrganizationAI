@@ -1,5 +1,6 @@
-from .role import Role, UserRole
+from .role import Role, RolePermission, UserRole
 from .user import User
+from .employee import AdminAuditEvent, AuthManagementToken, EmployeeProfile
 from .auth_workflow import (
     AuthWorkflowAttachment,
     AuthWorkflowDecision,
@@ -11,7 +12,8 @@ from .auth_workflow import (
 )
 
 __all__ = [
-    "Role", "User", "UserRole", "AuthWorkflowPlan", "AuthWorkflowAttachment",
+    "Role", "RolePermission", "User", "UserRole", "EmployeeProfile",
+    "AuthManagementToken", "AdminAuditEvent", "AuthWorkflowPlan", "AuthWorkflowAttachment",
     "AuthWorkflowVersion", "AuthWorkflowEvent", "AuthWorkflowDecision",
     "AuthWorkflowEvaluationRun", "AuthWorkflowEngineDecision",
 ]

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { AuthProvider } from '../context/AuthContext'
@@ -115,6 +115,36 @@ describe('Auth-first route entry', () => {
     renderApplication('/workflow/audit')
     expect(await screen.findByRole('heading', { name: 'Không có quyền truy cập' })).toBeVisible()
     expect(forbiddenAudit).not.toHaveBeenCalled()
+  })
+
+  it('shows the employee directory only to Admin users', async () => {
+    vi.spyOn(authService, 'me').mockResolvedValue(admin)
+    const listEmployees = vi.spyOn(authWorkflowService, 'listEmployees').mockResolvedValue({
+      items: [{
+        id: 'employee-1', account_id: 'user-1', user_code: 'USR-1', username: 'maker', display_name: 'Maker One',
+        email: 'maker@example.com', phone: null, department: null, job_title: null,
+        employment_start_date: null, employment_status: 'ACTIVE', status: 'ACTIVE', account_status: 'ACTIVE', roles: ['MAKER'], effective_permissions: [],
+      }],
+      offset: 0, limit: 25, total: 1,
+    })
+    vi.spyOn(authWorkflowService, 'listRoles').mockResolvedValue({ items: [], permission_catalog: [] })
+    const adminView = renderApplication('/workflow/employees')
+
+    expect(await screen.findByRole('heading', { name: 'Danh sách nhân viên' })).toBeVisible()
+    const directoryTable = await screen.findByRole('table')
+    expect(within(directoryTable).getByText('Maker One')).toBeVisible()
+    expect(listEmployees).toHaveBeenCalledWith({
+      query: '', role: '', status: undefined, department: '', job_title: '',
+      employment_status: undefined, offset: 0, limit: 25,
+    })
+
+    adminView.unmount()
+    vi.restoreAllMocks()
+    vi.spyOn(authService, 'me').mockResolvedValue(maker)
+    const deniedList = vi.spyOn(authWorkflowService, 'listEmployees')
+    renderApplication('/workflow/employees')
+    expect(await screen.findByRole('heading', { name: 'Không có quyền truy cập' })).toBeVisible()
+    expect(deniedList).not.toHaveBeenCalled()
   })
 
   it('does not render protected account content while the initial session check is pending', () => {
