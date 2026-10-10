@@ -149,20 +149,54 @@ jobs:
           .venv/bin/alembic upgrade head
           .venv/bin/python - <<'PY'
           import os
+          from alembic.config import Config
+          from alembic.script import ScriptDirectory
           from sqlalchemy import create_engine, inspect, text
+
+          alembic_config = Config('alembic.ini')
+          migration_heads = ScriptDirectory.from_config(alembic_config).get_heads()
+          assert len(migration_heads) == 1, f'Expected exactly one Alembic head, found {migration_heads}'
+          expected_head = migration_heads[0]
 
           engine = create_engine(os.environ['DATABASE_URL'])
           try:
               inspector = inspect(engine)
+              tables = set(inspector.get_table_names())
+              required_tables = {
+                  'auth_workflow_plans', 'employee_profiles', 'role_permissions',
+                  'auth_management_tokens', 'admin_audit_events',
+              }
               with engine.connect() as connection:
                   revisions = connection.scalars(text('SELECT version_num FROM alembic_version')).all()
-              assert revisions == ['20261009_08'], revisions
-              assert 'auth_workflow_plans' in inspector.get_table_names()
+              assert revisions == [expected_head], (
+                  f'Database revisions {revisions} do not match Alembic head {expected_head}'
+              )
+              missing_tables = required_tables - tables
+              assert not missing_tables, f'Missing EMP/account/token tables: {sorted(missing_tables)}'
+              assert {
+                  'status', 'activation_pending', 'session_version', 'employment_status',
+              } <= {column['name'] for column in inspector.get_columns('users')}
+              assert {'is_builtin', 'status'} <= {
+                  column['name'] for column in inspector.get_columns('roles')
+              }
+              assert {
+                  'user_code', 'display_name', 'employment_status', 'user_id',
+              } <= {column['name'] for column in inspector.get_columns('employee_profiles')}
+              assert {
+                  'user_id', 'issued_by', 'purpose', 'token_hash', 'expires_at', 'consumed_at',
+              } <= {column['name'] for column in inspector.get_columns('auth_management_tokens')}
+              assert any(
+                  item['name'] == 'ck_auth_management_tokens_purpose'
+                  for item in inspector.get_check_constraints('auth_management_tokens')
+              ), 'Auth management token purpose constraint is missing'
               assert any(
                   item['name'] == 'uq_auth_workflow_plans_maker_creation_key' and item['unique']
                   for item in inspector.get_indexes('auth_workflow_plans')
               )
-              print('PostgreSQL migration: head 20261009_08; draft idempotency index present.')
+              print(
+                  f'PostgreSQL migration: single Alembic head {expected_head}; '
+                  'EMP/account/token schema and draft idempotency index present.'
+              )
           finally:
               engine.dispose()
           PY
