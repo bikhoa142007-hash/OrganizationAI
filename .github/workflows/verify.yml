@@ -256,6 +256,8 @@ jobs:
           print(*ports)
           PY
           )
+          export CORS_ORIGINS="http://127.0.0.1:$frontend_port"
+          export VITE_API_BASE_URL="http://127.0.0.1:$api_port/api"
           nohup .venv/bin/python -m uvicorn src.backend.api.app:app --host 127.0.0.1 --port "$api_port" > "$RUNNER_TEMP/auth-api.log" 2>&1 &
           nohup npm --prefix frontend run dev -- --host 127.0.0.1 --port "$frontend_port" --strictPort > "$RUNNER_TEMP/auth-frontend.log" 2>&1 &
           for attempt in $(seq 1 60); do
@@ -288,8 +290,6 @@ jobs:
           AUTH_WORKFLOW_AI_PROVIDER: MOCK_VLM
           AUTH_WORKFLOW_MOCK_SCENARIO: review
           AUTH_COOKIE_SECURE: 'false'
-          CORS_ORIGINS: http://127.0.0.1:${{ steps.auth-e2e-servers.outputs.frontend_port }}
-          VITE_API_BASE_URL: http://127.0.0.1:${{ steps.auth-e2e-servers.outputs.api_port }}/api
           VITE_DEMO_ENABLED: 'true'
       - name: Run Auth Maker-Checker browser workflow against PostgreSQL
         run: npm run test:e2e -- --config playwright.auth-live.config.ts
