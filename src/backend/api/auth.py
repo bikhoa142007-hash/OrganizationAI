@@ -1,6 +1,7 @@
 from collections.abc import Iterator
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
+import logging
 import os
 import re
 from secrets import token_hex
@@ -23,13 +24,14 @@ from src.backend.db.security import (
     password_hash_needs_rehash,
     verify_password,
 )
-from src.backend.db.session import get_db
+from src.backend.db.session import get_session_factory
 from .auth_schemas import AccountTokenRequest, AuthResponse, AuthenticatedUser, LoginRequest, RegisterRequest
 
 AUTH_COOKIE_NAME = "organizationai_access_token"
 TOKEN_ISSUER = "organizationai"
 INVALID_CREDENTIALS = "Invalid credentials."
 router = APIRouter(prefix="/api/auth", tags=["authentication"])
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -112,13 +114,82 @@ def _auth_settings(request: Request) -> AuthSettings:
         raise _error(request, "UNAVAILABLE", "Authentication is not configured.") from exc
 
 
+def _auth_database_sqlstate(exc: BaseException) -> str | None:
+    pending = [exc]
+    visited: set[int] = set()
+    while pending:
+        current = pending.pop()
+        if id(current) in visited:
+            continue
+        visited.add(id(current))
+        diagnostic = getattr(current, "diag", None)
+        for candidate in (
+            getattr(current, "sqlstate", None),
+            getattr(current, "pgcode", None),
+            getattr(diagnostic, "sqlstate", None),
+        ):
+            if isinstance(candidate, str) and re.fullmatch(r"[0-9A-Z]{5}", candidate.upper()):
+                return candidate.upper()
+        for nested in (
+            getattr(current, "orig", None),
+            current.__cause__,
+            current.__context__,
+        ):
+            if isinstance(nested, BaseException) and id(nested) not in visited:
+                pending.append(nested)
+    return None
+
+
+def _log_auth_database_failure(request: Request, exc: SQLAlchemyError, phase: str) -> None:
+    sqlstate = _auth_database_sqlstate(exc)
+    if sqlstate and sqlstate.startswith(("08",)):
+        phase = "connect"
+    elif sqlstate and sqlstate.startswith(("42", "3F")):
+        phase = "schema"
+
+    # Deliberately omit exception text, SQL, parameters, and connection details.
+    logger.error(
+        "auth_database_failure correlation_id=%s exception_type=%s sqlstate=%s phase=%s",
+        getattr(request.state, "correlation_id", "auth-request"),
+        type(exc).__name__,
+        sqlstate or "none",
+        phase,
+    )
+
+
 def get_auth_db(request: Request) -> Iterator[Session]:
     try:
-        yield from get_db()
+        session_factory = get_session_factory()
     except RuntimeError as exc:
         raise _error(request, "UNAVAILABLE", "Authentication database is not configured.") from exc
     except SQLAlchemyError as exc:
+        _log_auth_database_failure(request, exc, "connect")
         raise _error(request, "UNAVAILABLE", "Authentication database is unavailable.") from exc
+
+    try:
+        session = session_factory()
+    except RuntimeError as exc:
+        raise _error(request, "UNAVAILABLE", "Authentication database is not configured.") from exc
+    except SQLAlchemyError as exc:
+        _log_auth_database_failure(request, exc, "connect")
+        raise _error(request, "UNAVAILABLE", "Authentication database is unavailable.") from exc
+
+    try:
+        try:
+            # Acquire the connection before yielding so connect failures are distinct
+            # from statement execution failures in the endpoint.
+            session.connection()
+        except SQLAlchemyError as exc:
+            _log_auth_database_failure(request, exc, "connect")
+            raise _error(request, "UNAVAILABLE", "Authentication database is unavailable.") from exc
+
+        try:
+            yield session
+        except SQLAlchemyError as exc:
+            _log_auth_database_failure(request, exc, "query")
+            raise _error(request, "UNAVAILABLE", "Authentication database is unavailable.") from exc
+    finally:
+        session.close()
 
 
 def _check_browser_origin(request: Request) -> None:
