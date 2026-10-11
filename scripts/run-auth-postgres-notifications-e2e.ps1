@@ -1,11 +1,14 @@
 [CmdletBinding()]
-param()
+param(
+    [string] $ExpectedBranch = 'codex/scope1-phase1-judge-continuation-20261011',
+    [switch] $SkipOtherCheckoutVerification
+)
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
-$expectedBranch = 'codex/scope1-phase1-judge-continuation-20261011'
+$expectedBranch = $ExpectedBranch
 $oldCheckout = 'C:\Users\Khoa Bi\VS Studio\repos\OrganizationAI'
 $backendImage = 'organizationai-backend:latest'
 $postgresImage = 'postgres:16'
@@ -16,7 +19,6 @@ $viteCli = Join-Path $frontendRoot 'node_modules\vite\bin\vite.js'
 $playwrightCli = Join-Path $frontendRoot 'node_modules\@playwright\test\cli.js'
 $runnerFile = Join-Path $PSScriptRoot 'run-auth-postgres-notifications-e2e.ps1'
 $helperFile = Join-Path $PSScriptRoot 'verify_auth_postgres_notifications.py'
-$postgresTestFile = Join-Path $repoRoot 'tests\integration\test_auth_workflow_postgres_notifications.py'
 $runId = [guid]::NewGuid().ToString('N')
 $runRoot = Join-Path ([IO.Path]::GetTempPath()) "organizationai-notification-postgres-$runId"
 $artifactRoot = Join-Path $repoRoot "docs\integration\evidence\auth-postgres-notifications\$runId"
@@ -24,8 +26,8 @@ $networkName = "oa-notify-$runId"
 $postgresContainer = "oa-notify-pg-$runId"
 $apiContainer = "oa-notify-api-$runId"
 $databaseUser = 'oa_test'
-$emptyDatabase = "oa_empty_$($runId.Substring(0, 10))"
-$legacyDatabase = "oa_legacy_$($runId.Substring(0, 10))"
+$emptyDatabase = "organizationai_test_empty_$runId"
+$legacyDatabase = "organizationai_test_legacy_$runId"
 $databasePassword = [guid]::NewGuid().ToString('N') + [guid]::NewGuid().ToString('N')
 $seedPassword = [guid]::NewGuid().ToString('N') + [guid]::NewGuid().ToString('N')
 $jwtSecret = [guid]::NewGuid().ToString('N') + [guid]::NewGuid().ToString('N')
@@ -34,6 +36,12 @@ $ownedNetworkCreated = $false
 $ownedPostgresCreated = $false
 $ownedApiCreated = $false
 $frontendProcess = $null
+$apiPortReservation = $null
+$frontendPortReservation = $null
+$apiPort = $null
+$frontendPort = $null
+$portAllocationMutex = [Threading.Mutex]::new($false, 'OrganizationAI.NotificationVerification.RenderPorts')
+$portAllocationMutexHeld = $false
 $status = 'RUNNING'
 $errorMessage = $null
 $evidence = $null
@@ -45,6 +53,7 @@ $postgresTestOutput = ''
 $browserStats = $null
 $provider = 'MOCK_VLM deterministic fixture; no live inference'
 $beforeContainerIds = @()
+$containerSnapshotAvailable = $false
 $oldCheckoutBefore = [ordered]@{ branch = $null; head = $null; status = $null }
 $oldCheckoutAfter = $null
 $branch = $null
@@ -80,6 +89,7 @@ $savedEnvironmentNames = @(
     'AUTH_SEED_PASSWORD', 'AUTH_WORKFLOW_AI_PROVIDER', 'AUTH_WORKFLOW_MOCK_SCENARIO',
     'CORS_ORIGINS', 'DATABASE_URL', 'DEMO_DATABASE', 'DEMO_MOCK_MODE', 'JWT_SECRET',
     'JWT_ACCESS_TOKEN_MINUTES', 'NOTIFICATION_VERIFICATION_RUN_ID',
+    'POSTGRES_TEST_DATABASE', 'POSTGRES_TEST_USER', 'POSTGRES_TEST_RUN_ID',
     'PLAYWRIGHT_JSON_OUTPUT_FILE', 'VITE_API_BASE_URL', 'VITE_DEMO_ENABLED'
 )
 $processEnvironment = [Environment]::GetEnvironmentVariables([EnvironmentVariableTarget]::Process)
@@ -101,6 +111,16 @@ function Set-RunEnvironment([hashtable] $Values) {
     foreach ($entry in $Values.GetEnumerator()) {
         [Environment]::SetEnvironmentVariable([string]$entry.Key, [string]$entry.Value, [EnvironmentVariableTarget]::Process)
     }
+}
+
+function Set-TestPostgresTarget([string] $Database, [string] $Url) {
+    Set-RunEnvironment @{
+        DATABASE_URL = $Url
+        POSTGRES_TEST_DATABASE = $Database
+        POSTGRES_TEST_USER = $databaseUser
+        POSTGRES_TEST_RUN_ID = $runId
+    }
+    $null = Invoke-BackendPython @('scripts/verify_postgres_test_target.py')
 }
 
 function Redact-Text([string] $Text) {
@@ -129,7 +149,7 @@ function Invoke-BackendPython([string[]] $PythonArguments, [switch] $AllowFailur
         'AUTH_E2E_MAKER_USERNAME', 'AUTH_REMEMBER_TOKEN_DAYS', 'AUTH_SEED_ENABLED',
         'AUTH_SEED_PASSWORD', 'AUTH_WORKFLOW_AI_PROVIDER', 'AUTH_WORKFLOW_MOCK_SCENARIO',
         'CORS_ORIGINS', 'DATABASE_URL', 'DEMO_DATABASE', 'DEMO_MOCK_MODE', 'JWT_SECRET',
-        'JWT_ACCESS_TOKEN_MINUTES', 'NOTIFICATION_VERIFICATION_RUN_ID'
+        'JWT_ACCESS_TOKEN_MINUTES', 'NOTIFICATION_VERIFICATION_RUN_ID', 'POSTGRES_TEST_DATABASE', 'POSTGRES_TEST_USER', 'POSTGRES_TEST_RUN_ID'
     )) {
         if (-not [string]::IsNullOrWhiteSpace([Environment]::GetEnvironmentVariable($name, [EnvironmentVariableTarget]::Process))) {
             $dockerArguments += @('--env', $name)
@@ -156,11 +176,34 @@ function Invoke-BackendJson([string[]] $PythonArguments) {
     catch { throw "Backend helper did not return JSON: $(Redact-Text $result.Output)" }
 }
 
-function Assert-PortFree([int] $Port) {
-    $listener = [Net.Sockets.TcpListener]::new([Net.IPAddress]::Loopback, $Port)
-    try { $listener.Start() }
-    catch { throw "Required local port $Port is occupied; no existing listener was changed." }
-    finally { $listener.Stop() }
+function Reserve-FreeLoopbackPort([int[]] $ExcludedPorts = @()) {
+    for ($attempt = 0; $attempt -lt 16; $attempt++) {
+        $listener = [Net.Sockets.TcpListener]::new([Net.IPAddress]::Loopback, 0)
+        try {
+            $listener.Start()
+            $port = [int]$listener.LocalEndpoint.Port
+            if ($port -notin $ExcludedPorts) { return $listener }
+        } catch {
+            $listener.Stop()
+            throw
+        }
+        $listener.Stop()
+    }
+    throw 'Could not reserve distinct loopback ports for this run.'
+}
+
+function Get-UnrelatedContainerIds {
+    $containerIds = @(& $docker ps -aq --no-trunc)
+    if ($LASTEXITCODE -ne 0) { throw 'Could not inspect Docker container ownership.' }
+    $unrelated = @()
+    foreach ($containerId in $containerIds) {
+        if ([string]::IsNullOrWhiteSpace($containerId)) { continue }
+        $runIdLabel = @(& $docker inspect --format '{{ index .Config.Labels "com.organizationai.notification-verification.run-id" }}' $containerId 2>$null)
+        if ($LASTEXITCODE -ne 0) { throw 'Could not inspect a Docker container ownership label.' }
+        $labelValue = ($runIdLabel -join '').Trim()
+        if ([string]::IsNullOrWhiteSpace($labelValue) -or $labelValue -eq '<no value>') { $unrelated += $containerId }
+    }
+    return $unrelated
 }
 
 function Stop-ProcessOwned($Process, [string] $Label) {
@@ -183,6 +226,14 @@ function Save-RedactedFile([string] $Source, [string] $Destination) {
 }
 
 try {
+    [Environment]::SetEnvironmentVariable('DATABASE_URL', $null, [EnvironmentVariableTarget]::Process)
+    [Environment]::SetEnvironmentVariable('DEMO_DATABASE', $null, [EnvironmentVariableTarget]::Process)
+    [Environment]::SetEnvironmentVariable('POSTGRES_TEST_DATABASE', $null, [EnvironmentVariableTarget]::Process)
+    [Environment]::SetEnvironmentVariable('POSTGRES_TEST_USER', $null, [EnvironmentVariableTarget]::Process)
+    [Environment]::SetEnvironmentVariable('POSTGRES_TEST_RUN_ID', $null, [EnvironmentVariableTarget]::Process)
+    [Environment]::SetEnvironmentVariable('CORS_ORIGINS', $null, [EnvironmentVariableTarget]::Process)
+    [Environment]::SetEnvironmentVariable('AUTH_E2E_BASE_URL', $null, [EnvironmentVariableTarget]::Process)
+    [Environment]::SetEnvironmentVariable('VITE_API_BASE_URL', $null, [EnvironmentVariableTarget]::Process)
     $resolvedRoot = (Get-GitText $repoRoot @('rev-parse', '--show-toplevel')).Replace('/', '\').TrimEnd('\')
     $normalizedRepoRoot = $repoRoot.TrimEnd('\')
     if (-not [string]::Equals($resolvedRoot, $normalizedRepoRoot, [StringComparison]::OrdinalIgnoreCase)) {
@@ -193,22 +244,24 @@ try {
     if ($branch -ne $expectedBranch) { throw "Expected branch $expectedBranch; found $branch. Runner refuses to use another checkout." }
     $workingTreeBefore = @(Get-GitText $repoRoot @('status', '--porcelain=v1', '--untracked-files=all') -split "`n" | Where-Object { $_ })
 
-    if (-not (Test-Path -LiteralPath $oldCheckout -PathType Container)) { throw "Expected preserved checkout is missing: $oldCheckout" }
-    $oldCheckoutBefore = [ordered]@{
-        branch = Get-GitText $oldCheckout @('branch', '--show-current')
-        head = Get-GitText $oldCheckout @('rev-parse', 'HEAD')
-        status = Get-GitText $oldCheckout @('status', '--porcelain=v1', '--untracked-files=all')
+    if (-not $SkipOtherCheckoutVerification) {
+        if (-not (Test-Path -LiteralPath $oldCheckout -PathType Container)) { throw "Expected preserved checkout is missing: $oldCheckout" }
+        $oldCheckoutBefore = [ordered]@{
+            branch = Get-GitText $oldCheckout @('branch', '--show-current')
+            head = Get-GitText $oldCheckout @('rev-parse', 'HEAD')
+            status = Get-GitText $oldCheckout @('status', '--porcelain=v1', '--untracked-files=all')
+        }
     }
     if (-not (Test-Path -LiteralPath $viteCli -PathType Leaf) -or -not (Test-Path -LiteralPath $playwrightCli -PathType Leaf)) {
         throw 'Frontend Vite/Playwright dependencies are unavailable in this worktree.'
     }
-    foreach ($port in @(18010, 15173)) { Assert-PortFree $port }
 
     $imageId = @(& $docker image inspect $backendImage --format '{{.Id}}' 2>$null)
     if ($LASTEXITCODE -ne 0 -or -not $imageId) { throw "The local $backendImage image is required; this runner never pulls images." }
     $postgresImageId = @(& $docker image inspect $postgresImage --format '{{.Id}}' 2>$null)
     if ($LASTEXITCODE -ne 0 -or -not $postgresImageId) { throw "The local $postgresImage image is required; this runner never pulls images." }
-    $beforeContainerIds = @(& $docker ps -aq --no-trunc | Sort-Object -Unique)
+    $beforeContainerIds = @(Get-UnrelatedContainerIds | Sort-Object -Unique)
+    $containerSnapshotAvailable = $true
     New-Item -ItemType Directory -Path $runRoot | Out-Null
     $apiLogPath = Join-Path $runRoot 'api.log'
     $frontendLogPath = Join-Path $runRoot 'frontend.log'
@@ -242,7 +295,6 @@ try {
         AUTH_ALLOW_SQLITE_MIGRATION_TESTS = 'false'
         AUTH_COOKIE_SECURE = 'false'
         AUTH_COOKIE_SAMESITE = 'lax'
-        AUTH_E2E_BASE_URL = 'http://127.0.0.1:15173'
         AUTH_E2E_CHECKER_USERNAME = 'checker'
         AUTH_E2E_MAKER_USERNAME = 'maker'
         AUTH_REMEMBER_TOKEN_DAYS = '14'
@@ -250,14 +302,12 @@ try {
         AUTH_SEED_PASSWORD = $seedPassword
         AUTH_WORKFLOW_AI_PROVIDER = 'MOCK_VLM'
         AUTH_WORKFLOW_MOCK_SCENARIO = 'review'
-        CORS_ORIGINS = 'http://127.0.0.1:15173'
         DEMO_DATABASE = '/tmp/organizationai-notification-demo.sqlite3'
         DEMO_MOCK_MODE = 'review'
         JWT_SECRET = $jwtSecret
         JWT_ACCESS_TOKEN_MINUTES = '30'
         NOTIFICATION_VERIFICATION_RUN_ID = $runId
         PLAYWRIGHT_JSON_OUTPUT_FILE = $browserReportPath
-        VITE_API_BASE_URL = 'http://127.0.0.1:18010/api'
         VITE_DEMO_ENABLED = 'true'
     }
     Set-RunEnvironment $environment
@@ -282,14 +332,14 @@ try {
     if (-not $postgresReady) { throw 'Temporary PostgreSQL did not become ready within 120 seconds.' }
 
     $emptyUrl = "postgresql+psycopg://${databaseUser}:${databasePassword}@postgres:5432/${emptyDatabase}"
-    Set-RunEnvironment @{ DATABASE_URL = $emptyUrl }
+    Set-TestPostgresTarget $emptyDatabase $emptyUrl
     $null = Invoke-BackendPython @('-m', 'alembic', 'upgrade', 'head')
     $emptyMigration = Invoke-BackendJson @('scripts/verify_auth_postgres_notifications.py', 'verify-empty')
 
     $createdb = @(& $docker exec $postgresContainer createdb -U $databaseUser $legacyDatabase 2>&1)
     if ($LASTEXITCODE -ne 0) { throw "Could not create the runner-owned revision 10 database: $(Redact-Text ($createdb -join "`n"))" }
     $legacyUrl = "postgresql+psycopg://${databaseUser}:${databasePassword}@postgres:5432/${legacyDatabase}"
-    Set-RunEnvironment @{ DATABASE_URL = $legacyUrl }
+    Set-TestPostgresTarget $legacyDatabase $legacyUrl
     $null = Invoke-BackendPython @('-m', 'alembic', 'upgrade', '20261010_10')
     $legacySeed = Invoke-BackendJson @('scripts/verify_auth_postgres_notifications.py', 'seed-revision-10')
     if ($legacySeed.status -ne 'PASS' -or $legacySeed.revision -ne '20261010_10') {
@@ -304,15 +354,34 @@ try {
         throw 'Legacy database did not reach the notification head without adding notification rows.'
     }
 
-    Set-RunEnvironment @{ DATABASE_URL = $emptyUrl }
+    Set-TestPostgresTarget $emptyDatabase $emptyUrl
     $seedOutput = Invoke-BackendPython @('-m', 'src.backend.seed_auth')
-    $integrationOutput = Invoke-BackendPython @('-m', 'pytest', '-q', 'tests/integration/test_auth_workflow_postgres_notifications.py')
+    $integrationOutput = Invoke-BackendPython @('-m', 'pytest', '-q', '-m', 'postgres')
     $postgresTestOutput = $integrationOutput.Output
+
+    # Serialize port handoff between concurrent copies of this runner. Hold the
+    # reservations until each listener is started and ready, then release the lock.
+    try { $mutexAcquired = $portAllocationMutex.WaitOne([TimeSpan]::FromMinutes(2)) }
+    catch [Threading.AbandonedMutexException] { $mutexAcquired = $true }
+    if (-not $mutexAcquired) { throw 'Timed out waiting for the Auth E2E loopback port allocator.' }
+    $portAllocationMutexHeld = $true
+    $apiPortReservation = Reserve-FreeLoopbackPort
+    $apiPort = [int]$apiPortReservation.LocalEndpoint.Port
+    $frontendPortReservation = Reserve-FreeLoopbackPort -ExcludedPorts @($apiPort)
+    $frontendPort = [int]$frontendPortReservation.LocalEndpoint.Port
+    $frontendOrigin = "http://127.0.0.1:$frontendPort"
+    $apiOrigin = "http://127.0.0.1:$apiPort"
+    $listenerEnvironment = @{
+        AUTH_E2E_BASE_URL = $frontendOrigin
+        CORS_ORIGINS = $frontendOrigin
+        VITE_API_BASE_URL = "$apiOrigin/api"
+    }
+    Set-RunEnvironment $listenerEnvironment
 
     $apiArguments = @(
         'run', '--pull=never', '--detach', '--rm', '--name', $apiContainer,
         '--label', "com.organizationai.notification-verification.run-id=$runId",
-        '--network', $networkName, '--publish', '127.0.0.1:18010:8000', '--workdir', '/app',
+        '--network', $networkName, '--publish', "127.0.0.1:${apiPort}:8000", '--workdir', '/app',
         '--volume', "${repoRoot}:/app"
     )
     foreach ($name in @(
@@ -322,13 +391,17 @@ try {
         'DATABASE_URL', 'DEMO_DATABASE', 'DEMO_MOCK_MODE', 'JWT_SECRET', 'JWT_ACCESS_TOKEN_MINUTES'
     )) { $apiArguments += @('--env', $name) }
     $apiArguments += @($backendImage, 'python', '-m', 'uvicorn', 'src.backend.api.app:app', '--host', '0.0.0.0', '--port', '8000')
+    $apiPortReservation.Stop()
+    $apiPortReservation = $null
     $apiStartOutput = @(& $docker @apiArguments 2>&1)
     if ($LASTEXITCODE -ne 0) { throw "Could not start this run's API container: $(Redact-Text ($apiStartOutput -join "`n"))" }
     $ownedApiCreated = $true
 
     $frontendLog = Join-Path $runRoot 'frontend.log'
     $frontendErrorLog = Join-Path $runRoot 'frontend-error.log'
-    $viteArgs = @('"' + $viteCli + '"', '--host', '127.0.0.1', '--port', '15173', '--strictPort')
+    $viteArgs = @('"' + $viteCli + '"', '--host', '127.0.0.1', '--port', [string]$frontendPort, '--strictPort')
+    $frontendPortReservation.Stop()
+    $frontendPortReservation = $null
     $frontendProcess = Start-Process -FilePath $node `
         -ArgumentList $viteArgs -WorkingDirectory $frontendRoot `
         -RedirectStandardOutput $frontendLog -RedirectStandardError $frontendErrorLog `
@@ -340,18 +413,40 @@ try {
         $frontendProcess.Refresh()
         if ($frontendProcess.HasExited) { throw 'The temporary Vite frontend exited during startup.' }
         try {
-            $response = Invoke-WebRequest -UseBasicParsing -Uri 'http://127.0.0.1:18010/api/health/ready' -TimeoutSec 4
+            $response = Invoke-WebRequest -UseBasicParsing -Uri "http://127.0.0.1:$apiPort/api/health/ready" -TimeoutSec 4
             $health = $response.Content | ConvertFrom-Json
             $apiReady = $response.StatusCode -eq 200 -and $health.auth_database -eq 'postgresql'
         } catch { $apiReady = $false }
         try {
-            $response = Invoke-WebRequest -UseBasicParsing -Uri 'http://127.0.0.1:15173/' -TimeoutSec 4
+            $response = Invoke-WebRequest -UseBasicParsing -Uri "http://127.0.0.1:$frontendPort/" -TimeoutSec 4
             $frontendReady = $response.StatusCode -eq 200
         } catch { $frontendReady = $false }
         if ($apiReady -and $frontendReady) { break }
         Start-Sleep -Seconds 2
     }
     if (-not $apiReady -or -not $frontendReady) { throw 'The runner-owned PostgreSQL API or Vite frontend did not become ready.' }
+
+    $corsPreflight = Invoke-WebRequest -UseBasicParsing -Method Options `
+        -Uri "$apiOrigin/api/health/ready" `
+        -Headers @{
+            Origin = $frontendOrigin
+            'Access-Control-Request-Method' = 'GET'
+        } -TimeoutSec 8
+    $allowedOrigin = $corsPreflight.Headers['Access-Control-Allow-Origin']
+    if ($allowedOrigin -cne $frontendOrigin) {
+        throw 'Auth E2E CORS preflight did not allow the configured frontend origin and port.'
+    }
+    if ($listenerEnvironment.AUTH_E2E_BASE_URL -cne $frontendOrigin -or
+        $listenerEnvironment.VITE_API_BASE_URL -cne "$apiOrigin/api") {
+        throw 'Auth E2E trusted origin or frontend API URL differs from the active listener ports.'
+    }
+    $processFrontendOrigin = [Environment]::GetEnvironmentVariable('AUTH_E2E_BASE_URL', [EnvironmentVariableTarget]::Process)
+    $processApiUrl = [Environment]::GetEnvironmentVariable('VITE_API_BASE_URL', [EnvironmentVariableTarget]::Process)
+    if ($processFrontendOrigin -cne $frontendOrigin -or $processApiUrl -cne "$apiOrigin/api") {
+        throw 'Auth E2E process URLs differ from the active frontend or API listener ports.'
+    }
+    $portAllocationMutex.ReleaseMutex()
+    $portAllocationMutexHeld = $false
 
     Push-Location $frontendRoot
     try {
@@ -388,6 +483,14 @@ catch {
     $errorMessage = Redact-Text $_.Exception.Message
 }
 finally {
+    if ($null -ne $apiPortReservation) { $apiPortReservation.Stop() }
+    if ($null -ne $frontendPortReservation) { $frontendPortReservation.Stop() }
+    if ($portAllocationMutexHeld) {
+        $portAllocationMutex.ReleaseMutex()
+        $portAllocationMutexHeld = $false
+    }
+    $portAllocationMutex.Dispose()
+
     Stop-ProcessOwned $frontendProcess 'Vite frontend'
 
     if ($ownedApiCreated) {
@@ -466,24 +569,36 @@ finally {
         }
     }
 
-    try {
-        $oldCheckoutAfter = [ordered]@{
-            branch = Get-GitText $oldCheckout @('branch', '--show-current')
-            head = Get-GitText $oldCheckout @('rev-parse', 'HEAD')
-            status = Get-GitText $oldCheckout @('status', '--porcelain=v1', '--untracked-files=all')
+    if (-not $SkipOtherCheckoutVerification) {
+        try {
+            $oldCheckoutAfter = [ordered]@{
+                branch = Get-GitText $oldCheckout @('branch', '--show-current')
+                head = Get-GitText $oldCheckout @('rev-parse', 'HEAD')
+                status = Get-GitText $oldCheckout @('status', '--porcelain=v1', '--untracked-files=all')
+            }
+            $oldCheckoutUnchanged = ($oldCheckoutBefore.branch -ceq $oldCheckoutAfter.branch -and
+                $oldCheckoutBefore.head -ceq $oldCheckoutAfter.head -and $oldCheckoutBefore.status -ceq $oldCheckoutAfter.status)
+        } catch {
+            $oldCheckoutUnchanged = $false
+            if ($status -eq 'PASS') { $status = 'FAILED'; $errorMessage = "Could not reverify the old checkout: $($_.Exception.Message)" }
         }
-        $oldCheckoutUnchanged = ($oldCheckoutBefore.branch -ceq $oldCheckoutAfter.branch -and
-            $oldCheckoutBefore.head -ceq $oldCheckoutAfter.head -and $oldCheckoutBefore.status -ceq $oldCheckoutAfter.status)
-    } catch {
-        $oldCheckoutUnchanged = $false
-        if ($status -eq 'PASS') { $status = 'FAILED'; $errorMessage = "Could not reverify the old checkout: $($_.Exception.Message)" }
     }
 
-    $afterContainerIds = @(& $docker ps -aq --no-trunc | Sort-Object -Unique)
-    $missingContainerIds = @($beforeContainerIds | Where-Object { $_ -and $_ -notin $afterContainerIds })
-    if ($missingContainerIds.Count -gt 0 -and $status -eq 'PASS') {
-        $status = 'FAILED'
-        $errorMessage = 'A container that existed before the runner is missing after cleanup.'
+    $missingContainerIds = @()
+    if ($containerSnapshotAvailable) {
+        try {
+            $afterContainerIds = @(Get-UnrelatedContainerIds | Sort-Object -Unique)
+            $missingContainerIds = @($beforeContainerIds | Where-Object { $_ -and $_ -notin $afterContainerIds })
+            if ($missingContainerIds.Count -gt 0 -and $status -eq 'PASS') {
+                $status = 'FAILED'
+                $errorMessage = 'A container that existed before the runner is missing after cleanup.'
+            }
+        } catch {
+            if ($status -eq 'PASS') {
+                $status = 'FAILED'
+                $errorMessage = 'Could not verify unrelated Docker containers after cleanup.'
+            }
+        }
     }
 
     $fileHashes = [ordered]@{}
@@ -516,7 +631,8 @@ finally {
             migration_head = $migrationHead
             working_tree_dirty_before_run = ($workingTreeBefore.Count -gt 0)
             changed_paths_before_run = $workingTreeBefore
-            old_checkout = $oldCheckout
+            other_checkout_verification = if ($SkipOtherCheckoutVerification) { 'SKIPPED_BY_WORKTREE_ISOLATION' } else { 'VERIFIED' }
+            old_checkout = if ($SkipOtherCheckoutVerification) { $null } else { $oldCheckout }
             old_checkout_branch_before = $oldCheckoutBefore.branch
             old_checkout_head_before = $oldCheckoutBefore.head
             old_checkout_status_unchanged = $oldCheckoutUnchanged
@@ -527,6 +643,12 @@ finally {
             files = $fileHashes
         }
         runtime = [ordered]@{
+            auth_e2e = [ordered]@{
+                frontend_url = if ($frontendPort) { "http://127.0.0.1:$frontendPort" } else { $null }
+                api_url = if ($apiPort) { "http://127.0.0.1:$apiPort/api" } else { $null }
+                cors_allowed_origin = if ($frontendPort) { "http://127.0.0.1:$frontendPort" } else { $null }
+                trusted_origin = if ($frontendPort) { "http://127.0.0.1:$frontendPort" } else { $null }
+            }
             docker_backend_image = $backendImage
             backend_image_id = ($imageId -join '').Trim()
             python = $pythonRuntime

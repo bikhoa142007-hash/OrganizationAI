@@ -251,11 +251,9 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("mode", choices=("verify-empty", "seed-revision-10", "verify-revision-11"))
     args = parser.parse_args()
-    from src.backend.db.session import normalize_database_url
+    from scripts.postgres_test_target import verify_runner_provisioned_database
 
-    database_url = normalize_database_url(os.environ.get("DATABASE_URL", ""))
-    if not database_url.startswith("postgresql+psycopg://"):
-        raise RuntimeError("This helper only accepts the runner's temporary PostgreSQL database.")
+    database_url = verify_runner_provisioned_database(os.environ)
     engine = create_engine(database_url, pool_pre_ping=True)
     factory = sessionmaker(engine, expire_on_commit=False)
     try:
