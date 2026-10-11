@@ -1,0 +1,95 @@
+{
+  "schema_version": 1,
+  "status": "PASS",
+  "verification_commit": "f728de097351e415cedd0c52586ae08c9ee8f46a",
+  "worktree": "<isolated-verification-worktree>",
+  "detached_head": true,
+  "worktree_clean_before_run": true,
+  "new_run_id": "cf81891ccaf24afb8df7fc95794ba6c4",
+  "new_run_fingerprint": "fad6aa38855db8c27d4b39544912993343073358de19593809e3fd4ac73397b5",
+  "reference_evidence": {
+    "run_id": "c285992f40c0447ba08537ad19dc9e9c",
+    "head": "a806fbf1a816764c4f1dd8713b60579aa910a1fb",
+    "fingerprint": "6227209e830c26058d622d4c5de5dd01ecec8364998c5b1a6ccc5d29a89882dd",
+    "manifest_file_count": 13,
+    "reference_raw_hashes_match_preserved_source": true,
+    "clean_commit_raw_hash_matches": {
+      "matched": 7,
+      "total": 13,
+      "line_ending_only_mismatch_paths": [
+        "alembic/versions/20261011_11_in_app_notifications.py",
+        "scripts/verify_auth_postgres_notifications.py",
+        "scripts/run-auth-postgres-notifications-e2e.ps1",
+        "scripts/run-auth-postgres-e2e.ps1",
+        "tests/integration/test_auth_workflow_postgres_notifications.py",
+        "frontend/src/pages/AuthenticatedNotificationsPage.tsx"
+      ]
+    },
+    "content_equal_after_crlf_to_lf_normalization": {
+      "matched": 13,
+      "total": 13,
+      "all_match": true
+    },
+    "reference_digest_recomputes_from_manifest": true
+  },
+  "new_run_fingerprint_file_matches": {
+    "matched": 13,
+    "total": 13,
+    "digest_recomputed": "fad6aa38855db8c27d4b39544912993343073358de19593809e3fd4ac73397b5"
+  },
+  "runner": {
+    "committed_source_unchanged": true,
+    "backend_and_api_mount_verification_worktree": "/app",
+    "temporary_harness_adaptations": [
+      "absolute verification root and source helper paths",
+      "branch guard accepts only exact detached commit f728de097351e415cedd0c52586ae08c9ee8f46a"
+    ],
+    "temporary_harness_outside_worktree_removed": true,
+    "harness_reverses_to_committed_runner": true,
+    "outer_shell_exit_code": 1,
+    "outer_shell_note": "Runner itself emitted PASS and error=null; outer shell exit was nonzero only when its cleanup command addressed the temporary launcher incorrectly. The exact temporary file was then removed after path-containment verification."
+  },
+  "dependencies": {
+    "frontend_install": "npm ci --prefer-offline --no-audit --no-fund",
+    "packages_added": 114,
+    "from_committed_lockfile": true,
+    "tracked_files_changed_by_install": false,
+    "backend_imports_present_at_commit": true
+  },
+  "results": {
+    "migration_head": "20261011_11",
+    "empty_database": "PASS",
+    "legacy_revision_20261010_10_seed": "PASS",
+    "legacy_revision_20261010_10_upgrade": "PASS",
+    "legacy_data_unchanged": true,
+    "postgres_notification_test_output": ".                                                                        [100%]\n=============================== warnings summary ===============================\n../usr/local/lib/python3.13/site-packages/fastapi/testclient.py:1\n  /usr/local/lib/python3.13/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.\n    from starlette.testclient import TestClient as TestClient  # noqa\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n1 passed, 1 warning in 5.04s",
+    "browser": {
+      "expected": 3,
+      "skipped": 0,
+      "unexpected": 0,
+      "flaky": 0,
+      "notification_flow": "Assigned Checker opens submission notice, marks it read, opens the plan; Maker opens rejection notice, marks it read, opens the same plan.",
+      "provider": "MOCK_VLM deterministic fixture; no live inference"
+    },
+    "provider": "MOCK_VLM deterministic fixture; no live inference",
+    "cleanup": {
+      "owned_network_removed": true,
+      "owned_postgres_container_stopped": true,
+      "owned_api_container_stopped": true,
+      "preexisting_containers_preserved": true,
+      "missing_preexisting_container_ids": [],
+      "temporary_files_archived_or_retained": true
+    },
+    "error": null
+  },
+  "preservation": {
+    "live_application_database_used": false,
+    "application_containers_modified": false,
+    "preexisting_containers_preserved": true,
+    "preexisting_container_ids_missing": [],
+    "existing_continuation_worktree_mount_used": false,
+    "existing_continuation_worktree_head_after": "f728de097351e415cedd0c52586ae08c9ee8f46a",
+    "existing_continuation_worktree_branch_after": "codex/scope1-phase1-judge-continuation-20261011",
+    "existing_continuation_worktree_status_entries_after": 40
+  }
+}
