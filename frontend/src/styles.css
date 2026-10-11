@@ -788,6 +788,30 @@ h1, h2, h3, h4 { letter-spacing: 0; }
 .auth-workflow-page-heading h1 { margin: 5px 0 7px; font-size: clamp(1.65rem, 3vw, 2.2rem); line-height: 1.15; }
 .auth-workflow-page-heading p:not(.page-eyebrow) { max-width: 680px; margin: 0; color: var(--muted); line-height: 1.5; }
 .auth-workflow-page-heading .page-eyebrow { margin: 0; color: var(--brand-dark); font-size: .7rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.auth-notification-unread-count { flex: 0 0 auto; border-radius: 999px; background: var(--surface-soft); padding: 7px 11px; color: var(--brand-dark); font-size: .78rem; font-weight: 750; }
+.auth-notification-list { display: grid; gap: 10px; }
+.auth-notification-card { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 20px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); padding: 18px 20px; }
+.auth-notification-card.is-unread { border-color: #b7d9d1; background: #f5fbf9; }
+.auth-notification-content { min-width: 0; }
+.auth-notification-heading { display: flex; align-items: center; gap: 10px; }
+.auth-notification-heading h2 { margin: 0; font-size: .98rem; }
+.auth-notification-new { border-radius: 999px; background: #dcefe9; padding: 3px 8px; color: #195d50; font-size: .68rem; font-weight: 800; }
+.auth-notification-content > p { margin: 8px 0; color: var(--ink); line-height: 1.5; }
+.auth-notification-content > small { color: var(--muted); font-size: .75rem; }
+.auth-notification-actions { display: flex; align-items: center; justify-content: flex-end; gap: 12px; }
+.auth-notification-actions > a { display: inline-flex; align-items: center; gap: 5px; color: var(--brand-dark); font-size: .82rem; font-weight: 750; text-decoration: none; white-space: nowrap; }
+.auth-notification-actions > a svg { width: 14px; height: 14px; }
+.auth-notification-actions > button { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.auth-notification-actions > button svg { width: 15px; height: 15px; }
+.auth-notification-empty { display: grid; justify-items: center; gap: 7px; border: 1px dashed var(--line-strong); border-radius: 8px; background: var(--surface); padding: 42px 20px; text-align: center; }
+.auth-notification-empty > svg { width: 27px; height: 27px; color: var(--muted); }
+.auth-notification-empty h2 { margin: 4px 0 0; font-size: 1rem; }
+.auth-notification-empty p { margin: 0; color: var(--muted); line-height: 1.5; }
+.auth-notification-error { margin: 0; border: 1px solid #e8bdb9; border-radius: 6px; background: #fff8f7; padding: 10px 12px; color: #8f312a; }
+.auth-notification-pagination { display: flex; align-items: center; justify-content: center; gap: 14px; }
+.auth-notification-pagination > button { display: inline-flex; align-items: center; gap: 5px; }
+.auth-notification-pagination > button svg { width: 16px; height: 16px; }
+.auth-notification-pagination > span { color: var(--muted); font-size: .8rem; }
 .auth-workflow-table-wrap { overflow: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
 .auth-workflow-table { width: 100%; border-collapse: collapse; text-align: left; }
 .auth-workflow-table th { background: var(--surface-soft); color: var(--muted); font-size: .72rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
@@ -967,6 +991,9 @@ h1, h2, h3, h4 { letter-spacing: 0; }
   .auth-workflow-fields, .auth-workflow-definition-grid { grid-template-columns: 1fr; }
   .auth-field.field-wide, .auth-workflow-definition-grid .field-wide { grid-column: auto; }
   .auth-workflow-page-heading, .auth-workflow-form-footer { align-items: stretch; flex-direction: column; }
+  .auth-notification-card { grid-template-columns: 1fr; align-items: stretch; padding: 15px; }
+  .auth-notification-actions { flex-wrap: wrap; justify-content: flex-start; }
+  .auth-notification-unread-count { align-self: flex-start; }
   .auth-workflow-status-pair { justify-items: start; text-align: left; }
   .auth-workflow-form-footer .button-row { display: flex; }
   .auth-workflow-form, .auth-workflow-card, .auth-workflow-state { padding: 16px; }

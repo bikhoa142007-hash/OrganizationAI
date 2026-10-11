@@ -250,6 +250,27 @@ export interface WorkflowAuditPage {
   total: number
 }
 
+export interface WorkflowNotification {
+  id: string
+  event_type: 'PLAN_SUBMITTED' | 'PLAN_APPROVED' | 'PLAN_AUTO_APPROVED' | 'PLAN_REJECTED'
+  plan_id: string
+  plan_code: string
+  title: string
+  message: string
+  version_number: number
+  round_number: number
+  created_at: string
+  read_at: string | null
+}
+
+export interface WorkflowNotificationPage {
+  items: WorkflowNotification[]
+  offset: number
+  limit: number
+  total: number
+  unread_count: number
+}
+
 export interface WorkflowEmployee {
   id: string
   account_id: string | null

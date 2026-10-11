@@ -7,6 +7,7 @@ from .auth_workflow import (
     AuthWorkflowEvent,
     AuthWorkflowEngineDecision,
     AuthWorkflowEvaluationRun,
+    AuthWorkflowNotification,
     AuthWorkflowPlan,
     AuthWorkflowVersion,
 )
@@ -15,5 +16,5 @@ __all__ = [
     "Role", "RolePermission", "User", "UserRole", "EmployeeProfile",
     "AuthManagementToken", "AdminAuditEvent", "AuthWorkflowPlan", "AuthWorkflowAttachment",
     "AuthWorkflowVersion", "AuthWorkflowEvent", "AuthWorkflowDecision",
-    "AuthWorkflowEvaluationRun", "AuthWorkflowEngineDecision",
+    "AuthWorkflowEvaluationRun", "AuthWorkflowEngineDecision", "AuthWorkflowNotification",
 ]

@@ -1,4 +1,4 @@
-import { ClipboardCheck, FileText, History, LogOut, UserRound, UsersRound } from 'lucide-react'
+import { Bell, ClipboardCheck, FileText, History, LogOut, UserRound, UsersRound } from 'lucide-react'
 import { useState } from 'react'
 import type { ReactNode } from 'react'
 import { Link, Navigate, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
@@ -27,6 +27,7 @@ export function AuthenticatedWorkflowShell() {
     <header className="auth-workflow-header">
       <Link className="auth-workflow-brand" to="/workflow"><span>OA</span><strong>OrganizationAI<small>Không gian làm việc</small></strong></Link>
       <nav aria-label="Điều hướng không gian làm việc">
+        <NavLink to="/workflow/notifications"><Bell aria-hidden="true" /> Thông báo</NavLink>
         {(roles.includes('MAKER') || roles.includes('ADMIN')) && <NavLink to="/workflow/plans"><FileText aria-hidden="true" /> {roles.includes('ADMIN') ? 'Toàn bộ kế hoạch' : 'Kế hoạch của tôi'}</NavLink>}
         {roles.includes('CHECKER') && <NavLink to="/workflow/reviews"><ClipboardCheck aria-hidden="true" /> Hàng chờ duyệt</NavLink>}
         {roles.includes('ADMIN') && <NavLink to="/workflow/audit"><History aria-hidden="true" /> Nhật ký kiểm toán</NavLink>}

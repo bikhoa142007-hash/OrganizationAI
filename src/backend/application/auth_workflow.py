@@ -22,6 +22,7 @@ from src.backend.db.models import (
     AuthWorkflowEngineDecision,
     AuthWorkflowEvent,
     AuthWorkflowEvaluationRun,
+    AuthWorkflowNotification,
     AuthWorkflowPlan,
     AuthWorkflowVersion,
     User,
@@ -186,6 +187,12 @@ def _timestamp() -> str:
     return _now_datetime().isoformat(timespec="milliseconds").replace("+00:00", "Z")
 
 
+def _utc_datetime(value: datetime | None) -> datetime | None:
+    if value is not None and value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value
+
+
 def _record_event(
     session: Session,
     *,
@@ -213,6 +220,71 @@ def _record_event(
     )
     session.add(event)
     return event
+
+
+def _record_notification(
+    session: Session,
+    *,
+    recipient_user_id: UUID,
+    plan: AuthWorkflowPlan,
+    event_type: str,
+    version_number: int,
+    round_number: int,
+) -> AuthWorkflowNotification:
+    copy = {
+        "PLAN_SUBMITTED": (
+            "Kế hoạch cần được duyệt",
+            f"Kế hoạch {plan.code} đã được gửi duyệt (phiên bản {version_number}, vòng {round_number}).",
+        ),
+        "PLAN_APPROVED": (
+            "Kế hoạch đã được phê duyệt",
+            f"Checker đã phê duyệt kế hoạch {plan.code} (vòng {round_number}).",
+        ),
+        "PLAN_AUTO_APPROVED": (
+            "Kế hoạch đã được phê duyệt tự động",
+            f"Hệ thống đã tự động phê duyệt kế hoạch {plan.code} (vòng {round_number}).",
+        ),
+        "PLAN_REJECTED": (
+            "Kế hoạch cần được chỉnh sửa",
+            f"Checker đã từ chối kế hoạch {plan.code} (vòng {round_number}). Mở kế hoạch để xem lý do.",
+        ),
+    }.get(event_type)
+    if copy is None:
+        raise ValueError("Unsupported workflow notification event type")
+    event_key = f"plan:{plan.id}:round:{round_number}:{event_type.lower()}"
+    existing = session.scalar(
+        select(AuthWorkflowNotification).where(AuthWorkflowNotification.event_key == event_key)
+    )
+    if existing is not None:
+        return existing
+    notification = AuthWorkflowNotification(
+        id=uuid4(),
+        recipient_user_id=recipient_user_id,
+        plan_id=plan.id,
+        event_key=event_key,
+        event_type=event_type,
+        title=copy[0],
+        message=copy[1],
+        version_number=version_number,
+        round_number=round_number,
+    )
+    session.add(notification)
+    return notification
+
+
+def _notification_dict(notification: AuthWorkflowNotification, plan_code: str) -> dict[str, Any]:
+    return {
+        "id": str(notification.id),
+        "event_type": notification.event_type,
+        "plan_id": str(notification.plan_id),
+        "plan_code": plan_code,
+        "title": notification.title,
+        "message": notification.message,
+        "version_number": notification.version_number,
+        "round_number": notification.round_number,
+        "created_at": _utc_datetime(notification.created_at),
+        "read_at": _utc_datetime(notification.read_at),
+    }
 
 
 def _plan_dict(session: Session, plan: AuthWorkflowPlan) -> dict[str, Any]:
@@ -377,6 +449,66 @@ def get_plan(
     plan = _plan_or_404(session, plan_id, correlation_id)
     _readable_plan(plan, principal, correlation_id)
     return _plan_dict(session, plan)
+
+
+def list_notifications(
+    session: Session,
+    principal: AuthenticatedPrincipal,
+    *,
+    offset: int = 0,
+    limit: int = 50,
+) -> dict[str, Any]:
+    recipient_id = principal.id
+    recipient_filter = AuthWorkflowNotification.recipient_user_id == recipient_id
+    total = session.scalar(
+        select(func.count(AuthWorkflowNotification.id)).where(recipient_filter)
+    ) or 0
+    unread_count = session.scalar(
+        select(func.count(AuthWorkflowNotification.id)).where(
+            recipient_filter, AuthWorkflowNotification.read_at.is_(None)
+        )
+    ) or 0
+    rows = session.execute(
+        select(AuthWorkflowNotification, AuthWorkflowPlan.code)
+        .join(AuthWorkflowPlan, AuthWorkflowPlan.id == AuthWorkflowNotification.plan_id)
+        .where(recipient_filter)
+        .order_by(AuthWorkflowNotification.created_at.desc(), AuthWorkflowNotification.id.desc())
+        .offset(offset)
+        .limit(limit)
+    ).all()
+    return {
+        "items": [_notification_dict(notification, plan_code) for notification, plan_code in rows],
+        "offset": offset,
+        "limit": limit,
+        "total": total,
+        "unread_count": unread_count,
+    }
+
+
+def mark_notification_read(
+    session: Session,
+    principal: AuthenticatedPrincipal,
+    notification_id: UUID,
+    correlation_id: str,
+) -> dict[str, Any]:
+    with _write_transaction(session):
+        notification = session.scalar(
+            select(AuthWorkflowNotification)
+            .where(
+                AuthWorkflowNotification.id == notification_id,
+                AuthWorkflowNotification.recipient_user_id == principal.id,
+            )
+            .with_for_update()
+        )
+        if notification is None:
+            _fail("NOT_FOUND", "Notification not found.", correlation_id)
+        if notification.read_at is None:
+            notification.read_at = _now_datetime()
+            session.flush()
+        plan_code = session.scalar(
+            select(AuthWorkflowPlan.code).where(AuthWorkflowPlan.id == notification.plan_id)
+        )
+        return _notification_dict(notification, plan_code)
 
 
 def list_audit_events(
@@ -699,6 +831,14 @@ def submit_plan(
                     "policy_version": configuration.policy.policy_version,
                     "policy_snapshot_hash": policy_snapshot_hash,
                 },
+            )
+            _record_notification(
+                session,
+                recipient_user_id=plan.checker_id,
+                plan=plan,
+                event_type="PLAN_SUBMITTED",
+                version_number=plan.current_version,
+                round_number=plan.current_round,
             )
             session.flush()
             session.refresh(plan)
@@ -1032,6 +1172,15 @@ def evaluate_submission(
                     "input_hash": run.input_hash,
                 },
             )
+            if bundle.decision.outcome == "AUTO_APPROVED":
+                _record_notification(
+                    session,
+                    recipient_user_id=plan.maker_id,
+                    plan=plan,
+                    event_type="PLAN_AUTO_APPROVED",
+                    version_number=run.version_number,
+                    round_number=run.round_number,
+                )
             session.flush()
             session.refresh(plan)
             return _plan_dict(session, plan)
@@ -1314,6 +1463,14 @@ def decide_plan(
                         "reason": normalized_reason,
                         "override_reason": normalized_override_reason,
                     },
+                )
+                _record_notification(
+                    session,
+                    recipient_user_id=plan.maker_id,
+                    plan=plan,
+                    event_type="PLAN_APPROVED" if action == "APPROVED" else "PLAN_REJECTED",
+                    version_number=plan.current_version,
+                    round_number=round_number,
                 )
                 session.flush()
                 session.refresh(plan)

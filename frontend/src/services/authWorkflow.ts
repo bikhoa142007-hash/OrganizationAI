@@ -1,5 +1,5 @@
 import { AuthApiError } from './auth'
-import type { AdminRoleCatalog, AdminRole, EmployeePendingPlanPage, WorkflowAuditPage, WorkflowChecker, WorkflowEmployee, WorkflowEmployeePage, WorkflowPayload, WorkflowPlan } from '../types/authWorkflow'
+import type { AdminRoleCatalog, AdminRole, EmployeePendingPlanPage, WorkflowAuditPage, WorkflowChecker, WorkflowEmployee, WorkflowEmployeePage, WorkflowNotification, WorkflowNotificationPage, WorkflowPayload, WorkflowPlan } from '../types/authWorkflow'
 import { resolveApiBaseUrl } from './apiBaseUrl'
 
 function planListQuery(offset: number, limit: number) {
@@ -45,6 +45,37 @@ function parseEmployeePage(value: unknown): WorkflowEmployeePage {
     throw new AuthApiError(200, 'The workflow service returned an invalid employee page.', 'INVALID_RESPONSE')
   }
   return value as WorkflowEmployeePage
+}
+
+function parseNotification(value: unknown): WorkflowNotification | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null
+  const item = value as Record<string, unknown>
+  const eventTypes = ['PLAN_SUBMITTED', 'PLAN_APPROVED', 'PLAN_AUTO_APPROVED', 'PLAN_REJECTED']
+  return typeof item.id === 'string'
+    && eventTypes.includes(String(item.event_type))
+    && typeof item.plan_id === 'string'
+    && typeof item.plan_code === 'string'
+    && typeof item.title === 'string'
+    && typeof item.message === 'string'
+    && Number.isInteger(item.version_number)
+    && Number.isInteger(item.round_number)
+    && typeof item.created_at === 'string'
+    && (item.read_at === null || typeof item.read_at === 'string')
+    ? value as WorkflowNotification
+    : null
+}
+
+function parseNotificationPage(value: unknown): WorkflowNotificationPage {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new AuthApiError(200, 'The workflow service returned an invalid notification page.', 'INVALID_RESPONSE')
+  }
+  const page = value as Record<string, unknown>
+  if (!Array.isArray(page.items) || !page.items.every(item => parseNotification(item) !== null)
+    || !Number.isInteger(page.offset) || !Number.isInteger(page.limit)
+    || !Number.isInteger(page.total) || !Number.isInteger(page.unread_count)) {
+    throw new AuthApiError(200, 'The workflow service returned an invalid notification page.', 'INVALID_RESPONSE')
+  }
+  return value as WorkflowNotificationPage
 }
 
 function announceAuthFailure(status: number) {
@@ -102,6 +133,22 @@ function creationIntentKey(intentId: string) {
 }
 
 export const authWorkflowService = {
+  listNotifications(offset = 0, limit = 50): Promise<WorkflowNotificationPage> {
+    return request<unknown>(`/workflow/notifications?offset=${offset}&limit=${limit}`, 'GET')
+      .then(parseNotificationPage)
+  },
+
+  markNotificationRead(notificationId: string): Promise<WorkflowNotification> {
+    return request<unknown>(`/workflow/notifications/${encoded(notificationId)}/read`, 'POST')
+      .then(value => {
+        const notification = parseNotification(value)
+        if (notification === null) {
+          throw new AuthApiError(200, 'The workflow service returned an invalid notification.', 'INVALID_RESPONSE')
+        }
+        return notification
+      })
+  },
+
   listAuditEvents(offset = 0, limit = 100): Promise<WorkflowAuditPage> {
     return request(`/workflow/audit?offset=${offset}&limit=${limit}`, 'GET')
   },

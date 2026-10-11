@@ -21,7 +21,7 @@ from src.backend.api.auth import get_auth_db
 from src.backend.api.dependencies import Settings
 from src.backend.application import auth_workflow as auth_workflow_application
 from src.backend.db.base import Base
-from src.backend.db.models import AuthWorkflowEvaluationRun, AuthWorkflowEvent, AuthWorkflowPlan, EmployeeProfile, Role, User, UserRole
+from src.backend.db.models import AuthWorkflowEvaluationRun, AuthWorkflowEvent, AuthWorkflowNotification, AuthWorkflowPlan, EmployeeProfile, Role, User, UserRole
 from src.backend.db.security import hash_password
 from src.backend.domain.policy import (
     ApprovalConfiguration,
@@ -675,6 +675,10 @@ def test_authenticated_submission_uses_existing_policy_for_auto_approval(workflo
     assert app.state.auth_workflow_media_provider.calls == 1
     assert app.state.auth_workflow_strategy_provider.calls == 1
     assert app.state.auth_workflow_provider.calls == 1
+    maker_notifications = client.get("/api/workflow/notifications").json()
+    assert [item["event_type"] for item in maker_notifications["items"]] == ["PLAN_AUTO_APPROVED"]
+    checker_notifications = authenticated_client(app, checker).get("/api/workflow/notifications").json()
+    assert [item["event_type"] for item in checker_notifications["items"]] == ["PLAN_SUBMITTED"]
 
 
 def test_authenticated_provider_failure_is_persisted_and_checker_can_review(workflow_client):
@@ -1063,6 +1067,98 @@ def test_rejection_needs_reason_and_resubmission_preserves_prior_version(workflo
         "Spring campaign", "Spring campaign revised",
     ]
     assert submitted["versions"][0]["payload"]["title"] == "Spring campaign"
+
+
+def test_in_app_notifications_are_private_idempotent_and_follow_plan_rounds(workflow_client):
+    client, factory, app = workflow_client
+    maker = create_user(factory, "maker.notifications", ("MAKER",))
+    checker = create_user(factory, "checker.notifications", ("CHECKER",))
+    outsider = create_user(factory, "checker.notification-outsider", ("CHECKER",))
+    login(client, maker)
+
+    draft = make_plan(client, checker.id, title="Notification campaign")
+    draft = upload_plan_image(client, draft["id"], draft["revision"])
+    submitted = submit_plan(client, draft)
+    checker_client = authenticated_client(app, checker)
+    outsider_client = authenticated_client(app, outsider)
+
+    checker_page = checker_client.get("/api/workflow/notifications")
+    assert checker_page.status_code == 200, checker_page.text
+    first = checker_page.json()
+    assert first["total"] == first["unread_count"] == 1
+    submission_notice = first["items"][0]
+    assert submission_notice["event_type"] == "PLAN_SUBMITTED"
+    assert submission_notice["plan_id"] == draft["id"]
+    assert submission_notice["plan_code"] == submitted["code"]
+    assert submission_notice["version_number"] == submission_notice["round_number"] == 1
+    assert client.get("/api/workflow/notifications").json()["total"] == 0
+    assert outsider_client.post(
+        f"/api/workflow/notifications/{submission_notice['id']}/read"
+    ).status_code == 404
+
+    marked = checker_client.post(
+        f"/api/workflow/notifications/{submission_notice['id']}/read"
+    )
+    assert marked.status_code == 200, marked.text
+    read_at = marked.json()["read_at"]
+    assert read_at is not None
+    replay = checker_client.post(
+        f"/api/workflow/notifications/{submission_notice['id']}/read"
+    )
+    assert replay.status_code == 200
+    assert replay.json()["read_at"] == read_at
+    assert checker_client.get("/api/workflow/notifications").json()["unread_count"] == 0
+
+    decision_url = f"/api/workflow/plans/{draft['id']}/rounds/1/decision"
+    decision = {
+        "action": "REJECTED",
+        "reason": "Please add measurable targets.",
+        "override_reason": "AI output was unavailable; this rejection is based on Checker review.",
+    }
+    rejected = checker_client.post(decision_url, json=decision)
+    assert rejected.status_code == 200, rejected.text
+    assert checker_client.post(decision_url, json=decision).status_code == 200
+
+    maker_page = client.get("/api/workflow/notifications").json()
+    assert maker_page["total"] == maker_page["unread_count"] == 1
+    rejection_notice = maker_page["items"][0]
+    assert rejection_notice["event_type"] == "PLAN_REJECTED"
+    assert rejection_notice["round_number"] == 1
+
+    updated = client.put(f"/api/workflow/plans/{draft['id']}", json={
+        "expected_revision": rejected.json()["revision"],
+        "payload": {
+            **rejected.json()["payload"],
+            "summary": "A revised campaign with measurable targets.",
+        },
+        "checker_user_id": str(checker.id),
+    })
+    assert updated.status_code == 200, updated.text
+    resubmitted = submit_plan(client, updated.json())
+    assert resubmitted["current_round"] == 2
+    checker_page = checker_client.get("/api/workflow/notifications").json()
+    assert checker_page["total"] == 2
+    assert checker_page["unread_count"] == 1
+    assert {(item["event_type"], item["round_number"]) for item in checker_page["items"]} == {
+        ("PLAN_SUBMITTED", 2), ("PLAN_SUBMITTED", 1),
+    }
+    approval_url = f"/api/workflow/plans/{draft['id']}/rounds/2/decision"
+    approval = {
+        "action": "APPROVED",
+        "reason": "The revised targets are measurable.",
+        "override_reason": "AI output was unavailable; this approval is based on Checker review.",
+    }
+    approved = checker_client.post(approval_url, json=approval)
+    assert approved.status_code == 200, approved.text
+    assert checker_client.post(approval_url, json=approval).status_code == 200
+    maker_page = client.get("/api/workflow/notifications").json()
+    assert maker_page["total"] == maker_page["unread_count"] == 2
+    assert {(item["event_type"], item["round_number"]) for item in maker_page["items"]} == {
+        ("PLAN_REJECTED", 1), ("PLAN_APPROVED", 2),
+    }
+    assert "Please add measurable targets." not in " ".join(item["message"] for item in maker_page["items"])
+    with factory() as session:
+        assert session.query(AuthWorkflowNotification).count() == 4
 
 
 def test_maker_submission_requires_attachment(workflow_client):

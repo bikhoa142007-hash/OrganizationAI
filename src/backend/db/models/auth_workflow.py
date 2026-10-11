@@ -142,6 +142,45 @@ class AuthWorkflowEvent(Base):
     )
 
 
+class AuthWorkflowNotification(Base):
+    """Durable in-app workflow notice delivered to one authenticated user."""
+
+    __tablename__ = "auth_workflow_notifications"
+    __table_args__ = (
+        CheckConstraint(
+            "event_type IN ('PLAN_SUBMITTED', 'PLAN_APPROVED', 'PLAN_AUTO_APPROVED', 'PLAN_REJECTED')",
+            name="ck_auth_workflow_notifications_event_type",
+        ),
+        UniqueConstraint("event_key", name="uq_auth_workflow_notifications_event_key"),
+        Index(
+            "ix_auth_workflow_notifications_recipient_created",
+            "recipient_user_id", "created_at",
+        ),
+        Index(
+            "ix_auth_workflow_notifications_recipient_unread",
+            "recipient_user_id", "read_at",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid4)
+    recipient_user_id: Mapped[UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
+    )
+    plan_id: Mapped[UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("auth_workflow_plans.id", ondelete="RESTRICT"), nullable=False
+    )
+    event_key: Mapped[str] = mapped_column(String(200), nullable=False)
+    event_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    title: Mapped[str] = mapped_column(String(160), nullable=False)
+    message: Mapped[str] = mapped_column(Text, nullable=False)
+    version_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    round_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    read_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+
 class AuthWorkflowDecision(Base):
     """At most one final Checker decision per submitted approval round."""
 
