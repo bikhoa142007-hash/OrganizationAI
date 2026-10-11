@@ -7,6 +7,7 @@ import { StatePanel } from '../components/ui'
 import { AuthenticatedAccountPage } from '../pages/AuthenticatedAccountPage'
 import { AuthenticatedAuditPage } from '../pages/AuthenticatedAuditPage'
 import { AuthenticatedEmployeesPage } from '../pages/AuthenticatedEmployeesPage'
+import { AuthenticatedNotificationsPage } from '../pages/AuthenticatedNotificationsPage'
 import { AuthenticatedRolesPage } from '../pages/AuthenticatedRolesPage'
 import { AccountHandoverPage } from '../pages/AccountHandoverPage'
 import { AuthenticatedPlansPage } from '../pages/AuthenticatedPlansPage'
@@ -39,6 +40,7 @@ export function AppRoutes() {
     <Route path="/access-denied" element={<RequireAuth><AccessDeniedPage /></RequireAuth>} />
     <Route path="/workflow" element={<RequireAuth><AuthenticatedWorkflowShell /></RequireAuth>}>
       <Route index element={<RoleHomePage />} />
+      <Route path="notifications" element={<AuthenticatedNotificationsPage />} />
       <Route path="plans" element={<AuthWorkflowRoleGuard roles={['MAKER', 'ADMIN']}><AuthenticatedPlansPage /></AuthWorkflowRoleGuard>} />
       <Route path="plans/new" element={<AuthWorkflowRoleGuard roles={['MAKER']}><AuthenticatedWorkflowFormPage /></AuthWorkflowRoleGuard>} />
       <Route path="plans/:planId" element={<AuthWorkflowRoleGuard roles={['MAKER', 'CHECKER', 'ADMIN']}><AuthenticatedWorkflowDetailPage /></AuthWorkflowRoleGuard>} />

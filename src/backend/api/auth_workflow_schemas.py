@@ -162,6 +162,27 @@ class WorkflowAuditPageResponse(AuthWorkflowDTO):
     total: int
 
 
+class WorkflowNotificationResponse(AuthWorkflowDTO):
+    id: UUID
+    event_type: Literal["PLAN_SUBMITTED", "PLAN_APPROVED", "PLAN_AUTO_APPROVED", "PLAN_REJECTED"]
+    plan_id: UUID
+    plan_code: str
+    title: str
+    message: str
+    version_number: int
+    round_number: int
+    created_at: datetime
+    read_at: datetime | None
+
+
+class WorkflowNotificationPageResponse(AuthWorkflowDTO):
+    items: list[WorkflowNotificationResponse]
+    offset: int
+    limit: int
+    total: int
+    unread_count: int
+
+
 class WorkflowEmployeeResponse(AuthWorkflowDTO):
     id: str
     account_id: str | None

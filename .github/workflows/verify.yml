@@ -32,7 +32,7 @@ jobs:
       - name: Run backend pytest, then all three Verify suites
         run: |
           overall=0
-          if ! .venv/bin/python -m pytest -q; then overall=1; fi
+          if ! .venv/bin/python -m pytest -q --ignore=tests/integration/test_auth_workflow_postgres_notifications.py; then overall=1; fi
           for suite in general escalation regression; do
             output="runtime/ci-verify-${suite}.json"
             if ! .venv/bin/python -m src.verify.runner --suite "$suite" --output "$output"; then overall=1; fi
@@ -211,6 +211,14 @@ jobs:
           AUTH_SEED_ENABLED: 'true'
           AUTH_SEED_PASSWORD: ci-only-auth-password
           DATABASE_URL: postgresql+psycopg://organizationai_test:ci-only-test-password@127.0.0.1:5432/organizationai_test
+      - name: Run in-app notification PostgreSQL acceptance test
+        run: .venv/bin/python -m pytest -q tests/integration/test_auth_workflow_postgres_notifications.py
+        working-directory: .
+        env:
+          APP_ENV: demo
+          AUTH_SEED_PASSWORD: ci-only-auth-password
+          DATABASE_URL: postgresql+psycopg://organizationai_test:ci-only-test-password@127.0.0.1:5432/organizationai_test
+          JWT_SECRET: ci-only-test-jwt-secret-at-least-32-characters
       - name: Start Auth API and frontend against disposable PostgreSQL
         run: |
           cd ..

@@ -18,6 +18,7 @@ const image = resolve(import.meta.dirname, '../../tests/fixtures/ba/v2.1/images/
 
 type LivePlan = {
   id: string
+  code: string
   status: string
   processing_stage: string
   current_version: number
@@ -115,6 +116,20 @@ async function waitForReview(page: Page, id: string): Promise<LivePlan> {
   throw new Error('The submitted plan did not reach persisted Checker review within three minutes.')
 }
 
+async function openAndReadNotification(page: Page, planCode: string, planId: string, title: string) {
+  await page.goto('/workflow/notifications')
+  await expect(page.getByRole('heading', { name: 'Thông báo', exact: true })).toBeVisible()
+  const card = page.locator('.auth-notification-card').filter({ hasText: planCode })
+  await expect(card).toHaveCount(1)
+  await expect(card.locator('h2')).toHaveText(title)
+  await expect(card.getByText('Mới', { exact: true })).toBeVisible()
+  await card.getByRole('button', { name: /Đánh dấu đã đọc/ }).click()
+  await expect(card.getByText('Mới', { exact: true })).toHaveCount(0)
+  await expect(page.locator('.auth-notification-unread-count')).toHaveText(/0 chưa đọc/)
+  await card.getByRole('link', { name: /Mở kế hoạch/ }).click()
+  await expect(page).toHaveURL(new RegExp(`/workflow/plans/${planId}$`))
+}
+
 test('live Auth Maker-to-Checker browser workflow preserves a rejected version through resubmission', async ({ browser }) => {
   test.skip(!password, 'Set AUTH_SEED_PASSWORD in the local test process to use the seeded local accounts.')
   const browserErrors: string[] = []
@@ -193,7 +208,7 @@ test('live Auth Maker-to-Checker browser workflow preserves a rejected version t
     await login(checker, checkerUsername, '/workflow/reviews', 'CHECKER')
     await expect(checker.getByRole('heading', { name: 'Kế hoạch chờ tôi duyệt' })).toBeVisible()
     await expect(checker.getByRole('link', { name: new RegExp(title) })).toBeVisible()
-    await checker.goto(`/workflow/plans/${planId}`)
+    await openAndReadNotification(checker, firstRound.code, planId, 'Kế hoạch cần được duyệt')
     await expect(checker.getByRole('heading', { name: title, exact: true })).toBeVisible()
     await checker.getByLabel('Lý do override AI').fill('Synthetic local review; Checker inspected the submitted snapshot.')
     await checker.getByRole('button', { name: 'Từ chối', exact: true }).click()
@@ -202,7 +217,7 @@ test('live Auth Maker-to-Checker browser workflow preserves a rejected version t
     await checker.getByRole('button', { name: 'Từ chối', exact: true }).click()
     await expect(checker.locator('.auth-workflow-page-heading .workflow-status')).toHaveText('Đã từ chối')
 
-    await maker.goto(`/workflow/plans/${planId}`)
+    await openAndReadNotification(maker, firstRound.code, planId, 'Kế hoạch cần được chỉnh sửa')
     await expect(maker.locator('.auth-workflow-page-heading .workflow-status')).toHaveText('Đã từ chối')
     await maker.getByRole('link', { name: 'Chỉnh sửa và gửi lại' }).click()
     const revisedSummary = 'Revised synthetic plan with an explicit attribution method and review checkpoint.'

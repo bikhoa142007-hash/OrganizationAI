@@ -40,6 +40,8 @@ from .auth_workflow_schemas import (
     WorkflowPlanResponse,
     WorkflowCheckerResponse,
     WorkflowAuditPageResponse,
+    WorkflowNotificationPageResponse,
+    WorkflowNotificationResponse,
     WorkflowEmployeePageResponse,
     WorkflowEmployeeResponse,
 )
@@ -49,6 +51,29 @@ router = APIRouter(prefix="/api/workflow", tags=["authenticated workflow"])
 
 def _correlation(request: Request) -> str:
     return getattr(request.state, "correlation_id", "workflow-request")
+
+
+@router.get("/notifications", response_model=WorkflowNotificationPageResponse)
+def notifications(
+    principal: AuthenticatedPrincipal = Depends(get_current_principal),
+    session: Session = Depends(get_auth_db),
+    offset: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
+):
+    return workflow.list_notifications(session, principal, offset=offset, limit=limit)
+
+
+@router.post("/notifications/{notification_id}/read", response_model=WorkflowNotificationResponse)
+def mark_notification_read(
+    notification_id: UUID,
+    request: Request,
+    principal: AuthenticatedPrincipal = Depends(get_current_principal),
+    session: Session = Depends(get_auth_db),
+):
+    _check_browser_origin(request)
+    return workflow.mark_notification_read(
+        session, principal, notification_id, _correlation(request)
+    )
 
 
 @router.get("/audit", response_model=WorkflowAuditPageResponse)
