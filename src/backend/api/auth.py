@@ -97,6 +97,7 @@ class AuthenticatedPrincipal:
             id=str(self.id), user_code=self.user_code, username=self.username,
             email=self.email, phone=self.phone, display_name=self.display_name,
             status=self.status, roles=list(self.roles),
+            effective_permissions=list(self.permissions),
         )
 
 

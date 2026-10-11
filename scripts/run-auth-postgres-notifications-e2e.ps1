@@ -68,6 +68,7 @@ $postgresLogPath = $null
 $workingTreeBefore = @()
 $fingerprintFiles = @(
     'alembic/versions/20261011_11_in_app_notifications.py',
+    'alembic/versions/20261011_12_approval_round_sla.py',
     'scripts/verify_auth_postgres_notifications.py',
     'scripts/run-auth-postgres-notifications-e2e.ps1',
     'scripts/run-auth-postgres-e2e.ps1',
@@ -76,6 +77,7 @@ $fingerprintFiles = @(
     'src/backend/api/auth_workflow.py',
     'src/backend/api/auth_workflow_schemas.py',
     'tests/integration/test_auth_workflow_postgres_notifications.py',
+    'tests/integration/test_auth_sla_postgres.py',
     'frontend/e2e/auth-live.spec.ts',
     'frontend/src/pages/AuthenticatedNotificationsPage.tsx',
     'frontend/src/services/authWorkflow.ts',
@@ -90,6 +92,7 @@ $savedEnvironmentNames = @(
     'CORS_ORIGINS', 'DATABASE_URL', 'DEMO_DATABASE', 'DEMO_MOCK_MODE', 'JWT_SECRET',
     'JWT_ACCESS_TOKEN_MINUTES', 'NOTIFICATION_VERIFICATION_RUN_ID',
     'POSTGRES_TEST_DATABASE', 'POSTGRES_TEST_USER', 'POSTGRES_TEST_RUN_ID',
+    'SLA_POSTGRES_TEST_URL', 'SLA_EMPTY_POSTGRES_TEST_URL',
     'PLAYWRIGHT_JSON_OUTPUT_FILE', 'VITE_API_BASE_URL', 'VITE_DEMO_ENABLED'
 )
 $processEnvironment = [Environment]::GetEnvironmentVariables([EnvironmentVariableTarget]::Process)
@@ -149,7 +152,9 @@ function Invoke-BackendPython([string[]] $PythonArguments, [switch] $AllowFailur
         'AUTH_E2E_MAKER_USERNAME', 'AUTH_REMEMBER_TOKEN_DAYS', 'AUTH_SEED_ENABLED',
         'AUTH_SEED_PASSWORD', 'AUTH_WORKFLOW_AI_PROVIDER', 'AUTH_WORKFLOW_MOCK_SCENARIO',
         'CORS_ORIGINS', 'DATABASE_URL', 'DEMO_DATABASE', 'DEMO_MOCK_MODE', 'JWT_SECRET',
-        'JWT_ACCESS_TOKEN_MINUTES', 'NOTIFICATION_VERIFICATION_RUN_ID', 'POSTGRES_TEST_DATABASE', 'POSTGRES_TEST_USER', 'POSTGRES_TEST_RUN_ID'
+        'JWT_ACCESS_TOKEN_MINUTES', 'NOTIFICATION_VERIFICATION_RUN_ID',
+        'POSTGRES_TEST_DATABASE', 'POSTGRES_TEST_USER', 'POSTGRES_TEST_RUN_ID',
+        'SLA_POSTGRES_TEST_URL', 'SLA_EMPTY_POSTGRES_TEST_URL'
     )) {
         if (-not [string]::IsNullOrWhiteSpace([Environment]::GetEnvironmentVariable($name, [EnvironmentVariableTarget]::Process))) {
             $dockerArguments += @('--env', $name)
@@ -231,6 +236,8 @@ try {
     [Environment]::SetEnvironmentVariable('POSTGRES_TEST_DATABASE', $null, [EnvironmentVariableTarget]::Process)
     [Environment]::SetEnvironmentVariable('POSTGRES_TEST_USER', $null, [EnvironmentVariableTarget]::Process)
     [Environment]::SetEnvironmentVariable('POSTGRES_TEST_RUN_ID', $null, [EnvironmentVariableTarget]::Process)
+    [Environment]::SetEnvironmentVariable('SLA_POSTGRES_TEST_URL', $null, [EnvironmentVariableTarget]::Process)
+    [Environment]::SetEnvironmentVariable('SLA_EMPTY_POSTGRES_TEST_URL', $null, [EnvironmentVariableTarget]::Process)
     [Environment]::SetEnvironmentVariable('CORS_ORIGINS', $null, [EnvironmentVariableTarget]::Process)
     [Environment]::SetEnvironmentVariable('AUTH_E2E_BASE_URL', $null, [EnvironmentVariableTarget]::Process)
     [Environment]::SetEnvironmentVariable('VITE_API_BASE_URL', $null, [EnvironmentVariableTarget]::Process)
@@ -285,8 +292,8 @@ try {
     }
     $headOutput = Invoke-BackendPython @('-m', 'alembic', 'heads')
     $headMatch = [regex]::Matches($headOutput.Output, '(?m)^([0-9A-Za-z_]+) \(head\)$')
-    if ($headMatch.Count -ne 1 -or $headMatch[0].Groups[1].Value -ne '20261011_11') {
-        throw "Expected exactly migration head 20261011_11 in this worktree; got $($headOutput.Output.Trim())."
+    if ($headMatch.Count -ne 1 -or $headMatch[0].Groups[1].Value -ne '20261011_12') {
+        throw "Expected exactly migration head 20261011_12 in this worktree; got $($headOutput.Output.Trim())."
     }
     $migrationHead = $headMatch[0].Groups[1].Value
 
@@ -346,12 +353,29 @@ try {
         throw 'Synthetic revision 10 data was not seeded at the requested migration revision.'
     }
     $null = Invoke-BackendPython @('-m', 'alembic', 'upgrade', 'head')
-    $legacyUpgrade = Invoke-BackendJson @('scripts/verify_auth_postgres_notifications.py', 'verify-revision-11')
+    $legacyUpgrade = Invoke-BackendJson @('scripts/verify_auth_postgres_notifications.py', 'verify-head-12')
     $beforeJson = ConvertTo-Json -InputObject $legacySeed.preserved_state -Depth 60 -Compress
     $afterJson = ConvertTo-Json -InputObject $legacyUpgrade.preserved_state -Depth 60 -Compress
     if ($beforeJson -cne $afterJson) { throw 'Revision 10 synthetic user, role, plan, version, or event data changed after migration.' }
-    if ($legacyUpgrade.revision -ne '20261011_11' -or $legacyUpgrade.notifications -ne 0) {
-        throw 'Legacy database did not reach the notification head without adding notification rows.'
+    if ($legacyUpgrade.revision -ne '20261011_12' -or $legacyUpgrade.notifications -ne 0) {
+        throw 'Legacy database did not reach migration head 20261011_12 without backfilling notifications or SLA rows.'
+    }
+
+    $slaDatabase = "organizationai_sla_acceptance_$runId"
+    $emptySlaDatabase = "organizationai_sla_empty_$runId"
+    $slaUrl = "postgresql+psycopg://${databaseUser}:${databasePassword}@postgres:5432/${slaDatabase}"
+    $emptySlaUrl = "postgresql+psycopg://${databaseUser}:${databasePassword}@postgres:5432/${emptySlaDatabase}"
+    foreach ($database in @($slaDatabase, $emptySlaDatabase)) {
+        $createdb = @(& $docker exec $postgresContainer createdb -U $databaseUser $database 2>&1)
+        if ($LASTEXITCODE -ne 0) { throw "Could not create this run's SLA acceptance database." }
+        $databaseUrl = if ($database -eq $slaDatabase) { $slaUrl } else { $emptySlaUrl }
+        Set-RunEnvironment @{ DATABASE_URL = $databaseUrl }
+        $null = Invoke-BackendPython @('-m', 'alembic', 'upgrade', 'head')
+        $null = Invoke-BackendPython @('-m', 'src.backend.seed_auth')
+    }
+    Set-RunEnvironment @{
+        SLA_POSTGRES_TEST_URL = $slaUrl
+        SLA_EMPTY_POSTGRES_TEST_URL = $emptySlaUrl
     }
 
     Set-TestPostgresTarget $emptyDatabase $emptyUrl

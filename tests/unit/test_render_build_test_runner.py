@@ -15,6 +15,7 @@ def test_render_build_tests_remove_database_environment_from_child_only():
         "PGHOST": "db.internal",
         "PGPASSWORD": "pg-password",
         "POSTGRES_TEST_RUN_ID": "runner-marker",
+        "SLA_POSTGRES_TEST_URL": "postgresql://sla-user:sla-password@temporary.invalid/sla",
         "SQLALCHEMY_DATABASE_URI": "postgresql://sql-user:sql-password@db.invalid/app",
         "JWT_SECRET": "unrelated-auth-secret",
     }
@@ -30,6 +31,7 @@ def test_render_build_tests_remove_database_environment_from_child_only():
         "PGHOST",
         "PGPASSWORD",
         "POSTGRES_TEST_RUN_ID",
+        "SLA_POSTGRES_TEST_URL",
         "SQLALCHEMY_DATABASE_URI",
     }
     assert set(child) == {"APP_ENV", "JWT_SECRET"}

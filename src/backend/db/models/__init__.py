@@ -1,6 +1,7 @@
 from .role import Role, RolePermission, UserRole
 from .user import User
 from .employee import AdminAuditEvent, AuthManagementToken, EmployeeProfile
+from .sla import AuthWorkflowSlaConfiguration, AuthWorkflowSlaRound
 from .auth_workflow import (
     AuthWorkflowAttachment,
     AuthWorkflowDecision,
@@ -17,4 +18,5 @@ __all__ = [
     "AuthManagementToken", "AdminAuditEvent", "AuthWorkflowPlan", "AuthWorkflowAttachment",
     "AuthWorkflowVersion", "AuthWorkflowEvent", "AuthWorkflowDecision",
     "AuthWorkflowEvaluationRun", "AuthWorkflowEngineDecision", "AuthWorkflowNotification",
+    "AuthWorkflowSlaConfiguration", "AuthWorkflowSlaRound",
 ]

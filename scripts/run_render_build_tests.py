@@ -10,7 +10,7 @@ import sys
 
 
 ROOT = Path(__file__).resolve().parents[1]
-_DATABASE_VARIABLE = re.compile(r"(?:^|_)(?:DATABASE|DB)(?:_|$)", re.IGNORECASE)
+_DATABASE_VARIABLE = re.compile(r"(?:^|_)(?:DATABASE|DB|POSTGRES)(?:_|$)", re.IGNORECASE)
 _EXPLICIT_DATABASE_VARIABLES = frozenset({
     "SQLALCHEMY_URL",
     "SQLALCHEMY_DATABASE_URI",

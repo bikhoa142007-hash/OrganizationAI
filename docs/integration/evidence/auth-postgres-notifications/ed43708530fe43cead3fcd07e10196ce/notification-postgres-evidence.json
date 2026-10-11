@@ -1,0 +1,377 @@
+{
+  "schema_version": 1,
+  "run_id": "ed43708530fe43cead3fcd07e10196ce",
+  "started_at_utc": "2026-10-11T20:33:37.8145146+07:00",
+  "completed_at_utc": "2026-10-11T20:34:28.0909343+07:00",
+  "status": "PASS",
+  "source": "Runner-owned Docker network, PostgreSQL 16 tmpfs databases, no live application database/container.",
+  "repository": {
+    "worktree": "C:\\Users\\Khoa Bi\\.codex\\worktrees\\sla-phase1\\OrganizationAI",
+    "branch": "codex/sla-phase1-20261011",
+    "head": "7a377ae3a609b4e94bbe25740146105523aceda4",
+    "migration_head": "20261011_12",
+    "working_tree_dirty_before_run": true,
+    "changed_paths_before_run": [
+      "M  .github/workflows/verify.yml\nM  deployment/README.md\nM  pytest.ini\nM  render.yaml\nA  scripts/postgres_test_target.py\nM  scripts/run-auth-postgres-notifications-e2e.ps1\nA  scripts/run_render_build_tests.py\nM  scripts/verify_auth_postgres_notifications.py\nA  scripts/verify_postgres_test_target.py\nA  tests/conftest.py\nM  tests/integration/test_auth_workflow_postgres_notifications.py\nA  tests/unit/test_postgres_acceptance_marker.py\nA  tests/unit/test_postgres_fixture_redaction.py\nA  tests/unit/test_postgres_test_target.py\nA  tests/unit/test_render_build_test_runner.py\n?? docs/integration/evidence/auth-postgres-notifications/9e00102f1a3c44ff8f51b1502c8735ce/notification-postgres-evidence.json"
+    ],
+    "other_checkout_verification": "SKIPPED_BY_WORKTREE_ISOLATION",
+    "old_checkout": null,
+    "old_checkout_branch_before": null,
+    "old_checkout_head_before": null,
+    "old_checkout_status_unchanged": false
+  },
+  "code_fingerprint": {
+    "algorithm": "SHA-256",
+    "digest": "ca8b579591121f99762b6484849da7c54182c92098cd16ce8c4a2ea5154d845d",
+    "files": {
+      "alembic/versions/20261011_11_in_app_notifications.py": "1a8f2f07cb6d0ab7fb39aecd22b7c3ad442b770827d775449cb6683bce11adc8",
+      "alembic/versions/20261011_12_approval_round_sla.py": "04f21f96e71497f3e1c94942c753fe0dc387c93daeed4ae46bfbaa62b4f18ac8",
+      "scripts/verify_auth_postgres_notifications.py": "7258a3f0278d683ca3668a7729c579adc78ec4111c90e69b4824a558ab7def1e",
+      "scripts/run-auth-postgres-notifications-e2e.ps1": "6a61c0915281a3869d50fe6953816d1ed417558f272422dccc91d2f601556176",
+      "scripts/run-auth-postgres-e2e.ps1": "6651eb54708da0589e3bc9d75a8f22abc9a95a826f4f42d2651feeeaf9fe1983",
+      "src/backend/application/auth_workflow.py": "98e758a4d63d955bdb7ba41272eaaf46d15bae75640b75413763e2fa9b0631ac",
+      "src/backend/db/models/auth_workflow.py": "a008dc0897dc4f2a3208acff3df0a76c0195adc2461ab156ea1927e160d35a2f",
+      "src/backend/api/auth_workflow.py": "5a4b31c2908dbf49f43c4e5030a920ca3b5c63148c16f6e1ce0930ee6278cdb7",
+      "src/backend/api/auth_workflow_schemas.py": "1ea4a20531ba41fe148ac5b3bd9277cf5a8a8e199019fd20b4e49c218353c0e2",
+      "tests/integration/test_auth_workflow_postgres_notifications.py": "fbf07fafd7060b0f8c6b7473d44b5cbb25ed71bab3d46bc24c2d7a6d6a4718a4",
+      "tests/integration/test_auth_sla_postgres.py": "50dc444bcfc5157ae35643c9dfd436695fa353f38d83b541746b82d0d9a29364",
+      "frontend/e2e/auth-live.spec.ts": "1dfe44e9b264432bf2fc8a25f93e3b37a5041db5e928c24cf4ba49ea706078c2",
+      "frontend/src/pages/AuthenticatedNotificationsPage.tsx": "97de99453ab9212210df53658cfd5df94f8e7596780cd386bae12aaede6bb9d8",
+      "frontend/src/services/authWorkflow.ts": "a7c63014b1b7b672b57414260c133d5d712c8697a50ef9a9c4e1728e83960dcd",
+      "frontend/src/types/authWorkflow.ts": "723b1e70d8d7bee769b880ae9190b1514ec0cce379091f63a72700b3cdb221c9"
+    }
+  },
+  "runtime": {
+    "auth_e2e": {
+      "frontend_url": "http://127.0.0.1:58509",
+      "api_url": "http://127.0.0.1:58508/api",
+      "cors_allowed_origin": "http://127.0.0.1:58509",
+      "trusted_origin": "http://127.0.0.1:58509"
+    },
+    "docker_backend_image": "organizationai-backend:latest",
+    "backend_image_id": "sha256:d3d41f59d89820cc0c832e27c1b5bca56768986c4009cceee454b83839233f1a",
+    "python": {
+      "executable": "/usr/local/bin/python",
+      "version": "3.13.15",
+      "pytest": "9.1.1",
+      "sqlalchemy": "2.1.1",
+      "fastapi": "0.141.1",
+      "psycopg": "3.3.6"
+    },
+    "postgres_image": "postgres:16",
+    "postgres_image_id": "sha256:ca0bd484cb98bf4b24eb1010e73fb3fcbd6714d240fbc1a10eea5b7dbecb641d",
+    "browser_provider": "MOCK_VLM deterministic fixture; no live inference"
+  },
+  "migrations": {
+    "empty_database": {
+      "check_constraints": [
+        "ck_auth_workflow_notifications_event_type"
+      ],
+      "columns": [
+        "created_at",
+        "event_key",
+        "event_type",
+        "id",
+        "message",
+        "plan_id",
+        "read_at",
+        "recipient_user_id",
+        "round_number",
+        "title",
+        "version_number"
+      ],
+      "foreign_keys": [
+        {
+          "columns": [
+            "plan_id"
+          ],
+          "ondelete": "RESTRICT",
+          "target": "auth_workflow_plans",
+          "target_columns": [
+            "id"
+          ]
+        },
+        {
+          "columns": [
+            "recipient_user_id"
+          ],
+          "ondelete": "RESTRICT",
+          "target": "users",
+          "target_columns": [
+            "id"
+          ]
+        }
+      ],
+      "indexes": [
+        "ix_auth_workflow_notifications_plan_round_event",
+        "ix_auth_workflow_notifications_recipient_created",
+        "ix_auth_workflow_notifications_recipient_unread",
+        "uq_auth_workflow_notifications_event_key"
+      ],
+      "notifications": 0,
+      "plans": 0,
+      "postgres_version": "16.15 (Debian 16.15-1.pgdg13+2)",
+      "revision": "20261011_12",
+      "sla_configurations": 0,
+      "sla_rounds": 0,
+      "status": "PASS",
+      "table": "auth_workflow_notifications",
+      "unique_constraints": [
+        "uq_auth_workflow_notifications_event_key"
+      ],
+      "users": 0
+    },
+    "revision_20261010_10_seed": {
+      "preserved_state": {
+        "events": [
+          {
+            "action": "SUBMITTED",
+            "details": {
+              "round": 1,
+              "synthetic": true,
+              "version": 1
+            },
+            "id": "2cb17b9d-89c0-58a9-b03d-d74aa437fbdf",
+            "sequence": 1,
+            "status_after": "PENDING_APPROVAL",
+            "status_before": "DRAFT"
+          }
+        ],
+        "plan": {
+          "checker_id": "34e55529-17ca-54f7-b4e6-0ea78b7ef144",
+          "code": "PG-LEGACY-ED43708530",
+          "current_round": 1,
+          "current_version": 1,
+          "id": "dcf673ce-cbb6-53a5-a9b5-5d000fce72b0",
+          "maker_id": "cc8d5be7-3cda-502c-b1d1-ea3a8e100087",
+          "payload": {
+            "department": "marketing",
+            "objective": "Synthetic fixture created at revision 20261010_10.",
+            "summary": "Existing data must remain unchanged after the notification migration.",
+            "title": "Synthetic revision 10 preservation ED43708530"
+          },
+          "processing_stage": "HUMAN_REVIEW_REQUIRED",
+          "revision": 1,
+          "status": "PENDING_APPROVAL"
+        },
+        "role_assignments": [
+          [
+            "PGED43708530C",
+            "CHECKER"
+          ],
+          [
+            "PGED43708530M",
+            "MAKER"
+          ]
+        ],
+        "users": [
+          {
+            "display_name": "Synthetic legacy Checker",
+            "email": "pg_ed43708530_checker@example.invalid",
+            "employment_status": "ACTIVE",
+            "id": "34e55529-17ca-54f7-b4e6-0ea78b7ef144",
+            "status": "ACTIVE",
+            "user_code": "PGED43708530C",
+            "username": "pg_ed43708530_checker"
+          },
+          {
+            "display_name": "Synthetic legacy Maker",
+            "email": "pg_ed43708530_maker@example.invalid",
+            "employment_status": "ACTIVE",
+            "id": "cc8d5be7-3cda-502c-b1d1-ea3a8e100087",
+            "status": "ACTIVE",
+            "user_code": "PGED43708530M",
+            "username": "pg_ed43708530_maker"
+          }
+        ],
+        "versions": [
+          {
+            "attachments": [],
+            "id": "c70d6a7e-22b3-572a-87ff-de2ffc5cb14d",
+            "payload": {
+              "department": "marketing",
+              "objective": "Synthetic fixture created at revision 20261010_10.",
+              "summary": "Existing data must remain unchanged after the notification migration.",
+              "title": "Synthetic revision 10 preservation ED43708530"
+            },
+            "round": 1,
+            "snapshot_hash": "b0f1fed7a271ce38028c9c2612cb7626687edde872cd5c13a3b9b12283bca3ca",
+            "submitted_by": "cc8d5be7-3cda-502c-b1d1-ea3a8e100087",
+            "version": 1
+          }
+        ]
+      },
+      "revision": "20261010_10",
+      "status": "PASS"
+    },
+    "revision_20261010_10_upgrade": {
+      "check_constraints": [
+        "ck_auth_workflow_notifications_event_type"
+      ],
+      "columns": [
+        "created_at",
+        "event_key",
+        "event_type",
+        "id",
+        "message",
+        "plan_id",
+        "read_at",
+        "recipient_user_id",
+        "round_number",
+        "title",
+        "version_number"
+      ],
+      "foreign_keys": [
+        {
+          "columns": [
+            "plan_id"
+          ],
+          "ondelete": "RESTRICT",
+          "target": "auth_workflow_plans",
+          "target_columns": [
+            "id"
+          ]
+        },
+        {
+          "columns": [
+            "recipient_user_id"
+          ],
+          "ondelete": "RESTRICT",
+          "target": "users",
+          "target_columns": [
+            "id"
+          ]
+        }
+      ],
+      "indexes": [
+        "ix_auth_workflow_notifications_plan_round_event",
+        "ix_auth_workflow_notifications_recipient_created",
+        "ix_auth_workflow_notifications_recipient_unread",
+        "uq_auth_workflow_notifications_event_key"
+      ],
+      "notifications": 0,
+      "plans": 1,
+      "postgres_version": "16.15 (Debian 16.15-1.pgdg13+2)",
+      "preserved_records": [
+        "users",
+        "user_roles",
+        "auth_workflow_plans",
+        "auth_workflow_versions",
+        "auth_workflow_events"
+      ],
+      "preserved_state": {
+        "events": [
+          {
+            "action": "SUBMITTED",
+            "details": {
+              "round": 1,
+              "synthetic": true,
+              "version": 1
+            },
+            "id": "2cb17b9d-89c0-58a9-b03d-d74aa437fbdf",
+            "sequence": 1,
+            "status_after": "PENDING_APPROVAL",
+            "status_before": "DRAFT"
+          }
+        ],
+        "plan": {
+          "checker_id": "34e55529-17ca-54f7-b4e6-0ea78b7ef144",
+          "code": "PG-LEGACY-ED43708530",
+          "current_round": 1,
+          "current_version": 1,
+          "id": "dcf673ce-cbb6-53a5-a9b5-5d000fce72b0",
+          "maker_id": "cc8d5be7-3cda-502c-b1d1-ea3a8e100087",
+          "payload": {
+            "department": "marketing",
+            "objective": "Synthetic fixture created at revision 20261010_10.",
+            "summary": "Existing data must remain unchanged after the notification migration.",
+            "title": "Synthetic revision 10 preservation ED43708530"
+          },
+          "processing_stage": "HUMAN_REVIEW_REQUIRED",
+          "revision": 1,
+          "status": "PENDING_APPROVAL"
+        },
+        "role_assignments": [
+          [
+            "PGED43708530C",
+            "CHECKER"
+          ],
+          [
+            "PGED43708530M",
+            "MAKER"
+          ]
+        ],
+        "users": [
+          {
+            "display_name": "Synthetic legacy Checker",
+            "email": "pg_ed43708530_checker@example.invalid",
+            "employment_status": "ACTIVE",
+            "id": "34e55529-17ca-54f7-b4e6-0ea78b7ef144",
+            "status": "ACTIVE",
+            "user_code": "PGED43708530C",
+            "username": "pg_ed43708530_checker"
+          },
+          {
+            "display_name": "Synthetic legacy Maker",
+            "email": "pg_ed43708530_maker@example.invalid",
+            "employment_status": "ACTIVE",
+            "id": "cc8d5be7-3cda-502c-b1d1-ea3a8e100087",
+            "status": "ACTIVE",
+            "user_code": "PGED43708530M",
+            "username": "pg_ed43708530_maker"
+          }
+        ],
+        "versions": [
+          {
+            "attachments": [],
+            "id": "c70d6a7e-22b3-572a-87ff-de2ffc5cb14d",
+            "payload": {
+              "department": "marketing",
+              "objective": "Synthetic fixture created at revision 20261010_10.",
+              "summary": "Existing data must remain unchanged after the notification migration.",
+              "title": "Synthetic revision 10 preservation ED43708530"
+            },
+            "round": 1,
+            "snapshot_hash": "b0f1fed7a271ce38028c9c2612cb7626687edde872cd5c13a3b9b12283bca3ca",
+            "submitted_by": "cc8d5be7-3cda-502c-b1d1-ea3a8e100087",
+            "version": 1
+          }
+        ]
+      },
+      "revision": "20261011_12",
+      "sla_configurations": 0,
+      "sla_rounds": 0,
+      "status": "PASS",
+      "table": "auth_workflow_notifications",
+      "unique_constraints": [
+        "uq_auth_workflow_notifications_event_key"
+      ],
+      "users": 2
+    },
+    "legacy_data_unchanged": true
+  },
+  "postgres_notification_test_output": ".......                                                                  [100%]\n=============================== warnings summary ===============================\n../usr/local/lib/python3.13/site-packages/fastapi/testclient.py:1\n  /usr/local/lib/python3.13/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.\n    from starlette.testclient import TestClient as TestClient  # noqa\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n7 passed, 367 deselected, 1 warning in 7.59s",
+  "browser_e2e": {
+    "expected": 3,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0,
+    "notification_flow": "Assigned Checker opens submission notice, marks it read, opens the plan; Maker opens rejection notice, marks it read, opens the same plan.",
+    "provider": "MOCK_VLM deterministic fixture; no live inference"
+  },
+  "cleanup": {
+    "owned_network_removed": true,
+    "owned_postgres_container_stopped": true,
+    "owned_api_container_stopped": true,
+    "preexisting_containers_preserved": true,
+    "missing_preexisting_container_ids": [],
+    "temporary_files_archived_or_retained": true
+  },
+  "error": null,
+  "artifacts": {
+    "directory": "C:\\Users\\Khoa Bi\\.codex\\worktrees\\sla-phase1\\OrganizationAI\\docs\\integration\\evidence\\auth-postgres-notifications\\ed43708530fe43cead3fcd07e10196ce",
+    "files": [
+      "notification-postgres-evidence.json"
+    ]
+  }
+}

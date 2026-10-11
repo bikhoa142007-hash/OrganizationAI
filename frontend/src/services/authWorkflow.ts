@@ -1,5 +1,5 @@
 import { AuthApiError } from './auth'
-import type { AdminRoleCatalog, AdminRole, EmployeePendingPlanPage, WorkflowAuditPage, WorkflowChecker, WorkflowEmployee, WorkflowEmployeePage, WorkflowNotification, WorkflowNotificationPage, WorkflowPayload, WorkflowPlan } from '../types/authWorkflow'
+import type { AdminRoleCatalog, AdminRole, EmployeePendingPlanPage, SlaConfiguration, SlaConfigurationHistory, WorkflowAuditPage, WorkflowChecker, WorkflowEmployee, WorkflowEmployeePage, WorkflowNotification, WorkflowNotificationPage, WorkflowPayload, WorkflowPlan } from '../types/authWorkflow'
 import { resolveApiBaseUrl } from './apiBaseUrl'
 
 function planListQuery(offset: number, limit: number) {
@@ -50,7 +50,7 @@ function parseEmployeePage(value: unknown): WorkflowEmployeePage {
 function parseNotification(value: unknown): WorkflowNotification | null {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null
   const item = value as Record<string, unknown>
-  const eventTypes = ['PLAN_SUBMITTED', 'PLAN_APPROVED', 'PLAN_AUTO_APPROVED', 'PLAN_REJECTED']
+  const eventTypes = ['PLAN_SUBMITTED', 'PLAN_APPROVED', 'PLAN_AUTO_APPROVED', 'PLAN_REJECTED', 'SLA_WARNING', 'SLA_OVERDUE']
   return typeof item.id === 'string'
     && eventTypes.includes(String(item.event_type))
     && typeof item.plan_id === 'string'
@@ -78,6 +78,35 @@ function parseNotificationPage(value: unknown): WorkflowNotificationPage {
   return value as WorkflowNotificationPage
 }
 
+function parseSlaConfiguration(value: unknown): SlaConfiguration {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new AuthApiError(200, 'The workflow service returned an invalid SLA configuration.', 'INVALID_RESPONSE')
+  }
+  const item = value as Record<string, unknown>
+  const nullableString = (field: unknown) => field === null || typeof field === 'string'
+  const nullableInteger = (field: unknown) => field === null || Number.isInteger(field)
+  if (typeof item.configured !== 'boolean' || !Number.isInteger(item.revision)
+    || typeof item.enabled !== 'boolean' || !nullableInteger(item.duration_minutes)
+    || !nullableInteger(item.warning_before_minutes) || !nullableString(item.changed_by_id)
+    || !nullableString(item.changed_by_name) || !nullableString(item.change_reason)
+    || !nullableString(item.updated_at)) {
+    throw new AuthApiError(200, 'The workflow service returned an invalid SLA configuration.', 'INVALID_RESPONSE')
+  }
+  return value as SlaConfiguration
+}
+
+function parseSlaConfigurationHistory(value: unknown): SlaConfigurationHistory {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new AuthApiError(200, 'The workflow service returned invalid SLA history.', 'INVALID_RESPONSE')
+  }
+  const page = value as Record<string, unknown>
+  if (!Array.isArray(page.items) || !page.items.every(item => {
+    try { parseSlaConfiguration(item); return true } catch { return false }
+  }) || !Number.isInteger(page.offset) || !Number.isInteger(page.limit) || !Number.isInteger(page.total)) {
+    throw new AuthApiError(200, 'The workflow service returned invalid SLA history.', 'INVALID_RESPONSE')
+  }
+  return value as SlaConfigurationHistory
+}
 function announceAuthFailure(status: number) {
   if (status === 401) window.dispatchEvent(new Event('organizationai:auth-expired'))
   if (status === 403) window.dispatchEvent(new Event('organizationai:access-denied'))
@@ -247,6 +276,21 @@ export const authWorkflowService = {
     return request(`/workflow/roles/${encoded(roleId)}/deactivation`, 'POST')
   },
 
+  getSlaConfiguration(): Promise<SlaConfiguration> {
+    return request<unknown>('/workflow/sla/configuration', 'GET').then(parseSlaConfiguration)
+  },
+
+  listSlaConfigurationHistory(offset = 0, limit = 100): Promise<SlaConfigurationHistory> {
+    const query = new URLSearchParams({ offset: String(offset), limit: String(limit) })
+    return request<unknown>(`/workflow/sla/configuration/history?${query.toString()}`, 'GET').then(parseSlaConfigurationHistory)
+  },
+
+  updateSlaConfiguration(input: {
+    enabled: boolean; duration_minutes: number; warning_before_minutes: number;
+    expected_revision: number; change_reason: string;
+  }): Promise<SlaConfiguration> {
+    return request<unknown>('/workflow/sla/configuration', 'PUT', input).then(parseSlaConfiguration)
+  },
   listPlans(offset = 0, limit = 100): Promise<WorkflowPlan[]> {
     const query = planListQuery(offset, limit)
     return request<unknown>(`/workflow/plans?${query.toString()}`, 'GET').then(parseWorkflowPlanList)

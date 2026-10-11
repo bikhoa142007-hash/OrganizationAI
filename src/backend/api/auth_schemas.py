@@ -31,6 +31,7 @@ class AuthenticatedUser(AuthDTO):
     display_name: str
     status: str
     roles: list[str]
+    effective_permissions: list[str]
 
 
 class AuthResponse(AuthDTO):

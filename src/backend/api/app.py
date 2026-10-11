@@ -27,6 +27,7 @@ from .errors import error_response
 from .schemas import Draft, Submission, Mutation, HumanDecisionRequest, PlanResponse, HistoryResponse, ErrorResponse, SubmissionResponse, EvaluationResponse, VerifyResponse, DTO
 from .auth import router as auth_router
 from .auth_workflow import router as auth_workflow_router
+from .auth_sla import router as auth_sla_router
 
 
 def create_app(settings=None, *, auth_workflow_provider=None, auth_workflow_configuration=None,
@@ -58,6 +59,7 @@ def create_app(settings=None, *, auth_workflow_provider=None, auth_workflow_conf
     app.state.auth_workflow_configuration = auth_workflow_configuration
     app.include_router(auth_router)
     app.include_router(auth_workflow_router)
+    app.include_router(auth_sla_router)
     app.add_middleware(CORSMiddleware, allow_origins=list(settings.cors_origins), allow_credentials=True,
                        allow_methods=['GET', 'POST', 'PUT'],
                        allow_headers=['Content-Type', 'X-Demo-Actor', 'Idempotency-Key', 'X-Correlation-ID'])

@@ -147,6 +147,29 @@ describe('Auth-first route entry', () => {
     expect(deniedList).not.toHaveBeenCalled()
   })
 
+  it('shows SLA configuration only to Admin with the existing management permission', async () => {
+    vi.spyOn(authService, 'me').mockResolvedValue(admin)
+    const deniedLoad = vi.spyOn(authWorkflowService, 'getSlaConfiguration')
+    const denied = renderApplication('/workflow/sla')
+    expect(await screen.findByRole('heading', { name: 'Không có quyền truy cập' })).toBeVisible()
+    expect(deniedLoad).not.toHaveBeenCalled()
+
+    denied.unmount()
+    vi.restoreAllMocks()
+    vi.spyOn(authService, 'me').mockResolvedValue({
+      ...admin, effective_permissions: ['ADMIN_SLA_MANAGE'],
+    })
+    vi.spyOn(authWorkflowService, 'getSlaConfiguration').mockResolvedValue({
+      configured: false, revision: 0, enabled: false, duration_minutes: null,
+      warning_before_minutes: null, changed_by_id: null, changed_by_name: null,
+      change_reason: null, updated_at: null,
+    })
+    vi.spyOn(authWorkflowService, 'listSlaConfigurationHistory').mockResolvedValue({
+      items: [], offset: 0, limit: 25, total: 0,
+    })
+    renderApplication('/workflow/sla')
+    expect(await screen.findByRole('heading', { name: 'Cấu hình SLA duyệt' })).toBeVisible()
+  })
   it('does not render protected account content while the initial session check is pending', () => {
     vi.spyOn(authService, 'me').mockReturnValue(new Promise(() => {}))
     renderApplication('/account')

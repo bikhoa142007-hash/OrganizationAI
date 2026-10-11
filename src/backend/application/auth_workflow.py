@@ -15,6 +15,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from src.backend.application.workflow import ApplicationError
+from src.backend.application.auth_sla import close_round_snapshot, plan_sla_read_model, start_round_snapshot
 from src.backend.application.role_admin import effective_role_filter
 from src.backend.db.models import (
     AuthWorkflowAttachment,
@@ -305,6 +306,7 @@ def _plan_dict(session: Session, plan: AuthWorkflowPlan) -> dict[str, Any]:
         .where(AuthWorkflowEvent.plan_id == plan.id)
         .order_by(AuthWorkflowEvent.sequence_number)
     ).all()
+    sla_current, sla_history = plan_sla_read_model(session, plan, versions)
     history = []
     for event in events:
         actor = session.get(User, event.actor_id) if event.actor_id else None
@@ -333,6 +335,8 @@ def _plan_dict(session: Session, plan: AuthWorkflowPlan) -> dict[str, Any]:
         "current_round": plan.current_round,
         "revision": plan.revision,
         "decision_reason": plan.decision_reason,
+        "sla_current": sla_current,
+        "sla_history": sla_history,
         "attachments": [_attachment_dict(item) for item in attachments],
         "versions": [{
             "version_number": item.version_number,
@@ -741,6 +745,10 @@ def submit_plan(
             plan.current_version += 1
             plan.current_round += 1
             plan.status = "PENDING_APPROVAL"
+            submitted_at = _now_datetime()
+            sla_snapshot = start_round_snapshot(
+                session, plan=plan, started_at=submitted_at, correlation_id=correlation_id
+            )
             plan.processing_stage = "AI_PENDING"
             plan.decision_reason = None
             plan.revision += 1
@@ -813,6 +821,8 @@ def submit_plan(
                     "checker_id": str(plan.checker_id),
                     "attachment_hashes": [item["content_hash"] for item in attachment_manifest],
                     "input_hash": snapshot_hash,
+                    "sla_configuration_revision": sla_snapshot.configuration_revision if sla_snapshot else None,
+                    "sla_due_at": sla_snapshot.due_at.isoformat() if sla_snapshot else None,
                 },
             )
             _record_event(
@@ -1133,6 +1143,10 @@ def evaluate_submission(
             before_stage = plan.processing_stage
             if bundle.decision.outcome == "AUTO_APPROVED":
                 plan.status = "APPROVED"
+                close_round_snapshot(
+                    session, plan_id=plan.id, round_number=run.round_number,
+                    closed_at=run.completed_at or _now_datetime(),
+                )
                 plan.processing_stage = "AI_AUTO_APPROVED"
                 plan.decision_reason = None
                 action = "AI_AUTO_APPROVED"
@@ -1451,6 +1465,9 @@ def decide_plan(
                     override_reason=normalized_override_reason,
                 )
                 plan.status = action
+                close_round_snapshot(
+                    session, plan_id=plan.id, round_number=round_number, closed_at=_now_datetime()
+                )
                 plan.processing_stage = "COMPLETED"
                 plan.decision_reason = normalized_reason
                 plan.revision += 1

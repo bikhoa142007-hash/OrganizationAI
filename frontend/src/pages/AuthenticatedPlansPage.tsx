@@ -226,7 +226,7 @@ export function AuthenticatedPlansPage({ reviews = false }: { reviews?: boolean 
           <thead><tr>
             <th scope="col">Yêu cầu / Mã</th><th scope="col">Bộ phận</th><th scope="col">Trạng thái</th>
             <th scope="col">Người lập</th><th scope="col">Checker</th><th scope="col">Ngày tạo</th>
-            <th scope="col">Cập nhật</th><th scope="col">Vòng duyệt</th>
+            <th scope="col">Cập nhật</th><th scope="col">Vòng duyệt</th><th scope="col">SLA</th>
           </tr></thead>
           <tbody>{filteredPlans.map(plan => <WorkflowPlanRow key={plan.id} plan={plan} />)}</tbody>
         </table>
@@ -268,9 +268,21 @@ function WorkflowPlanRow({ plan }: { plan: WorkflowPlan }) {
     <td data-label="Ngày tạo">{createdDate || '—'}</td>
     <td data-label="Cập nhật">{updatedDate || '—'}</td>
     <td data-label="Vòng duyệt">{round}</td>
+    <td data-label="SLA">{plan.sla_current?.applicable ? <><span className={`workflow-sla-status status-${plan.sla_current.status.toLowerCase()}`}>{slaStatusLabel(plan.sla_current.status)}</span><small className="auth-stage-note">Hạn {formatSlaDeadline(plan.sla_current.due_at)}</small></> : plan.current_round > 0 ? <span>Không áp dụng</span> : <span>—</span>}</td>
   </tr>
 }
 
+function slaStatusLabel(value: string) {
+  return ({ NOT_APPLICABLE: 'Không áp dụng', IN_PROGRESS: 'Đang trong hạn', WARNING: 'Sắp đến hạn', OVERDUE: 'Quá hạn', CLOSED_ON_TIME: 'Đóng đúng hạn', CLOSED_LATE: 'Đóng trễ' } as Record<string, string>)[value] ?? value
+}
+
+function formatSlaDeadline(value?: string | null) {
+  if (!value) return '—'
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat('vi-VN', {
+    dateStyle: 'short', timeStyle: 'short', timeZone: 'Asia/Ho_Chi_Minh',
+  }).format(date)
+}
 function mergeWorkflowPlans(current: WorkflowPlan[], incoming: WorkflowPlan[]) {
   const merged = [...current]
   const indexById = new Map(merged.map((plan, index) => [plan.id, index]))

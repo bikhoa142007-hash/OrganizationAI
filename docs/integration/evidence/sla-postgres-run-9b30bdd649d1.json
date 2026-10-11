@@ -1,0 +1,173 @@
+{
+  "schemaVersion": 1,
+  "runId": "sla-9b30bdd649d1",
+  "recordedAtUtc": "2026-10-11T11:04:55Z",
+  "verificationDateLocal": "2026-10-11",
+  "repository": "OrganizationAI",
+  "instructionSource": "AGENTS.md instructions supplied in the user message; no physical AGENTS.md was present in this worktree",
+  "branch": "codex/sla-phase1-20261011",
+  "head": "f4cf0857bdbdda4af20ef0d3bc4c0adadfd2059f",
+  "migrationHead": "20261011_12",
+  "sourceFingerprintsSha256": {
+    "README.md": "a9dd9026bc68ed8ca32e4e2a2219ef42f918f6dcb30c08c6ef5880a2167ec70c",
+    "docs/scope-phase-1.md": "b2065873ded2359aa0bf5689224f4f58bb9365d8db5ac0663bb80117f7c4c08e",
+    "docs/sprint-1-deliverables.md": "ce71a7247f31087c2f1d7fbfb90ee4ae2f8f08fcdf89e8de7f62e8eaa70ba344",
+    "tasks/sla-phase1-2026-10-11.md": "dc09c003088239a6d13d507a9636320817079a04aa8897543651a95c3db2cf73",
+    "tasks/scope1-phase1-notification-verification-2026-10-11.md": "97ff3b29aa01a1e2b47792cfc74d775ef3313c01588f85361b6d59ce0447fbeb",
+    "alembic/versions/20261011_12_approval_round_sla.py": "04f21f96e71497f3e1c94942c753fe0dc387c93daeed4ae46bfbaa62b4f18ac8",
+    "frontend/e2e/workflow.spec.ts": "8f8e7812a8b82f830b2b4f156a83a2199585401ce82f9c12dd5b1b14e08ec029",
+    "frontend/e2e/sla-live.spec.ts": "acacb3b083ebf93f887d4dcffecdbe5b3cb4e02238135c6e7cd5dcbdde360bdf",
+    "frontend/e2e/auth-live.spec.ts": "1dfe44e9b264432bf2fc8a25f93e3b37a5041db5e928c24cf4ba49ea706078c2",
+    "frontend/playwright.sla.config.ts": "ddb047d402a7d340c45a2a3bdfff43f467f58dae21c0029797de3d06159e2d6c",
+    "frontend/src/components/auth/AuthenticatedWorkflowShell.tsx": "e58550365dfc01d823781d3a137013fb295a7c9cdfd2aee23410f5e847589a65",
+    "frontend/src/pages/AuthenticatedPlansPage.tsx": "1e8b1ff94c2e5fa2c29bf850b81904ef05f76e409e967ee84912f6ea8370fba9",
+    "frontend/src/pages/AuthenticatedWorkflowDetailPage.tsx": "f9fb8852d19fad76739f2b501a1cdbe64d978988cf0feb65afbe9d8d914cd84a",
+    "frontend/src/pages/AuthenticatedSlaPage.tsx": "dc757c39493e880b85724e11f0d083a41a4f43fe822902053ffb17e5e57d1652",
+    "frontend/src/pages/AuthenticatedSlaPage.test.tsx": "4d93e5b6985cfad5ae1106a170eec27a5d052297dddec407345cb88d4a40940b",
+    "frontend/src/routes/AppRoutes.tsx": "166ac2ec48c0e3579c6e35042cd9fb56940edeacce07c4259755ddbfc6315a18",
+    "frontend/src/routes/AppRoutes.test.tsx": "c00f265784c3f6ef174a42e03de7f27c3c3338543a6a9849eaadd8ef3fe5cbf6",
+    "frontend/src/services/authWorkflow.ts": "a7c63014b1b7b672b57414260c133d5d712c8697a50ef9a9c4e1728e83960dcd",
+    "frontend/src/styles.css": "485eba45497439f27c1b0fc1b73d5aa63a72981a091bd25ce0e58e2e0564c9f0",
+    "frontend/src/types/authWorkflow.ts": "723b1e70d8d7bee769b880ae9190b1514ec0cce379091f63a72700b3cdb221c9",
+    "scripts/run_sla_clocked_api.py": "892e6623f2365a48e662e975e9acf8909a71bf1578c21ef2472392e404b6614f",
+    "scripts/run_sla_clocked_worker.py": "c4b24087d0e52d4f3e0e8fcecd8582f81c8b51329c764bd13204e3f184d287c5",
+    "src/backend/api/app.py": "6d9c76aaeb7d7fa668d5f979599e5ce9740eb8196add36d79d1c7df8e876140e",
+    "src/backend/api/auth.py": "db941f09fae360b54c3e266b8bf8c2213f6c0a78471ae9aca6edbc7f28da661a",
+    "src/backend/api/auth_schemas.py": "4be5ee2615f25597c9d4a1de81c3b0da4b182b8f6c7d2759021bcb1a5fc5ea9a",
+    "src/backend/api/auth_workflow_schemas.py": "1ea4a20531ba41fe148ac5b3bd9277cf5a8a8e199019fd20b4e49c218353c0e2",
+    "src/backend/api/auth_sla.py": "7d945202c79705f2702cd033e2fb949786afc4628e033b281ff29f9bf6a4d7fe",
+    "src/backend/api/auth_sla_schemas.py": "07ddc387aa37c7a28345894f1f630a1e3ff3d47ecba1b5a7f1ebf79ed72c68df",
+    "src/backend/application/auth_workflow.py": "98e758a4d63d955bdb7ba41272eaaf46d15bae75640b75413763e2fa9b0631ac",
+    "src/backend/application/employee_admin.py": "6c9eed888d92fa7e1996c7930fa8c2a4ba49681ddfa2c20324a375b9b4798494",
+    "src/backend/application/auth_sla.py": "f43bc9b13acb5556215bc8fbd024bc439540d3e188a14f09a7dfa195fcde86c8",
+    "src/backend/application/sla_rules.py": "cc8c5ef0a1023e29a1330fcce81ebfa6eda5e8b1da9fd62d827fde2f8e3c3ee7",
+    "src/backend/db/models/__init__.py": "8e8ef5733794163dc02fbe067c37a41ecdda967fe670490cd20db9063ded5fdf",
+    "src/backend/db/models/auth_workflow.py": "a008dc0897dc4f2a3208acff3df0a76c0195adc2461ab156ea1927e160d35a2f",
+    "src/backend/db/models/sla.py": "bac749d3a03e0da65baf60bfe5a18fe8b58ac0a724d80feb071c62464036dd5c",
+    "src/backend/sla_worker.py": "45c6bf90b51c75cde8ee394478a985ba8510605e40bb48ab32a6b8125284ccca",
+    "tests/integration/test_auth_api.py": "c8946722c9228f9d1fee1a9a4b131418ace9123f1a89204f1363e42f3b8c32d5",
+    "tests/integration/test_auth_workflow.py": "494b4a9fb7592e59a49dde9d07a6d229644e7a9f4d767e8a3868c780a9b0855d",
+    "tests/integration/test_auth_sla_postgres.py": "50dc444bcfc5157ae35643c9dfd436695fa353f38d83b541746b82d0d9a29364",
+    "tests/unit/test_auth_sla_rules.py": "5ccfe952ced360ecf0cb5dc2994bb9ee0c145be1f39a242ae047f6a22e63b457",
+    "tests/unit/test_auth_sla_service.py": "be52a776c4aa76a64bee754a6bdd78786240f72d1400f1d78a1afd939fea8769"
+  },
+  "remoteFreshness": {
+    "command": "git fetch --dry-run --no-write-fetch-head origin main",
+    "result": "blocked",
+    "reason": "DNS could not resolve github.com; origin/main freshness unknown."
+  },
+  "migration": {
+    "emptyDatabaseToHead": "PASS",
+    "syntheticRevision11ToHead": "PASS",
+    "historicalDataDigestBeforeAndAfter": "eb4f1ad9b2f854eaec69c90b99deda5a5d5a3b13622c7254fcc952c85629e8bf",
+    "preservedRowCounts": {
+      "users": 3,
+      "roles": 3,
+      "userRoleLinks": 3,
+      "plans": 1,
+      "versions": 1,
+      "events": 1,
+      "notifications": 1
+    },
+    "historicalSlaBackfill": "none",
+    "historicalRoundsEnabled": false,
+    "constraintsForeignKeysIndexesUniqueKeysImmutability": "PASS"
+  },
+  "gates": {
+    "postgresAcceptance": {
+      "result": "PASS",
+      "passed": 6,
+      "failed": 0,
+      "skipped": 0,
+      "coverage": [
+        "snapshot boundaries, recipients, replay, reassignment, resubmit",
+        "concurrent config writes and submit snapshot revision",
+        "parallel worker idempotency and atomic rollback",
+        "decision/reassignment versus worker lock races",
+        "migration constraints, indexes, immutability triggers",
+        "missing/disabled config"
+      ]
+    },
+    "backendFullSuite": {
+      "result": "PASS",
+      "passed": 361,
+      "subtestsPassed": 84,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "warnings": "one existing Starlette/httpx deprecation warning"
+    },
+    "frontend": {
+      "typecheck": "PASS",
+      "testsPassed": 154,
+      "testFiles": 21,
+      "build": "PASS",
+      "buildWarning": "existing bundle chunk exceeds 500 kB",
+      "lint": "no frontend lint script"
+    },
+    "browser": {
+      "slaPlaywright": {
+        "result": "PASS",
+        "passed": 1,
+        "database": "run-isolated PostgreSQL",
+        "coverage": [
+          "Admin config",
+          "Maker submit",
+          "Checker deadline and clock boundaries",
+          "worker warning/overdue recipients and replay",
+          "late decision closes SLA",
+          "config change preserves old snapshot",
+          "resubmit creates next snapshot",
+          "overdue catch-up omits stale warning",
+          "round history"
+        ]
+      },
+      "judgeDemoE2e": "5 passed",
+      "authE2e": "3 passed"
+    }
+  },
+  "provenance": {
+    "slaBrowser": "MOCK_VLM",
+    "authBrowser": "MOCK_VLM; evaluator tasks NOT_CONFIGURED route to Human Review",
+    "judgeDemo": "MOCK_VLM",
+    "realInferenceRun": false
+  },
+  "isolationAndCleanup": {
+    "applicationDatabaseOrUrlUsed": false,
+    "sourceMountedReadOnly": true,
+    "runContainersAndNetworkRemoved": true,
+    "runVolumesCreated": 0,
+    "tempRootRemoved": true,
+    "appContainersAfterCleanup": {
+      "frontend": "a0a63927e404",
+      "backend": "9eb63901ad4c",
+      "database": "eca52945ccd1"
+    },
+    "aiJudgeWorktree": {
+      "branch": "codex/scope1-phase1-judge-continuation-20261011",
+      "head": "f728de097351e415cedd0c52586ae08c9ee8f46a",
+      "changedByRun": false
+    }
+  },
+  "repositoryState": {
+    "headUnchanged": true,
+    "changesUncommitted": true,
+    "diffCheck": "PASS (LF/CRLF conversion notices only)",
+    "commitPushPullRequestMergeDeploy": "none"
+  },
+  "limitations": [
+    "DNS failure prevents checking live origin/main freshness.",
+    "Browser E2E used Mock VLM; no fresh Local VLM or Media/Strategy model inference.",
+    "Scope Phase 1 remains pending PO/stakeholder confirmation and this run does not claim Scope 1 completion."
+  ],
+  "secretsIncluded": false,
+  "ciWorkflowSha256": "90217fa6151c42f11c62b4592bdd0a6f2c3aa71f1a7b215d178b187b26f97a24",
+  "checkpointReview": {
+    "remoteMainHead": "f4cf0857bdbdda4af20ef0d3bc4c0adadfd2059f",
+    "remoteFetchSucceeded": true,
+    "remoteSlaBranchExistedBeforePush": false,
+    "existingDraftPullRequest": false,
+    "renderYamlChanged": false,
+    "ciPostCommitStatus": "PENDING"
+  }
+}

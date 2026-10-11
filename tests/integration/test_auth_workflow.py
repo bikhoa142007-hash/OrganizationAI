@@ -21,7 +21,7 @@ from src.backend.api.auth import get_auth_db
 from src.backend.api.dependencies import Settings
 from src.backend.application import auth_workflow as auth_workflow_application
 from src.backend.db.base import Base
-from src.backend.db.models import AuthWorkflowEvaluationRun, AuthWorkflowEvent, AuthWorkflowNotification, AuthWorkflowPlan, EmployeeProfile, Role, User, UserRole
+from src.backend.db.models import (AuthWorkflowEvaluationRun, AuthWorkflowEvent, AuthWorkflowNotification, AuthWorkflowPlan, AuthWorkflowSlaConfiguration, AuthWorkflowSlaRound, EmployeeProfile, Role, RolePermission, User, UserRole)
 from src.backend.db.security import hash_password
 from src.backend.domain.policy import (
     ApprovalConfiguration,
@@ -342,6 +342,61 @@ def submit_plan(client: TestClient, plan: dict) -> dict:
     return response.json()
 
 
+def test_admin_configures_sla_and_submission_captures_immutable_round_snapshot(workflow_client):
+    client, factory, app = workflow_client
+    maker = create_user(factory, "sla.maker", ("MAKER",))
+    checker = create_user(factory, "sla.checker", ("CHECKER",))
+    admin = create_user(factory, "sla.admin", ("ADMIN",))
+    with factory.begin() as session:
+        admin_role = session.scalar(select(Role).where(Role.code == "ADMIN"))
+        session.add(RolePermission(role_id=admin_role.id, permission_code="ADMIN_SLA_MANAGE"))
+
+    admin_client = authenticated_client(app, admin)
+    maker_client = authenticated_client(app, maker)
+    initial = admin_client.get("/api/workflow/sla/configuration")
+    assert initial.status_code == 200
+    assert initial.json()["configured"] is False
+    assert initial.json()["enabled"] is False
+    assert maker_client.get("/api/workflow/sla/configuration").status_code == 403
+    assert maker_client.put("/api/workflow/sla/configuration", json={
+        "enabled": True, "duration_minutes": 1440, "warning_before_minutes": 240,
+        "expected_revision": 0, "change_reason": "Unauthorized attempt",
+    }).status_code == 403
+    with factory() as session:
+        assert session.query(AuthWorkflowSlaConfiguration).count() == 0
+
+    configured = admin_client.put("/api/workflow/sla/configuration", json={
+        "enabled": True,
+        "duration_minutes": 24 * 60,
+        "warning_before_minutes": 4 * 60,
+        "expected_revision": 0,
+        "change_reason": "Synthetic integration-test configuration",
+    })
+    assert configured.status_code == 200, configured.text
+    assert configured.json()["revision"] == 1
+    history = admin_client.get("/api/workflow/sla/configuration/history")
+    assert history.status_code == 200
+    assert history.json()["total"] == 1
+
+    draft = make_plan(maker_client, checker.id)
+    draft = upload_plan_image(maker_client, draft["id"], draft["revision"])
+    submitted = submit_plan(maker_client, draft)
+
+    assert submitted["sla_current"]["applicable"] is True
+    assert submitted["sla_current"]["status"] == "IN_PROGRESS"
+    assert submitted["sla_current"]["configuration_revision"] == 1
+    assert submitted["sla_history"] == [submitted["sla_current"]]
+    with factory() as session:
+        snapshot = session.scalar(select(AuthWorkflowSlaRound).where(
+            AuthWorkflowSlaRound.plan_id == UUID(submitted["id"]),
+        ))
+        assert snapshot is not None
+        assert snapshot.version_number == submitted["current_version"] == 1
+        assert snapshot.round_number == submitted["current_round"] == 1
+        assert snapshot.duration_minutes == 24 * 60
+        assert snapshot.warning_before_minutes == 4 * 60
+        assert snapshot.configuration_revision == 1
+
 def test_auth_cookie_is_required_and_does_not_authenticate_judge_demo(workflow_client):
     client, factory, _app = workflow_client
     maker = create_user(factory, "maker.one", ("MAKER",))
@@ -648,6 +703,20 @@ def test_authenticated_submission_uses_existing_policy_for_auto_approval(workflo
     client, factory, app = workflow_client
     maker = create_user(factory, "maker.auto", ("MAKER",))
     checker = create_user(factory, "checker.auto", ("CHECKER",))
+    admin = create_user(factory, "admin.auto", ("ADMIN",))
+    with factory.begin() as session:
+        admin_role = session.scalar(select(Role).where(Role.code == "ADMIN"))
+        assert admin_role is not None
+        session.add(RolePermission(role_id=admin_role.id, permission_code="ADMIN_SLA_MANAGE"))
+    admin_client = authenticated_client(app, admin)
+    sla_configuration = admin_client.put("/api/workflow/sla/configuration", json={
+        "enabled": True,
+        "duration_minutes": 1440,
+        "warning_before_minutes": 240,
+        "expected_revision": 0,
+        "change_reason": "Synthetic enabled SLA for auto-approval closure verification.",
+    })
+    assert sla_configuration.status_code == 200, sla_configuration.text
     login(client, maker)
     app.state.auth_workflow_configuration = auto_approval_configuration(checker.id)
     app.state.auth_workflow_provider = AuthenticatedMockVLMProvider("pass", model_version="mock-1")
@@ -667,6 +736,11 @@ def test_authenticated_submission_uses_existing_policy_for_auto_approval(workflo
     assert submitted["ai_evaluations"][0]["strategy_evaluation"]["result"]["feasibility_score"] == 71
     assert submitted["engine_decisions"][0]["outcome"] == "AUTO_APPROVED"
     assert submitted["engine_decisions"][0]["decision"]["budget_validation"]["result"] == "PASS"
+    assert submitted["sla_current"]["applicable"] is True
+    assert submitted["sla_current"]["configuration_revision"] == 1
+    assert submitted["sla_current"]["status"] == "CLOSED_ON_TIME"
+    assert submitted["sla_current"]["closed_at"] is not None
+    assert submitted["sla_history"] == [submitted["sla_current"]]
     assert len([event for event in submitted["history"] if event["action"] == "AI_AUTO_APPROVED"]) == 1
     saved_media, saved_strategy = submitted["ai_evaluations"][0]["media_evaluation"], submitted["ai_evaluations"][0]["strategy_evaluation"]
     reloaded = client.get(f"/api/workflow/plans/{draft['id']}").json()

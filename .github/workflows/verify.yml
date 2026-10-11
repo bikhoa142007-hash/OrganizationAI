@@ -158,6 +158,9 @@ jobs:
           migration_heads = ScriptDirectory.from_config(alembic_config).get_heads()
           assert len(migration_heads) == 1, f'Expected exactly one Alembic head, found {migration_heads}'
           expected_head = migration_heads[0]
+          assert expected_head == '20261011_12', (
+              f'Expected SLA migration head 20261011_12, found {expected_head}'
+          )
 
           engine = create_engine(os.environ['DATABASE_URL'])
           try:
@@ -218,7 +221,124 @@ jobs:
           POSTGRES_TEST_DATABASE: organizationai_test_${{ github.run_id }}_${{ github.run_attempt }}
           POSTGRES_TEST_USER: organizationai_test
           POSTGRES_TEST_RUN_ID: ${{ github.run_id }}_${{ github.run_attempt }}
-      - name: Run in-app notification PostgreSQL acceptance test
+      - name: Prepare isolated SLA PostgreSQL databases
+        run: |
+          .venv/bin/python - <<'PY'
+          import os
+          import re
+          import subprocess
+          import sys
+
+          import psycopg
+          from psycopg import sql
+          from scripts.postgres_test_target import verify_runner_provisioned_database
+
+          base_url = verify_runner_provisioned_database(os.environ)
+          databases = (
+              os.environ["SLA_POSTGRES_TEST_DATABASE"],
+              os.environ["SLA_EMPTY_POSTGRES_TEST_DATABASE"],
+          )
+          if any(
+              not re.fullmatch(r"organizationai_sla_[a-z0-9_]{1,40}", name)
+              for name in databases
+          ):
+              raise RuntimeError("Run-scoped SLA database name is invalid.")
+
+          with psycopg.connect(
+              host=base_url.host,
+              port=base_url.port,
+              dbname="postgres",
+              user=base_url.username,
+              password=base_url.password,
+              autocommit=True,
+          ) as connection:
+              for database in databases:
+                  exists = connection.execute(
+                      "SELECT 1 FROM pg_database WHERE datname = %s", (database,)
+                  ).fetchone()
+                  if exists:
+                      raise RuntimeError("A run-scoped SLA database already exists.")
+                  connection.execute(
+                      sql.SQL("CREATE DATABASE {}").format(sql.Identifier(database))
+                  )
+
+          for database in databases:
+              environment = os.environ.copy()
+              environment["DATABASE_URL"] = base_url.set(database=database).render_as_string(
+                  hide_password=False
+              )
+              environment["APP_ENV"] = "demo"
+              environment["AUTH_SEED_ENABLED"] = "true"
+              subprocess.run(
+                  [sys.executable, "-m", "alembic", "upgrade", "head"],
+                  check=True,
+                  env=environment,
+              )
+              subprocess.run(
+                  [sys.executable, "-m", "src.backend.seed_auth"],
+                  check=True,
+                  env=environment,
+              )
+          PY
+        working-directory: .
+        env:
+          APP_ENV: demo
+          AUTH_SEED_ENABLED: 'true'
+          AUTH_SEED_PASSWORD: ci-only-auth-password
+          DATABASE_URL: postgresql+psycopg://organizationai_test:ci-only-test-password@127.0.0.1:${{ job.services.postgres.ports[5432] }}/organizationai_test_${{ github.run_id }}_${{ github.run_attempt }}
+          POSTGRES_TEST_DATABASE: organizationai_test_${{ github.run_id }}_${{ github.run_attempt }}
+          POSTGRES_TEST_USER: organizationai_test
+          POSTGRES_TEST_RUN_ID: ${{ github.run_id }}_${{ github.run_attempt }}
+          SLA_POSTGRES_TEST_DATABASE: organizationai_sla_acceptance_${{ github.run_id }}_${{ github.run_attempt }}
+          SLA_EMPTY_POSTGRES_TEST_DATABASE: organizationai_sla_empty_${{ github.run_id }}_${{ github.run_attempt }}
+      - name: Verify complete PostgreSQL acceptance marker selection
+        run: |
+          .venv/bin/python - <<'PY'
+          import subprocess
+          import sys
+
+          expected = {
+              "tests/integration/test_auth_sla_postgres.py::test_postgres_snapshot_boundaries_recipients_replay_reassignment_and_resubmit",
+              "tests/integration/test_auth_sla_postgres.py::test_postgres_concurrent_config_writes_and_submit_capture_one_revision",
+              "tests/integration/test_auth_sla_postgres.py::test_postgres_parallel_workers_are_idempotent_and_rollback_is_atomic",
+              "tests/integration/test_auth_sla_postgres.py::test_postgres_decision_and_checker_reassignment_win_worker_lock_races",
+              "tests/integration/test_auth_sla_postgres.py::test_postgres_migration_constraints_indexes_and_immutability_triggers",
+              "tests/integration/test_auth_sla_postgres.py::test_postgres_missing_and_disabled_configuration_do_not_start_a_round",
+              "tests/integration/test_auth_workflow_postgres_notifications.py::test_postgres_notification_lifecycle_permissions_replay_and_rollback",
+          }
+          result = subprocess.run(
+              [sys.executable, "-m", "pytest", "--collect-only", "-q", "-m", "postgres"],
+              check=False,
+              text=True,
+              capture_output=True,
+          )
+          print(result.stdout, end="")
+          if result.stderr:
+              print(result.stderr, file=sys.stderr, end="")
+          if result.returncode:
+              raise SystemExit(result.returncode)
+          selected = {
+              line.strip()
+              for line in result.stdout.splitlines()
+              if line.strip().startswith("tests/")
+          }
+          if selected != expected:
+              print(f"Missing PostgreSQL acceptance tests: {sorted(expected - selected)}", file=sys.stderr)
+              print(f"Unexpected PostgreSQL-marked tests: {sorted(selected - expected)}", file=sys.stderr)
+              raise SystemExit(1)
+          print("Verified exact PostgreSQL marker selection: all six SLA and notification acceptance tests.")
+          PY
+        working-directory: .
+        env:
+          APP_ENV: demo
+          AUTH_SEED_PASSWORD: ci-only-auth-password
+          DATABASE_URL: postgresql+psycopg://organizationai_test:ci-only-test-password@127.0.0.1:${{ job.services.postgres.ports[5432] }}/organizationai_test_${{ github.run_id }}_${{ github.run_attempt }}
+          POSTGRES_TEST_DATABASE: organizationai_test_${{ github.run_id }}_${{ github.run_attempt }}
+          POSTGRES_TEST_USER: organizationai_test
+          POSTGRES_TEST_RUN_ID: ${{ github.run_id }}_${{ github.run_attempt }}
+          SLA_POSTGRES_TEST_URL: postgresql+psycopg://organizationai_test:ci-only-test-password@127.0.0.1:${{ job.services.postgres.ports[5432] }}/organizationai_sla_acceptance_${{ github.run_id }}_${{ github.run_attempt }}
+          SLA_EMPTY_POSTGRES_TEST_URL: postgresql+psycopg://organizationai_test:ci-only-test-password@127.0.0.1:${{ job.services.postgres.ports[5432] }}/organizationai_sla_empty_${{ github.run_id }}_${{ github.run_attempt }}
+      - name: Run PostgreSQL SLA and notification acceptance
         run: .venv/bin/python -m pytest -q -m postgres
         working-directory: .
         env:
@@ -228,6 +348,8 @@ jobs:
           POSTGRES_TEST_DATABASE: organizationai_test_${{ github.run_id }}_${{ github.run_attempt }}
           POSTGRES_TEST_USER: organizationai_test
           POSTGRES_TEST_RUN_ID: ${{ github.run_id }}_${{ github.run_attempt }}
+          SLA_POSTGRES_TEST_URL: postgresql+psycopg://organizationai_test:ci-only-test-password@127.0.0.1:${{ job.services.postgres.ports[5432] }}/organizationai_sla_acceptance_${{ github.run_id }}_${{ github.run_attempt }}
+          SLA_EMPTY_POSTGRES_TEST_URL: postgresql+psycopg://organizationai_test:ci-only-test-password@127.0.0.1:${{ job.services.postgres.ports[5432] }}/organizationai_sla_empty_${{ github.run_id }}_${{ github.run_attempt }}
           JWT_SECRET: ci-only-test-jwt-secret-at-least-32-characters
       - name: Start Auth API and frontend against disposable PostgreSQL
         id: auth-e2e-servers
@@ -297,6 +419,101 @@ jobs:
           AUTH_SEED_PASSWORD: ci-only-auth-password
           AUTH_E2E_BASE_URL: http://127.0.0.1:${{ steps.auth-e2e-servers.outputs.frontend_port }}
           VITE_API_BASE_URL: http://127.0.0.1:${{ steps.auth-e2e-servers.outputs.api_port }}/api
+      - name: Build disposable SLA worker image
+        run: docker build --file deployment/Dockerfile.backend-dev --tag "organizationai-sla-worker-${{ github.run_id }}-${{ github.run_attempt }}" .
+        working-directory: .
+      - name: Start isolated clocked SLA API and worker
+        id: sla-e2e-servers
+        run: |
+          set -euo pipefail
+          run_id="${{ github.run_id }}_${{ github.run_attempt }}"
+          worker_container="oa-sla-worker-$run_id"
+          clock_root="$RUNNER_TEMP/organizationai-sla-clock-$run_id"
+          mkdir -p "$clock_root"
+          printf '%s\n' '{"now":"2026-11-01T12:00:00+00:00"}' > "$clock_root/clock.json"
+          postgres_id="${{ job.services.postgres.id }}"
+          postgres_network="$(docker inspect --format '{{range .NetworkSettings.Networks}}{{.NetworkID}}{{end}}' "$postgres_id")"
+          if [ -z "$postgres_network" ]; then
+            echo "Could not identify this job's disposable PostgreSQL network." >&2
+            exit 1
+          fi
+          read -r api_port vite_port < <(.venv/bin/python - <<'PY'
+          import socket
+          ports = []
+          for _ in range(32):
+              with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as listener:
+                  listener.bind(("127.0.0.1", 0))
+                  port = listener.getsockname()[1]
+              if port not in ports:
+                  ports.append(port)
+              if len(ports) == 2:
+                  break
+          if len(ports) != 2:
+              raise RuntimeError("Could not allocate two distinct SLA E2E ports.")
+          print(*ports)
+          PY
+          )
+          echo "api_port=$api_port" >> "$GITHUB_OUTPUT"
+          echo "vite_port=$vite_port" >> "$GITHUB_OUTPUT"
+          docker run --detach --rm --name "$worker_container" \
+            --network "$postgres_network" \
+            --volume "$GITHUB_WORKSPACE:/workspace:ro" \
+            --volume "$clock_root:/sla-test:ro" \
+            --env "DATABASE_URL=postgresql+psycopg://organizationai_test:ci-only-test-password@postgres:5432/organizationai_test_${{ github.run_id }}_${{ github.run_attempt }}" \
+            --entrypoint sleep "organizationai-sla-worker-${{ github.run_id }}-${{ github.run_attempt }}" infinity
+          echo "SLA_TEST_CLOCK_FILE=$clock_root/clock.json" >> "$GITHUB_ENV"
+          echo "SLA_TEST_API_CONTAINER=$worker_container" >> "$GITHUB_ENV"
+          echo "SLA_TEST_CLOCK_CONTAINER_FILE=/sla-test/clock.json" >> "$GITHUB_ENV"
+          echo "SLA_TEST_WORKER_SCRIPT=/workspace/scripts/run_sla_clocked_worker.py" >> "$GITHUB_ENV"
+          echo "SLA_E2E_VITE_PORT=$vite_port" >> "$GITHUB_ENV"
+          echo "SLA_TEST_API_PORT=$api_port" >> "$GITHUB_ENV"
+          api_database_url="postgresql+psycopg://organizationai_test:ci-only-test-password@127.0.0.1:${{ job.services.postgres.ports[5432] }}/organizationai_test_${{ github.run_id }}_${{ github.run_attempt }}"
+          log_root="$RUNNER_TEMP/organizationai-sla-logs-$run_id"
+          mkdir -p "$log_root"
+          nohup env APP_ENV=demo AUTH_SEED_PASSWORD=ci-only-auth-password \
+            AUTH_WORKFLOW_AI_PROVIDER=MOCK_VLM AUTH_WORKFLOW_MOCK_SCENARIO=review \
+            JWT_SECRET=ci-only-test-jwt-secret-at-least-32-characters \
+            DATABASE_URL="$api_database_url" SLA_TEST_CLOCK_FILE="$clock_root/clock.json" \
+            SLA_TEST_API_PORT="$api_port" CORS_ORIGINS="http://127.0.0.1:$vite_port" \
+            .venv/bin/python scripts/run_sla_clocked_api.py \
+            > "$log_root/api.log" 2>&1 &
+          echo "$!" > "$log_root/api.pid"
+          for attempt in $(seq 1 60); do
+            if curl --silent --fail "http://127.0.0.1:$api_port/api/health/ready" >/dev/null; then break; fi
+            sleep 2
+          done
+          if ! curl --silent --fail "http://127.0.0.1:$api_port/api/health/ready" >/dev/null; then
+            cat "$log_root/api.log"
+            exit 1
+          fi
+        working-directory: .
+      - name: Run SLA browser acceptance with test-only clock and MOCK_VLM
+        run: npm run test:e2e -- --config playwright.sla.config.ts
+        env:
+          APP_ENV: demo
+          AUTH_SEED_PASSWORD: ci-only-auth-password
+          AUTH_COOKIE_SECURE: 'false'
+          VITE_API_BASE_URL: http://127.0.0.1:${{ steps.sla-e2e-servers.outputs.api_port }}/api
+          VITE_DEMO_ENABLED: 'true'
+          SLA_TEST_CLOCK_FILE: ${{ env.SLA_TEST_CLOCK_FILE }}
+          SLA_TEST_API_CONTAINER: ${{ env.SLA_TEST_API_CONTAINER }}
+          SLA_TEST_CLOCK_CONTAINER_FILE: ${{ env.SLA_TEST_CLOCK_CONTAINER_FILE }}
+          SLA_TEST_WORKER_SCRIPT: ${{ env.SLA_TEST_WORKER_SCRIPT }}
+          SLA_E2E_VITE_PORT: ${{ steps.sla-e2e-servers.outputs.vite_port }}
+      - name: Clean up this run's SLA E2E resources
+        if: always()
+        run: |
+          set +e
+          run_id="${{ github.run_id }}_${{ github.run_attempt }}"
+          worker_container="oa-sla-worker-$run_id"
+          docker stop --time 5 "$worker_container" >/dev/null 2>&1 || true
+          docker rm --force "$worker_container" >/dev/null 2>&1 || true
+          docker image rm "organizationai-sla-worker-${{ github.run_id }}-${{ github.run_attempt }}" >/dev/null 2>&1 || true
+          if [ -f "$RUNNER_TEMP/organizationai-sla-logs-$run_id/api.pid" ]; then
+            kill "$(cat "$RUNNER_TEMP/organizationai-sla-logs-$run_id/api.pid")" >/dev/null 2>&1 || true
+          fi
+          rm -rf "$RUNNER_TEMP/organizationai-sla-clock-$run_id" "$RUNNER_TEMP/organizationai-sla-logs-$run_id"
+        working-directory: .
       - uses: actions/upload-artifact@v4
         if: failure()
         with:

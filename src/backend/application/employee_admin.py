@@ -11,6 +11,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
 from src.backend.application.workflow import ApplicationError
+from src.backend.application.auth_sla import notify_reassigned_checker
 from src.backend.db.models import (
     AdminAuditEvent, AuthManagementToken, AuthWorkflowEvent, AuthWorkflowPlan,
     EmployeeProfile, Role, RolePermission, User, UserRole,
@@ -292,6 +293,8 @@ def deactivate_employee(session: Session, principal: AuthenticatedPrincipal, emp
                 details={"previous_checker_id": str(previous_id), "new_checker_id": str(replacement.id),
                          "reason": "Employee deactivation with explicit reassignment"},
             ))
+            session.flush()
+            notify_reassigned_checker(session, plan=plan, now=now)
         profile.employment_status = "INACTIVE"
         if user:
             user.employment_status = "INACTIVE"
