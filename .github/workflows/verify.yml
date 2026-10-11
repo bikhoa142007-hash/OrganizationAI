@@ -32,7 +32,7 @@ jobs:
       - name: Run backend pytest, then all three Verify suites
         run: |
           overall=0
-          if ! .venv/bin/python -m pytest -q --ignore=tests/integration/test_auth_workflow_postgres_notifications.py; then overall=1; fi
+          if ! .venv/bin/python scripts/run_render_build_tests.py; then overall=1; fi
           for suite in general escalation regression; do
             output="runtime/ci-verify-${suite}.json"
             if ! .venv/bin/python -m src.verify.runner --suite "$suite" --output "$output"; then overall=1; fi
@@ -112,13 +112,13 @@ jobs:
       postgres:
         image: postgres:16
         env:
-          POSTGRES_DB: organizationai_test
+          POSTGRES_DB: organizationai_test_${{ github.run_id }}_${{ github.run_attempt }}
           POSTGRES_USER: organizationai_test
           POSTGRES_PASSWORD: ci-only-test-password
         ports:
-          - 5432:5432
+          - 127.0.0.1::5432
         options: >-
-          --health-cmd "pg_isready -U organizationai_test -d organizationai_test"
+          --health-cmd "pg_isready -U organizationai_test -d organizationai_test_${{ github.run_id }}_${{ github.run_attempt }}"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 10
@@ -146,6 +146,7 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - name: Verify migrations against disposable PostgreSQL
         run: |
+          .venv/bin/python scripts/verify_postgres_test_target.py
           .venv/bin/alembic upgrade head
           .venv/bin/python - <<'PY'
           import os
@@ -202,7 +203,10 @@ jobs:
           PY
         working-directory: .
         env:
-          DATABASE_URL: postgresql+psycopg://organizationai_test:ci-only-test-password@127.0.0.1:5432/organizationai_test
+          DATABASE_URL: postgresql+psycopg://organizationai_test:ci-only-test-password@127.0.0.1:${{ job.services.postgres.ports[5432] }}/organizationai_test_${{ github.run_id }}_${{ github.run_attempt }}
+          POSTGRES_TEST_DATABASE: organizationai_test_${{ github.run_id }}_${{ github.run_attempt }}
+          POSTGRES_TEST_USER: organizationai_test
+          POSTGRES_TEST_RUN_ID: ${{ github.run_id }}_${{ github.run_attempt }}
       - name: Seed disposable local Auth users
         run: .venv/bin/python -m src.backend.seed_auth
         working-directory: .
@@ -210,46 +214,89 @@ jobs:
           APP_ENV: demo
           AUTH_SEED_ENABLED: 'true'
           AUTH_SEED_PASSWORD: ci-only-auth-password
-          DATABASE_URL: postgresql+psycopg://organizationai_test:ci-only-test-password@127.0.0.1:5432/organizationai_test
+          DATABASE_URL: postgresql+psycopg://organizationai_test:ci-only-test-password@127.0.0.1:${{ job.services.postgres.ports[5432] }}/organizationai_test_${{ github.run_id }}_${{ github.run_attempt }}
+          POSTGRES_TEST_DATABASE: organizationai_test_${{ github.run_id }}_${{ github.run_attempt }}
+          POSTGRES_TEST_USER: organizationai_test
+          POSTGRES_TEST_RUN_ID: ${{ github.run_id }}_${{ github.run_attempt }}
       - name: Run in-app notification PostgreSQL acceptance test
-        run: .venv/bin/python -m pytest -q tests/integration/test_auth_workflow_postgres_notifications.py
+        run: .venv/bin/python -m pytest -q -m postgres
         working-directory: .
         env:
           APP_ENV: demo
           AUTH_SEED_PASSWORD: ci-only-auth-password
-          DATABASE_URL: postgresql+psycopg://organizationai_test:ci-only-test-password@127.0.0.1:5432/organizationai_test
+          DATABASE_URL: postgresql+psycopg://organizationai_test:ci-only-test-password@127.0.0.1:${{ job.services.postgres.ports[5432] }}/organizationai_test_${{ github.run_id }}_${{ github.run_attempt }}
+          POSTGRES_TEST_DATABASE: organizationai_test_${{ github.run_id }}_${{ github.run_attempt }}
+          POSTGRES_TEST_USER: organizationai_test
+          POSTGRES_TEST_RUN_ID: ${{ github.run_id }}_${{ github.run_attempt }}
           JWT_SECRET: ci-only-test-jwt-secret-at-least-32-characters
       - name: Start Auth API and frontend against disposable PostgreSQL
+        id: auth-e2e-servers
         run: |
+          exec 9>/tmp/organizationai-auth-e2e-port-allocation.lock
+          flock 9
           cd ..
-          nohup .venv/bin/python -m uvicorn src.backend.api.app:app --host 127.0.0.1 --port 8010 > "$RUNNER_TEMP/auth-api.log" 2>&1 &
-          nohup npm --prefix frontend run dev -- --host 127.0.0.1 --port 5173 > "$RUNNER_TEMP/auth-frontend.log" 2>&1 &
+          read -r api_port frontend_port < <(.venv/bin/python - <<'PY'
+          import os
+          import socket
+
+          ports = []
+          for _ in range(16):
+              with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as listener:
+                  listener.bind(('127.0.0.1', 0))
+                  port = listener.getsockname()[1]
+              if port not in ports:
+                  ports.append(port)
+              if len(ports) == 2:
+                  break
+          if len(ports) != 2:
+              raise RuntimeError('Could not select two distinct Auth E2E loopback ports.')
+          with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as output:
+              print(f'api_port={ports[0]}', file=output)
+              print(f'frontend_port={ports[1]}', file=output)
+          print(*ports)
+          PY
+          )
+          nohup .venv/bin/python -m uvicorn src.backend.api.app:app --host 127.0.0.1 --port "$api_port" > "$RUNNER_TEMP/auth-api.log" 2>&1 &
+          nohup npm --prefix frontend run dev -- --host 127.0.0.1 --port "$frontend_port" --strictPort > "$RUNNER_TEMP/auth-frontend.log" 2>&1 &
           for attempt in $(seq 1 60); do
-            if curl --silent --fail http://127.0.0.1:8010/api/health/ready >/dev/null \
-              && curl --silent --fail http://127.0.0.1:5173/ >/dev/null; then
-              exit 0
+            if curl --silent --fail "http://127.0.0.1:$api_port/api/health/ready" >/dev/null \
+              && curl --silent --fail "http://127.0.0.1:$frontend_port/" >/dev/null; then
+              break
             fi
             sleep 2
           done
-          cat "$RUNNER_TEMP/auth-api.log"
-          cat "$RUNNER_TEMP/auth-frontend.log"
-          exit 1
+          if ! curl --silent --fail "http://127.0.0.1:$api_port/api/health/ready" >/dev/null \
+            || ! curl --silent --fail "http://127.0.0.1:$frontend_port/" >/dev/null; then
+            cat "$RUNNER_TEMP/auth-api.log"
+            cat "$RUNNER_TEMP/auth-frontend.log"
+            exit 1
+          fi
+          cors_headers="$(curl --silent --show-error --fail --request OPTIONS \
+            --header "Origin: http://127.0.0.1:$frontend_port" \
+            --header 'Access-Control-Request-Method: GET' \
+            --dump-header - --output /dev/null \
+            "http://127.0.0.1:$api_port/api/health/ready")"
+          printf '%s\n' "$cors_headers" | grep --ignore-case --fixed-strings \
+            "access-control-allow-origin: http://127.0.0.1:$frontend_port" >/dev/null
+          printf 'Auth E2E ports: frontend=%s api=%s; CORS origin verified.\n' "$frontend_port" "$api_port"
+          flock -u 9
         env:
           APP_ENV: demo
-          DATABASE_URL: postgresql+psycopg://organizationai_test:ci-only-test-password@127.0.0.1:5432/organizationai_test
           AUTH_SEED_PASSWORD: ci-only-auth-password
+          DATABASE_URL: postgresql+psycopg://organizationai_test:ci-only-test-password@127.0.0.1:${{ job.services.postgres.ports[5432] }}/organizationai_test_${{ github.run_id }}_${{ github.run_attempt }}
           JWT_SECRET: ci-only-test-jwt-secret-at-least-32-characters
           AUTH_WORKFLOW_AI_PROVIDER: MOCK_VLM
           AUTH_WORKFLOW_MOCK_SCENARIO: review
           AUTH_COOKIE_SECURE: 'false'
-          CORS_ORIGINS: http://localhost:5173,http://127.0.0.1:5173
-          VITE_API_BASE_URL: http://localhost:8010/api
+          CORS_ORIGINS: http://127.0.0.1:${{ steps.auth-e2e-servers.outputs.frontend_port }}
+          VITE_API_BASE_URL: http://127.0.0.1:${{ steps.auth-e2e-servers.outputs.api_port }}/api
           VITE_DEMO_ENABLED: 'true'
       - name: Run Auth Maker-Checker browser workflow against PostgreSQL
         run: npm run test:e2e -- --config playwright.auth-live.config.ts
         env:
           AUTH_SEED_PASSWORD: ci-only-auth-password
-          VITE_API_BASE_URL: http://localhost:8010/api
+          AUTH_E2E_BASE_URL: http://127.0.0.1:${{ steps.auth-e2e-servers.outputs.frontend_port }}
+          VITE_API_BASE_URL: http://127.0.0.1:${{ steps.auth-e2e-servers.outputs.api_port }}/api
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
