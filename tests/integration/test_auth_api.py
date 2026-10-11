@@ -1,5 +1,6 @@
 from collections.abc import Iterator
 from datetime import datetime, timedelta, timezone
+import logging
 from uuid import uuid4
 
 import pytest
@@ -7,7 +8,7 @@ import jwt
 from fastapi import Depends
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, select
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import DataError, IntegrityError, OperationalError, ProgrammingError
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
@@ -499,3 +500,63 @@ def test_missing_postgres_auth_configuration_fails_closed_with_service_status(mo
 
     assert response.status_code == 503
     assert response.json()["message"] == "Authentication database is not configured."
+
+
+@pytest.mark.parametrize(
+    ("failure_point", "exception_type", "sqlstate", "expected_phase"),
+    [
+        ("connect", OperationalError, None, "connect"),
+        ("query", ProgrammingError, "42P01", "schema"),
+        ("query", OperationalError, "08006", "connect"),
+        ("query", DataError, "22000", "query"),
+    ],
+)
+def test_auth_database_failure_diagnostic_is_correlated_and_redacted(
+    monkeypatch, caplog, failure_point, exception_type, sqlstate, expected_phase,
+):
+    monkeypatch.setenv("JWT_SECRET", "test-only-auth-secret-that-is-at-least-32-bytes")
+    cause = RuntimeError("SENSITIVE_ERROR_MARKER password=never-log")
+    if sqlstate:
+        cause.sqlstate = sqlstate
+    database_error = exception_type(
+        "SENSITIVE_SQL_MARKER",
+        {"password": "SENSITIVE_PARAMETER_MARKER"},
+        cause,
+    )
+
+    class FailingSession:
+        def connection(self):
+            if failure_point == "connect":
+                raise database_error
+
+        def scalars(self, statement):
+            raise database_error
+
+        def close(self):
+            pass
+
+    session = FailingSession()
+    monkeypatch.setattr(
+        "src.backend.api.auth.get_session_factory",
+        lambda: lambda: session,
+    )
+    app = create_app(Settings(app_env="demo", cors_origins=("http://localhost:5173",)))
+
+    with caplog.at_level(logging.ERROR, logger="src.backend.api.auth"), TestClient(app) as client:
+        response = client.post("/api/auth/login", json={
+            "identifier": "maker", "password": "Local-demo-password-123",
+        })
+
+    correlation_id = response.headers["x-correlation-id"]
+    assert response.status_code == 503
+    assert response.json()["message"] == "Authentication database is unavailable."
+    assert f"correlation_id={correlation_id}" in caplog.text
+    assert f"exception_type={exception_type.__name__}" in caplog.text
+    assert f"sqlstate={sqlstate or 'none'}" in caplog.text
+    assert f"phase={expected_phase}" in caplog.text
+    assert "SENSITIVE_ERROR_MARKER" not in caplog.text
+    assert "SENSITIVE_SQL_MARKER" not in caplog.text
+    assert "SENSITIVE_PARAMETER_MARKER" not in caplog.text
+    assert "SENSITIVE_ERROR_MARKER" not in response.text
+    assert "SENSITIVE_SQL_MARKER" not in response.text
+    assert "SENSITIVE_PARAMETER_MARKER" not in response.text
