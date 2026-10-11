@@ -4,6 +4,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from .auth_sla_schemas import WorkflowSlaRoundResponse
+
 
 class AuthWorkflowDTO(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -127,6 +129,8 @@ class WorkflowPlanResponse(AuthWorkflowDTO):
     current_round: int
     revision: int
     decision_reason: str | None
+    sla_current: WorkflowSlaRoundResponse | None
+    sla_history: list[WorkflowSlaRoundResponse]
     attachments: list[WorkflowAttachmentResponse]
     versions: list[WorkflowVersionResponse]
     ai_evaluations: list[WorkflowEvaluationResponse]
@@ -164,7 +168,7 @@ class WorkflowAuditPageResponse(AuthWorkflowDTO):
 
 class WorkflowNotificationResponse(AuthWorkflowDTO):
     id: UUID
-    event_type: Literal["PLAN_SUBMITTED", "PLAN_APPROVED", "PLAN_AUTO_APPROVED", "PLAN_REJECTED"]
+    event_type: Literal["PLAN_SUBMITTED", "PLAN_APPROVED", "PLAN_AUTO_APPROVED", "PLAN_REJECTED", "SLA_WARNING", "SLA_OVERDUE"]
     plan_id: UUID
     plan_code: str
     title: str

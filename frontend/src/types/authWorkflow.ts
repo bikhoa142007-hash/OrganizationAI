@@ -201,6 +201,41 @@ export interface WorkflowEngineDecision {
   created_at: string
 }
 
+export type WorkflowSlaStatus = 'NOT_APPLICABLE' | 'IN_PROGRESS' | 'WARNING' | 'OVERDUE' | 'CLOSED_ON_TIME' | 'CLOSED_LATE'
+
+export interface WorkflowSlaRound {
+  version_number: number
+  round_number: number
+  applicable: boolean
+  status: WorkflowSlaStatus
+  configuration_revision: number | null
+  duration_minutes: number | null
+  warning_before_minutes: number | null
+  started_at: string | null
+  warning_at: string | null
+  due_at: string | null
+  closed_at: string | null
+  seconds_until_due: number | null
+}
+
+export interface SlaConfiguration {
+  configured: boolean
+  revision: number
+  enabled: boolean
+  duration_minutes: number | null
+  warning_before_minutes: number | null
+  changed_by_id: string | null
+  changed_by_name: string | null
+  change_reason: string | null
+  updated_at: string | null
+}
+
+export interface SlaConfigurationHistory {
+  items: SlaConfiguration[]
+  offset: number
+  limit: number
+  total: number
+}
 export interface WorkflowPlan {
   id: string
   code: string
@@ -215,6 +250,8 @@ export interface WorkflowPlan {
   current_round: number
   revision: number
   decision_reason: string | null
+  sla_current?: WorkflowSlaRound | null
+  sla_history?: WorkflowSlaRound[]
   attachments: WorkflowAttachment[]
   versions: WorkflowVersion[]
   ai_evaluations: WorkflowAiEvaluation[]
@@ -252,7 +289,7 @@ export interface WorkflowAuditPage {
 
 export interface WorkflowNotification {
   id: string
-  event_type: 'PLAN_SUBMITTED' | 'PLAN_APPROVED' | 'PLAN_AUTO_APPROVED' | 'PLAN_REJECTED'
+  event_type: 'PLAN_SUBMITTED' | 'PLAN_APPROVED' | 'PLAN_AUTO_APPROVED' | 'PLAN_REJECTED' | 'SLA_WARNING' | 'SLA_OVERDUE'
   plan_id: string
   plan_code: string
   title: string

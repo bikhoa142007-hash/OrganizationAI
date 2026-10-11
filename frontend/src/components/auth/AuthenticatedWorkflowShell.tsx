@@ -1,4 +1,4 @@
-import { Bell, ClipboardCheck, FileText, History, LogOut, UserRound, UsersRound } from 'lucide-react'
+import { Bell, ClipboardCheck, Clock3, FileText, History, LogOut, UserRound, UsersRound } from 'lucide-react'
 import { useState } from 'react'
 import type { ReactNode } from 'react'
 import { Link, Navigate, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
@@ -33,6 +33,7 @@ export function AuthenticatedWorkflowShell() {
         {roles.includes('ADMIN') && <NavLink to="/workflow/audit"><History aria-hidden="true" /> Nhật ký kiểm toán</NavLink>}
         {roles.includes('ADMIN') && <NavLink to="/workflow/employees"><UsersRound aria-hidden="true" /> Nhân viên</NavLink>}
         {roles.includes('ADMIN') && <NavLink to="/workflow/roles"><UsersRound aria-hidden="true" /> Vai trò</NavLink>}
+        {roles.includes('ADMIN') && user?.effective_permissions?.includes('ADMIN_SLA_MANAGE') && <NavLink to="/workflow/sla"><Clock3 aria-hidden="true" /> Cấu hình SLA</NavLink>}
         <NavLink to="/account"><UserRound aria-hidden="true" /> Tài khoản</NavLink>
       </nav>
       <div className="auth-workflow-user"><span><UserRound aria-hidden="true" /> {user?.display_name}<small>{roles.join(', ') || 'Chưa có vai trò được cấp'}</small></span><button type="button" disabled={logoutPending} aria-busy={logoutPending} onClick={() => void signOut()}><LogOut aria-hidden="true" /> {logoutPending ? 'Đang đăng xuất…' : logoutError ? 'Thử đăng xuất lại' : 'Đăng xuất'}</button></div>
@@ -42,6 +43,18 @@ export function AuthenticatedWorkflowShell() {
   </div>
 }
 
+export function AuthWorkflowPermissionGuard({
+  role,
+  permission,
+  children,
+}: { role: string; permission: string; children: ReactNode }) {
+  const { roles, user } = useAuth()
+  const location = useLocation()
+  if (!roles.includes(role) || !user?.effective_permissions?.includes(permission)) {
+    return <Navigate to="/access-denied" replace state={{ from: location }} />
+  }
+  return children
+}
 export function AuthWorkflowRoleGuard({ roles, children }: { roles: string[]; children: ReactNode }) {
   const { roles: currentRoles } = useAuth()
   const location = useLocation()

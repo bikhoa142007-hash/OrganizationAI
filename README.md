@@ -51,6 +51,7 @@ Backend Render lưu SQLite tại `/tmp/organizationai/demo-organization.sqlite3`
 | `Implemented` | Demo seed | Tám scenario tổng hợp, seed idempotent và không xóa database hiện có |
 | `Demo/Mock` | Actor identity | Chọn shared demo actor, gửi qua header `X-Demo-Actor`; server vẫn kiểm tra role và ownership |
 | `Demo/Mock` | AI evaluation | FastAPI đang nối `MockVLMProvider`; timeout/error/malformed evidence đều fail closed sang Human Review |
+| `Implemented (local)` | Approval SLA | Admin-only, revisioned configuration and immutable per-round deadlines; warning/overdue in-app notices come from an explicitly started worker. No active SLA setting is seeded. |
 | `Implemented (local)` | Auth workflow | Cookie JWT xác thực Maker/Checker; PostgreSQL lưu kế hoạch, snapshot, provider evaluation, quyết định policy, audit và hộp thư in-app; AI lỗi chuyển Checker review |
 | `Implemented (local)` | Auth AI stages | Local VLM extraction, Media Compliance và Strategy Evaluation là các bước độc lập; kết quả và cấu hình an toàn được lưu theo từng round; task chưa cấu hình sẽ chuyển Checker |
 | `Planned/TBD` | Production identity và policy operations | Chưa có nguồn budget/authority/content policy được phê duyệt, cấu hình quản trị hoặc rate limiting toàn diện |
@@ -284,7 +285,11 @@ docker compose exec backend alembic upgrade head
 docker compose exec backend python -m src.backend.seed_auth
 ```
 
-Đăng nhập Maker sẽ mở `/workflow/plans`; Checker xem `/workflow/reviews`; hộp thư tại `/workflow/notifications`; Admin-only mở danh sách và chi tiết kế hoạch ở chế độ chỉ đọc. Quyết định vẫn dành riêng cho Checker được gán. Submit/resubmit báo Checker; quyết định Checker và auto-approve báo Maker. Draft creation dùng `Idempotency-Key` để retry cùng nội dung không tạo bản nháp trùng. Link nội bộ sau đăng nhập được bảo toàn an toàn. Các trang Auth dùng JWT cookie và `/api/workflow/*`, không gửi `X-Demo-Actor`. `/api/plans`, `/api/reviews`, Verify và `/demo/*` vẫn dùng SQLite cùng actor header riêng.
+Đăng nhập Maker sẽ mở `/workflow/plans`; Checker xem `/workflow/reviews`; hộp thư tại `/workflow/notifications`; Admin-only mở danh sách và chi tiết kế hoạch ở chế độ chỉ đọc. Quyết định vẫn dành riêng cho Checker được gán. Submit/resubmit báo Checker; quyết định Checker và auto-approve báo Maker. Draft creation dùng `Idempotency-Key` để retry cùng nội dung không tạo bản nháp trùng. Link nội bộ sau đăng nhập được bảo toàn an toàn.
+
+SLA duyệt được quản lý tại `/workflow/sla` bởi Admin có quyền `ADMIN_SLA_MANAGE`. Hệ thống không seed hoặc bật sẵn thời hạn; mỗi lần lưu tạo revision bất biến và chỉ ảnh hưởng các vòng gửi sau đó. Preview 24 giờ/cảnh báo trước 4 giờ là dữ liệu tổng hợp cho UI, không phải SLA mặc định.
+
+Thông báo cảnh báo và quá hạn được gửi bởi worker chạy riêng, không tự khởi động cùng API. Chạy một lượt trong container local: `docker compose exec backend python -m src.backend.sla_worker --once`. Để chạy liên tục, mở process riêng bằng `docker compose exec backend python -m src.backend.sla_worker --interval-seconds 60`; nhấn Ctrl+C để dừng. Worker yêu cầu `DATABASE_URL` hợp lệ và chỉ tạo cảnh báo theo cấu hình đang bật. Các trang Auth dùng JWT cookie và `/api/workflow/*`, không gửi `X-Demo-Actor`. `/api/plans`, `/api/reviews`, Verify và `/demo/*` vẫn dùng SQLite cùng actor header riêng.
 
 Auth workflow commit snapshot/version/round trước khi chạy AI. Local VLM chỉ trích xuất OCR/quan sát ảnh. Hai text agent riêng đánh giá bằng chứng Media theo content policy và đánh giá kế hoạch Strategy theo rubric bảy tiêu chí; điểm có trọng số được backend tính bằng Decimal. Các bước có model, protocol, endpoint, timeout, giới hạn output, prompt/schema version và retry riêng. Kết quả từng bước cùng hash cấu hình được lưu theo round; không lưu API key hoặc endpoint thô. Khi cấu hình model hoặc policy thiếu, không phát sinh request cho task đó và giao diện ghi `Chưa cấu hình`. Auto-approval mặc định tắt và không lấy budget/authority/policy từ Judge Demo. Migration `20260930_06` bổ sung persistence riêng cho Media và Strategy; SQLite của Judge Demo không bị đổi.
 
@@ -520,7 +525,7 @@ Xem thêm [API examples](docs/integration/api-examples.md) và [generated OpenAP
 - Chưa có rate limiting toàn diện; `--limit-concurrency 32` chỉ giới hạn concurrency, không phải rate limit.
 - Không có Stop/Undo hoặc action `request_changes` riêng; chỉnh sửa được thực hiện sau human rejection rồi resubmit.
 - Admin có thể quản lý hồ sơ nhân viên tách biệt với tài khoản, cấp luồng kích hoạt/đặt lại mật khẩu bằng link bàn giao riêng, khóa tài khoản và quản lý role Maker/Checker cùng catalog role tùy chỉnh. Cấp/thu hồi ADMIN vẫn bị khóa chờ chỉ định system owner/operator; catalog quyền không đồng nghĩa mọi hành vi API đã được triển khai.
-- Policy UI chỉ đọc; chưa có API quản trị policy hoặc SLA. Inbox in-app hỗ trợ submit/resubmit và quyết định; SLA warning/overdue chờ quy tắc thời gian và lịch được chốt.
+- Policy UI vẫn chỉ đọc và chưa có API quản trị policy. Admin có quyền `ADMIN_SLA_MANAGE` có thể lưu cấu hình SLA theo revision; không có cấu hình nào được seed hoặc bật mặc định. Worker phát cảnh báo liên tục theo giờ khi được khởi động tường minh; chưa có business calendar hoặc holiday-aware SLA.
 - UI list hiện lấy tối đa 100 plan đầu; Verify cache và UI run state không bền vững qua process/page session.
 - Public URL đã reachable nhưng deployed commit/hash vẫn `TBD`; chưa tuyên bố public deployment khớp hoàn toàn với working tree hiện tại.
 

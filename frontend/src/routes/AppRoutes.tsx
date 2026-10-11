@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { Link, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { AppShell } from '../components/AppShell'
-import { AuthenticatedWorkflowShell, AuthWorkflowRoleGuard } from '../components/auth/AuthenticatedWorkflowShell'
+import { AuthenticatedWorkflowShell, AuthWorkflowPermissionGuard, AuthWorkflowRoleGuard } from '../components/auth/AuthenticatedWorkflowShell'
 import { RequireAuth } from '../components/auth/RequireAuth'
 import { StatePanel } from '../components/ui'
 import { AuthenticatedAccountPage } from '../pages/AuthenticatedAccountPage'
@@ -9,6 +9,7 @@ import { AuthenticatedAuditPage } from '../pages/AuthenticatedAuditPage'
 import { AuthenticatedEmployeesPage } from '../pages/AuthenticatedEmployeesPage'
 import { AuthenticatedNotificationsPage } from '../pages/AuthenticatedNotificationsPage'
 import { AuthenticatedRolesPage } from '../pages/AuthenticatedRolesPage'
+import { AuthenticatedSlaPage } from '../pages/AuthenticatedSlaPage'
 import { AccountHandoverPage } from '../pages/AccountHandoverPage'
 import { AuthenticatedPlansPage } from '../pages/AuthenticatedPlansPage'
 import { AuthenticatedWorkflowDetailPage } from '../pages/AuthenticatedWorkflowDetailPage'
@@ -49,6 +50,7 @@ export function AppRoutes() {
       <Route path="audit" element={<AuthWorkflowRoleGuard roles={['ADMIN']}><AuthenticatedAuditPage /></AuthWorkflowRoleGuard>} />
       <Route path="employees" element={<AuthWorkflowRoleGuard roles={['ADMIN']}><AuthenticatedEmployeesPage /></AuthWorkflowRoleGuard>} />
       <Route path="roles" element={<AuthWorkflowRoleGuard roles={['ADMIN']}><AuthenticatedRolesPage /></AuthWorkflowRoleGuard>} />
+      <Route path="sla" element={<AuthWorkflowPermissionGuard role="ADMIN" permission="ADMIN_SLA_MANAGE"><AuthenticatedSlaPage /></AuthWorkflowPermissionGuard>} />
     </Route>
 
     <Route path="/demo" element={isDemoEnabled() ? <AppShell /> : <Navigate to="/" replace />}>

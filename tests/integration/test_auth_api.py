@@ -16,7 +16,7 @@ from src.backend.api.dependencies import Settings
 from src.backend.api.auth import AuthenticatedPrincipal, get_auth_db, require_any_role, require_role
 from src.backend.api.auth_rate_limit import AuthAttemptLimiter
 from src.backend.db.base import Base
-from src.backend.db.models.role import Role, UserRole
+from src.backend.db.models.role import Role, RolePermission, UserRole
 from src.backend.db.models.user import User
 from src.backend.db.security import hash_password
 
@@ -94,6 +94,7 @@ def test_login_by_user_code_sets_http_only_cookie_and_me_returns_database_roles(
         "id": response.json()["user"]["id"], "user_code": "USR-000001",
         "username": "maker", "email": "maker@example.com", "phone": None,
         "display_name": "Demo User", "status": "ACTIVE", "roles": ["MAKER"],
+        "effective_permissions": [],
     }}
     assert "access_token" not in response.json()
     assert "httponly" in response.headers["set-cookie"].lower()
@@ -102,6 +103,24 @@ def test_login_by_user_code_sets_http_only_cookie_and_me_returns_database_roles(
     me = client.get("/api/auth/me")
     assert me.status_code == 200
     assert me.json() == response.json()
+
+
+def test_auth_responses_include_current_effective_role_permissions(auth_client):
+    client, factory = auth_client
+    admin = create_user(factory, user_code="USR-000003", email="admin@example.com",
+                        role_codes=("ADMIN",))
+    with factory.begin() as session:
+        role = session.scalar(select(Role).where(Role.code == "ADMIN"))
+        assert role is not None
+        session.add(RolePermission(role_id=role.id, permission_code="ADMIN_SLA_MANAGE"))
+
+    response = client.post("/api/auth/login", json={
+        "identifier": admin.user_code, "password": "Local-demo-password-123",
+    })
+    assert response.status_code == 200
+    expected_permissions = ["ADMIN_SLA_MANAGE"]
+    assert response.json()["user"]["effective_permissions"] == expected_permissions
+    assert client.get("/api/auth/me").json()["user"]["effective_permissions"] == expected_permissions
 
 
 def test_public_auth_configuration_reports_registration_without_exposing_credentials(auth_client, monkeypatch):

@@ -41,6 +41,7 @@ test('Maker submits mock pass, then assigned Checker approves with persisted evi
   await page.getByText('E2E auto campaign', { exact: true }).click()
   await expect(page.getByText('Khuyến nghị AI (không phải quyết định cuối)')).toBeVisible()
   await page.locator('#review-reason').fill('Campaign evidence reviewed by the assigned Checker')
+  await page.getByLabel('Lý do override').fill('Checker reviewed the saved evidence and records a manual decision.')
   await page.getByRole('button', { name: 'Approve', exact: true }).click()
   await page.getByRole('button', { name: 'Xác nhận', exact: true }).click()
   await expect(page.getByText('Quyết định đã được lưu cùng audit.')).toBeVisible()

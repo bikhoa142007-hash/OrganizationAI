@@ -32,7 +32,9 @@ jobs:
       - name: Run backend pytest, then all three Verify suites
         run: |
           overall=0
-          if ! .venv/bin/python -m pytest -q --ignore=tests/integration/test_auth_workflow_postgres_notifications.py; then overall=1; fi
+          if ! .venv/bin/python -m pytest -q \
+            --ignore=tests/integration/test_auth_workflow_postgres_notifications.py \
+            --ignore=tests/integration/test_auth_sla_postgres.py; then overall=1; fi
           for suite in general escalation regression; do
             output="runtime/ci-verify-${suite}.json"
             if ! .venv/bin/python -m src.verify.runner --suite "$suite" --output "$output"; then overall=1; fi
@@ -211,6 +213,32 @@ jobs:
           AUTH_SEED_ENABLED: 'true'
           AUTH_SEED_PASSWORD: ci-only-auth-password
           DATABASE_URL: postgresql+psycopg://organizationai_test:ci-only-test-password@127.0.0.1:5432/organizationai_test
+      - name: Prepare isolated SLA PostgreSQL databases
+        run: |
+          .venv/bin/python - <<'PY'
+          import psycopg
+          from psycopg import sql
+
+          with psycopg.connect(
+              'postgresql://organizationai_test:ci-only-test-password@127.0.0.1:5432/postgres',
+              autocommit=True,
+          ) as connection:
+              for database in ('organizationai_sla_acceptance', 'organizationai_sla_empty'):
+                  connection.execute(sql.SQL('CREATE DATABASE {}').format(sql.Identifier(database)))
+          PY
+          for database in organizationai_sla_acceptance organizationai_sla_empty; do
+            test_url="postgresql+psycopg://organizationai_test:ci-only-test-password@127.0.0.1:5432/${database}"
+            DATABASE_URL="$test_url" .venv/bin/alembic upgrade head
+            DATABASE_URL="$test_url" APP_ENV=demo AUTH_SEED_ENABLED=true \
+              AUTH_SEED_PASSWORD=ci-only-auth-password .venv/bin/python -m src.backend.seed_auth
+          done
+        working-directory: .
+      - name: Run SLA PostgreSQL acceptance against isolated databases
+        run: |
+          SLA_POSTGRES_TEST_URL=postgresql+psycopg://organizationai_test:ci-only-test-password@127.0.0.1:5432/organizationai_sla_acceptance \
+          SLA_EMPTY_POSTGRES_TEST_URL=postgresql+psycopg://organizationai_test:ci-only-test-password@127.0.0.1:5432/organizationai_sla_empty \
+            .venv/bin/python -m pytest -q tests/integration/test_auth_sla_postgres.py
+        working-directory: .
       - name: Run in-app notification PostgreSQL acceptance test
         run: .venv/bin/python -m pytest -q tests/integration/test_auth_workflow_postgres_notifications.py
         working-directory: .

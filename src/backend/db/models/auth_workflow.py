@@ -148,10 +148,11 @@ class AuthWorkflowNotification(Base):
     __tablename__ = "auth_workflow_notifications"
     __table_args__ = (
         CheckConstraint(
-            "event_type IN ('PLAN_SUBMITTED', 'PLAN_APPROVED', 'PLAN_AUTO_APPROVED', 'PLAN_REJECTED')",
+            "event_type IN ('PLAN_SUBMITTED', 'PLAN_APPROVED', 'PLAN_AUTO_APPROVED', 'PLAN_REJECTED', 'SLA_WARNING', 'SLA_OVERDUE')",
             name="ck_auth_workflow_notifications_event_type",
         ),
         UniqueConstraint("event_key", name="uq_auth_workflow_notifications_event_key"),
+        Index("ix_auth_workflow_notifications_plan_round_event", "plan_id", "round_number", "event_type"),
         Index(
             "ix_auth_workflow_notifications_recipient_created",
             "recipient_user_id", "created_at",

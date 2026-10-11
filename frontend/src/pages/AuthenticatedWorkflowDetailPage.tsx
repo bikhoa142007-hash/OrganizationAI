@@ -5,7 +5,7 @@ import { formatDateTime, statusLabel as processingStageLabel } from '../componen
 import { useAuth } from '../context/AuthContext'
 import { AuthApiError } from '../services/auth'
 import { authWorkflowService } from '../services/authWorkflow'
-import type { WorkflowEvent, WorkflowPlan, WorkflowTaskEvaluation, WorkflowVlmExtraction } from '../types/authWorkflow'
+import type { WorkflowEvent, WorkflowPlan, WorkflowSlaRound, WorkflowTaskEvaluation, WorkflowVlmExtraction } from '../types/authWorkflow'
 
 export function AuthenticatedWorkflowDetailPage() {
   const { planId = '' } = useParams()
@@ -148,6 +148,7 @@ export function AuthenticatedWorkflowDetailPage() {
     {loading && <p className="auth-workflow-refresh-status" role="status">Đang cập nhật kế hoạch… Nội dung hiện có vẫn được giữ.</p>}
     {error && <div className="auth-workflow-alert is-error" role="alert"><div><p>{error}</p>{errorReference && <small>Mã tham chiếu: {errorReference}</small>}</div>{detailLoadFailed && <button className="button button-secondary" type="button" disabled={loading} onClick={reloadDetail}>{loading ? 'Đang tải…' : 'Thử tải lại'}</button>}</div>}
     {['AI_PENDING', 'AI_PROCESSING'].includes(plan.processing_stage) && <div className="auth-workflow-alert is-progress" role="status"><Clock3 /><div><strong>Đang đánh giá kế hoạch</strong><p>Snapshot đã được lưu. Tải lại để xem trạng thái mới nhất. Checker được phân công có thể kiểm tra tác vụ đã gián đoạn; hệ thống chỉ chuyển sang Human Review sau 4 phút không hoàn tất.</p>{isAssignedChecker && <button type="button" className="button button-secondary" disabled={recoveryBusy} onClick={() => void recoverInterruptedEvaluation()}>{recoveryBusy ? 'Đang kiểm tra…' : 'Kiểm tra pipeline bị gián đoạn'}</button>}</div></div>}
+    <SlaRoundHistory plan={plan} />
     <div className="auth-workflow-detail-grid">
       <section className="auth-workflow-card"><div className="auth-workflow-card-heading"><FileText /><h2>Nội dung kế hoạch</h2></div><dl className="auth-workflow-definition-grid">
         <div><dt>Mục tiêu</dt><dd>{plan.payload.objective || '—'}</dd></div>
@@ -345,6 +346,72 @@ function VlmExtractionDetails({ extraction, plan }: {
   </section>
 }
 
+function SlaRoundHistory({ plan }: { plan: WorkflowPlan }) {
+  const rounds = plan.sla_history ?? []
+  const current = plan.sla_current ?? null
+  const [now, setNow] = useState(() => Date.now())
+  const [serverReadAt, setServerReadAt] = useState(() => Date.now())
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 1000)
+    return () => window.clearInterval(timer)
+  }, [])
+  useEffect(() => { setServerReadAt(Date.now()) }, [current?.round_number, current?.seconds_until_due, current?.status])
+
+  const isOpen = current?.applicable === true && current.closed_at === null
+  const secondsLeft = isOpen && current.seconds_until_due !== null
+    ? current.seconds_until_due - Math.floor((now - serverReadAt) / 1000)
+    : null
+  const warningBefore = current?.warning_before_minutes
+  const liveStatus = secondsLeft === null ? current?.status ?? 'NOT_APPLICABLE'
+    : secondsLeft <= 0 ? 'OVERDUE'
+      : warningBefore !== null && warningBefore !== undefined && secondsLeft <= warningBefore * 60 ? 'WARNING'
+        : 'IN_PROGRESS'
+
+  return <section className="auth-workflow-card workflow-sla-card" aria-labelledby="workflow-sla-title">
+    <div className="auth-workflow-card-heading"><Clock3 aria-hidden="true" /><h2 id="workflow-sla-title">Thời hạn duyệt</h2></div>
+    {!current ? <p>Chưa có vòng duyệt.</p> : !current.applicable
+      ? <p>SLA không áp dụng cho vòng {current.round_number}; vòng này được gửi khi SLA đang tắt hoặc chưa cấu hình.</p>
+      : <div className="workflow-sla-current">
+        <div><span className={`workflow-sla-status status-${liveStatus.toLowerCase()}`}>{slaStatusLabel(liveStatus)}</span><small>Vòng {current.round_number} · Version {current.version_number} · Cấu hình revision {current.configuration_revision}</small></div>
+        <strong aria-live="off">{secondsLeft === null ? '' : secondsLeft >= 0 ? `Còn ${formatCountdown(secondsLeft)}` : `Quá hạn ${formatCountdown(Math.abs(secondsLeft))}`}</strong>
+        <dl><div><dt>Bắt đầu</dt><dd>{formatSlaDate(current.started_at)}</dd></div><div><dt>Cảnh báo</dt><dd>{formatSlaDate(current.warning_at)}</dd></div><div><dt>Hạn chót</dt><dd>{formatSlaDate(current.due_at)}</dd></div><div><dt>Đóng vòng</dt><dd>{formatSlaDate(current.closed_at)}</dd></div></dl>
+        {isOpen && <small className="workflow-sla-note">Đếm ngược dựa trên lần đọc máy chủ gần nhất. Tải lại để đồng bộ trạng thái authoritative.</small>}
+      </div>}
+    {rounds.length > 0 && <details className="workflow-sla-history"><summary>Lịch sử SLA ({rounds.length} vòng)</summary><div className="auth-workflow-table-wrap"><table className="auth-workflow-table"><thead><tr><th>Vòng / Version</th><th>Trạng thái</th><th>Thời hạn</th><th>Hạn chót</th><th>Đóng vòng</th></tr></thead><tbody>
+      {rounds.map(round => <SlaHistoryRow key={`${round.round_number}-${round.version_number}`} round={round} />)}
+    </tbody></table></div></details>}
+  </section>
+}
+
+function SlaHistoryRow({ round }: { round: WorkflowSlaRound }) {
+  return <tr><td>{round.round_number} / {round.version_number}</td><td>{slaStatusLabel(round.status)}</td><td>{round.applicable ? formatMinutesForSla(round.duration_minutes) : '—'}</td><td>{formatSlaDate(round.due_at)}</td><td>{formatSlaDate(round.closed_at)}</td></tr>
+}
+
+function slaStatusLabel(value: string) {
+  return ({ NOT_APPLICABLE: 'Không áp dụng', IN_PROGRESS: 'Đang trong hạn', WARNING: 'Sắp đến hạn', OVERDUE: 'Quá hạn', CLOSED_ON_TIME: 'Đóng đúng hạn', CLOSED_LATE: 'Đóng trễ' } as Record<string, string>)[value] ?? value
+}
+
+function formatCountdown(seconds: number) {
+  const hours = Math.floor(seconds / 3600)
+  const minutes = Math.floor(seconds % 3600 / 60)
+  const remainder = seconds % 60
+  return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${remainder.toString().padStart(2, '0')}`
+}
+
+function formatMinutesForSla(total: number | null) {
+  if (total === null) return '—'
+  const hours = Math.floor(total / 60)
+  const minutes = total % 60
+  return [hours ? `${hours} giờ` : '', minutes ? `${minutes} phút` : ''].filter(Boolean).join(' ') || '0 phút'
+}
+
+function formatSlaDate(value: string | null) {
+  if (!value) return '—'
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat('vi-VN', {
+    dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Ho_Chi_Minh',
+  }).format(date)
+}
 function safeWorkflowEvents(value: unknown): WorkflowEvent[] {
   if (!Array.isArray(value)) return []
   return value.flatMap((candidate, index) => {
@@ -382,6 +449,9 @@ function eventLabel(action: string) {
     AI_EVALUATION_COMPLETED: 'Hoàn tất đánh giá AI',
     AI_RECOVERY_REVIEW_ROUTED: 'Chuyển Checker sau khi khôi phục',
     AI_AUTO_APPROVED: 'AI tự động phê duyệt',
+    SLA_WARNING_SENT: 'Đã gửi cảnh báo SLA',
+    SLA_OVERDUE_SENT: 'Đã gửi cảnh báo quá hạn SLA',
+    CHECKER_REASSIGNED: 'Đổi Checker được giao',
     APPROVED: 'Đã phê duyệt',
     REJECTED: 'Đã từ chối',
   } as Record<string, string>)[action] ?? 'Hoạt động khác'
