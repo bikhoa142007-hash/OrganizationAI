@@ -24,7 +24,7 @@ from src.backend.db.models import (
     UserRole,
 )
 
-EXPECTED_HEAD = "20261011_11"
+EXPECTED_HEAD = "20261011_12"
 LEGACY_HEAD = "20261010_10"
 NOTIFICATION_TABLE = "auth_workflow_notifications"
 
@@ -44,6 +44,7 @@ def _verify_schema(engine, *, empty: bool) -> dict:
     inspector = inspect(engine)
     tables = set(inspector.get_table_names())
     assert NOTIFICATION_TABLE in tables
+    assert {"auth_workflow_sla_configurations", "auth_workflow_sla_rounds"} <= tables
     columns = {column["name"]: column for column in inspector.get_columns(NOTIFICATION_TABLE)}
     required_columns = {
         "id", "recipient_user_id", "plan_id", "event_key", "event_type",
@@ -76,6 +77,7 @@ def _verify_schema(engine, *, empty: bool) -> dict:
     assert "ck_auth_workflow_notifications_event_type" in checks
     assert all(event in checks["ck_auth_workflow_notifications_event_type"] for event in (
         "PLAN_SUBMITTED", "PLAN_APPROVED", "PLAN_AUTO_APPROVED", "PLAN_REJECTED",
+        "SLA_WARNING", "SLA_OVERDUE",
     ))
 
     with engine.connect() as connection:
@@ -84,9 +86,13 @@ def _verify_schema(engine, *, empty: bool) -> dict:
         plan_count = connection.scalar(text("SELECT count(*) FROM auth_workflow_plans"))
         notification_count = connection.scalar(text(f"SELECT count(*) FROM {NOTIFICATION_TABLE}"))
         postgres_version = connection.scalar(text("SHOW server_version"))
+        sla_configuration_count = connection.scalar(text("SELECT count(*) FROM auth_workflow_sla_configurations"))
+        sla_round_count = connection.scalar(text("SELECT count(*) FROM auth_workflow_sla_rounds"))
     assert revision == EXPECTED_HEAD, revision
     if empty:
         assert user_count == plan_count == notification_count == 0
+    if empty:
+        assert sla_configuration_count == sla_round_count == 0
     return {
         "status": "PASS",
         "revision": revision,
@@ -102,6 +108,8 @@ def _verify_schema(engine, *, empty: bool) -> dict:
         "users": user_count,
         "plans": plan_count,
         "notifications": notification_count,
+        "sla_configurations": sla_configuration_count,
+        "sla_rounds": sla_round_count,
         "postgres_version": postgres_version,
     }
 
@@ -234,12 +242,13 @@ def _seed_revision_10(engine, factory, run_id: str) -> dict:
     return {"status": "PASS", "revision": LEGACY_HEAD, "preserved_state": state}
 
 
-def _verify_revision_11(engine, factory, run_id: str) -> dict:
+def _verify_current_head(engine, factory, run_id: str) -> dict:
     schema = _verify_schema(engine, empty=False)
     state = _synthetic_state(factory, run_id)
     assert len(state["users"]) == 2 and state["plan"] is not None
     assert len(state["versions"]) == len(state["events"]) == 1
     assert schema["notifications"] == 0
+    assert schema["sla_configurations"] == schema["sla_rounds"] == 0
     return {
         **schema,
         "preserved_state": state,
@@ -249,13 +258,11 @@ def _verify_revision_11(engine, factory, run_id: str) -> dict:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("mode", choices=("verify-empty", "seed-revision-10", "verify-revision-11"))
+    parser.add_argument("mode", choices=("verify-empty", "seed-revision-10", "verify-head-12"))
     args = parser.parse_args()
-    from src.backend.db.session import normalize_database_url
+    from scripts.postgres_test_target import verify_runner_provisioned_database
 
-    database_url = normalize_database_url(os.environ.get("DATABASE_URL", ""))
-    if not database_url.startswith("postgresql+psycopg://"):
-        raise RuntimeError("This helper only accepts the runner's temporary PostgreSQL database.")
+    database_url = verify_runner_provisioned_database(os.environ)
     engine = create_engine(database_url, pool_pre_ping=True)
     factory = sessionmaker(engine, expire_on_commit=False)
     try:
@@ -264,7 +271,7 @@ def main() -> None:
         elif args.mode == "seed-revision-10":
             result = _seed_revision_10(engine, factory, _run_id())
         else:
-            result = _verify_revision_11(engine, factory, _run_id())
+            result = _verify_current_head(engine, factory, _run_id())
         print(json.dumps(result, ensure_ascii=False, sort_keys=True))
     finally:
         engine.dispose()

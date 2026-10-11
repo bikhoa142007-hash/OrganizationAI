@@ -6,7 +6,7 @@ services:
     plan: free
     numInstances: 1
     autoDeployTrigger: "off"
-    buildCommand: python -m pip install -r requirements.txt && python -m pytest
+    buildCommand: python -m pip install -r requirements.txt && python scripts/run_render_build_tests.py
     startCommand: python -m deployment.start_backend
     healthCheckPath: /api/health
     envVars:

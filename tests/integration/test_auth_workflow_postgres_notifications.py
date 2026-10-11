@@ -16,6 +16,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, sessionmaker
+from scripts.postgres_test_target import verify_runner_provisioned_database
 
 from src.ai_pipeline.providers.base import ProviderAnalysis
 from src.ai_pipeline.providers.mock import AuthenticatedMockVLMProvider
@@ -234,12 +235,15 @@ def _auto_approval_configuration(checker_id: UUID) -> ApprovalConfiguration:
     )
 
 
+pytestmark = pytest.mark.postgres
+
+
 @pytest.fixture
 def postgres_workflow(monkeypatch):
-    database_url = os.environ.get("DATABASE_URL", "").strip()
+    database_url = verify_runner_provisioned_database(os.environ)
     password = os.environ.get("AUTH_SEED_PASSWORD", "")
-    assert database_url.startswith("postgresql+psycopg://"), "The isolated PostgreSQL runner must set DATABASE_URL."
-    assert password, "The runner must provide a temporary AUTH_SEED_PASSWORD; this test never skips."
+    if not password:
+        raise RuntimeError("PostgreSQL acceptance runner must provide a temporary authentication password.")
     monkeypatch.setenv("JWT_SECRET", os.environ.get("JWT_SECRET", "synthetic-test-jwt-secret-32-bytes-minimum"))
     monkeypatch.setenv("AUTH_COOKIE_SECURE", "false")
     monkeypatch.setenv("AUTH_COOKIE_SAMESITE", "lax")

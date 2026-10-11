@@ -50,8 +50,12 @@ Backend build:
 
 ```sh
 python -m pip install -r requirements.txt
-python -m pytest
+python scripts/run_render_build_tests.py
 ```
+
+The build runner removes database connection settings from the pytest child process only,
+then runs tests marked `postgres` in the dedicated PostgreSQL CI job after target validation,
+migrations and seeding. Render service runtime settings are not modified by the build runner.
 
 Backend start:
 
