@@ -186,6 +186,55 @@ function Invoke-DockerClientWithDiagnostic {
     }
 }
 
+function New-PgDumpBackupArguments {
+    param(
+        [string]$ContainerName,
+        [string]$RunId,
+        [string]$Image,
+        [string]$MountSpec,
+        [string]$ArchiveFileName
+    )
+
+    return @(
+        'run', '--rm', '--name', $ContainerName,
+        '--label', ('organizationai.auth-rehearsal.run=' + $RunId),
+        '--mount', $MountSpec,
+        '--env', 'PGHOST', '--env', 'PGPORT', '--env', 'PGUSER',
+        '--env', 'PGDATABASE', '--env', 'PGPASSWORD', '--env', 'PGSSLMODE',
+        '--env', 'PGCONNECT_TIMEOUT', '--env', 'PGOPTIONS', '--env', 'PGGSSENCMODE',
+        $Image, 'pg_dump', '--no-password', '--format=custom',
+        '--lock-wait-timeout=10s', ('--file=/backup/' + $ArchiveFileName)
+    )
+}
+
+function Invoke-PgDumpBackup {
+    param(
+        [string]$ContainerName,
+        [string]$RunId,
+        [string]$Image,
+        [string]$MountSpec,
+        [string]$BackupDirectory,
+        [string]$ArchiveFileName
+    )
+
+    $archivePath = Join-Path $BackupDirectory $ArchiveFileName
+    if (Test-Path -LiteralPath $archivePath) {
+        Stop-Safely 'BACKUP_ARCHIVE_PATH_COLLISION'
+    }
+
+    $dumpArguments = New-PgDumpBackupArguments `
+        $ContainerName $RunId $Image $MountSpec $ArchiveFileName
+    $processResult = Invoke-DockerClientWithDiagnostic $dumpArguments
+    $archiveReady = $false
+    if (Test-Path -LiteralPath $archivePath) {
+        $archiveReady = (Get-Item -LiteralPath $archivePath).Length -gt 0
+    }
+    return [pscustomobject]@{
+        ProcessResult = $processResult
+        ArchiveReady = $archiveReady
+    }
+}
+
 function Clear-SourcePostgresEnvironment {
     foreach ($name in @('DATABASE_URL', 'POSTGRES_USER', 'POSTGRES_DB', 'POSTGRES_PASSWORD')) {
         Set-ProcessEnvironment $name $null
@@ -218,7 +267,7 @@ function Get-SafePgDumpDiagnosticCode {
         $classifierOutput = @($DiagnosticText | & $script:PythonPath @classifierArguments 2>$null)
         $classifierExitCode = [int]$LASTEXITCODE
         $safeCode = ([string](@($classifierOutput | Select-Object -Last 1))).Trim()
-        if ($classifierExitCode -eq 0 -and $safeCode -cmatch '^(NONE|STDERR_PRESENT_NONFATAL|ARCHIVE_MISSING_OR_EMPTY|DOCKER_BIND_MOUNT_FAILED|DOCKER_ENGINE_FAILED|DOCKER_CLI_ERROR_REDACTED|DOCKER_RUN_START_OR_COMMAND_FAILED|DOCKER_RUN_OR_CONTAINER_ERROR_REDACTED|BACKUP_PATH_PERMISSION_FAILED|DATABASE_AUTHENTICATION_FAILED|DATABASE_PRIVILEGE_FAILED|BACKUP_STORAGE_FAILED|PG_DUMP_VERSION_MISMATCH|PG_DUMP_OPTION_ERROR|DATABASE_CONNECTION_FAILED|ERROR_OUTPUT_UNAVAILABLE|PG_DUMP_ERROR_REDACTED)$') {
+        if ($classifierExitCode -eq 0 -and $safeCode -cmatch '^(NONE|STDERR_PRESENT_NONFATAL|ARCHIVE_MISSING_OR_EMPTY|DOCKER_BIND_MOUNT_FAILED|DOCKER_ENGINE_FAILED|DOCKER_CLI_ERROR_REDACTED|DOCKER_RUN_START_OR_COMMAND_FAILED|DOCKER_RUN_OR_CONTAINER_ERROR_REDACTED|BACKUP_PATH_PERMISSION_FAILED|BACKUP_PATH_OPEN_FAILED_REDACTED|DATABASE_AUTHENTICATION_FAILED|DATABASE_PRIVILEGE_FAILED|BACKUP_STORAGE_FAILED|PG_DUMP_VERSION_MISMATCH|PG_DUMP_OPTION_ERROR|DATABASE_CONNECTION_FAILED|PERMISSION_DENIED_UNCLASSIFIED|ERROR_OUTPUT_UNAVAILABLE|PG_DUMP_ERROR_REDACTED)$') {
             return $safeCode
         }
     }
@@ -786,22 +835,10 @@ if __name__ == "__main__":
     Write-Host 'BACKUP_DOCKER_MOUNT_WRITE=verified'
 
     $dumpClientName = Register-ClientContainer 'dump'
-    $dumpArguments = @(
-        'run', '--rm', '--name', $dumpClientName,
-        '--label', ('organizationai.auth-rehearsal.run=' + $runId),
-        '--mount', $mountSpec,
-        '--env', 'PGHOST', '--env', 'PGPORT', '--env', 'PGUSER',
-        '--env', 'PGDATABASE', '--env', 'PGPASSWORD', '--env', 'PGSSLMODE',
-        '--env', 'PGCONNECT_TIMEOUT', '--env', 'PGOPTIONS', '--env', 'PGGSSENCMODE',
-        $image, 'pg_dump', '--no-password', '--format=custom',
-        '--lock-wait-timeout=10s', '--file=/backup/' + $archiveFileName
-    )
     Write-Host 'Creating a logical backup of the verified source database. URL and password remain hidden.'
-    $dumpResult = Invoke-DockerClientWithDiagnostic $dumpArguments
-    $archiveReady = $false
-    if (Test-Path -LiteralPath $archivePath) {
-        $archiveReady = (Get-Item -LiteralPath $archivePath).Length -gt 0
-    }
+    $dumpExecution = Invoke-PgDumpBackup $dumpClientName $runId $image $mountSpec $backupDirectory $archiveFileName
+    $dumpResult = $dumpExecution.ProcessResult
+    $archiveReady = [bool]$dumpExecution.ArchiveReady
     Clear-SourcePostgresEnvironment
     $sourcePassword = $null
     $dumpFailed = $true

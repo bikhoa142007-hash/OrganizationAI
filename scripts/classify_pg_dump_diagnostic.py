@@ -41,16 +41,39 @@ def classify_diagnostic(text: str, *, exit_code: int, archive_ready: bool) -> st
     if any(
         marker in message
         for marker in (
-            "could not open output file",
+            "permission denied for table",
+            "permission denied for sequence",
+            "permission denied for schema",
+            "permission denied for relation",
+            "permission denied for database",
+            "permission denied for function",
+            "permission denied for type",
+            "must be owner of",
+            "insufficient privilege",
+        )
+    ):
+        return "DATABASE_PRIVILEGE_FAILED"
+
+    output_file_open_failed = "could not open output file" in message
+    output_file_permission_denied = any(
+        marker in message
+        for marker in (
             "permission denied",
             "access is denied",
             "operation not permitted",
+            "read-only file system",
         )
+    )
+    if output_file_open_failed and output_file_permission_denied:
+        return "BACKUP_PATH_PERMISSION_FAILED"
+    if output_file_open_failed:
+        return "BACKUP_PATH_OPEN_FAILED_REDACTED"
+
+    if any(
+        marker in message
+        for marker in ("permission denied", "access is denied", "operation not permitted")
     ):
-        if any(marker in message for marker in ("output file", "/backup/", "\\backup\\")):
-            return "BACKUP_PATH_PERMISSION_FAILED"
-        if "permission denied for" in message or "must be owner of" in message:
-            return "DATABASE_PRIVILEGE_FAILED"
+        return "PERMISSION_DENIED_UNCLASSIFIED"
 
     if any(
         marker in message
@@ -73,16 +96,6 @@ def classify_diagnostic(text: str, *, exit_code: int, archive_ready: bool) -> st
         )
     ):
         return "DATABASE_AUTHENTICATION_FAILED"
-
-    if any(
-        marker in message
-        for marker in (
-            "permission denied for",
-            "must be owner of",
-            "insufficient privilege",
-        )
-    ):
-        return "DATABASE_PRIVILEGE_FAILED"
 
     if any(
         marker in message
