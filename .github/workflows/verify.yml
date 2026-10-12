@@ -157,10 +157,9 @@ jobs:
           alembic_config = Config('alembic.ini')
           migration_heads = ScriptDirectory.from_config(alembic_config).get_heads()
           assert len(migration_heads) == 1, f'Expected exactly one Alembic head, found {migration_heads}'
+          # Compare the migrated database with this checkout's current head instead of
+          # pinning CI to a revision that becomes stale when the schema advances.
           expected_head = migration_heads[0]
-          assert expected_head == '20261011_12', (
-              f'Expected SLA migration head 20261011_12, found {expected_head}'
-          )
 
           engine = create_engine(os.environ['DATABASE_URL'])
           try:
