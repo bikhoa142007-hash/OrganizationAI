@@ -180,8 +180,7 @@ test('Admin configures SLA; Maker submits, Checker receives reminders, decides l
     const title = `Temporary SLA browser ${new Date().toISOString()}`
     await maker.getByLabel('Tên kế hoạch').fill(title)
     const checkerSelect = maker.getByLabel('Người phê duyệt')
-    await expect(checkerSelect.locator('option').nth(1)).toBeAttached()
-    await checkerSelect.selectOption({ index: 1 })
+    await checkerSelect.selectOption(checkerId)
     await maker.getByRole('button', { name: 'Lưu bản nháp' }).click()
     await expect(maker.getByRole('heading', { name: title, exact: true })).toBeVisible()
     await maker.getByRole('link', { name: 'Chỉnh sửa và gửi lại' }).click()
