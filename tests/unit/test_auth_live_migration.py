@@ -2,6 +2,8 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import shutil
+import subprocess
 
 import pytest
 
@@ -199,26 +201,120 @@ def test_final_backup_archive_must_be_recent_and_not_older_than_its_receipt(tmp_
         )
 
 
+def _git(cwd: Path, *arguments: str) -> str:
+    completed = subprocess.run(
+        ["git", *arguments], cwd=cwd, capture_output=True, text=True, check=False,
+    )
+    assert completed.returncode == 0, completed.stderr
+    return completed.stdout.strip()
+
+
+def _create_pinned_source_fixture(repository_root: Path) -> str:
+    repository_root.mkdir(parents=True)
+    _git(repository_root, "init", "--quiet")
+    _git(repository_root, "config", "user.name", "Render test fixture")
+    _git(repository_root, "config", "user.email", "render-fixture@example.invalid")
+    (repository_root / "alembic/versions").mkdir(parents=True)
+    (repository_root / "src/backend/db").mkdir(parents=True)
+    (repository_root / "alembic.ini").write_text(
+        "[alembic]\nscript_location = alembic\n", encoding="utf-8",
+    )
+    (repository_root / "alembic/env.py").write_text("# fixture env\n", encoding="utf-8")
+    (repository_root / "alembic/versions/20261003_07_fixture.py").write_text(
+        "revision = '20261003_07'\ndown_revision = None\n",
+        encoding="utf-8",
+    )
+    (repository_root / "alembic/versions/20261011_12_approval_round_sla.py").write_text(
+        "revision = '20261011_12'\ndown_revision = '20261003_07'\n",
+        encoding="utf-8",
+    )
+    (repository_root / "src/backend/db/__init__.py").write_text(
+        "FIXTURE_SOURCE = 'fixture-v1'\n", encoding="utf-8",
+    )
+    (repository_root / "requirements.txt").write_text(
+        "fixture-dependency==1\n", encoding="utf-8",
+    )
+    _git(repository_root, "add", "alembic.ini", "alembic", "src/backend/db", "requirements.txt")
+    _git(repository_root, "commit", "--quiet", "-m", "Create pinned source fixture")
+    return _git(repository_root, "rev-parse", "HEAD")
+
+
+def _create_shallow_source_clone(tmp_path: Path) -> tuple[Path, str]:
+    source_repository = tmp_path / "source-repository"
+    pinned_sha = _create_pinned_source_fixture(source_repository)
+    (source_repository / "requirements.txt").write_text(
+        "fixture-dependency==2\n", encoding="utf-8",
+    )
+    _git(source_repository, "add", "requirements.txt")
+    _git(source_repository, "commit", "--quiet", "-m", "Advance fixture branch")
+    bare_remote = tmp_path / "fixture-origin.git"
+    _git(tmp_path, "clone", "--bare", str(source_repository), str(bare_remote))
+    shallow_clone = tmp_path / "shallow-checkout"
+    _git(tmp_path, "clone", "--depth=1", bare_remote.as_uri(), str(shallow_clone))
+    return shallow_clone, pinned_sha
+
+
+def _git_state(repository_root: Path) -> tuple[str, str, str]:
+    return (
+        _git(repository_root, "rev-parse", "HEAD"),
+        _git(repository_root, "symbolic-ref", "--short", "HEAD"),
+        _git(repository_root, "status", "--porcelain"),
+    )
+
+
 def test_pinned_migration_source_is_archived_without_checkout(tmp_path: Path):
-    repository_root = Path(__file__).resolve().parents[2]
+    import scripts.run_auth_live_migration as runner
+
+    repository_root = tmp_path / "fixture-repository"
+    fixture_sha = _create_pinned_source_fixture(repository_root)
     run_root = tmp_path / "private-run"
     run_root.mkdir()
+    before = _git_state(repository_root)
 
-    source_root = _prepare_pinned_source(repository_root, run_root)
+    source_root = runner._prepare_source_archive(repository_root, run_root, fixture_sha)
 
     assert PINNED_SHA == "0d17887cf1d6a6571fc8b02b74706343e2555e19"
-    assert (source_root / "alembic.ini").is_file()
-    assert (source_root / "alembic/versions/20261011_12_approval_round_sla.py").is_file()
+    assert (source_root / "alembic.ini").read_text(encoding="utf-8") == (
+        "[alembic]\nscript_location = alembic\n"
+    )
+    assert (source_root / "src/backend/db/__init__.py").read_text(encoding="utf-8") == (
+        "FIXTURE_SOURCE = 'fixture-v1'\n"
+    )
+    assert _git_state(repository_root) == before
+    assert not (run_root / "pinned-source.tar").exists()
+
+
+def test_production_pinned_source_uses_only_the_reviewed_sha(tmp_path, monkeypatch):
+    import scripts.run_auth_live_migration as runner
+
+    observed = {}
+    expected_path = tmp_path / "extracted-source"
+    monkeypatch.setattr(
+        runner,
+        "_prepare_source_archive",
+        lambda repository_root, run_root, source_sha: observed.update(
+            repository_root=repository_root, run_root=run_root, source_sha=source_sha,
+        ) or expected_path,
+    )
+
+    result = _prepare_pinned_source(tmp_path / "checkout", tmp_path / "run")
+
+    assert result == expected_path
+    assert observed["source_sha"] == PINNED_SHA
 
 
 def test_alembic_uses_extracted_archive_and_restores_process_environment(tmp_path, monkeypatch):
-    repository_root = Path(__file__).resolve().parents[2]
+    import scripts.run_auth_live_migration as runner
+
+    repository_root = tmp_path / "fixture-repository"
+    fixture_sha = _create_pinned_source_fixture(repository_root)
     run_root = tmp_path / "alembic-run"
     run_root.mkdir()
-    source_root = _prepare_pinned_source(repository_root, run_root)
+    source_root = runner._prepare_source_archive(repository_root, run_root, fixture_sha)
     url = build_secure_url("postgresql://runner@example.invalid/organizationai_db")
     monkeypatch.setenv("DATABASE_URL", "before-migration-value")
     monkeypatch.setenv("PGPASSWORD", "synthetic-before-value")
+    monkeypatch.delenv("PGSERVICE", raising=False)
     seen = {}
 
     from alembic import command
@@ -237,65 +333,104 @@ def test_alembic_uses_extracted_archive_and_restores_process_environment(tmp_pat
     assert "sslmode=require" in seen["database_url"]
     assert os.environ["DATABASE_URL"] == "before-migration-value"
     assert os.environ["PGPASSWORD"] == "synthetic-before-value"
+    assert "PGSERVICE" not in os.environ
 
 
-def test_pinned_source_fetches_exact_sha_for_shallow_clone(tmp_path, monkeypatch):
-    import io
-    import subprocess
-    import tarfile
-
+def test_alembic_failure_restores_process_environment(tmp_path, monkeypatch):
     import scripts.run_auth_live_migration as runner
 
+    repository_root = tmp_path / "fixture-repository"
+    fixture_sha = _create_pinned_source_fixture(repository_root)
+    run_root = tmp_path / "alembic-failure-run"
+    run_root.mkdir()
+    source_root = runner._prepare_source_archive(repository_root, run_root, fixture_sha)
+    url = build_secure_url("postgresql://runner@example.invalid/organizationai_db")
+    monkeypatch.setenv("DATABASE_URL", "before-failure-value")
+    monkeypatch.setenv("PGPASSWORD", "synthetic-before-failure")
+    monkeypatch.delenv("PGSERVICE", raising=False)
+
+    from alembic import command
+
+    def failing_upgrade(config, revision):
+        assert config.get_main_option("script_location") == str(source_root / "alembic")
+        assert revision == TARGET_REVISION
+        raise subprocess.CalledProcessError(1, ["alembic", "upgrade"])
+
+    monkeypatch.setattr(command, "upgrade", failing_upgrade)
+
+    with pytest.raises(SafeRunnerFailure, match="PINNED_ALEMBIC_UPGRADE_FAILED"):
+        _run_alembic_upgrade(source_root, url)
+
+    assert os.environ["DATABASE_URL"] == "before-failure-value"
+    assert os.environ["PGPASSWORD"] == "synthetic-before-failure"
+    assert "PGSERVICE" not in os.environ
+
+
+def test_pinned_source_fetches_exact_sha_from_local_shallow_clone(tmp_path):
+    import scripts.run_auth_live_migration as runner
+
+    repository_root, fixture_sha = _create_shallow_source_clone(tmp_path)
+    git = shutil.which("git.exe") or shutil.which("git")
+    assert git
+    missing = subprocess.run(
+        [git, "cat-file", "-e", f"{fixture_sha}^{{commit}}"],
+        cwd=repository_root, capture_output=True, check=False,
+    )
+    assert missing.returncode != 0
     run_root = tmp_path / "pinned-source-run"
     run_root.mkdir()
-    repository_root = tmp_path / "shallow-checkout"
-    archive_bytes = io.BytesIO()
-    with tarfile.open(fileobj=archive_bytes, mode="w") as archive:
-        for name, content in (
-            ("alembic.ini", b"[alembic]\n"),
-            ("alembic/versions/20261011_12_approval_round_sla.py", b"revision = '20261011_12'\n"),
-        ):
-            entry = tarfile.TarInfo(name)
-            entry.size = len(content)
-            archive.addfile(entry, io.BytesIO(content))
-    pinned_archive = archive_bytes.getvalue()
+    before = _git_state(repository_root)
     calls = []
-    fetched = False
 
-    def fake_run(command, **kwargs):
-        nonlocal fetched
+    def real_git(command, **kwargs):
         calls.append(command)
-        if command[1:3] == ["rev-parse", "--verify"]:
-            if not fetched:
-                return subprocess.CompletedProcess(command, 1, stdout="", stderr="")
-            return subprocess.CompletedProcess(
-                command, 0, stdout=f"{runner.PINNED_SHA}\n", stderr="",
-            )
-        if command[1] == "fetch":
-            fetched = True
-            return subprocess.CompletedProcess(command, 0, stdout="", stderr="")
-        if command[1] == "archive":
-            kwargs["stdout"].write(pinned_archive)
-            return subprocess.CompletedProcess(command, 0, stdout="", stderr="")
-        raise AssertionError("unexpected Git command")
+        return subprocess.run(command, **kwargs)
 
-    monkeypatch.setattr(runner.shutil, "which", lambda _name: "git")
-    monkeypatch.setattr(runner.subprocess, "run", fake_run)
-    monkeypatch.setattr(runner, "_validate_pinned_migration_chain", lambda _root: None)
+    source_root = runner._prepare_source_archive(
+        repository_root, run_root, fixture_sha, git_executable=git, run_process=real_git,
+    )
 
-    source_root = runner._prepare_pinned_source(repository_root, run_root)
-
-    fetch_calls = [call for call in calls if call[1] == "fetch"]
-    assert fetch_calls == [[
-        "git",
-        "fetch",
-        "--no-tags",
-        "--depth=1",
-        "--no-write-fetch-head",
-        "origin",
-        runner.PINNED_SHA,
-    ]]
     assert [call[1] for call in calls] == ["rev-parse", "fetch", "rev-parse", "archive"]
-    assert (source_root / "alembic.ini").is_file()
-    assert (source_root / "alembic/versions/20261011_12_approval_round_sla.py").is_file()
-    assert not (run_root / "pinned-source.tar").exists()
+    assert calls[1][1:] == [
+        "fetch", "--no-tags", "--depth=1", "--no-write-fetch-head", "origin", fixture_sha,
+    ]
+    assert (source_root / "src/backend/db/__init__.py").read_text(encoding="utf-8") == (
+        "FIXTURE_SOURCE = 'fixture-v1'\n"
+    )
+    assert _git_state(repository_root) == before
+
+
+@pytest.mark.parametrize(
+    ("fetch_result", "expected_code"),
+    (("failure", "PINNED_SOURCE_FETCH_FAILED"), ("timeout", "PINNED_SOURCE_FETCH_TIMEOUT"),
+     ("sha_mismatch", "PINNED_SOURCE_SHA_UNAVAILABLE")),
+)
+def test_pinned_source_fetch_errors_are_classified_offline(
+    tmp_path, fetch_result, expected_code,
+):
+    import scripts.run_auth_live_migration as runner
+
+    repository_root, fixture_sha = _create_shallow_source_clone(tmp_path)
+    run_root = tmp_path / "pinned-source-failure-run"
+    run_root.mkdir()
+    git = shutil.which("git.exe") or shutil.which("git")
+    assert git
+    resolve_count = 0
+
+    def controlled_git(command, **kwargs):
+        nonlocal resolve_count
+        if command[1] == "fetch" and fetch_result == "failure":
+            return subprocess.CompletedProcess(command, 128, stdout="", stderr="local fixture failure")
+        if command[1] == "fetch" and fetch_result == "timeout":
+            raise subprocess.TimeoutExpired(command, kwargs.get("timeout"))
+        if command[1:3] == ["rev-parse", "--verify"]:
+            resolve_count += 1
+            if fetch_result == "sha_mismatch" and resolve_count == 2:
+                return subprocess.CompletedProcess(command, 0, stdout=f"{'f' * 40}\n", stderr="")
+        return subprocess.run(command, **kwargs)
+
+    with pytest.raises(SafeRunnerFailure, match=expected_code):
+        runner._prepare_source_archive(
+            repository_root, run_root, fixture_sha,
+            git_executable=git, run_process=controlled_git,
+        )

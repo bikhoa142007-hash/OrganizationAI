@@ -252,15 +252,35 @@ def _protect_directory(path: Path) -> None:
 
 
 def _prepare_pinned_source(repository_root: Path, run_root: Path) -> Path:
-    git = shutil.which("git.exe") or shutil.which("git")
+    return _prepare_source_archive(repository_root, run_root, PINNED_SHA)
+
+
+def _prepare_source_archive(
+    repository_root: Path,
+    run_root: Path,
+    source_sha: str,
+    *,
+    git_executable: str | None = None,
+    run_process=None,
+) -> Path:
+    """Archive one exact commit without checking it out or changing the worktree.
+
+    Production only calls this through ``_prepare_pinned_source`` with the
+    reviewed constant above. The explicit SHA/process seam keeps the archive
+    and shallow-fetch behavior testable using temporary local Git repositories.
+    """
+    if not re.fullmatch(r"[0-9a-f]{40}", source_sha):
+        raise SafeRunnerFailure("PINNED_SOURCE_SHA_INVALID")
+    run_process = run_process or subprocess.run
+    git = git_executable or shutil.which("git.exe") or shutil.which("git")
     if not git:
         raise SafeRunnerFailure("PINNED_SOURCE_GIT_UNAVAILABLE")
-    resolve_args = [git, "rev-parse", "--verify", f"{PINNED_SHA}^{{commit}}"]
-    resolved = subprocess.run(
+    resolve_args = [git, "rev-parse", "--verify", f"{source_sha}^{{commit}}"]
+    resolved = run_process(
         resolve_args,
         capture_output=True, text=True, timeout=20, check=False, cwd=repository_root,
     )
-    if resolved.returncode != 0 or resolved.stdout.strip().lower() != PINNED_SHA:
+    if resolved.returncode != 0 or resolved.stdout.strip().lower() != source_sha:
         fetch_args = [
             git,
             "fetch",
@@ -268,10 +288,10 @@ def _prepare_pinned_source(repository_root: Path, run_root: Path) -> Path:
             "--depth=1",
             "--no-write-fetch-head",
             "origin",
-            PINNED_SHA,
+            source_sha,
         ]
         try:
-            fetched = subprocess.run(
+            fetched = run_process(
                 fetch_args,
                 capture_output=True, text=True, timeout=90, check=False, cwd=repository_root,
             )
@@ -281,16 +301,16 @@ def _prepare_pinned_source(repository_root: Path, run_root: Path) -> Path:
             raise SafeRunnerFailure("PINNED_SOURCE_FETCH_FAILED") from exc
         if fetched.returncode != 0:
             raise SafeRunnerFailure("PINNED_SOURCE_FETCH_FAILED")
-        resolved = subprocess.run(
+        resolved = run_process(
             resolve_args,
             capture_output=True, text=True, timeout=20, check=False, cwd=repository_root,
         )
-    if resolved.returncode != 0 or resolved.stdout.strip().lower() != PINNED_SHA:
+    if resolved.returncode != 0 or resolved.stdout.strip().lower() != source_sha:
         raise SafeRunnerFailure("PINNED_SOURCE_SHA_UNAVAILABLE")
     archive_path = run_root / "pinned-source.tar"
     with archive_path.open("wb") as archive_stream:
-        archived = subprocess.run(
-            [git, "archive", "--format=tar", PINNED_SHA, *PINNED_ARCHIVE_PATHS],
+        archived = run_process(
+            [git, "archive", "--format=tar", source_sha, *PINNED_ARCHIVE_PATHS],
             stdout=archive_stream, stderr=subprocess.DEVNULL, timeout=120, check=False,
             cwd=repository_root,
         )
