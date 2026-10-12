@@ -87,13 +87,23 @@ def test_auth_migrations_create_registration_ready_identity_tables(tmp_path, mon
     ai_runs = {column["name"] for column in inspector.get_columns("auth_workflow_evaluation_runs")}
     assert {
         "run_id", "evaluation_id", "input_hash", "provider", "model_version", "attempts", "retried",
+        "attempt_number", "retry_parent_run_id", "retry_idempotency_key", "retry_request_hash",
+        "result_disposition",
         "policy_snapshot", "evaluation", "visual_extraction", "media_evaluation",
         "strategy_evaluation", "failure_reason",
     } <= ai_runs
     ai_run_uniques = inspector.get_unique_constraints("auth_workflow_evaluation_runs")
-    assert any(item["column_names"] == ["plan_id", "round_number"] for item in ai_run_uniques)
+    assert any(item["column_names"] == ["plan_id", "round_number", "attempt_number"]
+               for item in ai_run_uniques)
+    assert any(item["column_names"] == ["plan_id", "round_number", "retry_idempotency_key"]
+               for item in ai_run_uniques)
     engine_decision_uniques = inspector.get_unique_constraints("auth_workflow_engine_decisions")
-    assert any(item["column_names"] == ["plan_id", "round_number"] for item in engine_decision_uniques)
+    assert not any(item["column_names"] == ["plan_id", "round_number"] for item in engine_decision_uniques)
+    engine_decision_indexes = inspector.get_indexes("auth_workflow_engine_decisions")
+    assert any(
+        item["name"] == "uq_auth_workflow_engine_auto_approved_plan_round" and item["unique"]
+        for item in engine_decision_indexes
+    )
     decision_uniques = inspector.get_unique_constraints("auth_workflow_decisions")
     assert any(item["column_names"] == ["plan_id", "round_number"] for item in decision_uniques)
     event_uniques = inspector.get_unique_constraints("auth_workflow_events")

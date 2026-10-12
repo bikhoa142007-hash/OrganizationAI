@@ -16,6 +16,12 @@ from sqlalchemy.orm import Session
 
 from src.backend.application.workflow import ApplicationError
 from src.backend.application.auth_sla import close_round_snapshot, plan_sla_read_model, start_round_snapshot
+from src.backend.application.approval_configuration import (
+    apply_round_configuration_snapshot,
+    capture_round_configuration_snapshot,
+    get_round_configuration_snapshot,
+    lock_configuration_registry,
+)
 from src.backend.application.role_admin import effective_role_filter
 from src.backend.db.models import (
     AuthWorkflowAttachment,
@@ -178,6 +184,25 @@ def _domain_snapshot(
             byte_size=item["byte_size"],
         ) for item in attachment_snapshot),
     )
+
+
+def _round_configuration_snapshot_is_valid(
+    snapshot,
+    plan_id: UUID,
+    plan_version: int,
+    approval_round: int,
+) -> bool:
+    if (
+        snapshot is None
+        or snapshot.plan_id != plan_id
+        or snapshot.plan_version != plan_version
+        or snapshot.approval_round != approval_round
+    ):
+        return False
+    body = snapshot.as_dict()
+    recorded_hash = body.pop("snapshot_hash", None)
+    body.pop("snapshot_id", None)
+    return isinstance(recorded_hash, str) and canonical_hash(body) == recorded_hash
 
 
 def _now_datetime() -> datetime:
@@ -351,6 +376,8 @@ def _plan_dict(session: Session, plan: AuthWorkflowPlan) -> dict[str, Any]:
             "id": str(item.id),
             "version_number": item.version_number,
             "round_number": item.round_number,
+            "attempt_number": item.attempt_number,
+            "result_disposition": item.result_disposition,
             "run_id": item.run_id,
             "evaluation_id": item.evaluation_id,
             "correlation_id": item.correlation_id,
@@ -375,7 +402,10 @@ def _plan_dict(session: Session, plan: AuthWorkflowPlan) -> dict[str, Any]:
         } for item in session.scalars(
             select(AuthWorkflowEvaluationRun)
             .where(AuthWorkflowEvaluationRun.plan_id == plan.id)
-            .order_by(AuthWorkflowEvaluationRun.round_number)
+            .order_by(
+                AuthWorkflowEvaluationRun.round_number,
+                AuthWorkflowEvaluationRun.attempt_number,
+            )
         ).all()],
         "engine_decisions": [{
             "id": str(item.id),
@@ -387,8 +417,15 @@ def _plan_dict(session: Session, plan: AuthWorkflowPlan) -> dict[str, Any]:
             "created_at": item.created_at,
         } for item in session.scalars(
             select(AuthWorkflowEngineDecision)
+            .join(
+                AuthWorkflowEvaluationRun,
+                AuthWorkflowEvaluationRun.id == AuthWorkflowEngineDecision.evaluation_run_id,
+            )
             .where(AuthWorkflowEngineDecision.plan_id == plan.id)
-            .order_by(AuthWorkflowEngineDecision.round_number)
+            .order_by(
+                AuthWorkflowEngineDecision.round_number,
+                AuthWorkflowEvaluationRun.attempt_number,
+            )
         ).all()],
         "history": history,
         "created_at": plan.created_at,
@@ -733,6 +770,7 @@ def submit_plan(
             if plan.revision != expected_revision:
                 _fail("CONFLICT", "The plan changed. Reload it before submitting.", correlation_id)
             _validate_submission(plan.payload, correlation_id)
+            lock_configuration_registry(session)
             _validate_checker(session, principal, plan.checker_id, correlation_id, required=True)
             attachments = session.scalars(
                 select(AuthWorkflowAttachment)
@@ -769,18 +807,8 @@ def submit_plan(
                 snapshot_payload, attachment_manifest,
             )
             snapshot_hash = snapshot.input_hash
-            policy_snapshot = configuration.to_dict()
-            policy_snapshot_hash = canonical_hash(policy_snapshot)
             run_id = "run-" + uuid4().hex
             evaluation_id = "evaluation-" + uuid4().hex
-            media_initial = initial_evaluation_step(
-                "MEDIA_COMPLIANCE", snapshot_hash, configuration,
-                configuration.media_model_snapshot,
-            )
-            strategy_initial = initial_evaluation_step(
-                "STRATEGY_EVALUATION", snapshot_hash, configuration,
-                configuration.strategy_model_snapshot,
-            )
             session.add(AuthWorkflowVersion(
                 id=uuid4(),
                 plan_id=plan.id,
@@ -791,6 +819,43 @@ def submit_plan(
                 snapshot_hash=snapshot_hash,
                 submitted_by=principal.id,
             ))
+            round_configuration_snapshot = capture_round_configuration_snapshot(
+                session,
+                plan_id=plan.id,
+                plan_version=plan.current_version,
+                approval_round=plan.current_round,
+                department_id=(
+                    plan.payload.get("department")
+                    if isinstance(plan.payload.get("department"), str)
+                    else None
+                ),
+                maker_id=plan.maker_id,
+                selected_checker_id=plan.checker_id,
+                effective_at=submitted_at,
+            )
+            checker_assignment = round_configuration_snapshot.checker_assignment
+            if (
+                not checker_assignment.get("eligible")
+                or checker_assignment.get("checker_id") != str(plan.checker_id)
+            ):
+                _fail(
+                    "VALIDATION_ERROR",
+                    "The configured Checker assignment is not eligible for this round.",
+                    correlation_id,
+                )
+            configuration = apply_round_configuration_snapshot(
+                configuration, round_configuration_snapshot,
+            )
+            policy_snapshot = configuration.to_dict()
+            policy_snapshot_hash = canonical_hash(policy_snapshot)
+            media_initial = initial_evaluation_step(
+                "MEDIA_COMPLIANCE", snapshot_hash, configuration,
+                configuration.media_model_snapshot,
+            )
+            strategy_initial = initial_evaluation_step(
+                "STRATEGY_EVALUATION", snapshot_hash, configuration,
+                configuration.strategy_model_snapshot,
+            )
             session.add(AuthWorkflowEvaluationRun(
                 id=uuid4(),
                 plan_id=plan.id,
@@ -840,6 +905,8 @@ def submit_plan(
                     "model_version": model_version,
                     "policy_version": configuration.policy.policy_version,
                     "policy_snapshot_hash": policy_snapshot_hash,
+                    "round_configuration_snapshot_id": str(round_configuration_snapshot.snapshot_id),
+                    "round_configuration_snapshot_hash": round_configuration_snapshot.snapshot_hash,
                 },
             )
             _record_notification(
@@ -881,11 +948,14 @@ def evaluate_submission(
     round_number: int,
     orchestrator: EvaluationOrchestrator,
     correlation_id: str,
+    *,
+    evaluation_run_id: UUID | None = None,
 ):
     """Evaluate a committed snapshot outside DB transactions, then persist atomically."""
     request = None
     configuration = None
     snapshot = None
+    round_configuration_snapshot = None
     verified_hashes: tuple[tuple[str, str], ...] = ()
     snapshot_is_valid = True
     prepared_response = None
@@ -893,14 +963,13 @@ def evaluate_submission(
     try:
         with _write_transaction(session):
             plan = _plan_or_404(session, plan_id, correlation_id, lock=True)
-            run = session.scalar(
-                select(AuthWorkflowEvaluationRun)
-                .where(
-                    AuthWorkflowEvaluationRun.plan_id == plan.id,
-                    AuthWorkflowEvaluationRun.round_number == round_number,
-                )
-                .with_for_update()
+            run_query = select(AuthWorkflowEvaluationRun).where(
+                AuthWorkflowEvaluationRun.plan_id == plan.id,
+                AuthWorkflowEvaluationRun.round_number == round_number,
             )
+            if evaluation_run_id is not None:
+                run_query = run_query.where(AuthWorkflowEvaluationRun.id == evaluation_run_id)
+            run = session.scalar(run_query.with_for_update())
             if run is None:
                 _fail("NOT_FOUND", "Evaluation run not found.", correlation_id)
             if run.status in {"SUCCEEDED", "FAILED", "TIMED_OUT"}:
@@ -923,9 +992,17 @@ def evaluate_submission(
                     plan.id, version.version_number, version.round_number,
                     version.payload_snapshot, version.attachment_snapshot,
                 )
+                round_configuration_snapshot = get_round_configuration_snapshot(
+                    session, plan_id=plan.id, approval_round=round_number,
+                )
                 snapshot_is_valid = (
-                    version.snapshot_hash == snapshot.input_hash
+                    _round_configuration_snapshot_is_valid(
+                        round_configuration_snapshot, plan.id, version.version_number, round_number,
+                    )
+                    and version.snapshot_hash == snapshot.input_hash
                     and run.input_hash == snapshot.input_hash
+                    and isinstance(run.policy_snapshot_hash, str)
+                    and canonical_hash(run.policy_snapshot) == run.policy_snapshot_hash
                 )
                 manifest = {str(item["id"]): item for item in version.attachment_snapshot}
                 attachment_ids = tuple(UUID(key) for key in manifest)
@@ -961,7 +1038,18 @@ def evaluate_submission(
                     provider=run.provider,
                     model_version=run.model_version,
                     configuration=configuration,
-                    metadata={"attachment_contents": contents, "model_id": run.model_id},
+                    metadata={
+                        "attachment_contents": contents,
+                        "model_id": run.model_id,
+                        "model_identity_mode": (
+                            configuration.visual_model_snapshot.get("identity_mode")
+                            if isinstance(configuration.visual_model_snapshot, dict)
+                            else None
+                        ),
+                        "round_configuration_snapshot": (
+                            round_configuration_snapshot.as_dict() if round_configuration_snapshot is not None else None
+                        ),
+                    },
                 )
                 run.status = "PROCESSING"
                 run.attempts = 0
@@ -1053,6 +1141,7 @@ def evaluate_submission(
                 run.media_evaluation = pipeline_result.media_evaluation or run.media_evaluation
                 run.strategy_evaluation = pipeline_result.strategy_evaluation or run.strategy_evaluation
                 run.failure_reason = "Late evaluation result was retained but not applied to a newer plan state."
+                run.result_disposition = "STALE"
                 run.completed_at = _now_datetime()
                 _record_event(
                     session, plan_id=plan.id, actor_id=None, actor_type="SYSTEM",
@@ -1102,6 +1191,7 @@ def evaluate_submission(
                 # Engine faults are not approval evidence. Preserve a durable review route.
                 run.status = "FAILED"
                 run.failure_reason = "Decision policy could not complete; Checker review is required."
+                run.result_disposition = "APPLIED"
                 run.completed_at = _now_datetime()
                 plan.processing_stage = "HUMAN_REVIEW_REQUIRED"
                 plan.decision_reason = run.failure_reason
@@ -1125,6 +1215,7 @@ def evaluate_submission(
             decision = bundle.decision.to_dict()
             run.status = bundle.evaluation.status
             run.evaluation = evaluation
+            run.result_disposition = "APPLIED"
             errors = evaluation.get("agent_errors") or []
             run.failure_reason = errors[0].get("code") if errors else None
             run.model_version = bundle.evaluation.model_version
@@ -1203,6 +1294,30 @@ def evaluate_submission(
         _fail("CONFLICT", "The evaluation result could not be committed for this round.", correlation_id)
 
 
+def evaluate_run_by_id(
+    session: Session,
+    plan_id: UUID,
+    evaluation_run_id: UUID,
+    orchestrator: EvaluationOrchestrator,
+    correlation_id: str,
+):
+    """Run a claimed retry against its own immutable run and saved round snapshot."""
+    run = session.scalar(select(AuthWorkflowEvaluationRun).where(
+        AuthWorkflowEvaluationRun.id == evaluation_run_id,
+        AuthWorkflowEvaluationRun.plan_id == plan_id,
+    ))
+    if run is None:
+        _fail("NOT_FOUND", "Evaluation run not found.", correlation_id)
+    return evaluate_submission(
+        session,
+        plan_id,
+        run.round_number,
+        orchestrator,
+        correlation_id,
+        evaluation_run_id=run.id,
+    )
+
+
 def recover_stale_evaluations(
     session: Session,
     correlation_id: str,
@@ -1250,6 +1365,7 @@ def recover_stale_evaluations(
                 if version is None:
                     run.status = "FAILED"
                     run.failure_reason = "RUN_INTERRUPTED_SNAPSHOT_UNAVAILABLE"
+                    run.result_disposition = "APPLIED"
                     run.completed_at = _now_datetime()
                     plan.processing_stage = "HUMAN_REVIEW_REQUIRED"
                     plan.decision_reason = failure_reason
@@ -1310,6 +1426,7 @@ def recover_stale_evaluations(
 
                 run.status = "FAILED"
                 run.failure_reason = configuration_error or "RUN_INTERRUPTED"
+                run.result_disposition = "APPLIED"
                 run.completed_at = _now_datetime()
                 plan.processing_stage = "HUMAN_REVIEW_REQUIRED"
                 plan.decision_reason = failure_reason
