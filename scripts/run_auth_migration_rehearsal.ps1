@@ -2,7 +2,8 @@
 param(
     [string]$ReuseBackupDirectory,
     [string]$ExpectedBackupSha256,
-    [int]$ReusePostgresMajor = 0
+    [int]$ReusePostgresMajor = 0,
+    [string]$PythonExe
 )
 
 Set-StrictMode -Version Latest
@@ -26,6 +27,7 @@ $script:UseExistingBackup = -not [string]::IsNullOrWhiteSpace($ReuseBackupDirect
 $script:DiagnosticDirectory = $null
 $script:DiagnosticPath = $null
 $script:BackupComplete = $false
+$script:WritersPaused = $false
 $script:ContainerCreated = $false
 $script:ContainerCreationAttempted = $false
 $script:BackupDirectoryCreated = $false
@@ -650,17 +652,37 @@ try {
         $script:PsqlPath = $psqlCommand.Source
     }
 
-    $pythonCandidates = @(
-        (Join-Path $repoRoot '.venv-test-20261009\Scripts\python.exe'),
-        'C:\Users\Khoa Bi\VS Studio\repos\OrganizationAI\.venv-test-20261009\Scripts\python.exe'
-    )
+    $pythonCandidates = if (-not [string]::IsNullOrWhiteSpace($PythonExe)) {
+        @($PythonExe)
+    }
+    else {
+        @(
+            (Join-Path $repoRoot '.venv-test-20261009\Scripts\python.exe'),
+            'C:\Users\Khoa Bi\VS Studio\repos\OrganizationAI\.venv-test-20261009\Scripts\python.exe'
+        )
+    }
     $script:PythonPath = $pythonCandidates | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
     if ([string]::IsNullOrWhiteSpace($script:PythonPath)) {
         Stop-Safely 'PINNED_PYTHON_NOT_FOUND'
     }
-    if ((Invoke-NativeQuiet $script:PythonPath @('-c', 'import alembic, sqlalchemy, psycopg')) -ne 0) {
+    $script:PythonPath = (Resolve-Path -LiteralPath $script:PythonPath -ErrorAction Stop).Path
+    $runtimeProbe = 'import sys,alembic,sqlalchemy,psycopg; print(chr(9).join([sys.executable,str(sys.version_info[0])+chr(46)+str(sys.version_info[1])+chr(46)+str(sys.version_info[2]),alembic.__version__,sqlalchemy.__version__,psycopg.__version__]))'
+    $probeLines = @(& $script:PythonPath '-B' '-c' $runtimeProbe 2>$null)
+    $probeExit = [int]$LASTEXITCODE
+    $probeFields = if ($probeLines.Count -eq 1) { ([string]$probeLines[0]) -split "`t" } else { @() }
+    if ($probeExit -ne 0 -or $probeFields.Count -ne 5 -or
+        -not [IO.Path]::GetFullPath([string]$probeFields[0]).Equals(
+            [IO.Path]::GetFullPath($script:PythonPath), [StringComparison]::OrdinalIgnoreCase)) {
         Stop-Safely 'PINNED_PYTHON_DEPENDENCIES_MISSING'
     }
+    $probeVersion = ([string]$probeFields[1]) -split '\.'
+    if ($probeVersion.Count -ne 3 -or [int]$probeVersion[0] -ne 3 -or
+        [int]$probeVersion[1] -lt 12 -or [int]$probeVersion[1] -ge 14) {
+        Stop-Safely 'PINNED_PYTHON_VERSION_UNSUPPORTED'
+    }
+    Write-Host ('PYTHON_ACTUAL_EXECUTABLE={0}' -f $script:PythonPath)
+    Write-Host ('PYTHON_VERSION={0}; ALEMBIC_VERSION={1}; SQLALCHEMY_VERSION={2}; PSYCOPG_VERSION={3}' -f `
+        $probeFields[1], $probeFields[2], $probeFields[3], $probeFields[4])
 
     $dockerVersion = & $script:DockerPath 'info' '--format' '{{.ServerVersion}}' 2>$null
     if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace([string]$dockerVersion)) {
@@ -704,6 +726,14 @@ if ($script:UseExistingBackup) {
     Write-Host ('RETAINED_SOURCE_POSTGRES_MAJOR_EXPECTED={0}' -f $serverMajor)
 }
 else {
+        Write-Host 'Before creating a cutover backup, verify the Auth API service and every background/database writer are paused in Render Dashboard.'
+        Write-Host 'Maintenance Mode alone does not stop private-network or scheduled writers. Do not suspend PostgreSQL.'
+        $writersPausedConfirmation = Read-Host 'After confirming all writers are paused, type AUTH_WRITERS_PAUSED'
+        if ($writersPausedConfirmation -cne 'AUTH_WRITERS_PAUSED') {
+            Stop-Safely 'WRITERS_NOT_PAUSED'
+        }
+        $script:WritersPaused = $true
+
         Write-Host 'Before continuing, open Render Dashboard locally:'
         Write-Host '1. In the Auth API environment, confirm DATABASE_URL references the intended PostgreSQL service.'
         Write-Host '2. Open that PostgreSQL service and use its External Database URL. Internal URLs may not be reachable from Windows.'
@@ -1608,6 +1638,47 @@ if ($script:CleanupPending) {
     }
     Write-Host ('CLEANUP_PENDING_RESOURCE={0}' -f $script:CleanupPendingResource)
     Write-Host ('CONTAINER_CLEANUP_DIAGNOSTIC={0}' -f $script:ContainerCleanupDiagnostic)
+}
+if (-not $script:CleanupPending -and [string]::IsNullOrWhiteSpace($script:FailureCode) -and -not $script:UseExistingBackup) {
+    try {
+        $receipt = [ordered]@{
+            receipt_version = 1
+            run_id = $runId
+            result = 'PASS'
+            cleanup_complete = $true
+            writers_paused = $script:WritersPaused
+            source_sha = $PinnedSha
+            database = $sourceDatabase
+            schema = $sourceSchema
+            start_revision = $ExpectedStartRevision
+            target_revision = $TargetRevision
+            postgres_major = [int]$serverMajor
+            backup_filename = [IO.Path]::GetFileName($archivePath)
+            backup_sha256 = $archiveHash.ToUpperInvariant()
+            data_preservation_verified = $true
+            created_utc = [DateTime]::UtcNow.ToString('o')
+        }
+        $receiptPath = Join-Path $backupDirectory 'auth-migration-rehearsal.json'
+        $temporaryReceiptPath = $receiptPath + '.tmp-' + $runId.Replace('-', '')
+        [IO.File]::WriteAllText(
+            $temporaryReceiptPath,
+            ($receipt | ConvertTo-Json -Depth 4),
+            [Text.UTF8Encoding]::new($false)
+        )
+        Move-Item -LiteralPath $temporaryReceiptPath -Destination $receiptPath -Force
+        Write-Host 'REHEARSAL_RECEIPT=PASS'
+    }
+    catch {
+        $script:FailureCode = 'REHEARSAL_RECEIPT_WRITE_FAILED'
+        $script:FailurePhase = 'REHEARSAL_RECEIPT_WRITE'
+        $script:FailureExceptionType = $_.Exception.GetType().Name
+        if ($script:FailureExceptionType -notmatch '^[A-Za-z][A-Za-z0-9_]{0,79}$') {
+            $script:FailureExceptionType = 'PowerShellFailure'
+        }
+    }
+}
+elseif (-not $script:CleanupPending -and [string]::IsNullOrWhiteSpace($script:FailureCode) -and $script:UseExistingBackup) {
+    Write-Host 'REHEARSAL_RECEIPT=NOT_ISSUED_REUSED_BACKUP'
 }
 elseif (-not [string]::IsNullOrWhiteSpace($script:FailureCode)) {
     Write-Host 'TEMPORARY_RESOURCE_CLEANUP=complete'
