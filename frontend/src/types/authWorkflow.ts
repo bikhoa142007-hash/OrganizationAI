@@ -74,6 +74,8 @@ export interface WorkflowAiEvaluation {
   id: string
   version_number: number
   round_number: number
+  attempt_number?: number
+  result_disposition?: 'APPLIED' | 'STALE' | null
   run_id: string
   evaluation_id: string
   correlation_id: string
@@ -101,8 +103,26 @@ export interface WorkflowTaskEvaluation {
   step: 'MEDIA_COMPLIANCE' | 'STRATEGY_EVALUATION'
   status: 'PENDING' | 'PROCESSING' | 'SUCCEEDED' | 'REVIEW_REQUIRED' | 'NOT_CONFIGURED' | 'FAILED' | 'TIMED_OUT'
   provider: string | null
+  identity_mode?: 'OLLAMA_TAG_DIGEST' | 'GENERIC_OPAQUE_REVISION' | null
   model_id: string | null
   model_version: string | null
+  model_revision?: string | null
+  reported_model_id?: string | null
+  model_configuration?: Record<string, string | number | boolean | null> | null
+  reported_total?: string | null
+  computed_total?: string | null
+  attempt_history?: Array<{
+    attempt: number
+    status: 'SUCCEEDED' | 'FAILED' | 'TIMED_OUT'
+    started_at: string
+    completed_at: string | null
+    model_revision: string | null
+    reported_model_id: string | null
+    raw_output_hash: string | null
+    reported_total: string | null
+    computed_total: string | null
+    error_code: string | null
+  }>
   prompt_version: string | null
   schema_version: string | null
   configuration_id: string | null
@@ -123,6 +143,8 @@ export interface WorkflowTaskEvaluation {
     rule_results?: Array<{ rule_id: string; result: string; rationale: string; evidence_refs: string[] }>
     criterion_scores?: Array<{ criterion_id: string; weight: number; score: number; maximum_score: number; rationale: string; evidence_refs: string[] }>
     feasibility_score?: number
+    reported_total?: string
+    computed_total?: string
     assumptions?: string[]
     missing_facts?: string[]
     critical_gaps?: string[]
@@ -170,8 +192,10 @@ export interface WorkflowVlmExtraction {
   confidence?: number | null
   provider: 'LOCAL_VLM'
   model_id: string | null
+  model_version?: string | null
   model_revision: string | null
   reported_model_id: string | null
+  model_identity_mode?: 'OLLAMA_TAG_DIGEST' | 'GENERIC_OPAQUE_REVISION' | null
   prompt_version: string
   schema_version: string
   run_id: string

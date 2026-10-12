@@ -6,6 +6,8 @@ import { RequireAuth } from '../components/auth/RequireAuth'
 import { StatePanel } from '../components/ui'
 import { AuthenticatedAccountPage } from '../pages/AuthenticatedAccountPage'
 import { AuthenticatedAuditPage } from '../pages/AuthenticatedAuditPage'
+import { AuthenticatedDashboardPage } from '../pages/AuthenticatedDashboardPage'
+import { AuthenticatedApprovalConfigurationPage } from '../pages/AuthenticatedApprovalConfigurationPage'
 import { AuthenticatedEmployeesPage } from '../pages/AuthenticatedEmployeesPage'
 import { AuthenticatedNotificationsPage } from '../pages/AuthenticatedNotificationsPage'
 import { AuthenticatedRolesPage } from '../pages/AuthenticatedRolesPage'
@@ -41,6 +43,7 @@ export function AppRoutes() {
     <Route path="/access-denied" element={<RequireAuth><AccessDeniedPage /></RequireAuth>} />
     <Route path="/workflow" element={<RequireAuth><AuthenticatedWorkflowShell /></RequireAuth>}>
       <Route index element={<RoleHomePage />} />
+      <Route path="dashboard" element={<AuthWorkflowRoleGuard roles={['MAKER', 'CHECKER', 'ADMIN']}><AuthenticatedDashboardPage /></AuthWorkflowRoleGuard>} />
       <Route path="notifications" element={<AuthenticatedNotificationsPage />} />
       <Route path="plans" element={<AuthWorkflowRoleGuard roles={['MAKER', 'ADMIN']}><AuthenticatedPlansPage /></AuthWorkflowRoleGuard>} />
       <Route path="plans/new" element={<AuthWorkflowRoleGuard roles={['MAKER']}><AuthenticatedWorkflowFormPage /></AuthWorkflowRoleGuard>} />
@@ -48,6 +51,7 @@ export function AppRoutes() {
       <Route path="plans/:planId/edit" element={<AuthWorkflowRoleGuard roles={['MAKER']}><AuthenticatedWorkflowFormPage /></AuthWorkflowRoleGuard>} />
       <Route path="reviews" element={<AuthWorkflowRoleGuard roles={['CHECKER']}><AuthenticatedPlansPage reviews /></AuthWorkflowRoleGuard>} />
       <Route path="audit" element={<AuthWorkflowRoleGuard roles={['ADMIN']}><AuthenticatedAuditPage /></AuthWorkflowRoleGuard>} />
+      <Route path="configuration" element={<AuthWorkflowRoleGuard roles={['ADMIN']}><AuthenticatedApprovalConfigurationPage /></AuthWorkflowRoleGuard>} />
       <Route path="employees" element={<AuthWorkflowRoleGuard roles={['ADMIN']}><AuthenticatedEmployeesPage /></AuthWorkflowRoleGuard>} />
       <Route path="roles" element={<AuthWorkflowRoleGuard roles={['ADMIN']}><AuthenticatedRolesPage /></AuthWorkflowRoleGuard>} />
       <Route path="sla" element={<AuthWorkflowPermissionGuard role="ADMIN" permission="ADMIN_SLA_MANAGE"><AuthenticatedSlaPage /></AuthWorkflowPermissionGuard>} />

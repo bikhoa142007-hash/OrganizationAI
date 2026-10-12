@@ -1,4 +1,4 @@
-import { Bell, ClipboardCheck, Clock3, FileText, History, LogOut, UserRound, UsersRound } from 'lucide-react'
+import { Bell, ClipboardCheck, Clock3, FileText, History, LayoutDashboard, LogOut, Settings2, UserRound, UsersRound } from 'lucide-react'
 import { useState } from 'react'
 import type { ReactNode } from 'react'
 import { Link, Navigate, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
@@ -27,12 +27,14 @@ export function AuthenticatedWorkflowShell() {
     <header className="auth-workflow-header">
       <Link className="auth-workflow-brand" to="/workflow"><span>OA</span><strong>OrganizationAI<small>Không gian làm việc</small></strong></Link>
       <nav aria-label="Điều hướng không gian làm việc">
+        <NavLink to="/workflow/dashboard"><LayoutDashboard aria-hidden="true" /> Tổng quan</NavLink>
         <NavLink to="/workflow/notifications"><Bell aria-hidden="true" /> Thông báo</NavLink>
         {(roles.includes('MAKER') || roles.includes('ADMIN')) && <NavLink to="/workflow/plans"><FileText aria-hidden="true" /> {roles.includes('ADMIN') ? 'Toàn bộ kế hoạch' : 'Kế hoạch của tôi'}</NavLink>}
         {roles.includes('CHECKER') && <NavLink to="/workflow/reviews"><ClipboardCheck aria-hidden="true" /> Hàng chờ duyệt</NavLink>}
         {roles.includes('ADMIN') && <NavLink to="/workflow/audit"><History aria-hidden="true" /> Nhật ký kiểm toán</NavLink>}
         {roles.includes('ADMIN') && <NavLink to="/workflow/employees"><UsersRound aria-hidden="true" /> Nhân viên</NavLink>}
         {roles.includes('ADMIN') && <NavLink to="/workflow/roles"><UsersRound aria-hidden="true" /> Vai trò</NavLink>}
+        {roles.includes('ADMIN') && <NavLink to="/workflow/configuration"><Settings2 aria-hidden="true" /> Cấu hình phê duyệt</NavLink>}
         {roles.includes('ADMIN') && user?.effective_permissions?.includes('ADMIN_SLA_MANAGE') && <NavLink to="/workflow/sla"><Clock3 aria-hidden="true" /> Cấu hình SLA</NavLink>}
         <NavLink to="/account"><UserRound aria-hidden="true" /> Tài khoản</NavLink>
       </nav>

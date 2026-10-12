@@ -5,7 +5,9 @@ import { formatDateTime, statusLabel as processingStageLabel } from '../componen
 import { useAuth } from '../context/AuthContext'
 import { AuthApiError } from '../services/auth'
 import { authWorkflowService } from '../services/authWorkflow'
-import type { WorkflowEvent, WorkflowPlan, WorkflowSlaRound, WorkflowTaskEvaluation, WorkflowVlmExtraction } from '../types/authWorkflow'
+import { InternalNotesPanel } from '../components/auth/InternalNotesPanel'
+import { ManualEvaluationRetryPanel } from '../components/auth/ManualEvaluationRetryPanel'
+import type { WorkflowAiEvaluation, WorkflowEvent, WorkflowPlan, WorkflowSlaRound, WorkflowTaskEvaluation, WorkflowVlmExtraction } from '../types/authWorkflow'
 
 export function AuthenticatedWorkflowDetailPage() {
   const { planId = '' } = useParams()
@@ -139,6 +141,10 @@ export function AuthenticatedWorkflowDetailPage() {
   const finalCheckerDecision = [...history].reverse().find(event =>
     event.actor_type === 'HUMAN' && ['APPROVED', 'REJECTED'].includes(event.action),
   )
+  const latestRoundRun = latestRunForRound(plan.ai_evaluations, plan.current_round)
+  const retryAvailable = plan.status === 'PENDING_APPROVAL'
+    && plan.processing_stage === 'HUMAN_REVIEW_REQUIRED'
+    && isRetryableEvaluationRun(latestRoundRun)
 
   return <section className="auth-workflow-page">
     <Link className="auth-back-link" to={isAssignedChecker ? '/workflow/reviews' : '/workflow/plans'}><ArrowLeft /> Quay lại danh sách</Link>
@@ -209,7 +215,7 @@ export function AuthenticatedWorkflowDetailPage() {
       const strategyScore = evaluation?.feasibility_score ?? strategyResult?.feasibility_score ?? null
       return <details key={item.id} open={item.round_number === plan.current_round}>
         <summary>Version {item.version_number} · Round {item.round_number} · {evaluation ? evaluationStatusLabel(evaluation.status) : runStatusLabel(item.status)}</summary>
-        <div className="auth-ai-metadata"><span>{providerLabel(item.provider)}</span><span>Model ID: {item.model_id || item.model_version || 'Chưa xác định'}</span>{item.model_id && item.model_version && <span>Model revision: {item.model_version}</span>}<span>Policy: {item.policy_version}</span><span>Tổng lượt gọi provider qua các stage: {item.attempts}{item.retried ? ' · có retry' : ''}</span></div>
+        <div className="auth-ai-metadata"><span>{providerLabel(item.provider)}</span><span>Model ID: {item.model_id || 'Chưa xác định'}</span>{item.model_version && <span>Configured model version: {item.model_version}</span>}<span>Policy: {item.policy_version}</span><span>Attempt: {item.attempt_number ?? 1} · {item.result_disposition || 'chưa có disposition'}</span><span>Tổng lượt gọi provider qua các stage: {item.attempts}{item.retried ? ' · có retry' : ''}</span></div>
         {item.visual_extraction
           ? <VlmExtractionDetails extraction={item.visual_extraction} plan={plan} />
           : <section className="auth-ai-phase"><h3>Trích xuất ảnh (VLM) · {item.status === 'PROCESSING' ? 'Đang xử lý' : item.status === 'PENDING' ? 'Đang chờ' : 'Chưa có kết quả riêng'}</h3><p>Ảnh chỉ được trích xuất một lần cho snapshot đã gửi. Tải lại trang chỉ đọc kết quả đã lưu.</p></section>}
@@ -238,6 +244,16 @@ export function AuthenticatedWorkflowDetailPage() {
     })}</section>}
     {plan.versions.length > 0 && <section className="auth-workflow-card auth-version-card"><div className="auth-workflow-card-heading"><History /><h2>Snapshot đã gửi</h2></div>{plan.versions.map(version => <details key={version.version_number}><summary>Version {version.version_number} · Round {version.round_number} · {new Date(version.created_at).toLocaleString('vi-VN')}</summary><p>{version.payload.summary}</p><ul>{version.attachments.map(item => <li key={item.id}>{item.filename} · SHA-256 {item.content_hash}</li>)}</ul></details>)}</section>}
     {canEdit && <div className="auth-workflow-actions"><Link className="button button-secondary" to={`/workflow/plans/${plan.id}/edit`}>Chỉnh sửa và gửi lại</Link></div>}
+    {isAssignedChecker && plan.current_round > 0 && <InternalNotesPanel planId={plan.id} approvalRound={plan.current_round} />}
+    {isAssignedChecker && <ManualEvaluationRetryPanel
+      planId={plan.id}
+      planVersion={plan.current_version}
+      approvalRound={plan.current_round}
+      roundRevision={plan.revision}
+      isAssignedChecker={isAssignedChecker}
+      isRetryAvailable={retryAvailable}
+      onRetryComplete={reloadDetail}
+    />}
     {canDecide && <section className="auth-workflow-card auth-decision-card">
       <div className="auth-workflow-card-heading"><Check aria-hidden="true" /><h2>Quyết định Checker</h2></div>
       <p>Nội dung và snapshot được lưu chỉ đọc. Từ chối cần có lý do.</p>
@@ -262,6 +278,32 @@ export function AuthenticatedWorkflowDetailPage() {
   </section>
 }
 
+const RETRYABLE_AI_FAILURE_CODES = new Set([
+  'PIPELINE_TIMEOUT',
+  'PROVIDER_TIMEOUT',
+  'PROVIDER_ERROR',
+  'INVALID_SCHEMA',
+  'INVALID_PROVIDER_RESPONSE',
+])
+
+function latestRunForRound(runs: WorkflowAiEvaluation[], roundNumber: number): WorkflowAiEvaluation | null {
+  return runs
+    .filter(run => run.round_number === roundNumber)
+    .reduce<WorkflowAiEvaluation | null>((latest, run) =>
+      !latest || (run.attempt_number ?? 1) > (latest.attempt_number ?? 1) ? run : latest, null)
+}
+
+function isRetryableEvaluationRun(run: WorkflowAiEvaluation | null): boolean {
+  if (!run || !['FAILED', 'TIMED_OUT'].includes(run.status)
+    || run.result_disposition !== 'APPLIED' || (run.attempt_number ?? 1) !== 1) {
+    return false
+  }
+  const codes = new Set<string>()
+  if (run.failure_reason) codes.add(run.failure_reason)
+  for (const error of run.evaluation?.agent_errors ?? []) codes.add(error.code)
+  return codes.size > 0 && [...codes].every(code => RETRYABLE_AI_FAILURE_CODES.has(code))
+}
+
 function TaskEvaluationDetails({ title, stage, kind }: {
   title: string
   stage: WorkflowTaskEvaluation | null
@@ -276,7 +318,10 @@ function TaskEvaluationDetails({ title, stage, kind }: {
     <h3>{title} · {mediaOutOfScope ? 'Không đánh giá: ngoài phạm vi policy' : taskStatusLabel(stage.status)}</h3>
     <div className="auth-ai-metadata">
       {!mediaOutOfScope && <><span>Model: {stage.model_id || 'Chưa cấu hình'}</span>
-      {stage.model_version && <span>Model version: {stage.model_version}</span>}</>}
+      {stage.model_version && <span>Configured model version: {stage.model_version}</span>}
+      {stage.model_revision && <span>Verified model revision: {stage.model_revision}</span>}
+      {stage.reported_model_id && <span>Provider reported model ID: {stage.reported_model_id}</span>}
+      {stage.identity_mode && <span>Identity mode: {stage.identity_mode}</span>}</>}
       <span>Policy/Rubric: {stage.configuration_id || 'Chưa cấu hình'}{stage.configuration_version ? ` · ${stage.configuration_version}` : ''}</span>
       {!mediaOutOfScope && stage.prompt_version && <span>Prompt: {stage.prompt_version}</span>}
       {!mediaOutOfScope && stage.schema_version && <span>Schema: {stage.schema_version}</span>}
@@ -285,6 +330,18 @@ function TaskEvaluationDetails({ title, stage, kind }: {
     </div>
     {stage.reason && <p>{stage.reason}</p>}
     {stage.error_code && <div className="auth-workflow-alert is-review" role="status">{stage.error_code} · Checker cần xem xét bước này.</div>}
+    {stage.attempt_history?.length ? <details>
+      <summary>Lịch sử provider attempt ({stage.attempt_history.length})</summary>
+      <ol>{stage.attempt_history.map(attempt => <li key={attempt.attempt}>
+        Attempt {attempt.attempt}: {attempt.status}{attempt.error_code ? ` · ${attempt.error_code}` : ''}
+        {attempt.reported_model_id && <span> · Model ID: {attempt.reported_model_id}</span>}
+        {attempt.model_revision && <span> · Revision: {attempt.model_revision}</span>}
+        {attempt.raw_output_hash && <span> · Output SHA-256: {attempt.raw_output_hash}</span>}
+        {(attempt.reported_total || attempt.computed_total) && <span>
+          {' '}· Total reported/computed: {attempt.reported_total ?? '—'} / {attempt.computed_total ?? '—'}
+        </span>}
+      </li>)}</ol>
+    </details> : null}
     {result?.reason && result.reason !== stage.reason && <p>{result.reason}</p>}
     {kind === 'media' && result?.outcome && <p>Kết quả: <strong>{mediaOutOfScope ? 'Không đánh giá: ngoài phạm vi policy' : result.outcome === 'PASS' ? 'Đạt policy' : 'Cần Checker xem xét'}</strong>{result.confidence != null && ` · ${percent(result.confidence)}`}</p>}
     {kind === 'media' && result?.findings?.length ? <div><h4>Phát hiện</h4><ul>{result.findings.map(item => <li key={item.finding_id}><strong>{item.severity}</strong>: {item.description}</li>)}</ul></div> : null}
@@ -307,7 +364,10 @@ function VlmExtractionDetails({ extraction, plan }: {
     <p>Bằng chứng trích xuất là dữ liệu cần Checker xác minh; kết quả này không phải đánh giá toàn bộ.</p>
     <div className="auth-ai-metadata">
       <span>Model ID: {extraction.model_id || 'Chưa cấu hình'}</span>
-      <span>Runtime revision: {extraction.model_revision || 'Runtime không cung cấp'}</span>
+      {extraction.model_version && <span>Configured model version: {extraction.model_version}</span>}
+      <span>Verified model revision: {extraction.model_revision || 'Không có revision đã xác minh'}</span>
+      {extraction.reported_model_id && <span>Provider reported model ID: {extraction.reported_model_id}</span>}
+      {extraction.model_identity_mode && <span>Identity mode: {extraction.model_identity_mode}</span>}
       <span>Prompt: {extraction.prompt_version}</span>
       <span>Schema: {extraction.schema_version}</span>
       {extraction.confidence != null && <span>Confidence trích xuất (tự báo, chưa hiệu chuẩn): {percent(extraction.confidence)}</span>}

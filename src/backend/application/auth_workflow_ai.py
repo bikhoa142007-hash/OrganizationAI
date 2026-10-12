@@ -45,6 +45,7 @@ def unconfigured_approval_configuration(
     strategy_rubric: StrategyRubric | None = None,
     media_model_snapshot: dict | None = None,
     strategy_model_snapshot: dict | None = None,
+    visual_model_snapshot: dict | None = None,
 ) -> ApprovalConfiguration:
     """Fail-closed policy snapshot for deployments without approved auth policy data.
 
@@ -74,6 +75,7 @@ def unconfigured_approval_configuration(
         media_policy=media_policy, strategy_rubric=strategy_rubric,
         media_model_snapshot=media_model_snapshot,
         strategy_model_snapshot=strategy_model_snapshot,
+        visual_model_snapshot=visual_model_snapshot or metadata,
     )
 
 

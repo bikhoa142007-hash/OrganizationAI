@@ -5,6 +5,7 @@ import { MemoryRouter } from 'react-router-dom'
 import { AuthProvider } from '../context/AuthContext'
 import { AuthApiError, authService } from '../services/auth'
 import { authWorkflowService } from '../services/authWorkflow'
+import { approvalConfigurationService } from '../services/approvalConfiguration'
 import { SessionProvider } from '../services/SessionProvider'
 import type { WorkflowPayload, WorkflowPlan } from '../types/authWorkflow'
 import { AppRoutes } from './AppRoutes'
@@ -27,6 +28,38 @@ beforeEach(() => {
 })
 
 describe('Auth-first route entry', () => {
+  it('protects approval configuration with the Admin role', async () => {
+    vi.spyOn(authService, 'me').mockResolvedValue(maker)
+    const deniedLoad = vi.spyOn(approvalConfigurationService, 'current')
+    const denied = renderApplication('/workflow/configuration')
+    expect(await screen.findByRole('heading', { name: 'Không có quyền truy cập' })).toBeVisible()
+    expect(deniedLoad).not.toHaveBeenCalled()
+
+    denied.unmount()
+    vi.restoreAllMocks()
+    vi.spyOn(authService, 'me').mockResolvedValue(admin)
+    vi.spyOn(approvalConfigurationService, 'current').mockResolvedValue({ as_of: '2026-10-12T00:00:00Z', items: [] })
+    vi.spyOn(approvalConfigurationService, 'history').mockResolvedValue({
+      kind: 'approval_policy', as_of: '2026-10-12T00:00:00Z', items: [], offset: 0, limit: 50, total: 0,
+    })
+    renderApplication('/workflow/configuration')
+    expect(await screen.findByRole('heading', { name: 'Cấu hình phê duyệt' })).toBeVisible()
+  })
+  it('warns that valid custom Strategy weights are not supported by the evaluator', async () => {
+    vi.spyOn(authService, 'me').mockResolvedValue(admin)
+    vi.spyOn(approvalConfigurationService, 'current').mockResolvedValue({ as_of: '2026-10-12T00:00:00Z', items: [] })
+    vi.spyOn(approvalConfigurationService, 'history').mockImplementation(async kind => ({
+      kind, as_of: '2026-10-12T00:00:00Z', items: [], offset: 0, limit: 50, total: 0,
+    }))
+    const user = userEvent.setup()
+    renderApplication('/workflow/configuration')
+
+    await screen.findByRole('heading', { name: 'Cấu hình phê duyệt' })
+    await user.selectOptions(screen.getByLabelText('Loại cấu hình'), 'strategy_rubric')
+
+    expect(await screen.findByRole('note')).toHaveTextContent('evaluator hiện chỉ hỗ trợ bộ trọng số baseline 15/15/15/15/15/15/10')
+    expect(screen.getByRole('note')).toHaveTextContent('EVALUATOR_RUBRIC_UNSUPPORTED')
+  })
   it('sends anonymous visitors from / to login', async () => {
     vi.spyOn(authService, 'me').mockRejectedValue(new AuthApiError(401, 'Authentication is required.'))
     renderApplication('/')

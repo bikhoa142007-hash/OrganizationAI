@@ -28,6 +28,10 @@ from .schemas import Draft, Submission, Mutation, HumanDecisionRequest, PlanResp
 from .auth import router as auth_router
 from .auth_workflow import router as auth_workflow_router
 from .auth_sla import router as auth_sla_router
+from .approval_configuration import router as approval_configuration_router
+from .internal_notes import router as internal_notes_router
+from .workflow_dashboard import router as workflow_dashboard_router
+from .workflow_retry import router as workflow_retry_router
 
 
 def create_app(settings=None, *, auth_workflow_provider=None, auth_workflow_configuration=None,
@@ -46,6 +50,7 @@ def create_app(settings=None, *, auth_workflow_provider=None, auth_workflow_conf
         strategy_rubric=strategy_rubric,
         media_model_snapshot=media_settings.public_snapshot() if media_settings else None,
         strategy_model_snapshot=strategy_settings.public_snapshot() if strategy_settings else None,
+        visual_model_snapshot=auth_workflow_provider.get_model_metadata(),
     )
     verify_runs = {}
     app = FastAPI(title='OrganizationAI API', version='1.0',
@@ -60,6 +65,10 @@ def create_app(settings=None, *, auth_workflow_provider=None, auth_workflow_conf
     app.include_router(auth_router)
     app.include_router(auth_workflow_router)
     app.include_router(auth_sla_router)
+    app.include_router(approval_configuration_router)
+    app.include_router(workflow_dashboard_router)
+    app.include_router(internal_notes_router)
+    app.include_router(workflow_retry_router)
     app.add_middleware(CORSMiddleware, allow_origins=list(settings.cors_origins), allow_credentials=True,
                        allow_methods=['GET', 'POST', 'PUT'],
                        allow_headers=['Content-Type', 'X-Demo-Actor', 'Idempotency-Key', 'X-Correlation-ID'])
