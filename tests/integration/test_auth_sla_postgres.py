@@ -17,7 +17,7 @@ from sqlalchemy.exc import DBAPIError
 from sqlalchemy.orm import sessionmaker
 
 from src.backend.api.auth import AuthenticatedPrincipal
-from src.backend.application import auth_sla, auth_workflow, employee_admin
+from src.backend.application import approval_configuration, auth_sla, auth_workflow, employee_admin
 from src.backend.application.sla_rules import SlaDeadlines, SlaStatus, calculate_status
 from src.backend.application.workflow import ApplicationError
 from src.backend.db.models import (
@@ -529,6 +529,23 @@ def test_postgres_decision_and_checker_reassignment_win_worker_lock_races(sla_po
     )
     with factory.begin() as session:
         session.add_all([old_profile, next_profile])
+        plan = session.get(AuthWorkflowPlan, reassignment_plan)
+        assert plan is not None
+        plan.payload = {**plan.payload, "department": "Synthetic test"}
+    with factory() as session:
+        approval_configuration.create_configuration_revision(
+            session,
+            _principal(people["ADMIN"], "ADMIN"),
+            "sla-reassignment-default-checker",
+            kind="checker_assignment",
+            expected_revision=None,
+            effective_at=datetime.now(timezone.utc) - timedelta(minutes=1),
+            change_reason="Synthetic PostgreSQL race-test default Checker.",
+            value={
+                "maker_may_select_other": False,
+                "defaults": [{"department": "Synthetic test", "checker_id": str(people["NEXT"].id)}],
+            },
+        )
     reassignment_entered = Event()
     allow_reassignment_commit = Event()
     original_reassignment_notice = employee_admin.notify_reassigned_checker
@@ -549,7 +566,7 @@ def test_postgres_decision_and_checker_reassignment_win_worker_lock_races(sla_po
                     _principal(people["ADMIN"], "ADMIN"),
                     old_profile.id,
                     "sla-reassignment-race",
-                    {reassignment_plan: people["NEXT"].id},
+                    {},
                 )
 
         reassignment_future = executor.submit(deactivate_and_reassign)

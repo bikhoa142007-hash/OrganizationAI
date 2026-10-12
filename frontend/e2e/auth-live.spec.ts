@@ -45,7 +45,7 @@ async function login(
   page: Page,
   username: string,
   expectedDestination: '/workflow/plans' | '/workflow/reviews',
-  expectedRole: 'MAKER' | 'CHECKER',
+  expectedRole: 'MAKER' | 'CHECKER' | 'ADMIN',
 ) {
   await page.goto('/login')
   await page.getByLabel('Tên đăng nhập, mã người dùng hoặc email').fill(username)
@@ -70,6 +70,44 @@ async function login(
   expect(session.roles).toEqual([expectedRole])
 }
 
+function localDateTime(minutesAgo: number): string {
+  const date = new Date(Date.now() - minutesAgo * 60_000)
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000)
+  return local.toISOString().slice(0, 16)
+}
+
+test.beforeAll(async ({ browser }) => {
+  test.skip(!password, 'Set AUTH_SEED_PASSWORD in the local test process to configure the seeded Checker.')
+  const makerContext = await browser.newContext()
+  const adminContext = await browser.newContext()
+  const maker = await makerContext.newPage()
+  const admin = await adminContext.newPage()
+  try {
+    await login(maker, makerUsername, '/workflow/plans', 'MAKER')
+    const checkerId = await maker.evaluate(async base => {
+      const response = await fetch(`${base}/workflow/checkers`, { credentials: 'include' })
+      if (!response.ok) throw new Error(`Could not load the synthetic Checker list (HTTP ${response.status}).`)
+      const checkers = await response.json() as Array<{ id: string }>
+      if (!checkers.length) throw new Error('The temporary Auth seed has no eligible Checker.')
+      return checkers[0].id
+    }, apiBase)
+
+    await login(admin, 'admin', '/workflow/plans', 'ADMIN')
+    await admin.goto('/workflow/configuration')
+    await admin.getByLabel('Loại cấu hình').selectOption('checker_assignment')
+    await admin.getByLabel('Giá trị JSON').fill(JSON.stringify({
+      maker_may_select_other: false,
+      defaults: [{ department: 'Marketing', checker_id: checkerId }],
+    }, null, 2))
+    await admin.getByLabel(/Hiệu lực từ thời điểm/).fill(localDateTime(1))
+    await admin.getByLabel('Lý do thay đổi').fill('Synthetic PostgreSQL browser acceptance default Checker assignment.')
+    await admin.getByRole('button', { name: 'Tạo revision bất biến' }).click()
+    await expect(admin.getByRole('status').filter({ hasText: 'Đã tạo revision 1' })).toBeVisible()
+  } finally {
+    await makerContext.close()
+    await adminContext.close()
+  }
+})
 async function readPlan(page: Page, id: string): Promise<LivePlan> {
   return page.evaluate(async ({ base, planId }) => {
     const response = await fetch(`${base}/workflow/plans/${encodeURIComponent(planId)}`, { credentials: 'include' })

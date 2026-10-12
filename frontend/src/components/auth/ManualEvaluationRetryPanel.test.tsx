@@ -61,3 +61,15 @@ it('reuses the idempotency key after a transient failure and reports fail-closed
   }, key)
   expect(onRetryComplete).toHaveBeenCalledWith(result)
 })
+
+it('keeps the successful retry result visible after the round retry limit is reached', async () => {
+  vi.spyOn(workflowCompletionService, 'retryEvaluation').mockResolvedValue(result)
+  const { rerender } = render(<ManualEvaluationRetryPanel {...props} />)
+
+  fireEvent.click(screen.getByRole('button', { name: 'Chạy lại AI' }))
+  expect(await screen.findByRole('status')).toHaveTextContent(result.run_id)
+  rerender(<ManualEvaluationRetryPanel {...props} isRetryAvailable={false} />)
+
+  expect(screen.getByRole('status')).toHaveTextContent(result.run_id)
+  expect(screen.queryByRole('button', { name: 'Chạy lại AI' })).not.toBeInTheDocument()
+})

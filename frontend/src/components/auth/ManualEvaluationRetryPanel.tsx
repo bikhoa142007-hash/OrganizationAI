@@ -1,5 +1,5 @@
 import { RotateCcw } from 'lucide-react'
-import { useId, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { AuthApiError } from '../../services/auth'
 import {
   workflowCompletionService,
@@ -56,7 +56,13 @@ export function ManualEvaluationRetryPanel({
   const [message, setMessage] = useState('')
   const pendingRequest = useRef<{ fingerprint: string; key: string } | null>(null)
 
-  if (!isAssignedChecker || !isRetryAvailable || planVersion < 1 || approvalRound < 1 || roundRevision < 0) {
+  useEffect(() => {
+    setError('')
+    setMessage('')
+    pendingRequest.current = null
+  }, [planId, approvalRound])
+
+  if (!isAssignedChecker || (!isRetryAvailable && !message) || planVersion < 1 || approvalRound < 1 || roundRevision < 0) {
     return null
   }
 
@@ -94,8 +100,8 @@ export function ManualEvaluationRetryPanel({
     <p>Lần chạy mới dùng snapshot của vòng hiện tại. Evidence của lần chạy trước vẫn được giữ nguyên.</p>
     {error && <p className="auth-workflow-alert is-error" role="alert">{error}</p>}
     {message && <p className="auth-workflow-alert is-progress" role="status">{message}</p>}
-    <button className="button button-secondary" type="button" onClick={() => void retry()} disabled={busy}>
+    {isRetryAvailable && <button className="button button-secondary" type="button" onClick={() => void retry()} disabled={busy}>
       {busy ? 'Đang chạy lại…' : 'Chạy lại AI'}
-    </button>
+    </button>}
   </section>
 }

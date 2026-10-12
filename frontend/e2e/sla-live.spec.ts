@@ -14,7 +14,7 @@ if (!apiBaseValue || !password || !clockFile || !apiContainer) {
 }
 const apiBase = apiBaseValue.replace(/\/$/, '')
 const image = resolve(import.meta.dirname, '../../tests/fixtures/ba/v2.1/images/creative-pass.png')
-const initialClock = '2026-11-01T12:00:00+00:00'
+const initialClock = new Date().toISOString()
 const authenticatedPages = new WeakSet<Page>()
 
 type SlaRound = {
@@ -95,6 +95,16 @@ function setClock(value: string) {
   writeFileSync(clockFile, `${JSON.stringify({ now: value })}\n`, { encoding: 'utf8' })
 }
 
+function stableSlaHistory(entry: NonNullable<SlaRound['sla_current']>) {
+  return Object.fromEntries(Object.entries(entry).filter(([key]) => key !== 'seconds_until_due'))
+}
+
+function localDateTime(minutesAgo: number): string {
+  const date = new Date(Date.now() - minutesAgo * 60_000)
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000)
+  return local.toISOString().slice(0, 16)
+}
+
 function runWorker(): number {
   const result = execFileSync('docker', [
     'exec', '-e', `SLA_TEST_CLOCK_FILE=${clockFileInApi}`, apiContainer,
@@ -130,6 +140,25 @@ test('Admin configures SLA; Maker submits, Checker receives reminders, decides l
     setClock(initialClock)
 
     await login(admin, 'admin', '/workflow/plans')
+    const checkerId = await admin.evaluate(async base => {
+      const response = await fetch(`${base}/workflow/employees?role=CHECKER&status=ACTIVE`, { credentials: 'include' })
+      if (!response.ok) throw new Error(`Could not load active Checker employees (HTTP ${response.status}).`)
+      const body = await response.json() as { items: Array<{ account_id: string | null }> }
+      const id = body.items.find(item => item.account_id)?.account_id
+      if (!id) throw new Error('The temporary Auth seed has no linked active Checker employee.')
+      return id
+    }, apiBase)
+    await admin.goto('/workflow/configuration')
+    await admin.getByLabel('Loại cấu hình').selectOption('checker_assignment')
+    await admin.getByLabel('Giá trị JSON').fill(JSON.stringify({
+      maker_may_select_other: false,
+      defaults: [{ department: 'Marketing', checker_id: checkerId }],
+    }, null, 2))
+    await admin.getByLabel(/Hiệu lực từ thời điểm/).fill(localDateTime(1))
+    await admin.getByLabel('Lý do thay đổi').fill('Synthetic PostgreSQL SLA browser default Checker assignment.')
+    await admin.getByRole('button', { name: 'Tạo revision bất biến' }).click()
+    await expect(admin.getByRole('status').filter({ hasText: 'Đã tạo revision' })).toBeVisible()
+
     await admin.goto('/workflow/sla')
     await expect(admin.getByRole('heading', { name: 'Cấu hình SLA duyệt' })).toBeVisible()
     await expect(admin.locator('.sla-config-state')).toHaveText('Chưa có cấu hình được lưu · SLA đang tắt')
@@ -170,6 +199,7 @@ test('Admin configures SLA; Maker submits, Checker receives reminders, decides l
     await maker.getByLabel('Chọn ảnh đính kèm').setInputFiles(image)
     const planId = new URL(maker.url()).pathname.split('/').filter(Boolean).at(-2)
     expect(planId).toMatch(/^[0-9a-f-]{36}$/i)
+    const submitStartedAt = Date.now()
     await maker.getByRole('button', { name: 'Gửi duyệt' }).click()
     await maker.waitForURL(new RegExp(`/workflow/plans/${planId}$`), { timeout: 120_000 })
 
@@ -177,7 +207,10 @@ test('Admin configures SLA; Maker submits, Checker receives reminders, decides l
     expect(roundOne.current_version).toBe(1)
     expect(roundOne.current_round).toBe(1)
     expect(roundOne.sla_current).toMatchObject({ applicable: true, status: 'IN_PROGRESS', configuration_revision: 1, duration_minutes: 2, warning_before_minutes: 1 })
-    expect(Date.parse(roundOne.sla_current!.started_at!)).toBe(Date.parse(initialClock))
+    // The API timestamps rounds with UTC wall time; the mounted clock file controls only the SLA worker.
+    const roundStartedAt = Date.parse(roundOne.sla_current!.started_at!)
+    expect(roundStartedAt).toBeGreaterThanOrEqual(submitStartedAt - 30_000)
+    expect(roundStartedAt).toBeLessThanOrEqual(Date.now() + 30_000)
     expect(roundOne.ai_evaluations[0].provider).toBe('MOCK_VLM')
     expect(roundOne.sla_history).toHaveLength(1)
     await expect(maker.locator('.workflow-sla-status')).toHaveText('Đang trong hạn')
@@ -195,9 +228,11 @@ test('Admin configures SLA; Maker submits, Checker receives reminders, decides l
     expect(roundOne.sla_current?.status).toBe('IN_PROGRESS')
     expect(runWorker()).toBe(0)
 
-    setClock(new Date(warningAt).toISOString())
+    await expect.poll(async () => (await readPlan(checker, planId!)).sla_current?.status, {
+      timeout: 90_000, intervals: [1_000],
+    }).toBe('WARNING')
+    setClock(new Date().toISOString())
     roundOne = await readPlan(checker, planId!)
-    expect(roundOne.sla_current?.status).toBe('WARNING')
     await checker.reload()
     await expect(checker.locator('.workflow-sla-status')).toHaveText('Sắp đến hạn')
     expect(runWorker()).toBe(1)
@@ -214,9 +249,11 @@ test('Admin configures SLA; Maker submits, Checker receives reminders, decides l
     await checker.reload()
     await expect(checker.locator('.workflow-sla-status')).toHaveText('Sắp đến hạn')
 
-    setClock(new Date(dueAt).toISOString())
+    await expect.poll(async () => (await readPlan(checker, planId!)).sla_current?.status, {
+      timeout: 90_000, intervals: [1_000],
+    }).toBe('OVERDUE')
+    setClock(new Date().toISOString())
     roundOne = await readPlan(checker, planId!)
-    expect(roundOne.sla_current?.status).toBe('OVERDUE')
     await checker.reload()
     await expect(checker.locator('.workflow-sla-status')).toHaveText('Quá hạn')
     expect(runWorker()).toBe(2)
@@ -233,17 +270,17 @@ test('Admin configures SLA; Maker submits, Checker receives reminders, decides l
     roundOne = await readPlan(checker, planId!)
     expect(roundOne.status).toBe('REJECTED')
     expect(roundOne.sla_current?.status).toBe('CLOSED_LATE')
-    expect(Date.parse(roundOne.sla_current!.closed_at!)).toBe(dueAt)
+    expect(Date.parse(roundOne.sla_current!.closed_at!)).toBeGreaterThanOrEqual(dueAt)
 
     await admin.goto('/workflow/sla')
     await expect(admin.locator('.sla-config-state')).toContainText('Revision 1 · Đang bật')
-    await duration.getByLabel('Phút').fill('4')
-    await warning.getByLabel('Phút').fill('2')
-    await admin.getByLabel('Lý do thay đổi').fill('Increase the temporary acceptance round duration to four minutes.')
+    await duration.getByLabel('Phút').fill('3')
+    await warning.getByLabel('Phút').fill('1')
+    await admin.getByLabel('Lý do thay đổi').fill('Increase the temporary acceptance round duration to three minutes.')
     await admin.getByRole('button', { name: 'Lưu revision' }).click()
     await expect(admin.getByRole('status')).toContainText('revision 2')
     const immutableRoundOne = await readPlan(admin, planId!)
-    expect(immutableRoundOne.sla_history[0]).toEqual(roundOne.sla_history[0])
+    expect(stableSlaHistory(immutableRoundOne.sla_history[0])).toEqual(stableSlaHistory(roundOne.sla_history[0]!))
     expect(immutableRoundOne.sla_history[0]).toMatchObject({ configuration_revision: 1, duration_minutes: 2, status: 'CLOSED_LATE' })
 
     await maker.goto(`/workflow/plans/${planId}`)
@@ -260,12 +297,14 @@ test('Admin configures SLA; Maker submits, Checker receives reminders, decides l
     expect(roundTwo.versions[0].payload.summary).toBe(originalSummary)
     expect(roundTwo.versions[1].payload.summary).toBe(revisedSummary)
     expect(roundTwo.sla_history).toHaveLength(2)
-    expect(roundTwo.sla_history[0]).toEqual(roundOne.sla_history[0])
-    expect(roundTwo.sla_current).toMatchObject({ applicable: true, status: 'IN_PROGRESS', configuration_revision: 2, duration_minutes: 4, warning_before_minutes: 2 })
+    expect(stableSlaHistory(roundTwo.sla_history[0])).toEqual(stableSlaHistory(roundOne.sla_history[0]!))
+    expect(roundTwo.sla_current).toMatchObject({ applicable: true, status: 'IN_PROGRESS', configuration_revision: 2, duration_minutes: 3, warning_before_minutes: 1 })
 
     const roundTwoDue = Date.parse(roundTwo.sla_current!.due_at!)
-    setClock(new Date(roundTwoDue).toISOString())
-    expect((await readPlan(checker, planId!)).sla_current?.status).toBe('OVERDUE')
+    await expect.poll(async () => (await readPlan(checker, planId!)).sla_current?.status, {
+      timeout: 180_000, intervals: [1_000],
+    }).toBe('OVERDUE')
+    setClock(new Date().toISOString())
     // Simulates worker recovery after downtime: first observation is overdue, so no stale warning is replayed.
     expect(runWorker()).toBe(2)
     const roundTwoCheckerNotices = (await readNotifications(checker)).filter(item => item.plan_id === planId && item.round_number === 2)
