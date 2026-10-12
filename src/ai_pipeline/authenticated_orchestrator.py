@@ -15,7 +15,10 @@ from src.ai_pipeline.providers.base import (
     ProviderNonRetryableError,
     ProviderTimeout,
 )
-from src.ai_pipeline.task_evaluation import validate_media_output, validate_strategy_output
+from src.ai_pipeline.task_evaluation import (
+    PolicyOutputConflictError, strategy_rubric_weights,
+    validate_media_output, validate_strategy_output,
+)
 from src.ai_pipeline.task_providers import OpenAICompatibleTaskProvider, TaskEvaluationRequest
 from src.ai_pipeline.vlm_extraction import common_evidence, failed_extraction, utc_now
 from src.backend.domain.policy import ApprovalConfiguration
@@ -26,6 +29,48 @@ PLAN_EVIDENCE_FIELDS = (
     "title", "objective", "summary", "department", "start_date", "end_date",
     "budget_minor_units", "currency", "target_audience", "channels", "kpi_expected", "notes",
 )
+_TRANSIENT_PROVIDER_FAILURE_CODES = frozenset({
+    "PROVIDER_ERROR", "PROVIDER_UNAVAILABLE", "RATE_LIMITED",
+})
+_RETRYABLE_OUTPUT_FAILURE_CODES = frozenset({
+    "INVALID_SCHEMA", "INVALID_PROVIDER_RESPONSE",
+})
+
+
+def _round_strategy_rubric(metadata):
+    """Read the Strategy rubric resolution only from the immutable round snapshot."""
+    if not isinstance(metadata, Mapping):
+        return None
+    snapshot = _read_member(metadata, "round_configuration_snapshot")
+    configurations = _read_member(snapshot, "configurations")
+    rubric_snapshot = _read_member(configurations, "strategy_rubric")
+    return rubric_snapshot
+
+
+def _read_member(value, name, default=None):
+    if isinstance(value, Mapping):
+        return value.get(name, default)
+    return getattr(value, name, default)
+
+
+def _safe_provenance_text(value):
+    if not isinstance(value, str) or not value.strip() or len(value) > 160:
+        return None
+    if any(ord(character) < 32 for character in value):
+        return None
+    return value.strip()
+
+
+def settings_snapshot_identity(settings):
+    return getattr(settings, "identity_mode", None)
+
+
+def _safe_output_hash(value):
+    if not isinstance(value, str) or len(value) != 64:
+        return None
+    if any(character not in "0123456789abcdef" for character in value.lower()):
+        return None
+    return value.lower()
 
 
 def initial_evaluation_step(task, input_hash, configuration, settings):
@@ -36,10 +81,19 @@ def initial_evaluation_step(task, input_hash, configuration, settings):
     configured_snapshot = (
         configuration.media_model_snapshot if media else configuration.strategy_model_snapshot
     )
-    settings_snapshot = (
+    raw_settings_snapshot = (
         settings.public_snapshot() if hasattr(settings, "public_snapshot")
-        else settings if isinstance(settings, dict) else {}
+        else settings if isinstance(settings, Mapping) else {}
     )
+    safe_snapshot_fields = {
+        "task", "provider", "model_id", "model_version", "identity_mode",
+        "reasoning_effort", "endpoint_fingerprint", "timeout_seconds",
+        "max_output_tokens", "max_response_bytes", "max_input_bytes", "max_retries",
+        "prompt_version", "schema_version", "configuration_error", "configuration_hash",
+    }
+    settings_snapshot = {
+        key: value for key, value in raw_settings_snapshot.items() if key in safe_snapshot_fields
+    }
     setting_ready = settings.is_configured if hasattr(settings, "is_configured") else bool(
         settings_snapshot.get("provider") and settings_snapshot.get("model_id")
         and settings_snapshot.get("model_version") and settings_snapshot.get("endpoint_fingerprint")
@@ -70,6 +124,8 @@ def initial_evaluation_step(task, input_hash, configuration, settings):
         "provider": settings_snapshot.get("provider"),
         "model_id": settings_snapshot.get("model_id"),
         "model_version": settings_snapshot.get("model_version"),
+        "identity_mode": settings_snapshot.get("identity_mode"),
+        "model_configuration": settings_snapshot,
         "prompt_version": settings_snapshot.get("prompt_version"),
         "schema_version": settings_snapshot.get("schema_version"),
         "configuration_id": getattr(agent_config, "policy_id", None)
@@ -78,12 +134,17 @@ def initial_evaluation_step(task, input_hash, configuration, settings):
         or getattr(agent_config, "rubric_version", None),
         "input_hash": input_hash,
         "raw_output_hash": None,
+        "model_revision": None,
+        "reported_model_id": None,
+        "reported_total": None,
+        "computed_total": None,
         "configuration_hash": configuration_hash,
         "started_at": None,
         "completed_at": None,
         "latency_ms": None,
         "attempts": 0,
         "retried": False,
+        "attempt_history": [],
         "result": None,
         "error_code": error_code,
         "reason": reason,
@@ -236,20 +297,56 @@ class AuthenticatedEvaluationOrchestrator:
         rubric = configuration.strategy_rubric
         if strategy_step["status"] == "FAILED":
             pass
-        elif strategy_step["status"] == "NOT_CONFIGURED":
-            strategy_step["error_code"] = "STRATEGY_NOT_CONFIGURED"
         else:
-            task_request = TaskEvaluationRequest(
-                "STRATEGY_EVALUATION", request.input_hash,
-                {key: request.plan.payload.get(key) for key in PLAN_EVIDENCE_FIELDS
-                 if request.plan.payload.get(key) not in (None, "", [])},
-                all_evidence, rubric=rubric,
-            )
-            strategy_step = self._run_step(
-                "STRATEGY_EVALUATION", self.strategy_provider, task_request, strategy_step,
-                deadline, lambda output, refs: validate_strategy_output(output, rubric, refs),
-                {item["evidence_id"]: item.get("kind") for item in all_evidence}, on_step,
-            )
+            try:
+                round_rubric_snapshot = _round_strategy_rubric(request.metadata)
+                if round_rubric_snapshot is None:
+                    raise ValueError("The approval-round Strategy rubric snapshot is missing.")
+                round_rubric_status = _read_member(round_rubric_snapshot, "status")
+                if round_rubric_status not in {"UNCONFIGURED", "DISABLED", "EFFECTIVE"}:
+                    raise ValueError("The approval-round Strategy rubric snapshot has an invalid status.")
+                round_rubric = _read_member(round_rubric_snapshot, "value")
+                if round_rubric is None:
+                    round_rubric = _read_member(round_rubric_snapshot, "effective_value")
+                if round_rubric_status == "EFFECTIVE":
+                    if round_rubric is None:
+                        raise ValueError("The effective Strategy rubric snapshot has no value.")
+                    strategy_rubric_weights(round_rubric)
+            except ValueError as exc:
+                self._complete_failed(
+                    strategy_step,
+                    getattr(exc, "code", "EVALUATOR_RUBRIC_UNSUPPORTED"),
+                    "The configured Strategy rubric is unsupported; Checker review is required.",
+                )
+                strategy_step["attempts"] = 0
+                strategy_step["retried"] = False
+                self._emit(on_step, "strategy_evaluation", strategy_step)
+            else:
+                if round_rubric_status in {"UNCONFIGURED", "DISABLED"}:
+                    strategy_step.update({
+                        "status": "NOT_CONFIGURED",
+                        "error_code": "STRATEGY_NOT_CONFIGURED",
+                        "reason": "No effective Strategy rubric was captured for this round.",
+                        "result": None,
+                        "attempts": 0,
+                        "retried": False,
+                        "completed_at": utc_now(),
+                    })
+                    self._emit(on_step, "strategy_evaluation", strategy_step)
+                elif strategy_step["status"] == "NOT_CONFIGURED":
+                    strategy_step["error_code"] = "STRATEGY_NOT_CONFIGURED"
+                else:
+                    task_request = TaskEvaluationRequest(
+                        "STRATEGY_EVALUATION", request.input_hash,
+                        {key: request.plan.payload.get(key) for key in PLAN_EVIDENCE_FIELDS
+                         if request.plan.payload.get(key) not in (None, "", [])},
+                        all_evidence, rubric=rubric,
+                    )
+                    strategy_step = self._run_step(
+                        "STRATEGY_EVALUATION", self.strategy_provider, task_request, strategy_step,
+                        deadline, lambda output, refs: validate_strategy_output(output, rubric, refs),
+                        {item["evidence_id"]: item.get("kind") for item in all_evidence}, on_step,
+                    )
 
         errors = []
         if extraction.get("status") == "FAILED":
@@ -258,6 +355,26 @@ class AuthenticatedEvaluationOrchestrator:
                 "code": extraction.get("error_code") or "PROVIDER_ERROR",
                 "message": "Image extraction failed; Checker review is required.",
             })
+        expected_visual_mode = request.metadata.get("model_identity_mode")
+        expected_visual_model_id = request.metadata.get("model_id")
+        if extraction.get("status") != "FAILED" and expected_visual_mode:
+            if extraction.get("reported_model_id") != expected_visual_model_id:
+                errors.append({
+                    "component": "visual_extraction", "code": "UNKNOWN_MODEL",
+                    "message": "Image extraction reported a model ID outside the submitted configuration.",
+                })
+            if (expected_visual_mode == "OLLAMA_TAG_DIGEST"
+                    and extraction.get("model_revision") != request.model_version):
+                errors.append({
+                    "component": "visual_extraction", "code": "MODEL_DIGEST_MISMATCH",
+                    "message": "Image extraction digest did not match the submitted model pin.",
+                })
+            if (expected_visual_mode == "GENERIC_OPAQUE_REVISION"
+                    and extraction.get("model_revision") is not None):
+                errors.append({
+                    "component": "visual_extraction", "code": "MODEL_IDENTITY_UNVERIFIED",
+                    "message": "Image extraction reported an unverified model revision.",
+                })
         errors.extend(self._agent_errors(media_step, strategy_step))
         visual_model_version = extraction.get("model_revision") or request.model_version
         if not isinstance(visual_model_version, str) or not visual_model_version.strip():
@@ -376,61 +493,163 @@ class AuthenticatedEvaluationOrchestrator:
         settings = provider.settings
         step["status"] = "PROCESSING"
         step["started_at"] = utc_now()
+        step.setdefault("attempt_history", [])
         self._emit(on_step, self._step_key(task), step)
         started = time.monotonic()
         last_code = "PROVIDER_ERROR"
         attempts = 0
-        raw_hash = None
         while attempts <= settings.max_retries:
             remaining = self._remaining(deadline)
             if remaining <= 0:
                 last_code = "PIPELINE_TIMEOUT"
                 break
             attempts += 1
+            attempt_record = {
+                "attempt": attempts,
+                "status": "FAILED",
+                "started_at": utc_now(),
+                "completed_at": None,
+                "model_revision": None,
+                "reported_model_id": None,
+                "raw_output_hash": None,
+                "reported_total": None,
+                "computed_total": None,
+                "error_code": None,
+            }
+            step.update({
+                "model_revision": None,
+                "reported_model_id": None,
+                "raw_output_hash": None,
+                "reported_total": None,
+                "computed_total": None,
+            })
             executor = ThreadPoolExecutor(max_workers=1)
+            output = None
+            retryable = True
             future = executor.submit(provider.evaluate, task_request)
             try:
                 output = future.result(timeout=min(remaining, settings.timeout_seconds))
                 executor.shutdown(wait=True)
                 if not isinstance(output, ProviderAnalysis) or not isinstance(output.output, Mapping):
                     raise ProviderNonRetryableError("Provider returned an invalid response.", code="INVALID_SCHEMA")
-                if (output.model_revision != settings.model_version
-                        or output.reported_model_id != settings.model_id):
+                revision = _safe_provenance_text(output.model_revision)
+                reported_model_id = _safe_provenance_text(output.reported_model_id)
+                output_hash = _safe_output_hash(output.raw_output_hash)
+                attempt_record.update({
+                    "model_revision": revision,
+                    "reported_model_id": reported_model_id,
+                    "raw_output_hash": output_hash,
+                })
+                step.update({
+                    "model_revision": revision,
+                    "reported_model_id": reported_model_id,
+                    "raw_output_hash": output_hash,
+                })
+                identity_mode = (
+                    settings.resolved_identity_mode if hasattr(settings, "resolved_identity_mode")
+                    else settings_snapshot_identity(settings)
+                )
+                if identity_mode == "OLLAMA_TAG_DIGEST" and output.model_revision != settings.model_version:
+                    raise ProviderNonRetryableError(
+                        "Task provider digest did not match the pinned configuration.",
+                        code="MODEL_DIGEST_MISMATCH",
+                    )
+                if identity_mode == "GENERIC_OPAQUE_REVISION" and output.model_revision is not None:
+                    raise ProviderNonRetryableError(
+                        "Opaque providers must not report an unverified model revision.",
+                        code="MODEL_IDENTITY_UNVERIFIED",
+                    )
+                if identity_mode not in {"OLLAMA_TAG_DIGEST", "GENERIC_OPAQUE_REVISION"}:
+                    raise ProviderNonRetryableError(
+                        "Task provider identity mode is not supported.", code="MODEL_IDENTITY_UNVERIFIED"
+                    )
+                if output.reported_model_id != settings.model_id:
                     raise ProviderNonRetryableError(
                         "Task provider identity did not match the pinned configuration.",
                         code="UNKNOWN_MODEL",
                     )
-                raw_hash = output.raw_output_hash
                 normalized = validate(output.output, evidence)
+                attempt_record.update({
+                    "status": "SUCCEEDED",
+                    "reported_total": normalized.get("reported_total"),
+                    "computed_total": normalized.get("computed_total"),
+                })
                 step.update({
                     "status": "SUCCEEDED",
                     "result": normalized,
                     "error_code": None,
                     "reason": normalized.get("reason"),
+                    "reported_total": normalized.get("reported_total"),
+                    "computed_total": normalized.get("computed_total"),
                 })
-                break
             except FutureTimeout:
                 future.cancel()
                 executor.shutdown(wait=False, cancel_futures=True)
                 last_code = "PROVIDER_TIMEOUT" if self._remaining(deadline) > 0 else "PIPELINE_TIMEOUT"
+                attempt_record["status"] = "TIMED_OUT"
             except (ProviderConfigurationError, ProviderNonRetryableError) as exc:
                 executor.shutdown(wait=True)
                 last_code = exc.code
-                if isinstance(exc, ProviderConfigurationError) or exc.code not in {"INVALID_SCHEMA", "INVALID_PROVIDER_RESPONSE"}:
-                    break
+                retryable = (
+                    not isinstance(exc, ProviderConfigurationError)
+                    and exc.code in _RETRYABLE_OUTPUT_FAILURE_CODES
+                )
+                attempt_record["status"] = "FAILED"
             except ProviderTimeout as exc:
                 executor.shutdown(wait=True)
                 last_code = exc.code
+                attempt_record["status"] = "TIMED_OUT"
+                retryable = True
             except ProviderError as exc:
                 executor.shutdown(wait=True)
                 last_code = exc.code
-            except ValueError:
+                attempt_record["status"] = "FAILED"
+                retryable = exc.code in _TRANSIENT_PROVIDER_FAILURE_CODES
+            except PolicyOutputConflictError as exc:
                 executor.shutdown(wait=True)
-                last_code = "INVALID_SCHEMA"
+                last_code = exc.code
+                retryable = False
+                attempt_record.update({
+                    "status": "FAILED",
+                    "reported_total": str(exc.reported_total) if exc.reported_total is not None else None,
+                    "computed_total": str(exc.computed_total) if exc.computed_total is not None else None,
+                })
+            except ValueError as exc:
+                executor.shutdown(wait=True)
+                last_code = getattr(exc, "code", "INVALID_SCHEMA")
+                retryable = last_code in _RETRYABLE_OUTPUT_FAILURE_CODES
+                attempt_record["status"] = "FAILED"
             except Exception:
                 executor.shutdown(wait=True)
                 last_code = "PROVIDER_ERROR"
-            if attempts > settings.max_retries:
+                attempt_record["status"] = "FAILED"
+                retryable = False
+
+            if output is not None and isinstance(output, ProviderAnalysis):
+                attempt_record.update({
+                    "model_revision": _safe_provenance_text(output.model_revision),
+                    "reported_model_id": _safe_provenance_text(output.reported_model_id),
+                    "raw_output_hash": _safe_output_hash(output.raw_output_hash),
+                })
+                step.update({
+                    "model_revision": attempt_record["model_revision"],
+                    "reported_model_id": attempt_record["reported_model_id"],
+                    "raw_output_hash": attempt_record["raw_output_hash"],
+                })
+            attempt_record["completed_at"] = utc_now()
+            attempt_record["error_code"] = None if attempt_record["status"] == "SUCCEEDED" else last_code
+            step["attempt_history"].append(attempt_record)
+            step["attempts"] = attempts
+            step["retried"] = attempts > 1
+            if attempt_record["status"] != "SUCCEEDED":
+                step["error_code"] = last_code
+                if attempt_record["reported_total"] is not None:
+                    step["reported_total"] = attempt_record["reported_total"]
+                    step["computed_total"] = attempt_record["computed_total"]
+            self._emit(on_step, self._step_key(task), step)
+            if attempt_record["status"] == "SUCCEEDED":
+                break
+            if not retryable or attempts > settings.max_retries:
                 break
 
         if step["status"] != "SUCCEEDED":
@@ -442,7 +661,6 @@ class AuthenticatedEvaluationOrchestrator:
             })
         step["attempts"] = attempts
         step["retried"] = attempts > 1
-        step["raw_output_hash"] = raw_hash
         step["completed_at"] = utc_now()
         step["latency_ms"] = max(0, int((time.monotonic() - started) * 1_000))
         self._emit(on_step, self._step_key(task), step)

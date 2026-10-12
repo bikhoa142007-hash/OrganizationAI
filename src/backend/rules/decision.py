@@ -198,12 +198,15 @@ def decide(plan: MarketingPlan, config: ApprovalConfiguration, raw_evaluation,
     media_category = 'FACT_UNCERTAIN' if factual_media else 'POLICY_OUT_OF_SCOPE'
     for rule, value, passed, limit, category in (
         ('MEDIA_PASS', ev.media_result, ev.media_result == 'PASS', 'media_result = PASS', media_category),
-        ('MEDIA_CONFIDENCE', ev.media_confidence, successful and ev.media_confidence >= .85,
-         'media_confidence >= 0.85', 'FACT_UNCERTAIN'),
-        ('FEASIBILITY_SCORE', ev.feasibility_score, successful and ev.feasibility_score > 70,
-         'feasibility_score > 70', 'POLICY_OUT_OF_SCOPE'),
-        ('FEASIBILITY_CONFIDENCE', ev.feasibility_confidence, successful and ev.feasibility_confidence >= .80,
-         'feasibility_confidence >= 0.80', 'FACT_UNCERTAIN'),
+        ('MEDIA_CONFIDENCE', ev.media_confidence,
+         successful and ev.media_confidence >= policy.media_confidence_threshold,
+         f'media_confidence >= {policy.media_confidence_threshold}', 'FACT_UNCERTAIN'),
+        ('FEASIBILITY_SCORE', ev.feasibility_score,
+         successful and ev.feasibility_score > policy.feasibility_threshold,
+         f'feasibility_score > {policy.feasibility_threshold}', 'POLICY_OUT_OF_SCOPE'),
+        ('FEASIBILITY_CONFIDENCE', ev.feasibility_confidence,
+         successful and ev.feasibility_confidence >= policy.feasibility_confidence_threshold,
+         f'feasibility_confidence >= {policy.feasibility_confidence_threshold}', 'FACT_UNCERTAIN'),
     ):
         check(rule, passed if successful else None, value, limit,
               category if successful else 'FACT_UNCERTAIN', ev_refs)

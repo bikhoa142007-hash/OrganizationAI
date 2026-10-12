@@ -451,6 +451,8 @@ Thiết lập các biến sau trong `.env` (không commit file này):
 | --- | --- |
 | `AUTH_WORKFLOW_AI_PROVIDER` | `LOCAL_VLM` mặc định; chỉ chọn `MOCK_VLM` rõ ràng cho demo |
 | `LOCAL_VLM_MODEL` | Model ID do runtime đang chạy nhận diện; không phải revision bất biến |
+| `LOCAL_VLM_MODEL_VERSION` | Revision do operator pin; giá trị `sha256:` được xác minh qua Ollama inventory |
+| `LOCAL_VLM_IDENTITY_MODE` | Tùy chọn `OLLAMA_TAG_DIGEST` hoặc `GENERIC_OPAQUE_REVISION`; mặc định suy ra Ollama cho pin `sha256:` |
 | `LOCAL_VLM_BASE_URL` | Root URL, gồm `/v1`, của endpoint tương thích Chat Completions |
 | `LOCAL_VLM_ALLOW_REMOTE` | Mặc định `false`; endpoint không-local cần bật rõ ràng và dùng HTTPS |
 | `LOCAL_VLM_API_KEY` | Tùy chọn; chỉ truyền trong Authorization header ở backend |
@@ -459,7 +461,7 @@ Thiết lập các biến sau trong `.env` (không commit file này):
 | `LOCAL_VLM_MAX_RESPONSE_BYTES` | Giới hạn response body, mặc định 262144 byte |
 | `LOCAL_VLM_MAX_INPUT_BYTES` | Giới hạn tổng bytes ảnh mỗi request VLM, mặc định 20 MiB |
 
-Media và Strategy có bộ biến môi trường độc lập trong `.env.example`: `AUTH_WORKFLOW_MEDIA_*` và `AUTH_WORKFLOW_STRATEGY_*`. Mỗi bộ hỗ trợ protocol `OPENAI_COMPATIBLE_CHAT_COMPLETIONS`, base URL, model ID, model version do operator pin, API key tùy chọn cho runtime local, timeout, giới hạn input/output, retry, prompt version và schema version. Schema/prompt version không được tự ý thay đổi; adapter hiện chỉ chấp nhận version được hỗ trợ. API key không được ghi vào snapshot hoặc gửi lên frontend.
+Media và Strategy có bộ biến môi trường độc lập trong `.env.example`: `AUTH_WORKFLOW_MEDIA_*` và `AUTH_WORKFLOW_STRATEGY_*`. Mỗi bộ hỗ trợ protocol `OPENAI_COMPATIBLE_CHAT_COMPLETIONS`, base URL, model ID, model version do operator pin, API key tùy chọn cho runtime local, timeout, giới hạn input/output, retry, prompt version và schema version. Có thể đặt `AUTH_WORKFLOW_MEDIA_IDENTITY_MODE` và `AUTH_WORKFLOW_STRATEGY_IDENTITY_MODE` thành `OLLAMA_TAG_DIGEST` hoặc `GENERIC_OPAQUE_REVISION`. Ollama mode xác minh digest bằng `/api/tags`; generic mode không gọi Ollama và yêu cầu response `model` khớp chính xác model ID, trong khi lưu `model_revision=null` và giữ revision cấu hình riêng ở `model_version`. Mode được chụp vào snapshot tại lúc submit. Schema/prompt version không được tự ý thay đổi; adapter hiện chỉ chấp nhận version được hỗ trợ. API key không được ghi vào snapshot hoặc gửi lên frontend.
 
 Chỉ điền `AUTH_WORKFLOW_MEDIA_POLICY_JSON` với policy do tổ chức phê duyệt, gồm `policy_id`, `policy_version`, `status`, `scope_departments`, `scope_channels` và các rule có severity, mô tả, evidence kind bắt buộc. Không có policy ví dụ được áp dụng mặc định. `AUTH_WORKFLOW_STRATEGY_RUBRIC_JSON` nhận rubric versioned với đúng bảy BA criteria và weights 15/15/15/15/15/15/10; backend từ chối rubric khác. Với endpoint không-local, cần dùng HTTPS và bật riêng `AUTH_WORKFLOW_MEDIA_ALLOW_REMOTE=true` hoặc `AUTH_WORKFLOW_STRATEGY_ALLOW_REMOTE=true` sau khi cho phép truyền dữ liệu. Cấu hình provider/policy là server-side; request client không thể bật model hoặc auto-approval.
 

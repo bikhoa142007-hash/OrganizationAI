@@ -3,6 +3,7 @@
 from contextlib import contextmanager
 from copy import deepcopy
 from dataclasses import dataclass, field
+from decimal import Decimal
 import hashlib
 import json
 import os
@@ -17,6 +18,14 @@ from src.ai_pipeline.providers.base import (
     ProviderNonRetryableError,
     ProviderTimeout,
 )
+from src.ai_pipeline.providers.ollama_identity import (
+    GENERIC_OPAQUE_REVISION,
+    IDENTITY_MODES,
+    OLLAMA_TAG_DIGEST,
+    is_sha256_pin,
+    resolve_identity_mode,
+    verify_ollama_model_digest,
+)
 from src.ai_pipeline.task_evaluation import (
     MEDIA_OUTPUT_SCHEMA,
     MEDIA_PROMPT_VERSION,
@@ -24,6 +33,7 @@ from src.ai_pipeline.task_evaluation import (
     STRATEGY_OUTPUT_SCHEMA,
     STRATEGY_PROMPT_VERSION,
     STRATEGY_SCHEMA_VERSION,
+    EvaluatorRubricUnsupportedError,
     task_messages,
 )
 from src.shared.validation import canonical_hash
@@ -51,6 +61,11 @@ class TaskModelSettings:
     prompt_version: str = ""
     schema_version: str = ""
     configuration_error: str | None = None
+    identity_mode: str | None = None
+
+    @property
+    def resolved_identity_mode(self):
+        return resolve_identity_mode(self.identity_mode, self.model_version)
 
     @classmethod
     def from_environment(cls, task: TaskName, environ=None):
@@ -70,6 +85,9 @@ class TaskModelSettings:
             reasoning_effort = None
         prompt_version = _optional(environ.get(prefix + "_PROMPT_VERSION")) or expected_prompt
         schema_version = _optional(environ.get(prefix + "_SCHEMA_VERSION")) or expected_schema
+        identity_mode = _optional(environ.get(prefix + "_IDENTITY_MODE"))
+        if identity_mode is not None:
+            identity_mode = identity_mode.upper()
         allow_remote, remote_invalid = _boolean(environ.get(prefix + "_ALLOW_REMOTE"), default=False)
         error = None
         defaults = {
@@ -98,6 +116,10 @@ class TaskModelSettings:
             parsed = defaults
         if reasoning_invalid:
             error = "INVALID_PROVIDER_CONFIGURATION"
+        elif identity_mode is not None and identity_mode not in IDENTITY_MODES:
+            error = "INVALID_PROVIDER_CONFIGURATION"
+        elif identity_mode == OLLAMA_TAG_DIGEST and not is_sha256_pin(model_version):
+            error = "INVALID_PROVIDER_CONFIGURATION"
         elif provider and provider != SUPPORTED_PROTOCOL:
             error = "UNSUPPORTED_PROVIDER_PROTOCOL"
         elif provider and prompt_version != expected_prompt:
@@ -123,6 +145,7 @@ class TaskModelSettings:
             prompt_version=prompt_version,
             schema_version=schema_version,
             configuration_error=error,
+            identity_mode=identity_mode,
             **parsed,
         )
 
@@ -131,6 +154,8 @@ class TaskModelSettings:
         return bool(
             self.provider == SUPPORTED_PROTOCOL and self.base_url and self.model_id
             and self.model_version and not self.configuration_error
+            and self.resolved_identity_mode in IDENTITY_MODES
+            and (self.resolved_identity_mode != OLLAMA_TAG_DIGEST or is_sha256_pin(self.model_version))
         )
 
     def public_snapshot(self):
@@ -140,6 +165,7 @@ class TaskModelSettings:
             "provider": self.provider,
             "model_id": self.model_id or None,
             "model_version": self.model_version or None,
+            "identity_mode": self.resolved_identity_mode,
             "reasoning_effort": self.reasoning_effort,
             "endpoint_fingerprint": hashlib.sha256(self.base_url.encode("utf-8")).hexdigest()
             if self.base_url else None,
@@ -178,6 +204,7 @@ class OpenAICompatibleTaskProvider:
             "model_id": self.settings.model_id or None,
             "model_version": self.settings.model_version or None,
             "protocol": SUPPORTED_PROTOCOL,
+            "identity_mode": self.settings.resolved_identity_mode,
         }
 
     def evaluate(self, request: TaskEvaluationRequest) -> ProviderAnalysis:
@@ -188,11 +215,26 @@ class OpenAICompatibleTaskProvider:
             raise ProviderConfigurationError(code=settings.configuration_error)
         if not settings.is_configured:
             raise ProviderConfigurationError()
+        verified_model_version = None
+        if settings.resolved_identity_mode == OLLAMA_TAG_DIGEST:
+            with self._client_context() as client:
+                verified_model_version = verify_ollama_model_digest(
+                    client,
+                    base_url=settings.base_url,
+                    model_id=settings.model_id,
+                    expected_version=settings.model_version,
+                    timeout_seconds=settings.timeout_seconds,
+                    headers=self._headers(),
+                )
         try:
             messages = task_messages(
                 request.task, request.plan_payload, request.evidence,
                 policy=request.policy, rubric=request.rubric,
             )
+        except EvaluatorRubricUnsupportedError as exc:
+            raise ProviderNonRetryableError(
+                "The configured Strategy rubric is unsupported.", code=exc.code
+            ) from None
         except (TypeError, ValueError):
             raise ProviderNonRetryableError("Task input was invalid.", code="INVALID_TASK_INPUT") from None
         input_bytes = sum(len(item["content"].encode("utf-8")) for item in messages)
@@ -226,7 +268,10 @@ class OpenAICompatibleTaskProvider:
             content = message["content"]
             if not isinstance(content, str):
                 raise ValueError("Output content is not text")
-            output = json.loads(content)
+            output = json.loads(
+                content,
+                parse_float=Decimal if request.task == "STRATEGY_EVALUATION" else float,
+            )
         except ProviderNonRetryableError:
             raise
         except (KeyError, IndexError, TypeError, ValueError, json.JSONDecodeError):
@@ -240,7 +285,7 @@ class OpenAICompatibleTaskProvider:
         return ProviderAnalysis(
             output=output,
             raw_output_hash=hashlib.sha256(content.encode("utf-8")).hexdigest(),
-            model_revision=settings.model_version,
+            model_revision=verified_model_version,
             reported_model_id=_safe_model_id(reported_model_id),
         )
 
@@ -252,11 +297,15 @@ class OpenAICompatibleTaskProvider:
             with httpx.Client(timeout=self.settings.timeout_seconds) as client:
                 yield client
 
-    def _post(self, body):
-        raw = bytearray()
+    def _headers(self):
         headers = {"Accept": "application/json", "Content-Type": "application/json"}
         if self.settings.api_key.strip():
             headers["Authorization"] = "Bearer " + self.settings.api_key.strip()
+        return headers
+
+    def _post(self, body):
+        raw = bytearray()
+        headers = self._headers()
         try:
             with self._client_context() as client:
                 with client.stream(

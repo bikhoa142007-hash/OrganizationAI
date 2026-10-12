@@ -1,6 +1,8 @@
 from datetime import datetime, timezone
+from dataclasses import replace
 from decimal import Decimal
 import hashlib
+from types import SimpleNamespace
 
 import pytest
 
@@ -72,21 +74,34 @@ def request(
         },
         (AttachmentManifest(attachment_id, hashlib.sha256(content).hexdigest(), "image/png", len(content)),),
     )
+    saved_configuration = configuration(
+        media_policy=media_policy or media_policy_from_json(MEDIA_POLICY_JSON),
+    )
+    metadata = {
+        "model_id": "qwen3-vl:4b", "attachment_contents": {attachment_id: content},
+        "fake_extraction_status": extraction_status,
+        "fake_visual_observation": image_observation,
+        "fake_visual_confidence": extraction_confidence,
+        "fake_visual_quality": visual_quality or {"result": "PASS", "findings": []},
+        "round_configuration_snapshot": SimpleNamespace(
+            configurations=SimpleNamespace(
+                strategy_rubric=SimpleNamespace(
+                    status="EFFECTIVE", value=saved_configuration.strategy_rubric,
+                ),
+            ),
+        ),
+    }
     return EvaluationRequest(
         plan=plan, policy_version="AUTH-1", evaluation_id="eval-1", run_id="run-1",
         correlation_id="trace-1", provider="LOCAL_VLM", model_version="vlm-rev-1",
-        configuration=configuration(media_policy=media_policy or media_policy_from_json(MEDIA_POLICY_JSON)),
-        metadata={"model_id": "qwen3-vl:4b", "attachment_contents": {attachment_id: content},
-                  "fake_extraction_status": extraction_status,
-                  "fake_visual_observation": image_observation,
-                  "fake_visual_confidence": extraction_confidence,
-                  "fake_visual_quality": visual_quality or {"result": "PASS", "findings": []}},
+        configuration=saved_configuration,
+        metadata=metadata,
     )
 
 
 def settings(task):
     prefix = "media" if task == "MEDIA_COMPLIANCE" else "strategy"
-    return TaskModelSettings(
+    configured = TaskModelSettings(
         task=task, provider="OPENAI_COMPATIBLE_CHAT_COMPLETIONS",
         base_url=f"http://localhost:8000/v1/{prefix}", model_id=f"{prefix}-model",
         model_version=f"{prefix}-rev-1", api_key="secret", allow_remote=False,
@@ -94,6 +109,10 @@ def settings(task):
         max_input_bytes=4096, max_retries=0,
         prompt_version=f"{prefix}-prompt-v1", schema_version=f"{prefix}-schema-v1",
     )
+    # The configured version is an opaque provenance pin. Compatible providers
+    # identify the deployed model by ID but need not expose a runtime revision.
+    object.__setattr__(configured, "identity_mode", "GENERIC_OPAQUE_REVISION")
+    return configured
 
 
 class FakeExtractionProvider:
@@ -135,11 +154,12 @@ class RetryOnceExtractionProvider(FakeExtractionProvider):
 
 
 class FakeTaskProvider:
-    def __init__(self, task, *, fail=None, score=71):
+    def __init__(self, task, *, fail=None, score=71, reported_model_id=None):
         self.settings = settings(task)
         self.task = task
         self.fail = fail
         self.score = score
+        self.reported_model_id = reported_model_id or self.settings.model_id
         self.calls = 0
         self.last_evidence = ()
 
@@ -150,6 +170,8 @@ class FakeTaskProvider:
             raise ProviderTimeout()
         if self.fail == "error":
             raise RuntimeError("secret response must not leak")
+        if self.fail == "identity_error":
+            raise ProviderError("Unverified model identity response.", code="MODEL_IDENTITY_UNVERIFIED")
         if self.task == "MEDIA_COMPLIANCE":
             observations = [item for item in task_request.evidence
                            if item.get("kind") == "OBSERVATION"]
@@ -169,8 +191,8 @@ class FakeTaskProvider:
             if self.fail == "invalid_policy_reference":
                 output["policy_id"] = "UNTRUSTED-POLICY"
             return ProviderAnalysis(
-                output=output, model_revision=self.settings.model_version,
-                reported_model_id=self.settings.model_id,
+                output=output, model_revision=self._model_revision(),
+                reported_model_id=self.reported_model_id,
                 raw_output_hash=hashlib.sha256(b"fake-media-output").hexdigest(),
             )
         refs = ["plan-field:objective"]
@@ -189,10 +211,15 @@ class FakeTaskProvider:
         if self.fail == "mismatched_total":
             output["total_score"] = float(score) + 0.01
         return ProviderAnalysis(
-            output=output, model_revision=self.settings.model_version,
-            reported_model_id=self.settings.model_id,
+            output=output, model_revision=self._model_revision(),
+            reported_model_id=self.reported_model_id,
             raw_output_hash=hashlib.sha256(b"fake-strategy-output").hexdigest(),
         )
+
+    def _model_revision(self):
+        if self.settings.identity_mode == "GENERIC_OPAQUE_REVISION":
+            return None
+        return self.settings.model_version
 
 
 def make_orchestrator(*, media=None, strategy=None, timeout_seconds=20):
@@ -225,6 +252,48 @@ def test_authenticated_orchestrator_reuses_extraction_and_builds_weighted_strate
     assert ("strategy_evaluation", "SUCCEEDED") in updates
 
 
+def test_generic_opaque_task_identity_allows_missing_revision_and_persists_provider_identity():
+    media = FakeTaskProvider("MEDIA_COMPLIANCE")
+    strategy = FakeTaskProvider("STRATEGY_EVALUATION")
+
+    result = make_orchestrator(media=media, strategy=strategy).evaluate(request())
+
+    assert result.media_evaluation["status"] == "SUCCEEDED"
+    assert result.strategy_evaluation["status"] == "SUCCEEDED"
+    assert result.evaluation["status"] == "SUCCEEDED"
+    assert result.media_evaluation["model_revision"] is None
+    assert result.strategy_evaluation["model_revision"] is None
+    assert result.media_evaluation["reported_model_id"] == media.settings.model_id
+    assert result.strategy_evaluation["reported_model_id"] == strategy.settings.model_id
+
+
+def test_generic_opaque_task_identity_rejects_a_mismatched_reported_model_id():
+    media = FakeTaskProvider(
+        "MEDIA_COMPLIANCE", reported_model_id="untrusted-media-model",
+    )
+    strategy = FakeTaskProvider("STRATEGY_EVALUATION")
+
+    result = make_orchestrator(media=media, strategy=strategy).evaluate(request())
+
+    assert result.media_evaluation["status"] == "FAILED"
+    assert result.media_evaluation["error_code"] == "UNKNOWN_MODEL"
+    assert result.media_evaluation["attempts"] == 1
+    assert result.evaluation["status"] == "FAILED"
+
+
+def test_provider_identity_error_is_terminal_even_when_transport_retries_are_configured():
+    media = FakeTaskProvider("MEDIA_COMPLIANCE", fail="identity_error")
+    media.settings = replace(media.settings, max_retries=2)
+    result = make_orchestrator(
+        media=media, strategy=FakeTaskProvider("STRATEGY_EVALUATION"),
+    ).evaluate(request())
+
+    assert media.calls == 1
+    assert result.media_evaluation["error_code"] == "MODEL_IDENTITY_UNVERIFIED"
+    assert result.media_evaluation["attempts"] == 1
+    assert result.media_evaluation["attempt_history"][0]["error_code"] == "MODEL_IDENTITY_UNVERIFIED"
+
+
 def test_unconfigured_media_does_not_fake_pass_and_keeps_strategy_result():
     strategy = FakeTaskProvider("STRATEGY_EVALUATION")
     result = make_orchestrator(strategy=strategy).evaluate(request())
@@ -236,6 +305,92 @@ def test_unconfigured_media_does_not_fake_pass_and_keeps_strategy_result():
     assert result.evaluation["media_result"] is None
     assert result.evaluation["agent_errors"][0]["code"] == "MEDIA_NOT_CONFIGURED"
     assert strategy.calls == 1
+
+
+def test_round_snapshot_with_nonbaseline_strategy_weights_fails_without_fallback():
+    submitted = request()
+    rubric_value = {
+        "rubric_id": "BA-RUBRIC-TEST", "rubric_version": "2", "status": "ACTIVE",
+        "criteria": [{
+            "criterion_id": criterion_id, "label": label,
+            "weight": 40 if criterion_id == "risk_control" else 10,
+        } for criterion_id, label, _weight in STRATEGY_CRITERIA],
+    }
+    metadata = dict(submitted.metadata)
+    metadata["round_configuration_snapshot"] = {
+        "configurations": {
+            "strategy_rubric": {
+                "status": "EFFECTIVE",
+                "revision_id": "strategy-rubric-revision-2",
+                "revision": 2,
+                "configuration_hash": "a" * 64,
+                "effective_at": "2026-10-12T00:00:00Z",
+                "value": rubric_value,
+            },
+        },
+    }
+    submitted = replace(
+        submitted,
+        configuration=replace(submitted.configuration, strategy_rubric=None),
+        metadata=metadata,
+    )
+    strategy = FakeTaskProvider("STRATEGY_EVALUATION")
+
+    result = make_orchestrator(
+        media=FakeTaskProvider("MEDIA_COMPLIANCE"), strategy=strategy,
+    ).evaluate(submitted)
+
+    assert strategy.calls == 0
+    assert result.strategy_evaluation["status"] == "FAILED"
+    assert result.strategy_evaluation["error_code"] == "EVALUATOR_RUBRIC_UNSUPPORTED"
+    assert result.strategy_evaluation["result"] is None
+    assert result.evaluation["status"] == "FAILED"
+
+
+def test_round_snapshot_with_baseline_strategy_weights_uses_saved_mapping():
+    submitted = request()
+    rubric_value = submitted.configuration.strategy_rubric.to_dict()
+    metadata = dict(submitted.metadata)
+    metadata["round_configuration_snapshot"] = {
+        "configurations": {
+            "strategy_rubric": {
+                "kind": "strategy_rubric",
+                "status": "EFFECTIVE",
+                "revision_id": "strategy-rubric-revision-1",
+                "revision": 1,
+                "configuration_hash": "b" * 64,
+                "value": rubric_value,
+            },
+        },
+    }
+    submitted = replace(submitted, metadata=metadata)
+    strategy = FakeTaskProvider("STRATEGY_EVALUATION")
+
+    result = make_orchestrator(
+        media=FakeTaskProvider("MEDIA_COMPLIANCE"), strategy=strategy,
+    ).evaluate(submitted)
+
+    assert strategy.calls == 1
+    assert result.strategy_evaluation["status"] == "SUCCEEDED"
+    assert result.strategy_evaluation["result"]["rubric_id"] == rubric_value["rubric_id"]
+
+
+def test_missing_round_configuration_snapshot_fails_before_strategy_provider():
+    submitted = request()
+    metadata = dict(submitted.metadata)
+    metadata.pop("round_configuration_snapshot")
+    submitted = replace(submitted, metadata=metadata)
+    strategy = FakeTaskProvider("STRATEGY_EVALUATION")
+
+    result = make_orchestrator(
+        media=FakeTaskProvider("MEDIA_COMPLIANCE"), strategy=strategy,
+    ).evaluate(submitted)
+
+    assert strategy.calls == 0
+    assert result.strategy_evaluation["status"] == "FAILED"
+    assert result.strategy_evaluation["error_code"] == "EVALUATOR_RUBRIC_UNSUPPORTED"
+    assert result.strategy_evaluation["result"] is None
+    assert result.evaluation["status"] == "FAILED"
 
 
 def test_out_of_scope_media_skips_provider_and_aggregate_attempts_sum_actual_stage_calls():
@@ -282,12 +437,28 @@ def test_one_successful_step_is_retained_when_the_other_provider_fails():
 def test_invalid_policy_reference_and_weighted_total_are_step_failures():
     media = FakeTaskProvider("MEDIA_COMPLIANCE", fail="invalid_policy_reference")
     strategy = FakeTaskProvider("STRATEGY_EVALUATION", fail="mismatched_total")
+    media.settings = replace(media.settings, max_retries=2)
+    strategy.settings = replace(strategy.settings, max_retries=2)
     result = make_orchestrator(media=media, strategy=strategy).evaluate(request())
 
     assert result.media_evaluation["status"] == "FAILED"
     assert result.media_evaluation["error_code"] == "INVALID_SCHEMA"
+    assert result.media_evaluation["attempts"] == 3
+    assert result.media_evaluation["retried"] is True
     assert result.strategy_evaluation["status"] == "FAILED"
-    assert result.strategy_evaluation["error_code"] == "INVALID_SCHEMA"
+    assert result.strategy_evaluation["error_code"] == "POLICY_OUTPUT_CONFLICT"
+    assert result.strategy_evaluation["attempts"] == 1
+    assert result.strategy_evaluation["retried"] is False
+    strategy_attempt = result.strategy_evaluation["attempt_history"][0]
+    assert strategy_attempt["status"] == "FAILED"
+    assert strategy_attempt["error_code"] == "POLICY_OUTPUT_CONFLICT"
+    assert strategy_attempt["reported_total"] == "71.01"
+    assert Decimal(strategy_attempt["computed_total"]) == Decimal("71")
+    assert strategy_attempt["reported_model_id"] == strategy.settings.model_id
+    assert strategy_attempt["raw_output_hash"] == hashlib.sha256(b"fake-strategy-output").hexdigest()
+    assert result.strategy_evaluation["reported_total"] == "71.01"
+    assert Decimal(result.strategy_evaluation["computed_total"]) == Decimal("71")
+    assert "Grounded in plan evidence." not in str(result.strategy_evaluation)
     assert result.evaluation["status"] == "FAILED"
 
 
@@ -308,7 +479,7 @@ def test_media_pass_with_hard_violation_fails_closed_through_decision_engine():
             "severity": "HARD_VIOLATION",
             "description": "A configured hard policy rule failed.",
             "rule_id": "BRAND-LOGO",
-            "evidence_refs": ["ev-image-1"],
+            "evidence_refs": output["rule_results"][0]["evidence_refs"],
         }]
         return ProviderAnalysis(
             output=output,
@@ -323,7 +494,7 @@ def test_media_pass_with_hard_violation_fails_closed_through_decision_engine():
     ).evaluate(submitted)
 
     assert result.media_evaluation["status"] == "FAILED"
-    assert result.media_evaluation["error_code"] == "INVALID_SCHEMA"
+    assert result.media_evaluation["error_code"] == "POLICY_OUTPUT_CONFLICT"
     assert result.media_evaluation["result"] is None
     assert result.evaluation["status"] == "FAILED"
 
