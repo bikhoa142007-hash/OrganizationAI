@@ -140,13 +140,14 @@ test('Admin configures SLA; Maker submits, Checker receives reminders, decides l
     setClock(initialClock)
 
     await login(admin, 'admin', '/workflow/plans')
-    const checkerId = await admin.evaluate(async base => {
-      const response = await fetch(`${base}/workflow/employees?role=CHECKER&status=ACTIVE`, { credentials: 'include' })
-      if (!response.ok) throw new Error(`Could not load active Checker employees (HTTP ${response.status}).`)
-      const body = await response.json() as { items: Array<{ account_id: string | null }> }
-      const id = body.items.find(item => item.account_id)?.account_id
-      if (!id) throw new Error('The temporary Auth seed has no linked active Checker employee.')
-      return id
+    await login(checker, 'checker', '/workflow/reviews')
+    const checkerId = await checker.evaluate(async base => {
+      const response = await fetch(`${base}/auth/me`, { credentials: 'include' })
+      if (!response.ok) throw new Error(`Could not identify the signed-in Checker (HTTP ${response.status}).`)
+      const body = await response.json() as { user?: { id?: string; roles?: string[] } }
+      const user = body.user
+      if (!user?.id || !user.roles?.includes('CHECKER')) throw new Error('The seeded checker account is not an eligible Checker.')
+      return user.id
     }, apiBase)
     await admin.goto('/workflow/configuration')
     await admin.getByLabel('Loại cấu hình').selectOption('checker_assignment')
@@ -214,7 +215,6 @@ test('Admin configures SLA; Maker submits, Checker receives reminders, decides l
     expect(roundOne.sla_history).toHaveLength(1)
     await expect(maker.locator('.workflow-sla-status')).toHaveText('Đang trong hạn')
 
-    await login(checker, 'checker', '/workflow/reviews')
     await checker.goto(`/workflow/plans/${planId}`)
     await expect(checker.getByRole('heading', { name: title, exact: true })).toBeVisible()
     await expect(checker.locator('.workflow-sla-status')).toHaveText('Đang trong hạn')
