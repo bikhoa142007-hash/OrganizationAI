@@ -155,7 +155,7 @@ test('Admin configures SLA; Maker submits, Checker receives reminders, decides l
       maker_may_select_other: false,
       defaults: [{ department: 'Marketing', checker_id: checkerId }],
     }, null, 2))
-    await admin.getByLabel(/Hiệu lực từ thời điểm/).fill(localDateTime(1))
+    await admin.getByLabel(/Hiệu lực từ thời điểm/).fill(localDateTime(0))
     await admin.getByLabel('Lý do thay đổi').fill('Synthetic PostgreSQL SLA browser default Checker assignment.')
     await admin.getByRole('button', { name: 'Tạo revision bất biến' }).click()
     await expect(admin.getByRole('status').filter({ hasText: 'Đã tạo revision' })).toBeVisible()
