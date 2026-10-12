@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "runId": "judge-demo-publication-2026-10-12",
+  "recordedOn": "2026-10-12",
+  "repository": "OrganizationAI",
+  "branch": "codex/scope1-publication-clean-20261012",
+  "sourceHead": "6df2f2e077ea830e970bc6cfbb0bf482ca3af724",
+  "testFile": "frontend/e2e/workflow.spec.ts",
+  "testFileSha256": "8f8e7812a8b82f830b2b4f156a83a2199585401ce82f9c12dd5b1b14e08ec029",
+  "database": "disposable SQLite",
+  "provider": "MOCK_VLM",
+  "runs": [
+    {
+      "test": "factual evidence and real Verify results render",
+      "commandScope": "single named Playwright test",
+      "result": "PASS",
+      "passed": 1,
+      "failed": 0,
+      "verifyCases": "4/4 and 5/5"
+    },
+    {
+      "test": "four remaining tests in workflow.spec.ts",
+      "commandScope": "workflow.spec.ts --grep-invert 'factual evidence and real Verify results render'",
+      "result": "PASS",
+      "passed": 4,
+      "failed": 0
+    }
+  ],
+  "aggregateCurrentSourceResult": {
+    "result": "PASS",
+    "passed": 5,
+    "failed": 0
+  },
+  "priorEvidenceReuse": {
+    "workflowSpecFingerprintMatched": true,
+    "priorSourceFingerprints": 41,
+    "fingerprintsDifferingOnPublicationBranch": 33,
+    "remainingFourRerunAgainstCurrentSource": true
+  },
+  "limitations": [
+    "Mock-provider browser regression is integration evidence, not real AI inference or model-quality evidence.",
+    "Only the named test and the four remaining workflow.spec.ts tests are included; other browser suites are reported separately."
+  ],
+  "liveDatabaseOrProductionConfigurationUsed": false
+}

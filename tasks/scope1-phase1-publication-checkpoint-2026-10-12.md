@@ -45,7 +45,7 @@ Actual temporary PostgreSQL migration runs, in addition to static graph inspecti
 - Retry-panel Vitest regression: PASS, 3 tests. The success message remains visible after the round limit hides the retry button.
 - Integrated Auth browser suite: the three Auth specs and the dashboard/configuration/notes/retry spec passed on temporary PostgreSQL. The integrated spec was rerun after adding the terminal policy-conflict case and passed 1/1.
 - SLA browser spec: PASS, 1/1 on temporary PostgreSQL. It covers Admin configuration, Maker submission, Checker reminders and decision, resubmission, per-round snapshot history, and elapsed SLA boundaries. Focused runs exposed two incorrect test assumptions: `closed_at` can be later than `due_at`, and `seconds_until_due` is derived and changes over time. The assertions now match those semantics while comparing all stored SLA history fields.
-- Judge Demo regression `factual evidence and real Verify results render`: PASS, 1/1 on a separate temporary SQLite database; Verify returned 4/4 and 5/5.
+- Judge Demo `workflow.spec.ts` has five browser tests. The checkpoint's named `factual evidence and real Verify results render` run was 1/1 and its Verify fixtures returned 4/4 and 5/5; it does not by itself represent the other four browser tests. The older suite evidence had the same `workflow.spec.ts` SHA-256 (`8f8e7812a8b82f830b2b4f156a83a2199585401ce82f9c12dd5b1b14e08ec029`), but 33 of its 41 recorded source fingerprints differ on this integrated branch. To close that gap, the four remaining tests were run here against the publication source with a disposable SQLite database: PASS, 4/4. Together with the separately run named spec, the current-source Judge Demo suite is PASS, 5/5; run summary: [`judge-demo-publication-2026-10-12.json`](../docs/integration/evidence/judge-demo-publication-2026-10-12.json).
 - The publication browser scenario covers Admin versus Maker permissions, valid-but-unsupported rubric messaging, the old round snapshot after a later config revision, Checker-only notes, terminal `EVALUATOR_RUBRIC_UNSUPPORTED` and `POLICY_OUTPUT_CONFLICT`, a retryable `INVALID_SCHEMA`, preserved attempt/model/input/policy provenance, and rejection of a second manual retry in the same round.
 
 These are synthetic integration gates. They do not measure real model accuracy or approve any policy weights.
@@ -71,7 +71,7 @@ Open Phase 1 Must items remain:
 - Scope 1 v1.1 still requires product-owner/stakeholder approval of the policy values. Test-only SLA and Checker defaults do not approve them.
 - Admin authority/bootstrap still awaits a named system owner/operator; some role/permission behaviors and custom-role PostgreSQL acceptance remain open.
 - Checker default-versus-Maker-choice behavior remains a business decision.
-- In-app notification lifecycle is covered, but the Phase 1 email-notification Must and approved recipients/channels/retry ownership remain open.
+- In-app notifications are implemented and covered, consistent with the recorded Sprint decision in `scope1-phase1-notification-verification-2026-10-11.md` to use in-app only and keep Email/SMS/production providers disabled. Scope Phase 1 still classifies email notification NOT-02 as Must. NOT-02 remains open pending explicit product scope resolution; it is neither implemented nor reclassified here. Approved recipients/channels/retry ownership also remain open.
 - AI-02/AI-03/AI-04 quality and VLM inference are not accepted; approved content policy, rubric anchors/weights, budget authority and production provider/model configuration are still missing. Keep auto-approval disabled and Human Review fail-closed.
 - The complete Phase 1 workflow, audit and competition/public-judge requirements are not claimed complete by these focused gates.
 
@@ -81,4 +81,4 @@ See [`scope1-phase1-traceability-2026-10-10.md`](scope1-phase1-traceability-2026
 
 The complete four-commit range from the requested baseline to checkpoint `460db9afbad0289fb9c4bef8333c98cdf2e07176` was inspected at commit-blob level (74 changed blobs). It contains no `handoff-a.md`, `handoff-b.md`, or `handoff-c.md` path and no copied-content candidate against the three files in excluded commit `df64da278e9e5949ba7fcb44ff8eb6261171ca69`. The scan found no raw log paths, private keys, AWS credentials, bearer tokens or JWTs. Four credential-pattern matches were confined to synthetic test/API-key placeholders; observed email domains were example/test domains. No real user records were identified.
 
-No push, pull request, main merge, deployment or model-pin change is part of this checkpoint.
+At the time checkpoint `6df2f2e077ea830e970bc6cfbb0bf482ca3af724` was created, no push, pull request, main merge, deployment or model-pin change had occurred.
