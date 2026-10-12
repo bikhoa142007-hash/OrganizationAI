@@ -295,10 +295,8 @@ test('Admin configures SLA; Maker submits, Checker receives reminders, decides l
     expect(roundTwo.sla_current).toMatchObject({ applicable: true, status: 'IN_PROGRESS', configuration_revision: 2, duration_minutes: 3, warning_before_minutes: 1 })
 
     const roundTwoDue = Date.parse(roundTwo.sla_current!.due_at!)
-    await expect.poll(async () => (await readPlan(checker, planId!)).sla_current?.status, {
-      timeout: 180_000, intervals: [1_000],
-    }).toBe('OVERDUE')
-    setClock(new Date().toISOString())
+    setClock(new Date(roundTwoDue + 1).toISOString())
+    expect((await readPlan(checker, planId!)).sla_current?.status).toBe('OVERDUE')
     // Simulates worker recovery after downtime: first observation is overdue, so no stale warning is replayed.
     expect(runWorker()).toBe(2)
     const roundTwoCheckerNotices = (await readNotifications(checker)).filter(item => item.plan_id === planId && item.round_number === 2)
