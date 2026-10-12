@@ -227,11 +227,9 @@ test('Admin configures SLA; Maker submits, Checker receives reminders, decides l
     expect(roundOne.sla_current?.status).toBe('IN_PROGRESS')
     expect(runWorker()).toBe(0)
 
-    await expect.poll(async () => (await readPlan(checker, planId!)).sla_current?.status, {
-      timeout: 90_000, intervals: [1_000],
-    }).toBe('WARNING')
-    setClock(new Date().toISOString())
+    setClock(new Date(warningAt + 1).toISOString())
     roundOne = await readPlan(checker, planId!)
+    expect(roundOne.sla_current?.status).toBe('WARNING')
     await checker.reload()
     await expect(checker.locator('.workflow-sla-status')).toHaveText('Sắp đến hạn')
     expect(runWorker()).toBe(1)
@@ -243,15 +241,12 @@ test('Admin configures SLA; Maker submits, Checker receives reminders, decides l
     await warningCard.getByRole('link', { name: /Mở kế hoạch/ }).click()
     await expect(checker).toHaveURL(new RegExp(`/workflow/plans/${planId}$`))
 
-    setClock(new Date(warningAt + 1).toISOString())
     expect((await readPlan(maker, planId!)).sla_current?.status).toBe('WARNING')
     await checker.reload()
     await expect(checker.locator('.workflow-sla-status')).toHaveText('Sắp đến hạn')
 
-    await expect.poll(async () => (await readPlan(checker, planId!)).sla_current?.status, {
-      timeout: 90_000, intervals: [1_000],
-    }).toBe('OVERDUE')
-    setClock(new Date().toISOString())
+    setClock(new Date(dueAt + 1).toISOString())
+    expect((await readPlan(checker, planId!)).sla_current?.status).toBe('OVERDUE')
     roundOne = await readPlan(checker, planId!)
     await checker.reload()
     await expect(checker.locator('.workflow-sla-status')).toHaveText('Quá hạn')
