@@ -255,10 +255,36 @@ def _prepare_pinned_source(repository_root: Path, run_root: Path) -> Path:
     git = shutil.which("git.exe") or shutil.which("git")
     if not git:
         raise SafeRunnerFailure("PINNED_SOURCE_GIT_UNAVAILABLE")
+    resolve_args = [git, "rev-parse", "--verify", f"{PINNED_SHA}^{{commit}}"]
     resolved = subprocess.run(
-        [git, "rev-parse", "--verify", f"{PINNED_SHA}^{{commit}}"],
+        resolve_args,
         capture_output=True, text=True, timeout=20, check=False, cwd=repository_root,
     )
+    if resolved.returncode != 0 or resolved.stdout.strip().lower() != PINNED_SHA:
+        fetch_args = [
+            git,
+            "fetch",
+            "--no-tags",
+            "--depth=1",
+            "--no-write-fetch-head",
+            "origin",
+            PINNED_SHA,
+        ]
+        try:
+            fetched = subprocess.run(
+                fetch_args,
+                capture_output=True, text=True, timeout=90, check=False, cwd=repository_root,
+            )
+        except subprocess.TimeoutExpired as exc:
+            raise SafeRunnerFailure("PINNED_SOURCE_FETCH_TIMEOUT") from exc
+        except OSError as exc:
+            raise SafeRunnerFailure("PINNED_SOURCE_FETCH_FAILED") from exc
+        if fetched.returncode != 0:
+            raise SafeRunnerFailure("PINNED_SOURCE_FETCH_FAILED")
+        resolved = subprocess.run(
+            resolve_args,
+            capture_output=True, text=True, timeout=20, check=False, cwd=repository_root,
+        )
     if resolved.returncode != 0 or resolved.stdout.strip().lower() != PINNED_SHA:
         raise SafeRunnerFailure("PINNED_SOURCE_SHA_UNAVAILABLE")
     archive_path = run_root / "pinned-source.tar"

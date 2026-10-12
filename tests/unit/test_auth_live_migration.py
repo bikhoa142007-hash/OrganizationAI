@@ -237,3 +237,65 @@ def test_alembic_uses_extracted_archive_and_restores_process_environment(tmp_pat
     assert "sslmode=require" in seen["database_url"]
     assert os.environ["DATABASE_URL"] == "before-migration-value"
     assert os.environ["PGPASSWORD"] == "synthetic-before-value"
+
+
+def test_pinned_source_fetches_exact_sha_for_shallow_clone(tmp_path, monkeypatch):
+    import io
+    import subprocess
+    import tarfile
+
+    import scripts.run_auth_live_migration as runner
+
+    run_root = tmp_path / "pinned-source-run"
+    run_root.mkdir()
+    repository_root = tmp_path / "shallow-checkout"
+    archive_bytes = io.BytesIO()
+    with tarfile.open(fileobj=archive_bytes, mode="w") as archive:
+        for name, content in (
+            ("alembic.ini", b"[alembic]\n"),
+            ("alembic/versions/20261011_12_approval_round_sla.py", b"revision = '20261011_12'\n"),
+        ):
+            entry = tarfile.TarInfo(name)
+            entry.size = len(content)
+            archive.addfile(entry, io.BytesIO(content))
+    pinned_archive = archive_bytes.getvalue()
+    calls = []
+    fetched = False
+
+    def fake_run(command, **kwargs):
+        nonlocal fetched
+        calls.append(command)
+        if command[1:3] == ["rev-parse", "--verify"]:
+            if not fetched:
+                return subprocess.CompletedProcess(command, 1, stdout="", stderr="")
+            return subprocess.CompletedProcess(
+                command, 0, stdout=f"{runner.PINNED_SHA}\n", stderr="",
+            )
+        if command[1] == "fetch":
+            fetched = True
+            return subprocess.CompletedProcess(command, 0, stdout="", stderr="")
+        if command[1] == "archive":
+            kwargs["stdout"].write(pinned_archive)
+            return subprocess.CompletedProcess(command, 0, stdout="", stderr="")
+        raise AssertionError("unexpected Git command")
+
+    monkeypatch.setattr(runner.shutil, "which", lambda _name: "git")
+    monkeypatch.setattr(runner.subprocess, "run", fake_run)
+    monkeypatch.setattr(runner, "_validate_pinned_migration_chain", lambda _root: None)
+
+    source_root = runner._prepare_pinned_source(repository_root, run_root)
+
+    fetch_calls = [call for call in calls if call[1] == "fetch"]
+    assert fetch_calls == [[
+        "git",
+        "fetch",
+        "--no-tags",
+        "--depth=1",
+        "--no-write-fetch-head",
+        "origin",
+        runner.PINNED_SHA,
+    ]]
+    assert [call[1] for call in calls] == ["rev-parse", "fetch", "rev-parse", "archive"]
+    assert (source_root / "alembic.ini").is_file()
+    assert (source_root / "alembic/versions/20261011_12_approval_round_sla.py").is_file()
+    assert not (run_root / "pinned-source.tar").exists()
