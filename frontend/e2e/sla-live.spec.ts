@@ -266,11 +266,37 @@ test('Admin configures SLA; Maker submits, Checker receives reminders, decides l
     expect(roundOne.sla_current?.status).toBe('CLOSED_LATE')
     expect(Date.parse(roundOne.sla_current!.closed_at!)).toBeGreaterThanOrEqual(dueAt)
 
-    await admin.goto('/workflow/sla')
-    await expect(admin.locator('.sla-config-state')).toContainText('Revision 1 · Đang bật')
-    await duration.getByLabel('Phút').fill('3')
-    await warning.getByLabel('Phút').fill('1')
-    await admin.getByLabel('Lý do thay đổi').fill('Increase the temporary acceptance round duration to three minutes.')
+    const slaConfigurationEndpoint = `${apiBase}/workflow/sla/configuration`
+    let releaseDelayedConfiguration: (() => void) | undefined
+    let finishDelayedConfiguration: (() => void) | undefined
+    let delayedConfigurationHeld = false
+    const delayedConfigurationRelease = new Promise<void>(resolve => { releaseDelayedConfiguration = resolve })
+    const delayedConfigurationFinished = new Promise<void>(resolve => { finishDelayedConfiguration = resolve })
+    await admin.route(slaConfigurationEndpoint, async route => {
+      if (!delayedConfigurationHeld && route.request().method() === 'GET') {
+        delayedConfigurationHeld = true
+        const response = await route.fetch()
+        await delayedConfigurationRelease
+        await route.fulfill({ response })
+        finishDelayedConfiguration?.()
+        return
+      }
+      await route.continue()
+    })
+    try {
+      await admin.goto('/workflow/sla')
+      await expect(admin.locator('.sla-config-state')).toContainText('Revision 1 · Đang bật')
+      await duration.getByLabel('Phút').fill('3')
+      await warning.getByLabel('Phút').fill('1')
+      await admin.getByLabel('Lý do thay đổi').fill('Increase the temporary acceptance round duration to three minutes.')
+      expect(delayedConfigurationHeld).toBe(true)
+      releaseDelayedConfiguration?.()
+      await delayedConfigurationFinished
+      await expect(duration.getByLabel('Phút')).toHaveValue('3')
+    } finally {
+      releaseDelayedConfiguration?.()
+      await admin.unroute(slaConfigurationEndpoint)
+    }
     await admin.getByRole('button', { name: 'Lưu revision' }).click()
     await expect(admin.getByRole('status')).toContainText('revision 2')
     const immutableRoundOne = await readPlan(admin, planId!)
