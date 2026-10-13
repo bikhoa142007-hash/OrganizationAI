@@ -1382,7 +1382,14 @@ def test_late_vlm_result_cannot_replace_a_run_recovered_during_inference(workflo
     assert run["visual_extraction"]["error_code"] == "RUN_INTERRUPTED"
     assert "Late output must not replace recovery." not in json.dumps(run)
     assert len(recovered["engine_decisions"]) == 1
-    assert recovered["history"][-1]["action"] == "AI_RECOVERY_REVIEW_ROUTED"
+    assert [event["action"] for event in recovered["history"][-2:]] == [
+        "AI_RECOVERY_REVIEW_ROUTED",
+        "AI_RESULT_IGNORED_STALE",
+    ]
+    ignored_result = recovered["history"][-1]
+    assert ignored_result["actor_type"] == "SYSTEM"
+    assert ignored_result["actor_id"] is None
+    assert (ignored_result["details"]["version"], ignored_result["details"]["round"]) == (1, 1)
 
 
 def test_rejection_needs_reason_and_resubmission_preserves_prior_version(workflow_client):

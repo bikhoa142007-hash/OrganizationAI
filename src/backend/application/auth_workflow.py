@@ -942,6 +942,29 @@ def _validate_submission(payload: dict[str, Any], correlation_id: str) -> None:
         _fail("VALIDATION_ERROR", "Budget must be a non-negative whole-number amount.", correlation_id)
 
 
+def _record_ignored_stale_result(
+    session: Session,
+    plan: AuthWorkflowPlan,
+    run: AuthWorkflowEvaluationRun,
+) -> None:
+    _record_event(
+        session,
+        plan_id=plan.id,
+        actor_id=None,
+        actor_type="SYSTEM",
+        action="AI_RESULT_IGNORED_STALE",
+        status_before=plan.status,
+        status_after=plan.status,
+        details={
+            "version": run.version_number,
+            "round": run.round_number,
+            "run_id": run.run_id,
+            "evaluation_id": run.evaluation_id,
+            "input_hash": run.input_hash,
+        },
+    )
+
+
 def evaluate_submission(
     session: Session,
     plan_id: UUID,
@@ -1123,6 +1146,8 @@ def evaluate_submission(
             if run is None:
                 _fail("NOT_FOUND", "Evaluation run not found.", correlation_id)
             if run.evaluation is not None:
+                _record_ignored_stale_result(session, plan, run)
+                session.flush()
                 return _plan_dict(session, plan)
             run.visual_extraction = pipeline_result.visual_extraction
 
@@ -1143,18 +1168,7 @@ def evaluate_submission(
                 run.failure_reason = "Late evaluation result was retained but not applied to a newer plan state."
                 run.result_disposition = "STALE"
                 run.completed_at = _now_datetime()
-                _record_event(
-                    session, plan_id=plan.id, actor_id=None, actor_type="SYSTEM",
-                    action="AI_RESULT_IGNORED_STALE", status_before=plan.status,
-                    status_after=plan.status,
-                    details={
-                        "version": run.version_number,
-                        "round": run.round_number,
-                        "run_id": run.run_id,
-                        "evaluation_id": run.evaluation_id,
-                        "input_hash": run.input_hash,
-                    },
-                )
+                _record_ignored_stale_result(session, plan, run)
                 session.flush()
                 return _plan_dict(session, plan)
 

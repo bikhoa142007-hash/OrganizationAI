@@ -556,6 +556,84 @@ def test_postgres_committed_submission_survives_provider_timeout(postgres_workfl
             AuthWorkflowNotification.plan_id == persisted.id,
         )) == 1
 
+
+def test_postgres_late_vlm_result_is_audited_after_recovery(postgres_workflow):
+    import httpx
+
+    from src.ai_pipeline.providers.openai_provider import LocalVLMProvider
+    from src.backend.application.auth_workflow_ai import unconfigured_approval_configuration
+
+    state = postgres_workflow
+    app = state["app"]
+    factory = state["factory"]
+    maker_client = state["maker_client"]
+    checker = state["checker"]
+    captured = []
+    plan_id = None
+
+    def finish_after_recovery(_request):
+        captured.append(True)
+        with factory.begin() as session:
+            run = session.scalar(select(AuthWorkflowEvaluationRun).where(
+                AuthWorkflowEvaluationRun.plan_id == UUID(plan_id),
+                AuthWorkflowEvaluationRun.round_number == 1,
+            ))
+            run.started_at = datetime.now(timezone.utc) - timedelta(minutes=3)
+        with factory() as recovery_session:
+            workflow.recover_stale_evaluations(
+                recovery_session,
+                "postgres-late-vlm-test",
+                age_seconds=120,
+                visible_plan_ids=(UUID(plan_id),),
+            )
+        extraction = {
+            "images": [{
+                "image_index": 0,
+                "status": "COMPLETE",
+                "ocr_text": "Late output must not replace recovery.",
+                "observations": [],
+                "uncertainties": [],
+            }],
+        }
+        return httpx.Response(200, json={
+            "model": "configured-model-id",
+            "choices": [{
+                "message": {"role": "assistant", "content": json.dumps(extraction)},
+                "finish_reason": "stop",
+            }],
+        })
+
+    provider = LocalVLMProvider(
+        model="configured-model-id",
+        model_version="late-test-model-revision",
+        base_url="http://localhost:8000/v1",
+        client=httpx.Client(transport=httpx.MockTransport(finish_after_recovery)),
+    )
+    app.state.auth_workflow_provider = provider
+    app.state.auth_workflow_configuration = unconfigured_approval_configuration(provider)
+
+    plan = _create_plan(maker_client, checker.id, "PostgreSQL late VLM result")
+    plan_id = plan["id"]
+    submitted = _upload_and_submit(maker_client, plan)
+
+    assert captured == [True]
+    assert submitted["processing_stage"] == "HUMAN_REVIEW_REQUIRED"
+    run = submitted["ai_evaluations"][0]
+    assert run["status"] == "FAILED"
+    assert run["evaluation"]["agent_errors"][0]["code"] == "RUN_INTERRUPTED"
+    assert run["visual_extraction"]["error_code"] == "RUN_INTERRUPTED"
+    assert "Late output must not replace recovery." not in json.dumps(run)
+    assert len(submitted["engine_decisions"]) == 1
+    assert [event["action"] for event in submitted["history"][-2:]] == [
+        "AI_RECOVERY_REVIEW_ROUTED",
+        "AI_RESULT_IGNORED_STALE",
+    ]
+    ignored_result = submitted["history"][-1]
+    assert ignored_result["actor_type"] == "SYSTEM"
+    assert ignored_result["actor_id"] is None
+    assert (ignored_result["details"]["version"], ignored_result["details"]["round"]) == (1, 1)
+
+
 def test_postgres_policy_conflict_persists_safe_attempt_provenance_and_routes_to_checker(postgres_workflow):
     state = postgres_workflow
     app = state["app"]
