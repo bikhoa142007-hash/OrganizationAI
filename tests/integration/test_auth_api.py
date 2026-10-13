@@ -14,7 +14,13 @@ from sqlalchemy.pool import StaticPool
 
 from src.backend.api.app import create_app
 from src.backend.api.dependencies import Settings
-from src.backend.api.auth import AuthenticatedPrincipal, get_auth_db, require_any_role, require_role
+from src.backend.api.auth import (
+    AuthenticatedPrincipal,
+    get_auth_db,
+    require_any_role,
+    require_permission,
+    require_role,
+)
 from src.backend.api.auth_rate_limit import AuthAttemptLimiter
 from src.backend.db.base import Base
 from src.backend.db.models.role import Role, RolePermission, UserRole
@@ -51,6 +57,10 @@ def auth_client(monkeypatch) -> Iterator[tuple[TestClient, sessionmaker[Session]
 
     @app.get("/test/checker-or-admin")
     def checker_or_admin(user: AuthenticatedPrincipal = Depends(require_any_role("CHECKER", "ADMIN"))):
+        return {"user_code": user.user_code}
+
+    @app.get("/test/permission")
+    def permission_only(user: AuthenticatedPrincipal = Depends(require_permission("TEST_PERMISSION"))):
         return {"user_code": user.user_code}
 
     with TestClient(app) as client:
@@ -122,6 +132,31 @@ def test_auth_responses_include_current_effective_role_permissions(auth_client):
     expected_permissions = ["ADMIN_SLA_MANAGE"]
     assert response.json()["user"]["effective_permissions"] == expected_permissions
     assert client.get("/api/auth/me").json()["user"]["effective_permissions"] == expected_permissions
+
+
+def test_require_permission_distinguishes_unauthenticated_forbidden_and_granted(auth_client):
+    client, factory = auth_client
+    maker = create_user(factory, user_code="USR-PERMISSION", email="permission@example.com")
+
+    unauthenticated = client.get("/test/permission")
+    assert unauthenticated.status_code == 401
+    assert unauthenticated.json()["code"] == "UNAUTHENTICATED"
+
+    assert client.post("/api/auth/login", json={
+        "identifier": maker.user_code, "password": "Local-demo-password-123",
+    }).status_code == 200
+    forbidden = client.get("/test/permission")
+    assert forbidden.status_code == 403
+    assert forbidden.json()["code"] == "FORBIDDEN"
+
+    with factory.begin() as session:
+        role = session.scalar(select(Role).where(Role.code == "MAKER"))
+        assert role is not None
+        session.add(RolePermission(role_id=role.id, permission_code="TEST_PERMISSION"))
+
+    granted = client.get("/test/permission")
+    assert granted.status_code == 200
+    assert granted.json() == {"user_code": maker.user_code}
 
 
 def test_public_auth_configuration_reports_registration_without_exposing_credentials(auth_client, monkeypatch):
