@@ -421,3 +421,44 @@ def test_custom_checker_permission_bundle_is_a_valid_replacement_and_cannot_be_r
     with factory() as session:
         with pytest.raises(ApplicationError, match="Reassign pending plans"):
             role_admin.replace_employee_roles(session, principal, replacement_id, "test", [])
+
+@pytest.mark.parametrize(
+    "operation",
+    ["list", "create", "update", "deactivate", "replace_assignment"],
+)
+def test_role_admin_service_permission_matrix_denies_maker(admin_db, operation):
+    factory, _admin_principal = admin_db
+    maker = SimpleNamespace(id=uuid4(), roles=("MAKER",), permissions=())
+    with factory() as session:
+        with pytest.raises(ApplicationError) as error:
+            if operation == "list":
+                role_admin.list_roles(session, maker, "permission-matrix-test")
+            elif operation == "create":
+                role_admin.create_role(
+                    session,
+                    maker,
+                    "permission-matrix-test",
+                    "CUSTOM_DENIED_ROLE",
+                    "Denied role",
+                    None,
+                    ["MARKETING_PLAN_READ"],
+                )
+            elif operation == "update":
+                role_admin.update_role(
+                    session,
+                    maker,
+                    uuid4(),
+                    "permission-matrix-test",
+                    name="Denied update",
+                    description=None,
+                    permissions=[],
+                )
+            elif operation == "deactivate":
+                role_admin.deactivate_role(
+                    session, maker, uuid4(), "permission-matrix-test",
+                )
+            else:
+                role_admin.replace_employee_roles(
+                    session, maker, uuid4(), "permission-matrix-test", [],
+                )
+        assert error.value.code == "FORBIDDEN"

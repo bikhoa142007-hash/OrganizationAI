@@ -3,7 +3,7 @@ from __future__ import annotations
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 from threading import Barrier
-from uuid import uuid4
+from uuid import UUID, uuid4
 import os
 
 from fastapi import FastAPI, Request
@@ -15,21 +15,29 @@ from sqlalchemy.orm import sessionmaker
 
 from src.backend.api import approval_configuration as configuration_api
 from src.backend.api.auth import AuthenticatedPrincipal, get_auth_db, get_current_principal
-from src.backend.application import approval_configuration
+from src.backend.application import approval_configuration, role_admin
+from scripts.postgres_test_target import verify_runner_provisioned_database
 from src.backend.application.workflow import ApplicationError
 from src.backend.db.base import Base
 from src.backend.db.models.approval_configuration import AuthWorkflowRoundConfigurationSnapshot
 from src.backend.db.models.auth_workflow import AuthWorkflowPlan, AuthWorkflowVersion
 from src.backend.db.models.employee import EmployeeProfile
-from src.backend.db.models import Role, User, UserRole
+from src.backend.db.models import AdminAuditEvent, Role, RolePermission, User, UserRole
 
 
 @pytest.fixture
 def configuration_postgres():
-    """Use an explicitly named, run-specific PostgreSQL target; never inherit DATABASE_URL."""
-    url = os.environ.get("SCOPE1_B_POSTGRES_TEST_URL", "").strip()
-    if not url.startswith("postgresql+psycopg://"):
-        pytest.skip("Set SCOPE1_B_POSTGRES_TEST_URL to a disposable PostgreSQL database for this run.")
+    """Use only a run-scoped PostgreSQL target verified before any schema writes."""
+    explicit_url = os.environ.get("SCOPE1_B_POSTGRES_TEST_URL", "").strip()
+    target_environment = os.environ.copy()
+    if explicit_url:
+        target_environment["DATABASE_URL"] = explicit_url
+    if not target_environment.get("DATABASE_URL", "").strip():
+        pytest.skip("A verified run-scoped PostgreSQL test target is required.")
+    try:
+        url = verify_runner_provisioned_database(target_environment)
+    except RuntimeError as error:
+        pytest.fail(str(error), pytrace=False)
     schema = f"scope1_b_{uuid4().hex[:20]}"
     base_engine = create_engine(url, pool_pre_ping=True)
     with base_engine.begin() as connection:
@@ -229,3 +237,208 @@ def test_round_version_and_configuration_snapshot_rollback_together(configuratio
             AuthWorkflowRoundConfigurationSnapshot.plan_id == plan_id,
             AuthWorkflowRoundConfigurationSnapshot.approval_round == 1,
         )) is None
+
+def _linked_employee(factory, prefix: str) -> tuple[UUID, UUID]:
+    suffix = uuid4().hex[:12]
+    user_code = f"{prefix}-{suffix}"
+    with factory.begin() as session:
+        user = User(
+            user_code=user_code,
+            username=f"{prefix.lower()}_{suffix}",
+            email=f"{prefix.lower()}_{suffix}@example.test",
+            password_hash="synthetic-test-only",
+            display_name=f"Synthetic {prefix}",
+            status="ACTIVE",
+            employment_status="ACTIVE",
+            activation_pending=False,
+        )
+        session.add(user)
+        session.flush()
+        profile = EmployeeProfile(
+            user_code=user_code,
+            display_name=user.display_name,
+            email=user.email,
+            employment_status="ACTIVE",
+            user_id=user.id,
+        )
+        session.add(profile)
+        session.flush()
+        return profile.id, user.id
+
+
+def test_postgres_custom_role_crud_assignment_and_audit(configuration_postgres):
+    _engine, factory = configuration_postgres
+    admin = _admin(factory)
+    principal = _principal(admin, ("ADMIN",))
+    profile_id, user_id = _linked_employee(factory, "GOV-ROLE")
+    checker_permissions = [
+        "MARKETING_REVIEW_ASSIGNED",
+        "MARKETING_APPROVE",
+        "MARKETING_REJECT",
+    ]
+
+    with factory() as session:
+        created = role_admin.create_role(
+            session,
+            principal,
+            "synthetic-role-test",
+            "CUSTOM_GOV_REVIEW",
+            "Synthetic Review",
+            "Synthetic acceptance role.",
+            checker_permissions,
+        )
+        role_id = UUID(created["id"])
+    assert created["is_builtin"] is False
+    assert set(created["permissions"]) == set(checker_permissions)
+
+    with factory() as session:
+        updated = role_admin.update_role(
+            session,
+            principal,
+            role_id,
+            "synthetic-role-test",
+            name="Synthetic Checker",
+            description="Updated synthetic acceptance role.",
+            permissions=checker_permissions + ["MARKETING_HISTORY_READ"],
+        )
+    assert updated["name"] == "Synthetic Checker"
+    assert set(updated["permissions"]) == set(checker_permissions + ["MARKETING_HISTORY_READ"])
+
+    with factory() as session:
+        assignment = role_admin.replace_employee_roles(
+            session,
+            principal,
+            profile_id,
+            "synthetic-role-test",
+            ["CUSTOM_GOV_REVIEW"],
+        )
+    assert assignment == {
+        "employee_id": str(profile_id),
+        "roles": ["CUSTOM_GOV_REVIEW"],
+    }
+
+    with factory() as session:
+        assert session.scalar(
+            select(User.id).where(
+                User.id == user_id,
+                role_admin.effective_role_filter("CHECKER"),
+            )
+        ) == user_id
+        persisted = session.get(Role, role_id)
+        assert persisted is not None
+        assert persisted.name == "Synthetic Checker"
+        assert {
+            link.permission_code for link in persisted.permissions
+        } == set(checker_permissions + ["MARKETING_HISTORY_READ"])
+        actions = session.scalars(
+            select(AdminAuditEvent.action)
+            .where(AdminAuditEvent.actor_id == admin.id)
+            .order_by(AdminAuditEvent.created_at, AdminAuditEvent.id)
+        ).all()
+        assert actions == [
+            "CUSTOM_ROLE_CREATED",
+            "CUSTOM_ROLE_UPDATED",
+            "EMPLOYEE_ROLES_REPLACED",
+        ]
+
+
+def test_postgres_role_admin_keeps_admin_grants_self_assignment_and_builtins_locked(
+    configuration_postgres,
+):
+    _engine, factory = configuration_postgres
+    admin = _admin(factory)
+    principal = _principal(admin, ("ADMIN",))
+    target_profile_id, _target_user_id = _linked_employee(factory, "GOV-TARGET")
+    suffix = uuid4().hex[:12]
+    with factory.begin() as session:
+        self_profile = EmployeeProfile(
+            user_code=f"GOV-SELF-{suffix}",
+            display_name="Synthetic admin profile",
+            employment_status="ACTIVE",
+            user_id=admin.id,
+        )
+        session.add(self_profile)
+        session.flush()
+        self_profile_id = self_profile.id
+
+    with factory() as session:
+        custom = role_admin.create_role(
+            session,
+            principal,
+            "synthetic-role-test",
+            "CUSTOM_GOV_SAFE",
+            "Synthetic safe role",
+            None,
+            ["MARKETING_PLAN_READ"],
+        )
+        safe_role_id = UUID(custom["id"])
+        with pytest.raises(ApplicationError, match="ADMIN permissions are reserved"):
+            role_admin.create_role(
+                session,
+                principal,
+                "synthetic-role-test",
+                "CUSTOM_GOV_ADMIN",
+                "Synthetic admin role",
+                None,
+                ["ADMIN_EMPLOYEE_MANAGE"],
+            )
+        with pytest.raises(ApplicationError, match="ADMIN permissions are reserved"):
+            role_admin.update_role(
+                session,
+                principal,
+                safe_role_id,
+                "synthetic-role-test",
+                name="Unsafe role",
+                description=None,
+                permissions=["ADMIN_ROLE_MANAGE"],
+            )
+        with pytest.raises(ApplicationError, match="Built-in roles are immutable"):
+            role_admin.update_role(
+                session,
+                principal,
+                UUID(str(session.scalar(select(Role.id).where(Role.code == "MAKER")))),
+                "synthetic-role-test",
+                name="Changed built-in",
+                description=None,
+                permissions=[],
+            )
+        with pytest.raises(ApplicationError, match="Built-in roles cannot be deactivated"):
+            role_admin.deactivate_role(
+                session,
+                principal,
+                UUID(str(session.scalar(select(Role.id).where(Role.code == "MAKER")))),
+                "synthetic-role-test",
+            )
+        with pytest.raises(ApplicationError, match="ADMIN role assignment is reserved"):
+            role_admin.replace_employee_roles(
+                session, principal, target_profile_id, "synthetic-role-test", ["ADMIN"],
+            )
+        with pytest.raises(ApplicationError, match="cannot assign or revoke roles for themselves"):
+            role_admin.replace_employee_roles(
+                session, principal, self_profile_id, "synthetic-role-test", ["CUSTOM_GOV_SAFE"],
+            )
+
+    with factory.begin() as session:
+        legacy_role = Role(
+            code="CUSTOM_GOV_LEGACY_ADMIN",
+            name="Synthetic legacy owner permission",
+            is_builtin=False,
+            status="ACTIVE",
+        )
+        session.add(legacy_role)
+        session.flush()
+        session.add(RolePermission(
+            role_id=legacy_role.id,
+            permission_code="ADMIN_EMPLOYEE_MANAGE",
+        ))
+        legacy_role_code = legacy_role.code
+
+    with factory() as session:
+        with pytest.raises(ApplicationError, match="ADMIN permissions are reserved"):
+            role_admin.replace_employee_roles(
+                session,
+                principal,
+                target_profile_id,
+                "synthetic-role-test",
+                [legacy_role_code],
+            )
