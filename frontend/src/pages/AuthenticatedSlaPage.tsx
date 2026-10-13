@@ -1,5 +1,5 @@
 import { Clock3, RefreshCw, Save } from 'lucide-react'
-import { useCallback, useEffect, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { AuthApiError } from '../services/auth'
 import { authWorkflowService } from '../services/authWorkflow'
 import type { SlaConfiguration, SlaConfigurationHistory } from '../types/authWorkflow'
@@ -20,8 +20,10 @@ export function AuthenticatedSlaPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  const loadSequence = useRef(0)
 
   const load = useCallback(async (nextOffset = 0) => {
+    const requestSequence = ++loadSequence.current
     setLoading(true)
     setError('')
     try {
@@ -29,6 +31,7 @@ export function AuthenticatedSlaPage() {
         authWorkflowService.getSlaConfiguration(),
         authWorkflowService.listSlaConfigurationHistory(nextOffset, HISTORY_PAGE_SIZE),
       ])
+      if (requestSequence !== loadSequence.current) return
       setConfiguration(nextConfiguration)
       setHistory(nextHistory)
       setOffset(nextOffset)
@@ -36,9 +39,9 @@ export function AuthenticatedSlaPage() {
       setDuration(toParts(nextConfiguration.duration_minutes))
       setWarning(toParts(nextConfiguration.warning_before_minutes))
     } catch (failure) {
-      setError(slaError(failure))
+      if (requestSequence === loadSequence.current) setError(slaError(failure))
     } finally {
-      setLoading(false)
+      if (requestSequence === loadSequence.current) setLoading(false)
     }
   }, [])
 
