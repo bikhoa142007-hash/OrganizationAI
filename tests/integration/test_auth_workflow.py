@@ -19,6 +19,7 @@ from src.ai_pipeline.task_providers import TaskModelSettings
 from src.backend.api.app import create_app
 from src.backend.api.auth import get_auth_db
 from src.backend.api.dependencies import Settings
+from src.backend.application.role_admin import BUILTIN_PERMISSIONS
 from src.backend.application import auth_workflow as auth_workflow_application
 from src.backend.db.base import Base
 from src.backend.db.models import (
@@ -67,7 +68,13 @@ def workflow_client(monkeypatch) -> Iterator[tuple[TestClient, sessionmaker[Sess
     factory = sessionmaker(engine, expire_on_commit=False)
     with factory.begin() as session:
         for code in ("MAKER", "CHECKER", "ADMIN"):
-            session.add(Role(id=uuid4(), code=code, name=code.title(), description=None))
+            role = Role(id=uuid4(), code=code, name=code.title(), description=None)
+            session.add(role)
+            session.flush()
+            session.add_all(
+                RolePermission(role_id=role.id, permission_code=permission_code)
+                for permission_code in BUILTIN_PERMISSIONS[code]
+            )
     app = create_app(Settings(app_env="demo", cors_origins=("http://localhost:5173",)))
 
     def override_db() -> Iterator[Session]:
@@ -104,6 +111,112 @@ def create_user(factory, username: str, roles: tuple[str, ...]) -> User:
         session.flush()
         session.expunge(user)
     return user
+
+
+def assign_role_permissions(factory, role_code: str, permission_codes: tuple[str, ...]) -> None:
+    with factory.begin() as session:
+        role = session.scalar(select(Role).where(Role.code == role_code))
+        assert role is not None
+        existing = session.scalars(
+            select(RolePermission).where(RolePermission.role_id == role.id)
+        ).all()
+        for permission in existing:
+            session.delete(permission)
+        session.flush()
+        session.add_all(
+            RolePermission(role_id=role.id, permission_code=permission_code)
+            for permission_code in permission_codes
+        )
+
+
+def test_workflow_and_admin_routes_enforce_catalog_permissions(workflow_client):
+    client, factory, app = workflow_client
+    maker = create_user(factory, "permission.maker", ("MAKER",))
+    checker = create_user(factory, "permission.checker", ("CHECKER",))
+    admin = create_user(factory, "permission.admin", ("ADMIN",))
+
+    assign_role_permissions(factory, "MAKER", ())
+    login(client, maker)
+    assert client.get("/api/workflow/plans").status_code == 403
+    draft_body = {"checker_user_id": str(checker.id), "payload": {"title": "Permission test"}}
+    assert client.post("/api/workflow/plans", json=draft_body).status_code == 403
+
+    assign_role_permissions(
+        factory, "MAKER", ("MARKETING_PLAN_READ", "MARKETING_PLAN_CREATE")
+    )
+    assert client.get("/api/workflow/plans").status_code == 200
+    draft = client.post("/api/workflow/plans", json=draft_body)
+    assert draft.status_code == 201, draft.text
+
+    # Plan detail includes workflow history, so both catalog permissions are required.
+    assign_role_permissions(factory, "MAKER", ("MARKETING_PLAN_READ",))
+    assert client.get(f"/api/workflow/plans/{draft.json()['id']}").status_code == 403
+    assert client.get(
+        f"/api/workflow/plans/{draft.json()['id']}/attachments/{uuid4()}"
+    ).status_code == 404
+    assign_role_permissions(
+        factory, "MAKER", ("MARKETING_PLAN_READ", "MARKETING_HISTORY_READ")
+    )
+    assert client.get(f"/api/workflow/plans/{draft.json()['id']}").status_code == 200
+    assert client.put(f"/api/workflow/plans/{draft.json()['id']}", json={
+        "expected_revision": draft.json()["revision"],
+        "payload": draft.json()["payload"],
+    }).status_code == 403
+    assert client.post(
+        f"/api/workflow/plans/{draft.json()['id']}/attachments",
+        data={"expected_revision": draft.json()["revision"]},
+        files={"file": ("campaign.png", PNG, "image/png")},
+    ).status_code == 403
+    assert client.post(
+        f"/api/workflow/plans/{draft.json()['id']}/submit",
+        json={"expected_revision": draft.json()["revision"]},
+    ).status_code == 403
+
+    checker_client = authenticated_client(app, checker)
+    assign_role_permissions(factory, "CHECKER", ())
+    assert checker_client.get("/api/workflow/reviews").status_code == 403
+    assign_role_permissions(factory, "CHECKER", ("MARKETING_REVIEW_ASSIGNED",))
+    assert checker_client.get("/api/workflow/reviews").status_code == 200
+    decision_url = f"/api/workflow/plans/{uuid4()}/rounds/1/decision"
+    assert checker_client.post(decision_url, json={"action": "APPROVED"}).status_code == 403
+    assign_role_permissions(
+        factory, "CHECKER", ("MARKETING_REVIEW_ASSIGNED", "MARKETING_APPROVE")
+    )
+    assert checker_client.post(decision_url, json={"action": "APPROVED"}).status_code == 404
+    assert checker_client.post(
+        decision_url, json={"action": "REJECTED", "reason": "No reject permission"}
+    ).status_code == 403
+
+    admin_client = authenticated_client(app, admin)
+    assign_role_permissions(factory, "ADMIN", ("MARKETING_PLAN_READ",))
+    assert admin_client.get("/api/workflow/plans").status_code == 403
+    assign_role_permissions(
+        factory, "ADMIN", ("MARKETING_PLAN_READ", "MARKETING_PLAN_VIEW_ALL")
+    )
+    assert admin_client.get("/api/workflow/plans").status_code == 200
+
+    assign_role_permissions(
+        factory, "ADMIN", ("MARKETING_PLAN_READ", "MARKETING_PLAN_VIEW_ALL")
+    )
+    assert admin_client.get("/api/workflow/employees").status_code == 403
+    assert admin_client.get("/api/workflow/roles").status_code == 403
+    assert admin_client.get("/api/workflow/audit").status_code == 403
+    assert admin_client.get("/api/workflow/admin-audit").status_code == 403
+    assert admin_client.get("/api/workflow/sla/configuration").status_code == 403
+
+    assign_role_permissions(factory, "ADMIN", (
+        "MARKETING_PLAN_READ", "MARKETING_PLAN_VIEW_ALL", "ADMIN_EMPLOYEE_MANAGE",
+        "ADMIN_ROLE_MANAGE", "ADMIN_AUDIT_READ",
+    ))
+    assert admin_client.get("/api/workflow/employees").status_code == 200
+    assert admin_client.get("/api/workflow/roles").status_code == 200
+    assert admin_client.get("/api/workflow/audit").status_code == 200
+    assert admin_client.get("/api/workflow/admin-audit").status_code == 200
+    assign_role_permissions(factory, "ADMIN", (
+        "MARKETING_PLAN_READ", "MARKETING_PLAN_VIEW_ALL", "ADMIN_EMPLOYEE_MANAGE",
+        "ADMIN_ROLE_MANAGE", "ADMIN_AUDIT_READ", "ADMIN_SLA_MANAGE",
+    ))
+    assert admin_client.get("/api/workflow/sla/configuration").status_code == 200
 
 
 def test_dashboard_notes_and_retry_routers_are_registered_and_role_scoped(workflow_client):
@@ -414,9 +527,6 @@ def test_admin_configures_sla_and_submission_captures_immutable_round_snapshot(w
     maker = create_user(factory, "sla.maker", ("MAKER",))
     checker = create_user(factory, "sla.checker", ("CHECKER",))
     admin = create_user(factory, "sla.admin", ("ADMIN",))
-    with factory.begin() as session:
-        admin_role = session.scalar(select(Role).where(Role.code == "ADMIN"))
-        session.add(RolePermission(role_id=admin_role.id, permission_code="ADMIN_SLA_MANAGE"))
 
     admin_client = authenticated_client(app, admin)
     maker_client = authenticated_client(app, maker)
