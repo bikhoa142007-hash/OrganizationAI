@@ -159,6 +159,12 @@ def test_require_permission_distinguishes_unauthenticated_forbidden_and_granted(
     assert granted.json() == {"user_code": maker.user_code}
 
 
+@pytest.mark.parametrize("permission_code", [None, 123, "", "permission "])
+def test_require_permission_rejects_invalid_identifiers(permission_code):
+    with pytest.raises(ValueError, match="permission_code must be"):
+        require_permission(permission_code)
+
+
 def test_public_auth_configuration_reports_registration_without_exposing_credentials(auth_client, monkeypatch):
     client, _ = auth_client
 

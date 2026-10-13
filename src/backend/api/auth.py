@@ -359,7 +359,11 @@ def require_any_role(*roles: str):
 
 def require_permission(permission_code: str):
     """Require a catalog permission; callers must still enforce record-level scope."""
-    if not permission_code or permission_code.strip() != permission_code:
+    if (
+        not isinstance(permission_code, str)
+        or not permission_code
+        or permission_code.strip() != permission_code
+    ):
         raise ValueError("permission_code must be a non-empty, trimmed permission identifier.")
 
     def dependency(
