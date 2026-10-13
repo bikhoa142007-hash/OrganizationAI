@@ -12,6 +12,8 @@ from sqlalchemy.orm import Session, selectinload
 
 from src.backend.application.workflow import ApplicationError
 from src.backend.application.auth_sla import notify_reassigned_checker
+from src.backend.application.approval_configuration import lock_configuration_registry
+from src.backend.application.checker_assignment_configuration import resolve_checker_assignment
 from src.backend.db.models import (
     AdminAuditEvent, AuthManagementToken, AuthWorkflowEvent, AuthWorkflowPlan,
     EmployeeProfile, Role, RolePermission, User, UserRole,
@@ -246,17 +248,19 @@ def update_employee(session: Session, principal: AuthenticatedPrincipal, employe
         raise ApplicationError("CONFLICT", "Employee code, email or phone is already in use.", correlation_id) from exc
 
 
-def _active_checker(session: Session, checker_id: UUID) -> User | None:
-    return session.scalar(select(User).where(
-        User.id == checker_id, User.status == "ACTIVE", User.activation_pending.is_(False),
-        User.employment_status == "ACTIVE", effective_role_filter("CHECKER"),
-    ).with_for_update())
-
-
 def deactivate_employee(session: Session, principal: AuthenticatedPrincipal, employee_id: UUID,
                         correlation_id: str, reassignments: dict[UUID, UUID]) -> dict:
     _require_admin(principal, correlation_id)
+    if reassignments:
+        raise ApplicationError(
+            "VALIDATION_ERROR",
+            "Pending Checker reassignment is controlled by the active department configuration.",
+            correlation_id,
+        )
     with _write_transaction(session):
+        # Keep the lock order consistent with configuration writes: registry first,
+        # then employee and plan rows. This avoids a config/deactivation deadlock.
+        lock_configuration_registry(session)
         profile = session.scalar(select(EmployeeProfile).where(EmployeeProfile.id == employee_id).with_for_update())
         if profile is None:
             raise ApplicationError("NOT_FOUND", "Employee not found.", correlation_id)
@@ -273,25 +277,41 @@ def deactivate_employee(session: Session, principal: AuthenticatedPrincipal, emp
                 AuthWorkflowPlan.checker_id == profile.user_id,
                 AuthWorkflowPlan.status == "PENDING_APPROVAL",
             ).order_by(AuthWorkflowPlan.id).with_for_update()).all()
-        required_ids = {str(plan.id) for plan in pending}
-        if set(map(str, reassignments)) != required_ids:
-            raise ApplicationError("CONFLICT", "Provide one eligible replacement Checker for every pending plan.", correlation_id)
         now = datetime.now(timezone.utc)
         for plan in pending:
-            replacement_id = reassignments[plan.id]
-            replacement = _active_checker(session, replacement_id)
-            if replacement is None or replacement.id == plan.maker_id or replacement.id == profile.user_id:
-                raise ApplicationError("VALIDATION_ERROR", "Replacement must be an active Checker distinct from the Maker and departing Checker.", correlation_id)
+            assignment = resolve_checker_assignment(
+                session,
+                department_id=plan.payload.get("department"),
+                maker_id=plan.maker_id,
+                selected_checker_id=None,
+                effective_at=now,
+                lock_eligible_checker=True,
+            )
+            replacement_id = assignment.checker_id
+            if not assignment.eligible or replacement_id is None or replacement_id == profile.user_id:
+                raise ApplicationError(
+                    "CONFLICT",
+                    "No eligible configured default Checker is available for every pending plan; deactivation was not applied.",
+                    correlation_id,
+                )
             previous_id = plan.checker_id
-            plan.checker_id = replacement.id
+            plan.checker_id = replacement_id
+            plan.revision += 1
             sequence = (session.scalar(select(func.max(AuthWorkflowEvent.sequence_number)).where(
                 AuthWorkflowEvent.plan_id == plan.id)) or 0) + 1
             session.add(AuthWorkflowEvent(
                 plan_id=plan.id, actor_id=principal.id, actor_type="HUMAN",
                 sequence_number=sequence, action="CHECKER_REASSIGNED",
                 status_before=plan.status, status_after=plan.status,
-                details={"previous_checker_id": str(previous_id), "new_checker_id": str(replacement.id),
-                         "reason": "Employee deactivation with explicit reassignment"},
+                details={
+                    "previous_checker_id": str(previous_id),
+                    "new_checker_id": str(replacement_id),
+                    "reason": "Employee deactivation using the active department default",
+                    "assignment_configuration_revision_id": assignment.configuration_revision_id,
+                    "assignment_configuration_revision": assignment.configuration_revision,
+                    "assignment_configuration_hash": assignment.configuration_hash,
+                    "assignment_source": assignment.source,
+                },
             ))
             session.flush()
             notify_reassigned_checker(session, plan=plan, now=now)

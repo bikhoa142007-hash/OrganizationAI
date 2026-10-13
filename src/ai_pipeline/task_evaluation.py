@@ -1,6 +1,6 @@
 """Versioned configuration and strict output validation for Auth workflow agents."""
 
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal, InvalidOperation, localcontext
 import json
 import math
 from collections.abc import Mapping
@@ -18,6 +18,23 @@ MEDIA_PROMPT_VERSION = "media-compliance-prompt-v5"
 MEDIA_SCHEMA_VERSION = "media-compliance-schema-v3"
 STRATEGY_PROMPT_VERSION = "strategy-evaluation-prompt-v5"
 STRATEGY_SCHEMA_VERSION = "strategy-evaluation-schema-v5"
+
+
+class PolicyOutputConflictError(ValueError):
+    """Schema-valid model claims contradict a deterministic policy or rubric."""
+
+    code = "POLICY_OUTPUT_CONFLICT"
+
+    def __init__(self, message, *, reported_total=None, computed_total=None):
+        super().__init__(message)
+        self.reported_total = reported_total
+        self.computed_total = computed_total
+
+
+class EvaluatorRubricUnsupportedError(ValueError):
+    """The evaluator only supports the baseline StrategyRubric contract."""
+
+    code = "EVALUATOR_RUBRIC_UNSUPPORTED"
 
 MEDIA_OUTPUT_SCHEMA = {
     "type": "object", "additionalProperties": False,
@@ -159,6 +176,7 @@ def task_messages(task: str, plan_payload: Mapping, evidence: list[dict], *, pol
     elif task == "STRATEGY_EVALUATION":
         if rubric is None:
             raise ValueError("Strategy rubric is required for Strategy Evaluation.")
+        strategy_rubric_weights(rubric)
         system = STRATEGY_SYSTEM_PROMPT
         content = {"rubric": rubric.to_dict(), "plan": dict(plan_payload), "evidence": evidence}
     else:
@@ -195,6 +213,37 @@ def media_policy_snapshot(policy: MediaCompliancePolicy | None) -> dict | None:
 
 def strategy_rubric_snapshot(rubric: StrategyRubric | None) -> dict | None:
     return rubric.to_dict() if rubric is not None else None
+
+
+def strategy_rubric_weights(rubric) -> dict[str, int]:
+    """Return baseline weights; custom rubric weights are not supported yet."""
+    expected = {criterion_id: weight for criterion_id, _label, weight in STRATEGY_CRITERIA}
+    criteria = _read_member(rubric, "criteria")
+    if not isinstance(criteria, (list, tuple)):
+        raise EvaluatorRubricUnsupportedError(
+            "The configured Strategy rubric is not supported by this evaluator."
+        )
+    configured = {}
+    for item in criteria:
+        criterion_id = _read_member(item, "criterion_id")
+        weight = _read_member(item, "weight")
+        if (not isinstance(criterion_id, str) or not criterion_id.strip()
+                or type(weight) is not int or weight <= 0 or criterion_id in configured):
+            raise EvaluatorRubricUnsupportedError(
+                "The configured Strategy rubric is not supported by this evaluator."
+            )
+        configured[criterion_id] = weight
+    if configured != expected:
+        raise EvaluatorRubricUnsupportedError(
+            "The configured Strategy rubric is not supported by this evaluator."
+        )
+    return configured
+
+
+def _read_member(value, name, default=None):
+    if isinstance(value, Mapping):
+        return value.get(name, default)
+    return getattr(value, name, default)
 
 
 def validate_media_output(
@@ -248,9 +297,9 @@ def validate_media_output(
                 "PASS"
             )
             if result != expected_result:
-                raise ValueError("Media result conflicts with the configured literal rule.")
+                raise PolicyOutputConflictError("Media result conflicts with the configured literal rule.")
             if literal_matches and not (set(refs) & literal_matches):
-                raise ValueError("Media literal rule result must cite matching OCR evidence.")
+                raise PolicyOutputConflictError("Media literal rule result must cite matching OCR evidence.")
         results.append({
             "rule_id": rule_id,
             "result": result,
@@ -271,16 +320,18 @@ def validate_media_output(
         finding_id = _text(item["finding_id"], "Media finding ID", maximum=160)
         rule_id = _text(item["rule_id"], "Media finding policy reference", maximum=160)
         rule = configured_rules.get(rule_id)
-        if rule is None or item["severity"] != rule.severity:
-            raise ValueError("Media finding does not match a configured policy rule.")
+        if rule is None:
+            raise ValueError("Media finding references an unknown policy rule.")
+        if item["severity"] != rule.severity:
+            raise PolicyOutputConflictError("Media finding severity conflicts with its configured policy.")
         if results_by_id[rule_id]["result"] != "FAIL":
-            raise ValueError("Media finding conflicts with its policy rule result.")
+            raise PolicyOutputConflictError("Media finding conflicts with its policy rule result.")
         refs = _references(item["evidence_refs"], valid_evidence, "Media finding evidence reference")
         if not refs:
             raise ValueError("Media finding requires supporting evidence.")
         matching_refs = literal_matches_by_rule.get(rule_id, set())
         if matching_refs and not (set(refs) & matching_refs):
-            raise ValueError("Media literal finding must cite matching OCR evidence.")
+            raise PolicyOutputConflictError("Media literal finding must cite matching OCR evidence.")
         findings.append({
             "finding_id": finding_id,
             "severity": rule.severity,
@@ -292,7 +343,7 @@ def validate_media_output(
     finding_rules = {item["rule_id"] for item in findings}
     if any(item["severity"] == "HARD_VIOLATION" and item["result"] == "FAIL"
            and item["rule_id"] not in finding_rules for item in results):
-        raise ValueError("A hard policy violation must include a finding.")
+        raise PolicyOutputConflictError("A hard policy violation must include a finding.")
 
     conflicts = []
     if not isinstance(raw["evidence_conflicts"], list):
@@ -324,7 +375,7 @@ def validate_media_output(
     ) for item in results)
     expected_outcome = "REVIEW_REQUIRED" if review_required else "PASS"
     if raw["outcome"] != expected_outcome:
-        raise ValueError("Media outcome conflicts with policy findings or evidence.")
+        raise PolicyOutputConflictError("Media outcome conflicts with policy findings or evidence.")
     return {
         "policy_id": policy.policy_id,
         "policy_version": policy.policy_version,
@@ -340,6 +391,7 @@ def validate_media_output(
 
 def validate_strategy_output(raw, rubric: StrategyRubric, evidence_ids) -> dict:
     """Validate every BA criterion and verify the model total with Decimal arithmetic."""
+    configured_weights = strategy_rubric_weights(rubric)
     expected = {
         "rubric_id", "rubric_version", "total_score", "confidence", "criterion_scores",
         "assumptions", "missing_facts", "critical_gaps", "evidence_conflicts", "reason",
@@ -354,9 +406,8 @@ def validate_strategy_output(raw, rubric: StrategyRubric, evidence_ids) -> dict:
     valid_evidence = _evidence_map(evidence_ids)
     if not isinstance(raw["criterion_scores"], list):
         raise ValueError("Strategy criterion scores must be an array.")
-    configured_weights = {item.criterion_id: item.weight for item in rubric.criteria}
     scores = []
-    decimal_total = Decimal(0)
+    decimal_scores = []
     for item in raw["criterion_scores"]:
         _exact_object(item, {"criterion_id", "score", "rationale", "evidence_refs"}, "Strategy criterion")
         criterion_id = _text(item["criterion_id"], "Strategy criterion reference", maximum=160)
@@ -369,7 +420,7 @@ def validate_strategy_output(raw, rubric: StrategyRubric, evidence_ids) -> dict:
         refs = _references(item["evidence_refs"], valid_evidence, "Strategy evidence reference")
         if not refs:
             raise ValueError("Strategy criterion is missing supporting evidence.")
-        decimal_total += score * Decimal(weight) / Decimal(100)
+        decimal_scores.append((score, weight))
         scores.append({
             "criterion_id": criterion_id,
             "weight": weight,
@@ -381,9 +432,25 @@ def validate_strategy_output(raw, rubric: StrategyRubric, evidence_ids) -> dict:
     distinct([item["criterion_id"] for item in scores])
     if {item["criterion_id"] for item in scores} != set(configured_weights):
         raise ValueError("Strategy output is missing or duplicates a configured criterion.")
+    precision = max(
+        28,
+        max((len(score.as_tuple().digits) for score, _weight in decimal_scores), default=1) + 4,
+    )
+    with localcontext() as context:
+        context.prec = precision
+        decimal_total = sum(
+            (score * Decimal(weight) / Decimal(100) for score, weight in decimal_scores),
+            Decimal(0),
+        )
     reported_total = _decimal(raw["total_score"], "Strategy total score")
-    if not 0 <= reported_total <= 100 or reported_total != decimal_total:
-        raise ValueError("Strategy total does not equal the configured Decimal weighted score.")
+    if not 0 <= reported_total <= 100:
+        raise ValueError("Strategy total score is outside [0, 100].")
+    if reported_total != decimal_total:
+        raise PolicyOutputConflictError(
+            "Strategy total does not equal the configured Decimal weighted score.",
+            reported_total=reported_total,
+            computed_total=decimal_total,
+        )
 
     conflicts = []
     if not isinstance(raw["evidence_conflicts"], list):
@@ -402,6 +469,8 @@ def validate_strategy_output(raw, rubric: StrategyRubric, evidence_ids) -> dict:
     return {
         "rubric_id": rubric.rubric_id,
         "rubric_version": rubric.rubric_version,
+        "reported_total": str(reported_total),
+        "computed_total": str(decimal_total),
         "feasibility_score": float(decimal_total),
         "confidence": float(confidence),
         "criterion_scores": scores,
@@ -464,7 +533,7 @@ def _text(value, label, *, maximum):
 
 
 def _decimal(value, label):
-    if type(value) not in (int, float, str):
+    if type(value) not in (int, float, str, Decimal):
         raise ValueError(f"{label} must be a finite number.")
     try:
         result = Decimal(str(value))

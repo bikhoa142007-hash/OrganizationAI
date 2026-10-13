@@ -1,4 +1,5 @@
 from types import SimpleNamespace
+from datetime import datetime, timedelta, timezone
 from uuid import UUID, uuid4
 import hashlib
 
@@ -7,6 +8,7 @@ from sqlalchemy import create_engine, func, select
 from sqlalchemy.orm import Session, sessionmaker
 
 from src.backend.application import auth_workflow, employee_admin, role_admin
+from src.backend.application import approval_configuration
 from src.backend.api.auth import _user_roles
 from src.backend.application.workflow import ApplicationError
 from src.backend.db.base import Base
@@ -14,6 +16,7 @@ from src.backend.db.models import (
     AdminAuditEvent, AuthManagementToken, AuthWorkflowEvent, AuthWorkflowPlan,
     EmployeeProfile, Role, RolePermission, User, UserRole,
 )
+from src.backend.db.models.sla import AuthWorkflowSlaConfiguration, AuthWorkflowSlaRound
 from src.backend.db.security import verify_password
 
 
@@ -60,6 +63,23 @@ def add_profile(factory, code: str, name: str, *, email: str | None = None,
             for code_role in roles:
                 session.add(UserRole(user_id=user.id, role_id=session.scalar(select(Role.id).where(Role.code == code_role))))
         return profile.id, user.id if user else None
+
+
+def configure_checker_default(factory, principal, checker_id: UUID, department: str = "Marketing"):
+    with factory() as session:
+        return approval_configuration.create_configuration_revision(
+            session,
+            principal,
+            "synthetic-checker-assignment-test",
+            kind="checker_assignment",
+            expected_revision=None,
+            effective_at=datetime.now(timezone.utc) - timedelta(minutes=1),
+            change_reason="Synthetic unit fixture for Checker deactivation.",
+            value={
+                "maker_may_select_other": False,
+                "defaults": [{"department": department, "checker_id": str(checker_id)}],
+            },
+        )
 
 
 def test_employee_profile_can_exist_without_an_account_and_is_audited(admin_db):
@@ -211,48 +231,73 @@ def test_management_token_expiry_is_enforced(admin_db):
             employee_admin.consume_management_token(session, issued["handover_token"], "New-secure-password-123", "test")
 
 
-def test_checker_deactivation_requires_explicit_reassignment_and_preserves_event_history(admin_db):
+def test_checker_deactivation_uses_configured_default_and_preserves_event_history(admin_db):
     factory, principal = admin_db
     employee_id, departing_user_id = add_profile(factory, "EMP-102", "Departing Checker", roles=("CHECKER",))
     _, replacement_id = add_profile(factory, "EMP-103", "Replacement Checker", roles=("CHECKER",))
     _, maker_id = add_profile(factory, "EMP-104", "Plan Maker", roles=("MAKER",))
+    configure_checker_default(factory, principal, replacement_id)
+    sla_started = datetime.now(timezone.utc)
     with factory.begin() as session:
+        sla_config = AuthWorkflowSlaConfiguration(
+            revision=1, enabled=True, duration_minutes=60, warning_before_minutes=45,
+            changed_by=principal.id, change_reason="Synthetic SLA assignment test.",
+        )
+        session.add(sla_config)
+        session.flush()
         plan = AuthWorkflowPlan(code="PLAN-1", maker_id=maker_id, checker_id=departing_user_id,
-                                payload={}, status="PENDING_APPROVAL", processing_stage="HUMAN_REVIEW_REQUIRED")
+                                payload={"department": "Marketing"}, status="PENDING_APPROVAL",
+                                processing_stage="HUMAN_REVIEW_REQUIRED", current_version=1, current_round=1)
         session.add(plan)
         session.flush()
         plan_id = plan.id
+        session.add(AuthWorkflowSlaRound(
+            plan_id=plan_id, version_number=1, round_number=1,
+            configuration_id=sla_config.id, configuration_revision=1,
+            duration_minutes=60, warning_before_minutes=45,
+            started_at=sla_started, warning_at=sla_started + timedelta(minutes=15),
+            due_at=sla_started + timedelta(minutes=60),
+        ))
     with factory() as session:
-        with pytest.raises(ApplicationError, match="every pending plan"):
-            employee_admin.deactivate_employee(session, principal, employee_id, "test", {})
+        with pytest.raises(ApplicationError, match="controlled by the active department configuration"):
+            employee_admin.deactivate_employee(session, principal, employee_id, "test", {plan_id: departing_user_id})
     with factory() as session:
-        changed = employee_admin.deactivate_employee(session, principal, employee_id, "test", {plan_id: replacement_id})
+        changed = employee_admin.deactivate_employee(session, principal, employee_id, "test", {})
         assert changed["employment_status"] == "INACTIVE"
         assert changed["status"] == "DISABLED"
         departing_user = session.get(User, departing_user_id)
         assert departing_user.employment_status == "INACTIVE"
         assert departing_user.session_version == 1
-        assert session.get(AuthWorkflowPlan, plan_id).checker_id == replacement_id
+        reassigned_plan = session.get(AuthWorkflowPlan, plan_id)
+        assert reassigned_plan.checker_id == replacement_id
+        assert reassigned_plan.revision == 1
         event = session.scalar(select(AuthWorkflowEvent).where(AuthWorkflowEvent.plan_id == plan_id))
         assert event.action == "CHECKER_REASSIGNED"
         assert event.details["previous_checker_id"] == str(departing_user_id)
+        assert event.details["new_checker_id"] == str(replacement_id)
+        assert event.details["assignment_configuration_revision"] == 1
+        assert event.details["assignment_configuration_hash"]
+        sla = session.scalar(select(AuthWorkflowSlaRound).where(AuthWorkflowSlaRound.plan_id == plan_id))
+        due_at = sla.due_at.replace(tzinfo=timezone.utc) if sla and sla.due_at.tzinfo is None else (sla.due_at if sla else None)
+        assert due_at == sla_started + timedelta(minutes=60)
         assert session.scalar(select(AdminAuditEvent).where(AdminAuditEvent.action == "EMPLOYEE_DEACTIVATED"))
 
 
-def test_checker_deactivation_rolls_back_reassignment_employee_account_and_audit_on_invalid_replacement(admin_db):
+def test_checker_deactivation_without_configured_default_rolls_back_everything(admin_db):
     factory, principal = admin_db
     employee_id, departing_user_id = add_profile(factory, "EMP-102A", "Departing Checker", roles=("CHECKER",))
     _, maker_id = add_profile(factory, "EMP-104A", "Plan Maker", roles=("MAKER",))
-    _, not_checker_id = add_profile(factory, "EMP-104B", "Not Checker", roles=("MAKER",))
     with factory.begin() as session:
         plan = AuthWorkflowPlan(code="PLAN-ROLLBACK", maker_id=maker_id, checker_id=departing_user_id,
-                                payload={}, status="PENDING_APPROVAL", processing_stage="HUMAN_REVIEW_REQUIRED")
+                                payload={"department": "Marketing"}, status="PENDING_APPROVAL",
+                                processing_stage="HUMAN_REVIEW_REQUIRED", current_version=1, current_round=1)
         session.add(plan)
         session.flush()
         plan_id = plan.id
     with factory() as session:
-        with pytest.raises(ApplicationError, match="Replacement must be an active Checker"):
-            employee_admin.deactivate_employee(session, principal, employee_id, "test", {plan_id: not_checker_id})
+        with pytest.raises(ApplicationError, match="No eligible configured default Checker") as error:
+            employee_admin.deactivate_employee(session, principal, employee_id, "test", {})
+        assert error.value.code == "CONFLICT"
     with factory() as session:
         assert session.get(EmployeeProfile, employee_id).employment_status == "ACTIVE"
         user = session.get(User, departing_user_id)
@@ -360,15 +405,17 @@ def test_custom_checker_permission_bundle_is_a_valid_replacement_and_cannot_be_r
             session, SimpleNamespace(id=maker_id, roles=("MAKER",)), "test",
         )
         assert replacement_user_id in {UUID(item["id"]) for item in checker_picker}
+    configure_checker_default(factory, principal, replacement_user_id)
     with factory.begin() as session:
         plan = AuthWorkflowPlan(code="PLAN-CUSTOM-CHECKER", maker_id=maker_id, checker_id=departing_user_id,
-                                payload={}, status="PENDING_APPROVAL", processing_stage="HUMAN_REVIEW_REQUIRED")
+                                payload={"department": "Marketing"}, status="PENDING_APPROVAL",
+                                processing_stage="HUMAN_REVIEW_REQUIRED", current_version=1, current_round=1)
         session.add(plan)
         session.flush()
         plan_id = plan.id
     with factory() as session:
         updated = employee_admin.deactivate_employee(
-            session, principal, departing_id, "test", {plan_id: replacement_user_id},
+            session, principal, departing_id, "test", {},
         )
         assert updated["employment_status"] == "INACTIVE"
     with factory() as session:

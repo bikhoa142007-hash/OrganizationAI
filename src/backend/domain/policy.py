@@ -1,4 +1,5 @@
 """Internal configuration, not additions to WP1 wire schemas."""
+import math
 from dataclasses import dataclass
 from collections.abc import Mapping
 from typing import Any, Literal
@@ -125,15 +126,25 @@ class PolicySnapshot(Contract):
     allowed_media_types: tuple[str, ...]
     max_attachment_bytes: Positive
     rule_ids: tuple[str, ...] = RULE_IDS
-    feasibility_threshold: Literal[70] = 70
-    media_confidence_threshold: Literal[0.85] = .85
-    feasibility_confidence_threshold: Literal[0.8] = .80
+    feasibility_threshold: int = 70
+    media_confidence_threshold: float = .85
+    feasibility_confidence_threshold: float = .80
 
     def validate(self):
         require(self.rule_ids == RULE_IDS, 'Required rules cannot be disabled')
         require(set(MANDATORY_FIELDS) <= set(self.mandatory_fields) and bool(self.criteria),
                 'Incomplete policy')
         require(sum(c.maximum_score for c in self.criteria) == 100, 'Criteria must total 100')
+        require(type(self.feasibility_threshold) is int and 0 <= self.feasibility_threshold < 100,
+                'Exclusive feasibility threshold must be an integer from 0 to 99')
+        require(type(self.media_confidence_threshold) in (int, float)
+                and math.isfinite(self.media_confidence_threshold)
+                and 0 <= self.media_confidence_threshold <= 1,
+                'Media confidence threshold must be in [0, 1]')
+        require(type(self.feasibility_confidence_threshold) in (int, float)
+                and math.isfinite(self.feasibility_confidence_threshold)
+                and 0 <= self.feasibility_confidence_threshold <= 1,
+                'Feasibility confidence threshold must be in [0, 1]')
         distinct(self.mandatory_fields)
         distinct([c.criterion_id for c in self.criteria])
         distinct(self.known_model_versions)
@@ -171,6 +182,7 @@ class ApprovalConfiguration(Contract):
     strategy_rubric: StrategyRubric | None = None
     media_model_snapshot: Any = None
     strategy_model_snapshot: Any = None
+    visual_model_snapshot: Any = None
 
     def validate(self):
         if self.strategy_rubric is None:
@@ -184,12 +196,14 @@ class ApprovalConfiguration(Contract):
 
     @classmethod
     def from_dict(cls, value):
-        # Policy snapshots persisted before Media/Strategy existed remain readable.
-        if isinstance(value, Mapping) and set(value) == {"policy", "budgets", "authority"}:
-            value = {**value, "media_policy": None, "strategy_rubric": None,
-                     "media_model_snapshot": None, "strategy_model_snapshot": None}
-        elif isinstance(value, Mapping) and set(value) == {
-            "policy", "budgets", "authority", "media_policy", "strategy_rubric"
-        }:
-            value = {**value, "media_model_snapshot": None, "strategy_model_snapshot": None}
+        # Older immutable round snapshots predate one or more AI model snapshots.
+        if isinstance(value, Mapping):
+            defaults = {
+                "media_policy": None,
+                "strategy_rubric": None,
+                "media_model_snapshot": None,
+                "strategy_model_snapshot": None,
+                "visual_model_snapshot": None,
+            }
+            value = {**defaults, **value}
         return Contract.from_dict.__func__(cls, value)

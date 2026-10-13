@@ -157,10 +157,9 @@ jobs:
           alembic_config = Config('alembic.ini')
           migration_heads = ScriptDirectory.from_config(alembic_config).get_heads()
           assert len(migration_heads) == 1, f'Expected exactly one Alembic head, found {migration_heads}'
+          # Compare the migrated database with this checkout's current head instead of
+          # pinning CI to a revision that becomes stale when the schema advances.
           expected_head = migration_heads[0]
-          assert expected_head == '20261011_12', (
-              f'Expected SLA migration head 20261011_12, found {expected_head}'
-          )
 
           engine = create_engine(os.environ['DATABASE_URL'])
           try:
@@ -298,12 +297,18 @@ jobs:
           import sys
 
           expected = {
+              "tests/integration/test_approval_configuration_api.py::test_admin_api_returns_unconfigured_and_rejects_maker",
+              "tests/integration/test_approval_configuration_api.py::test_admin_revision_requires_allowed_browser_origin_and_keeps_auto_approval_off",
+              "tests/integration/test_approval_configuration_api.py::test_concurrent_first_revision_has_exactly_one_winner",
+              "tests/integration/test_approval_configuration_api.py::test_round_version_and_configuration_snapshot_rollback_together",
               "tests/integration/test_auth_sla_postgres.py::test_postgres_snapshot_boundaries_recipients_replay_reassignment_and_resubmit",
               "tests/integration/test_auth_sla_postgres.py::test_postgres_concurrent_config_writes_and_submit_capture_one_revision",
               "tests/integration/test_auth_sla_postgres.py::test_postgres_parallel_workers_are_idempotent_and_rollback_is_atomic",
               "tests/integration/test_auth_sla_postgres.py::test_postgres_decision_and_checker_reassignment_win_worker_lock_races",
               "tests/integration/test_auth_sla_postgres.py::test_postgres_migration_constraints_indexes_and_immutability_triggers",
               "tests/integration/test_auth_sla_postgres.py::test_postgres_missing_and_disabled_configuration_do_not_start_a_round",
+              "tests/integration/test_auth_workflow_postgres_notifications.py::test_postgres_retry_race_reuses_the_round_snapshot",
+              "tests/integration/test_auth_workflow_postgres_notifications.py::test_postgres_policy_conflict_persists_safe_attempt_provenance_and_routes_to_checker",
               "tests/integration/test_auth_workflow_postgres_notifications.py::test_postgres_notification_lifecycle_permissions_replay_and_rollback",
           }
           result = subprocess.run(
@@ -326,7 +331,7 @@ jobs:
               print(f"Missing PostgreSQL acceptance tests: {sorted(expected - selected)}", file=sys.stderr)
               print(f"Unexpected PostgreSQL-marked tests: {sorted(selected - expected)}", file=sys.stderr)
               raise SystemExit(1)
-          print("Verified exact PostgreSQL marker selection: all six SLA and notification acceptance tests.")
+          print("Verified exact PostgreSQL marker selection: all 13 configuration, retry, SLA, and notification acceptance tests.")
           PY
         working-directory: .
         env:

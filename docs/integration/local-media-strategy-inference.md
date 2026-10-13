@@ -1,6 +1,26 @@
 # Local Media Compliance and Strategy Inference
 
-## Verified local runtime
+## Current verification status: Real AI quality FAIL; VLM inference BLOCKED
+
+The reviewed checkpoint [evidence](evidence/scope1-c-20261012/real-inference-20261012.json)
+records four Media/Strategy provider calls with schema-valid responses, but policy
+and rubric quality passed **0/4**. Task model identity passed; visual model identity
+failed because its digest did not match, so visual inference was not sent. Pipeline
+persistence/routing and an independent holdout were not run in that inference run.
+The integrated fail-closed, persistence, and routing tests use synthetic providers;
+they do not change model quality. **Real AI quality remains FAIL and VLM inference
+remains BLOCKED.**
+
+The C inference source at `40f047c3d212cfaac384d23753647034fa4beea5` was compared
+with C handoff HEAD `79ae4825c227017bde3ccfc6f117b4afd294da61`: the inference
+script and source files are unchanged; the delta is documentation-only. The
+historical JSON was generated against the 40f source checkpoint, not this integrated
+branch, and is not attached as evidence for the integrated source. Its four conflict
+records lack a per-conflict raw output hash and the reported/computed totals. The
+historical file fingerprints also do not match Git blobs for 12 files. These gaps
+remain unresolved; no historical or aggregate hash is assigned to a new run.
+
+## Local runtime configuration
 
 The local Compose backend can call Ollama on the Windows host through
 `http://host.docker.internal:11434/v1`. Keep external access disabled:
@@ -23,7 +43,8 @@ ollama show organizationai-qwen3:4b-ctx8192
 
 Keep `LOCAL_VLM_MODEL=qwen3-vl:4b` for image extraction and set
 `LOCAL_VLM_MODEL_VERSION` to the `sha256:` digest reported by Ollama for that
-exact tag. Ollama's `fp_ollama` response fingerprint identifies the runtime,
+exact tag. A digest pin selects `OLLAMA_TAG_DIGEST`; use that mode explicitly
+for the Media and Strategy task settings as well. Ollama's `fp_ollama` response fingerprint identifies the runtime,
 not the model weights. For both task providers, set
 `PROVIDER=OPENAI_COMPATIBLE_CHAT_COMPLETIONS`, `BASE_URL` to the host URL
 above, `MODEL=organizationai-qwen3:4b-ctx8192`, and `MODEL_VERSION` to the

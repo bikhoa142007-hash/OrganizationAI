@@ -5,10 +5,16 @@ This module deliberately fails when those inputs are missing instead of skipping
 """
 from __future__ import annotations
 
+from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
+from dataclasses import replace
+from datetime import datetime, timedelta, timezone
+from decimal import Decimal
+from hashlib import sha256
 import json
 import os
 import struct
 import zlib
+from threading import Barrier, Event
 from uuid import UUID, uuid4
 
 import pytest
@@ -18,7 +24,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, sessionmaker
 from scripts.postgres_test_target import verify_runner_provisioned_database
 
-from src.ai_pipeline.providers.base import ProviderAnalysis
+from src.ai_pipeline.providers.base import ProviderAnalysis, ProviderError
 from src.ai_pipeline.providers.mock import AuthenticatedMockVLMProvider
 from src.ai_pipeline.task_evaluation import STRATEGY_CRITERIA, media_policy_from_json, strategy_rubric_from_json
 from src.ai_pipeline.task_providers import TaskModelSettings
@@ -28,8 +34,12 @@ from src.backend.api.dependencies import Settings
 from src.backend.application import auth_workflow as workflow
 from src.backend.db.models import (
     AuthWorkflowDecision,
+    AuthWorkflowEngineDecision,
+    AuthWorkflowEvaluationRun,
     AuthWorkflowNotification,
     AuthWorkflowPlan,
+    AuthWorkflowRoundConfigurationSnapshot,
+    EmployeeProfile,
     Role,
     User,
     UserRole,
@@ -75,6 +85,14 @@ def _create_user(factory: sessionmaker[Session], username: str, role_code: str, 
         session.add(user)
         session.flush()
         session.add(UserRole(user_id=user.id, role_id=role.id))
+        session.add(EmployeeProfile(
+            id=user.id,
+            user_code=user.user_code,
+            display_name=user.display_name,
+            email=user.email,
+            phone=user.phone,
+            user_id=user.id,
+        ))
         session.flush()
         session.expunge(user)
     return user
@@ -83,6 +101,26 @@ def _create_user(factory: sessionmaker[Session], username: str, role_code: str, 
 def _login(client: TestClient, username: str, password: str) -> None:
     response = client.post("/api/auth/login", json={"identifier": username, "password": password})
     assert response.status_code == 200, response.text
+
+
+def _create_configuration_revision(
+    client: TestClient,
+    kind: str,
+    value: dict,
+    *,
+    expected_revision=None,
+) -> dict:
+    response = client.post(
+        f"/api/workflow/configuration/{kind}/revisions",
+        json={
+            "expected_revision": expected_revision,
+            "effective_at": (datetime.now(timezone.utc) - timedelta(seconds=5)).isoformat(),
+            "change_reason": "Synthetic PostgreSQL snapshot verification.",
+            "value": value,
+        },
+    )
+    assert response.status_code == 201, response.text
+    return response.json()
 
 
 def _create_plan(client: TestClient, checker_id: UUID, title: str) -> dict:
@@ -136,6 +174,7 @@ def _task_settings(task: str) -> TaskModelSettings:
         max_response_bytes=4096,
         max_input_bytes=4096,
         max_retries=0,
+        identity_mode="GENERIC_OPAQUE_REVISION",
         prompt_version=f"{task.lower()}-prompt-v1",
         schema_version=f"{task.lower()}-schema-v1",
     )
@@ -184,7 +223,7 @@ class _SyntheticTaskProvider:
             }
         return ProviderAnalysis(
             output,
-            model_revision=self.settings.model_version,
+            model_revision=None,
             reported_model_id=self.settings.model_id,
         )
 
@@ -287,6 +326,261 @@ def postgres_workflow(monkeypatch):
         engine.dispose()
 
 
+def test_postgres_retry_race_reuses_the_round_snapshot(postgres_workflow):
+    state = postgres_workflow
+    app = state["app"]
+    factory = state["factory"]
+    checker = state["checker"]
+    maker_client = state["maker_client"]
+    checker_client = state["checker_client"]
+    configuration = _auto_approval_configuration(checker.id)
+    media_settings = replace(_task_settings("MEDIA_COMPLIANCE"), timeout_seconds=30)
+    configuration = replace(
+        configuration,
+        policy=replace(configuration.policy, auto_approval_policy_enabled=False),
+        media_model_snapshot=media_settings.public_snapshot(),
+    )
+    app.state.auth_workflow_configuration = configuration
+    app.state.auth_workflow_provider = AuthenticatedMockVLMProvider("pass", model_version="mock-1")
+
+    admin = _create_user(
+        factory, f"pg_admin_snapshot_{uuid4().hex[:10]}", "ADMIN", os.environ["AUTH_SEED_PASSWORD"],
+    )
+    admin_client = TestClient(app, raise_server_exceptions=False)
+    _login(admin_client, admin.username, os.environ["AUTH_SEED_PASSWORD"])
+    _create_configuration_revision(admin_client, "approval_policy", {
+        "enabled": False,
+        "media_confidence_threshold": 0.85,
+        "feasibility_score_threshold_exclusive": 70,
+        "feasibility_confidence_threshold": 0.8,
+    })
+    original_rubric = {
+        "rubric_id": "SYNTHETIC-POSTGRES-STRATEGY",
+        "rubric_version": "snapshot-r1",
+        "status": "ACTIVE",
+        "criteria": [{"criterion_id": key, "label": label, "weight": weight}
+                      for key, label, weight in STRATEGY_CRITERIA],
+    }
+    _create_configuration_revision(admin_client, "strategy_rubric", original_rubric)
+
+    class FailOnceBlockingMediaProvider(_SyntheticTaskProvider):
+        def __init__(self):
+            super().__init__("MEDIA_COMPLIANCE")
+            self.settings = media_settings
+            self.calls = 0
+            self.retry_started = Event()
+            self.release_retry = Event()
+
+        def evaluate(self, request):
+            self.calls += 1
+            if self.calls == 1:
+                raise ProviderError("private synthetic transport response")
+            self.retry_started.set()
+            if not self.release_retry.wait(timeout=20):
+                raise ProviderError("synthetic concurrency gate timed out")
+            return super().evaluate(request)
+
+    class SnapshotStrategyProvider(_SyntheticTaskProvider):
+        def __init__(self):
+            super().__init__("STRATEGY_EVALUATION")
+            self.rubric_versions = []
+
+        def evaluate(self, request):
+            self.rubric_versions.append(request.rubric.rubric_version)
+            return super().evaluate(request)
+
+    media = FailOnceBlockingMediaProvider()
+    strategy = SnapshotStrategyProvider()
+    app.state.auth_workflow_media_provider = media
+    app.state.auth_workflow_strategy_provider = strategy
+    plan = _create_plan(maker_client, checker.id, "PostgreSQL snapshot retry race")
+    failed = _upload_and_submit(maker_client, plan)
+    assert failed["processing_stage"] == "HUMAN_REVIEW_REQUIRED"
+
+    plan_id = UUID(failed["id"])
+    with factory() as session:
+        first_run = session.scalar(select(AuthWorkflowEvaluationRun).where(
+            AuthWorkflowEvaluationRun.plan_id == plan_id,
+            AuthWorkflowEvaluationRun.attempt_number == 1,
+        ))
+        round_snapshot = session.scalar(select(AuthWorkflowRoundConfigurationSnapshot).where(
+            AuthWorkflowRoundConfigurationSnapshot.plan_id == plan_id,
+            AuthWorkflowRoundConfigurationSnapshot.approval_round == 1,
+        ))
+        assert first_run is not None and round_snapshot is not None
+        loaded_snapshot = workflow.get_round_configuration_snapshot(
+            session, plan_id=plan_id, approval_round=1,
+        )
+        version_row = session.scalar(select(workflow.AuthWorkflowVersion).where(
+            workflow.AuthWorkflowVersion.plan_id == plan_id,
+            workflow.AuthWorkflowVersion.round_number == 1,
+        ))
+        domain_snapshot = workflow._domain_snapshot(
+            plan_id, version_row.version_number, version_row.round_number,
+            version_row.payload_snapshot, version_row.attachment_snapshot,
+        )
+        assert first_run.failure_reason == "PROVIDER_ERROR", {
+            "failure_reason": first_run.failure_reason,
+            "round_snapshot_valid": workflow._round_configuration_snapshot_is_valid(
+                loaded_snapshot, plan_id, 1, 1,
+            ),
+            "policy_snapshot_hash_valid": (
+                workflow.canonical_hash(first_run.policy_snapshot) == first_run.policy_snapshot_hash
+            ),
+            "version_input_hash_valid": version_row.snapshot_hash == domain_snapshot.input_hash,
+            "run_input_hash_valid": first_run.input_hash == domain_snapshot.input_hash,
+            "snapshot_hash": round_snapshot.snapshot_hash,
+        }
+        assert round_snapshot.configurations["strategy_rubric"]["value"]["rubric_version"] == "snapshot-r1"
+        assert first_run.policy_snapshot["strategy_rubric"]["rubric_version"] == "snapshot-r1"
+        frozen_policy = first_run.policy_snapshot
+        frozen_policy_hash = first_run.policy_snapshot_hash
+        frozen_round_hash = round_snapshot.snapshot_hash
+        assert first_run.media_evaluation["attempt_history"][0]["error_code"] == "PROVIDER_ERROR"
+        assert "private synthetic transport response" not in str(first_run.media_evaluation)
+
+    current_rubric = {**original_rubric, "rubric_version": "current-r2"}
+    _create_configuration_revision(
+        admin_client, "strategy_rubric", current_rubric, expected_revision=1,
+    )
+    app.state.auth_workflow_configuration = replace(
+        configuration,
+        strategy_rubric=replace(configuration.strategy_rubric, rubric_version="volatile-current"),
+    )
+
+    parallel_checker = TestClient(app, raise_server_exceptions=False)
+    _login(parallel_checker, checker.username, os.environ["AUTH_SEED_PASSWORD"])
+    start_together = Barrier(2)
+    retry_url = f"/api/workflow/plans/{failed['id']}/rounds/1/evaluation-retries"
+    body = {
+        "expected_plan_version": failed["current_version"],
+        "expected_round_revision": failed["revision"],
+    }
+
+    def send_retry(client, key):
+        start_together.wait(timeout=10)
+        return client.post(retry_url, json=body, headers={"Idempotency-Key": key})
+
+    try:
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            requests = [
+                pool.submit(send_retry, checker_client, "pg-retry-race-a"),
+                pool.submit(send_retry, parallel_checker, "pg-retry-race-b"),
+            ]
+            assert media.retry_started.wait(timeout=10), "The winning retry never reached the provider."
+            completed, _pending = wait(requests, timeout=10, return_when=FIRST_COMPLETED)
+            assert len(completed) == 1, "The losing retry should resolve while the winner is held in provider I/O."
+            loser = next(iter(completed)).result()
+            assert loser.status_code == 409, loser.text
+            media.release_retry.set()
+            responses = [request.result(timeout=30) for request in requests]
+    finally:
+        media.release_retry.set()
+        parallel_checker.close()
+        admin_client.close()
+
+    assert sorted(response.status_code for response in responses) == [200, 409]
+    assert strategy.rubric_versions == ["snapshot-r1", "snapshot-r1"]
+    detail = checker_client.get(f"/api/workflow/plans/{failed['id']}").json()
+    assert [item["attempt_number"] for item in detail["ai_evaluations"]] == [1, 2]
+    assert [item["outcome"] for item in detail["engine_decisions"]] == [
+        "HUMAN_REVIEW_REQUIRED", "HUMAN_REVIEW_REQUIRED",
+    ]
+    with factory() as session:
+        runs = session.scalars(select(AuthWorkflowEvaluationRun).where(
+            AuthWorkflowEvaluationRun.plan_id == plan_id,
+        ).order_by(AuthWorkflowEvaluationRun.attempt_number)).all()
+        round_snapshot = session.scalar(select(AuthWorkflowRoundConfigurationSnapshot).where(
+            AuthWorkflowRoundConfigurationSnapshot.plan_id == plan_id,
+            AuthWorkflowRoundConfigurationSnapshot.approval_round == 1,
+        ))
+        decisions = session.scalars(select(AuthWorkflowEngineDecision).where(
+            AuthWorkflowEngineDecision.plan_id == plan_id,
+            AuthWorkflowEngineDecision.round_number == 1,
+        )).all()
+        assert len(runs) == 2
+        assert [run.attempt_number for run in runs] == [1, 2]
+        assert runs[1].policy_snapshot == frozen_policy
+        assert runs[1].policy_snapshot_hash == frozen_policy_hash
+        assert round_snapshot.snapshot_hash == frozen_round_hash
+        assert len(decisions) == 2
+        assert sum(decision.outcome == "AUTO_APPROVED" for decision in decisions) <= 1
+
+
+def test_postgres_policy_conflict_persists_safe_attempt_provenance_and_routes_to_checker(postgres_workflow):
+    state = postgres_workflow
+    app = state["app"]
+    factory = state["factory"]
+    checker = state["checker"]
+    app.state.auth_workflow_configuration = _auto_approval_configuration(checker.id)
+    app.state.auth_workflow_provider = AuthenticatedMockVLMProvider("pass", model_version="mock-1")
+    app.state.auth_workflow_media_provider = _SyntheticTaskProvider("MEDIA_COMPLIANCE")
+
+    class ConflictingStrategyProvider(_SyntheticTaskProvider):
+        def __init__(self):
+            super().__init__("STRATEGY_EVALUATION")
+            self.raw_hash = None
+
+        def evaluate(self, request):
+            analysis = super().evaluate(request)
+            output = dict(analysis.output)
+            output["total_score"] = 71.01
+            output["reason"] = "PRIVATE-RAW-STRATEGY-RESPONSE"
+            self.raw_hash = sha256(json.dumps(output, sort_keys=True).encode("utf-8")).hexdigest()
+            return ProviderAnalysis(
+                output,
+                model_revision=analysis.model_revision,
+                reported_model_id=analysis.reported_model_id,
+                raw_output_hash=self.raw_hash,
+            )
+
+    strategy = ConflictingStrategyProvider()
+    app.state.auth_workflow_strategy_provider = strategy
+    plan = _create_plan(state["maker_client"], checker.id, "PostgreSQL strategy conflict persistence")
+    submitted = _upload_and_submit(state["maker_client"], plan)
+    assert submitted["processing_stage"] == "HUMAN_REVIEW_REQUIRED"
+    run_id = UUID(submitted["ai_evaluations"][0]["id"])
+
+    with factory() as session:
+        run = session.get(AuthWorkflowEvaluationRun, run_id)
+        assert run is not None and run.status == "FAILED"
+        attempt = run.strategy_evaluation["attempt_history"][0]
+        assert run.failure_reason == "POLICY_OUTPUT_CONFLICT"
+        assert run.strategy_evaluation["error_code"] == "POLICY_OUTPUT_CONFLICT"
+        assert run.strategy_evaluation["attempts"] == 1
+        assert attempt["status"] == "FAILED"
+        assert attempt["error_code"] == "POLICY_OUTPUT_CONFLICT"
+        assert attempt["reported_total"] == "71.01"
+        assert Decimal(attempt["computed_total"]) == Decimal("71")
+        assert attempt["raw_output_hash"] == strategy.raw_hash
+        assert attempt["reported_model_id"] == strategy.settings.model_id
+        assert attempt["model_revision"] is None
+        assert run.strategy_evaluation["identity_mode"] == "GENERIC_OPAQUE_REVISION"
+        assert "api_key" not in str(run.strategy_evaluation["model_configuration"])
+        assert "PRIVATE-RAW-STRATEGY-RESPONSE" not in str(run.strategy_evaluation)
+        assert "PRIVATE-RAW-STRATEGY-RESPONSE" not in str(run.evaluation)
+        assert run.strategy_evaluation["result"] is None
+        decision = session.scalar(select(AuthWorkflowEngineDecision).where(
+            AuthWorkflowEngineDecision.evaluation_run_id == run_id,
+        ))
+        assert decision is not None and decision.outcome == "HUMAN_REVIEW_REQUIRED"
+
+    retry = state["checker_client"].post(
+        f"/api/workflow/plans/{submitted['id']}/rounds/1/evaluation-retries",
+        json={
+            "expected_plan_version": submitted["current_version"],
+            "expected_round_revision": submitted["revision"],
+        },
+        headers={"Idempotency-Key": "pg-conflict-retry-must-be-terminal"},
+    )
+    assert retry.status_code == 409
+    with factory() as session:
+        assert session.scalar(select(AuthWorkflowEvaluationRun.id).where(
+            AuthWorkflowEvaluationRun.plan_id == UUID(submitted["id"]),
+            AuthWorkflowEvaluationRun.attempt_number == 2,
+        )) is None
+
+
 def test_postgres_notification_lifecycle_permissions_replay_and_rollback(postgres_workflow, monkeypatch):
     state = postgres_workflow
     maker, checker, next_checker = state["maker"], state["checker"], state["next_checker"]
@@ -378,47 +672,44 @@ def test_postgres_notification_lifecycle_permissions_replay_and_rollback(postgre
         ("PLAN_REJECTED", 1), ("PLAN_APPROVED", 2),
     }
 
-    # Controlled auto approval runs only with this test's synthetic DB policy.
+    # Admin configuration stays disabled until PO sign-off; even passing
+    # synthetic providers must therefore route to the assigned Checker.
     app = state["app"]
     app.state.auth_workflow_configuration = _auto_approval_configuration(next_checker.id)
+    admin = _create_user(
+        factory, f"pg_admin_auto_{uuid4().hex[:10]}", "ADMIN", os.environ["AUTH_SEED_PASSWORD"],
+    )
+    admin_client = TestClient(app, raise_server_exceptions=False)
+    _login(admin_client, admin.username, os.environ["AUTH_SEED_PASSWORD"])
+    policy_history = admin_client.get("/api/workflow/configuration/approval_policy/history")
+    assert policy_history.status_code == 200, policy_history.text
+    current_policy_revision = max(
+        (item["revision"] for item in policy_history.json()["items"]),
+        default=None,
+    )
+    _create_configuration_revision(admin_client, "approval_policy", {
+        "enabled": False,
+        "media_confidence_threshold": 0.85,
+        "feasibility_score_threshold_exclusive": 70,
+        "feasibility_confidence_threshold": 0.8,
+    }, expected_revision=current_policy_revision)
     app.state.auth_workflow_provider = AuthenticatedMockVLMProvider("pass", model_version="mock-1")
     app.state.auth_workflow_media_provider = _SyntheticTaskProvider("MEDIA_COMPLIANCE")
     app.state.auth_workflow_strategy_provider = _SyntheticTaskProvider("STRATEGY_EVALUATION")
-    auto_plan = _create_plan(maker_client, next_checker.id, "Synthetic auto approval notification")
-    auto_approved = _upload_and_submit(maker_client, auto_plan)
-    assert auto_approved["status"] == "APPROVED"
-    assert auto_approved["processing_stage"] == "AI_AUTO_APPROVED"
-    assert auto_approved["ai_evaluations"][0]["provider"] == "MOCK_VLM"
-    assert auto_approved["engine_decisions"][0]["outcome"] == "AUTO_APPROVED"
+    guarded_plan = _create_plan(maker_client, next_checker.id, "Auto approval stays disabled before PO sign-off")
+    guarded = _upload_and_submit(maker_client, guarded_plan)
+    assert guarded["status"] == "PENDING_APPROVAL"
+    assert guarded["processing_stage"] == "HUMAN_REVIEW_REQUIRED"
+    assert guarded["ai_evaluations"][0]["provider"] == "MOCK_VLM"
+    assert guarded["engine_decisions"][0]["outcome"] == "HUMAN_REVIEW_REQUIRED"
     maker_notice_types = [item["event_type"] for item in maker_client.get("/api/workflow/notifications").json()["items"]]
-    assert maker_notice_types.count("PLAN_AUTO_APPROVED") == 1
-    auto_notice = next(item for item in maker_client.get("/api/workflow/notifications").json()["items"]
-                       if item["event_type"] == "PLAN_AUTO_APPROVED")
-    with factory.begin() as session:
-        existing = session.get(AuthWorkflowNotification, UUID(auto_notice["id"]))
-        plan_row = session.get(AuthWorkflowPlan, UUID(auto_plan["id"]))
-        replay = workflow._record_notification(
-            session,
-            recipient_user_id=maker.id,
-            plan=plan_row,
-            event_type="PLAN_AUTO_APPROVED",
-            version_number=1,
-            round_number=1,
-        )
-        assert replay.id == existing.id
+    assert maker_notice_types.count("PLAN_AUTO_APPROVED") == 0
     with factory() as session:
-        assert session.scalar(select(AuthWorkflowNotification).where(
-            AuthWorkflowNotification.plan_id == UUID(auto_plan["id"]),
-            AuthWorkflowNotification.event_type == "PLAN_AUTO_APPROVED",
-        )) is not None
         assert session.scalar(select(AuthWorkflowNotification.id).where(
-            AuthWorkflowNotification.plan_id == UUID(auto_plan["id"]),
+            AuthWorkflowNotification.plan_id == UUID(guarded_plan["id"]),
             AuthWorkflowNotification.event_type == "PLAN_AUTO_APPROVED",
-        ).limit(2)) is not None
-        assert len(session.scalars(select(AuthWorkflowNotification).where(
-            AuthWorkflowNotification.plan_id == UUID(auto_plan["id"]),
-            AuthWorkflowNotification.event_type == "PLAN_AUTO_APPROVED",
-        )).all()) == 1
+        )) is None
+    admin_client.close()
 
     # A notification inserted before an injected failure rolls back with the
     # business transaction for both submission and Checker decisions.

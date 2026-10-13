@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 from sqlalchemy import create_engine
 
-from src.ai_pipeline.providers.base import ProviderAnalysis
+from src.ai_pipeline.providers.base import ProviderAnalysis, ProviderError
 from src.ai_pipeline.providers.mock import AuthenticatedMockVLMProvider
 from src.ai_pipeline.task_evaluation import STRATEGY_CRITERIA, media_policy_from_json, strategy_rubric_from_json
 from src.ai_pipeline.task_providers import TaskModelSettings
@@ -21,7 +21,12 @@ from src.backend.api.auth import get_auth_db
 from src.backend.api.dependencies import Settings
 from src.backend.application import auth_workflow as auth_workflow_application
 from src.backend.db.base import Base
-from src.backend.db.models import (AuthWorkflowEvaluationRun, AuthWorkflowEvent, AuthWorkflowNotification, AuthWorkflowPlan, AuthWorkflowSlaConfiguration, AuthWorkflowSlaRound, EmployeeProfile, Role, RolePermission, User, UserRole)
+from src.backend.db.models import (
+    AuthWorkflowEvaluationRun, AuthWorkflowEvent, AuthWorkflowNotification,
+    AuthWorkflowPlan, AuthWorkflowRoundConfigurationSnapshot,
+    AuthWorkflowSlaConfiguration, AuthWorkflowSlaRound,
+    EmployeeProfile, Role, RolePermission, User, UserRole,
+)
 from src.backend.db.security import hash_password
 from src.backend.domain.policy import (
     ApprovalConfiguration,
@@ -99,6 +104,30 @@ def create_user(factory, username: str, roles: tuple[str, ...]) -> User:
         session.flush()
         session.expunge(user)
     return user
+
+
+def test_dashboard_notes_and_retry_routers_are_registered_and_role_scoped(workflow_client):
+    client, factory, app = workflow_client
+    maker = create_user(factory, "router.contract-maker", ("MAKER",))
+
+    paths = app.openapi()["paths"]
+    assert "/api/workflow/dashboard" in paths
+    assert "/api/workflow/plans/{plan_id}/internal-notes" in paths
+    assert "/api/workflow/plans/{plan_id}/rounds/{round_number}/evaluation-retries" in paths
+    assert client.get("/api/workflow/dashboard").status_code == 401
+
+    login(client, maker)
+    dashboard = client.get("/api/workflow/dashboard")
+    assert dashboard.status_code == 200, dashboard.text
+    assert dashboard.json()["principal_scope"] == "MAKER_OWN"
+    plan_id = str(uuid4())
+    assert client.get(f"/api/workflow/plans/{plan_id}/internal-notes").status_code == 403
+    retry_response = client.post(
+        f"/api/workflow/plans/{plan_id}/rounds/1/evaluation-retries",
+        json={"expected_plan_version": 1, "expected_round_revision": 0},
+        headers={"Idempotency-Key": "route-check"},
+    )
+    assert retry_response.status_code == 403
 
 
 def login(client: TestClient, user: User) -> None:
@@ -233,7 +262,9 @@ def make_plan(client: TestClient, checker_id: UUID, *, title: str = "Spring camp
     return response.json()
 
 
-def auto_approval_configuration(checker_id: UUID) -> ApprovalConfiguration:
+def auto_approval_configuration(
+    checker_id: UUID, *, task_identity_mode: str | None = None,
+) -> ApprovalConfiguration:
     media_policy = media_policy_from_json('''{
       "policy_id":"TEST-MEDIA","policy_version":"1","status":"ACTIVE",
       "scope_departments":["marketing"],"scope_channels":["social"],
@@ -247,8 +278,8 @@ def auto_approval_configuration(checker_id: UUID) -> ApprovalConfiguration:
             for key, label, weight in STRATEGY_CRITERIA
         ],
     }))
-    media_settings = _task_settings("MEDIA_COMPLIANCE")
-    strategy_settings = _task_settings("STRATEGY_EVALUATION")
+    media_settings = _task_settings("MEDIA_COMPLIANCE", identity_mode=task_identity_mode)
+    strategy_settings = _task_settings("STRATEGY_EVALUATION", identity_mode=task_identity_mode)
     return ApprovalConfiguration(
         PolicySnapshot(
             "TEST-AUTH-POLICY", "TEST-AUTH-POLICY-1", True, MANDATORY_FIELDS,
@@ -267,12 +298,16 @@ def auto_approval_configuration(checker_id: UUID) -> ApprovalConfiguration:
     )
 
 
-def _task_settings(task: str) -> TaskModelSettings:
+def _task_settings(task: str, *, identity_mode: str | None = None) -> TaskModelSettings:
     model = "test-media-model" if task == "MEDIA_COMPLIANCE" else "test-strategy-model"
+    model_version = f"{model}-rev-1"
+    if identity_mode == "OLLAMA_TAG_DIGEST":
+        model_version = "sha256:" + ("a" if task == "MEDIA_COMPLIANCE" else "b") * 64
     return TaskModelSettings(
         task=task, provider="OPENAI_COMPATIBLE_CHAT_COMPLETIONS",
         base_url=f"http://localhost:8000/v1/{task.lower()}", model_id=model,
-        model_version=f"{model}-rev-1", api_key="test-secret", timeout_seconds=2,
+        model_version=model_version, identity_mode=identity_mode,
+        api_key="test-secret", timeout_seconds=2,
         max_output_tokens=1024, max_response_bytes=4096, max_input_bytes=4096,
         max_retries=0, prompt_version=f"{task.lower()}-prompt-v1",
         schema_version=f"{task.lower()}-schema-v1",
@@ -280,8 +315,8 @@ def _task_settings(task: str) -> TaskModelSettings:
 
 
 class FakeAuthenticatedTaskProvider:
-    def __init__(self, task: str):
-        self.settings = _task_settings(task)
+    def __init__(self, task: str, *, identity_mode: str | None = None):
+        self.settings = _task_settings(task, identity_mode=identity_mode)
         self.task = task
         self.calls = 0
 
@@ -310,8 +345,13 @@ class FakeAuthenticatedTaskProvider:
                 "assumptions": [], "missing_facts": [], "critical_gaps": [],
                 "evidence_conflicts": [], "reason": "Synthetic test evaluation.",
             }
-        return ProviderAnalysis(output, model_revision=self.settings.model_version,
+        return ProviderAnalysis(output, model_revision=self._model_revision(),
                                 reported_model_id=self.settings.model_id)
+
+    def _model_revision(self):
+        if self.settings.resolved_identity_mode == "OLLAMA_TAG_DIGEST":
+            return self.settings.model_version
+        return None
 
 
 class LowConfidenceMediaProvider(FakeAuthenticatedTaskProvider):
@@ -340,6 +380,33 @@ def submit_plan(client: TestClient, plan: dict) -> dict:
     )
     assert response.status_code == 200, response.text
     return response.json()
+
+
+def create_configuration_revision(client: TestClient, kind: str, value: dict, *, expected_revision=None) -> dict:
+    effective_at = (datetime.now(timezone.utc) - timedelta(seconds=5)).isoformat()
+    response = client.post(
+        f"/api/workflow/configuration/{kind}/revisions",
+        json={
+            "expected_revision": expected_revision,
+            "effective_at": effective_at,
+            "change_reason": "Synthetic integration configuration.",
+            "value": value,
+        },
+    )
+    assert response.status_code == 201, response.text
+    return response.json()
+
+
+def baseline_strategy_rubric_value(*, version="snapshot-r1") -> dict:
+    return {
+        "rubric_id": "SNAPSHOT-STRATEGY",
+        "rubric_version": version,
+        "status": "ACTIVE",
+        "criteria": [
+            {"criterion_id": key, "label": label, "weight": weight}
+            for key, label, weight in STRATEGY_CRITERIA
+        ],
+    }
 
 
 def test_admin_configures_sla_and_submission_captures_immutable_round_snapshot(workflow_client):
@@ -396,6 +463,14 @@ def test_admin_configures_sla_and_submission_captures_immutable_round_snapshot(w
         assert snapshot.duration_minutes == 24 * 60
         assert snapshot.warning_before_minutes == 4 * 60
         assert snapshot.configuration_revision == 1
+        round_configuration = session.scalar(select(AuthWorkflowRoundConfigurationSnapshot).where(
+            AuthWorkflowRoundConfigurationSnapshot.plan_id == UUID(submitted["id"]),
+        ))
+        assert round_configuration is not None
+        assert round_configuration.plan_version == submitted["current_version"] == 1
+        assert round_configuration.approval_round == submitted["current_round"] == 1
+        assert round_configuration.checker_assignment["eligible"] is True
+        assert round_configuration.checker_assignment["checker_id"] == str(checker.id)
 
 def test_auth_cookie_is_required_and_does_not_authenticate_judge_demo(workflow_client):
     client, factory, _app = workflow_client
@@ -699,60 +774,208 @@ def test_maker_submits_and_only_assigned_checker_can_approve(workflow_client):
     )
 
 
-def test_authenticated_submission_uses_existing_policy_for_auto_approval(workflow_client):
+def test_round_snapshot_thresholds_override_legacy_policy_and_keep_auto_approval_disabled(workflow_client):
     client, factory, app = workflow_client
     maker = create_user(factory, "maker.auto", ("MAKER",))
     checker = create_user(factory, "checker.auto", ("CHECKER",))
     admin = create_user(factory, "admin.auto", ("ADMIN",))
-    with factory.begin() as session:
-        admin_role = session.scalar(select(Role).where(Role.code == "ADMIN"))
-        assert admin_role is not None
-        session.add(RolePermission(role_id=admin_role.id, permission_code="ADMIN_SLA_MANAGE"))
     admin_client = authenticated_client(app, admin)
-    sla_configuration = admin_client.put("/api/workflow/sla/configuration", json={
-        "enabled": True,
-        "duration_minutes": 1440,
-        "warning_before_minutes": 240,
-        "expected_revision": 0,
-        "change_reason": "Synthetic enabled SLA for auto-approval closure verification.",
-    })
-    assert sla_configuration.status_code == 200, sla_configuration.text
+    approval_revision = create_configuration_revision(
+        admin_client,
+        "approval_policy",
+        {
+            "enabled": False,
+            "media_confidence_threshold": 0.9,
+            "feasibility_score_threshold_exclusive": 72,
+            "feasibility_confidence_threshold": 0.85,
+        },
+    )
+    rubric_revision = create_configuration_revision(
+        admin_client, "strategy_rubric", baseline_strategy_rubric_value(),
+    )
     login(client, maker)
-    app.state.auth_workflow_configuration = auto_approval_configuration(checker.id)
+    app.state.auth_workflow_configuration = auto_approval_configuration(
+        checker.id, task_identity_mode="OLLAMA_TAG_DIGEST",
+    )
     app.state.auth_workflow_provider = AuthenticatedMockVLMProvider("pass", model_version="mock-1")
-    app.state.auth_workflow_media_provider = FakeAuthenticatedTaskProvider("MEDIA_COMPLIANCE")
-    app.state.auth_workflow_strategy_provider = FakeAuthenticatedTaskProvider("STRATEGY_EVALUATION")
+    app.state.auth_workflow_media_provider = FakeAuthenticatedTaskProvider(
+        "MEDIA_COMPLIANCE", identity_mode="OLLAMA_TAG_DIGEST",
+    )
+    app.state.auth_workflow_strategy_provider = FakeAuthenticatedTaskProvider(
+        "STRATEGY_EVALUATION", identity_mode="OLLAMA_TAG_DIGEST",
+    )
 
     draft = make_plan(client, checker.id, title="Eligible campaign", channels=("social",))
     draft = upload_plan_image(client, draft["id"], draft["revision"])
     submitted = submit_plan(client, draft)
 
-    assert submitted["status"] == "APPROVED", json.dumps(submitted["ai_evaluations"][0], indent=2)
-    assert submitted["processing_stage"] == "AI_AUTO_APPROVED"
+    assert submitted["status"] == "PENDING_APPROVAL"
+    assert submitted["processing_stage"] == "HUMAN_REVIEW_REQUIRED"
     assert submitted["ai_evaluations"][0]["status"] == "SUCCEEDED"
     assert submitted["ai_evaluations"][0]["provider"] == "MOCK_VLM"
     assert submitted["ai_evaluations"][0]["media_evaluation"]["status"] == "SUCCEEDED"
     assert submitted["ai_evaluations"][0]["strategy_evaluation"]["status"] == "SUCCEEDED"
+    assert submitted["ai_evaluations"][0]["strategy_evaluation"]["result"]["rubric_id"] == "SNAPSHOT-STRATEGY"
+    assert submitted["ai_evaluations"][0]["strategy_evaluation"]["result"]["rubric_version"] == "snapshot-r1"
+    assert submitted["ai_evaluations"][0]["media_evaluation"]["model_revision"] == (
+        app.state.auth_workflow_media_provider.settings.model_version
+    )
+    assert submitted["ai_evaluations"][0]["media_evaluation"]["reported_model_id"] == (
+        app.state.auth_workflow_media_provider.settings.model_id
+    )
+    assert submitted["ai_evaluations"][0]["strategy_evaluation"]["model_revision"] == (
+        app.state.auth_workflow_strategy_provider.settings.model_version
+    )
     assert submitted["ai_evaluations"][0]["strategy_evaluation"]["result"]["feasibility_score"] == 71
-    assert submitted["engine_decisions"][0]["outcome"] == "AUTO_APPROVED"
+    assert submitted["engine_decisions"][0]["outcome"] == "HUMAN_REVIEW_REQUIRED"
     assert submitted["engine_decisions"][0]["decision"]["budget_validation"]["result"] == "PASS"
-    assert submitted["sla_current"]["applicable"] is True
-    assert submitted["sla_current"]["configuration_revision"] == 1
-    assert submitted["sla_current"]["status"] == "CLOSED_ON_TIME"
-    assert submitted["sla_current"]["closed_at"] is not None
-    assert submitted["sla_history"] == [submitted["sla_current"]]
-    assert len([event for event in submitted["history"] if event["action"] == "AI_AUTO_APPROVED"]) == 1
+    assert not [event for event in submitted["history"] if event["action"] == "AI_AUTO_APPROVED"]
     saved_media, saved_strategy = submitted["ai_evaluations"][0]["media_evaluation"], submitted["ai_evaluations"][0]["strategy_evaluation"]
+    saved_visual = submitted["ai_evaluations"][0]["visual_extraction"]
+    assert saved_visual["model_version"] == app.state.auth_workflow_provider.model_version
+    assert saved_visual["model_revision"] == app.state.auth_workflow_provider.model_version
+    assert saved_visual["reported_model_id"] == app.state.auth_workflow_provider.model_id
     reloaded = client.get(f"/api/workflow/plans/{draft['id']}").json()
     assert reloaded["ai_evaluations"][0]["media_evaluation"] == saved_media
     assert reloaded["ai_evaluations"][0]["strategy_evaluation"] == saved_strategy
+    assert reloaded["ai_evaluations"][0]["visual_extraction"] == saved_visual
+    with factory() as session:
+        persisted_run = session.get(AuthWorkflowEvaluationRun, UUID(submitted["ai_evaluations"][0]["id"]))
+        assert persisted_run is not None
+        assert persisted_run.policy_snapshot["policy"]["auto_approval_policy_enabled"] is False
+        assert persisted_run.policy_snapshot["policy"]["feasibility_threshold"] == 72
+        assert persisted_run.policy_snapshot["policy"]["media_confidence_threshold"] == 0.9
+        assert persisted_run.policy_snapshot["policy"]["feasibility_confidence_threshold"] == 0.85
+        round_snapshot = session.scalar(select(AuthWorkflowRoundConfigurationSnapshot).where(
+            AuthWorkflowRoundConfigurationSnapshot.plan_id == UUID(submitted["id"]),
+        ))
+        assert round_snapshot is not None
+        assert round_snapshot.configurations["approval_policy"]["revision_id"] == approval_revision["revision_id"]
+        assert round_snapshot.configurations["strategy_rubric"]["revision_id"] == rubric_revision["revision_id"]
+        assert round_snapshot.configurations["approval_policy"]["value"]["enabled"] is False
+        assert round_snapshot.configurations["strategy_rubric"]["value"]["rubric_version"] == "snapshot-r1"
+        assert persisted_run.media_evaluation["model_revision"] == saved_media["model_revision"]
+        assert persisted_run.strategy_evaluation["model_revision"] == saved_strategy["model_revision"]
+        assert persisted_run.visual_extraction["model_revision"] == saved_visual["model_revision"]
+        assert persisted_run.attempt_number == 1
+        assert persisted_run.result_disposition == "APPLIED"
     assert app.state.auth_workflow_media_provider.calls == 1
     assert app.state.auth_workflow_strategy_provider.calls == 1
     assert app.state.auth_workflow_provider.calls == 1
     maker_notifications = client.get("/api/workflow/notifications").json()
-    assert [item["event_type"] for item in maker_notifications["items"]] == ["PLAN_AUTO_APPROVED"]
+    assert not [item for item in maker_notifications["items"] if item["event_type"] == "PLAN_AUTO_APPROVED"]
     checker_notifications = authenticated_client(app, checker).get("/api/workflow/notifications").json()
     assert [item["event_type"] for item in checker_notifications["items"]] == ["PLAN_SUBMITTED"]
+
+
+def test_manual_retry_reuses_round_configuration_and_appends_one_decision_per_attempt(workflow_client):
+    client, factory, app = workflow_client
+    maker = create_user(factory, "maker.retry-decision", ("MAKER",))
+    checker = create_user(factory, "checker.retry-decision", ("CHECKER",))
+    admin = create_user(factory, "admin.retry-decision", ("ADMIN",))
+    admin_client = authenticated_client(app, admin)
+    approval_revision = create_configuration_revision(
+        admin_client,
+        "approval_policy",
+        {
+            "enabled": False,
+            "media_confidence_threshold": 0.85,
+            "feasibility_score_threshold_exclusive": 70,
+            "feasibility_confidence_threshold": 0.8,
+        },
+    )
+    rubric_revision = create_configuration_revision(
+        admin_client, "strategy_rubric", baseline_strategy_rubric_value(),
+    )
+    login(client, maker)
+    app.state.auth_workflow_configuration = auto_approval_configuration(checker.id)
+    app.state.auth_workflow_provider = AuthenticatedMockVLMProvider("pass", model_version="mock-1")
+
+    class FailOnceMediaProvider(FakeAuthenticatedTaskProvider):
+        def __init__(self, task):
+            super().__init__(task)
+            self.fail_next = True
+
+        def evaluate(self, request):
+            if self.fail_next:
+                self.fail_next = False
+                self.calls += 1
+                raise ProviderError("synthetic retryable provider error")
+            return super().evaluate(request)
+
+    app.state.auth_workflow_media_provider = FailOnceMediaProvider("MEDIA_COMPLIANCE")
+    app.state.auth_workflow_strategy_provider = FakeAuthenticatedTaskProvider("STRATEGY_EVALUATION")
+    draft = make_plan(client, checker.id, title="Retry decision uniqueness", channels=("social",))
+    draft = upload_plan_image(client, draft["id"], draft["revision"])
+    failed = submit_plan(client, draft)
+
+    assert failed["processing_stage"] == "HUMAN_REVIEW_REQUIRED"
+    assert failed["ai_evaluations"][0]["status"] == "FAILED"
+    assert failed["ai_evaluations"][0]["failure_reason"] == "PROVIDER_ERROR"
+    assert len(failed["engine_decisions"]) == 1
+    assert failed["engine_decisions"][0]["outcome"] == "HUMAN_REVIEW_REQUIRED"
+
+    first_run_id = UUID(failed["ai_evaluations"][0]["id"])
+    with factory() as session:
+        original_run = session.get(AuthWorkflowEvaluationRun, first_run_id)
+        assert original_run is not None
+        original_policy_snapshot = original_run.policy_snapshot
+        original_policy_snapshot_hash = original_run.policy_snapshot_hash
+        original_round_snapshot = session.scalar(select(AuthWorkflowRoundConfigurationSnapshot).where(
+            AuthWorkflowRoundConfigurationSnapshot.plan_id == UUID(failed["id"]),
+        ))
+        assert original_round_snapshot is not None
+        original_round_snapshot_hash = original_round_snapshot.snapshot_hash
+        assert original_round_snapshot.configurations["approval_policy"]["revision_id"] == approval_revision["revision_id"]
+        assert original_round_snapshot.configurations["strategy_rubric"]["revision_id"] == rubric_revision["revision_id"]
+
+    newer_policy_revision = create_configuration_revision(
+        admin_client,
+        "approval_policy",
+        {
+            "enabled": False,
+            "media_confidence_threshold": 0.99,
+            "feasibility_score_threshold_exclusive": 90,
+            "feasibility_confidence_threshold": 0.99,
+        },
+        expected_revision=1,
+    )
+    assert newer_policy_revision["revision"] == 2
+
+    checker_client = authenticated_client(app, checker)
+    retried = checker_client.post(
+        f"/api/workflow/plans/{draft['id']}/rounds/1/evaluation-retries",
+        json={
+            "expected_plan_version": failed["current_version"],
+            "expected_round_revision": failed["revision"],
+        },
+        headers={"Idempotency-Key": "retry-decision-unique"},
+    )
+    assert retried.status_code == 200, retried.text
+    assert retried.json()["processing_stage"] == "HUMAN_REVIEW_REQUIRED"
+    detail = checker_client.get(f"/api/workflow/plans/{draft['id']}").json()
+    assert detail["status"] == "PENDING_APPROVAL"
+    assert len(detail["ai_evaluations"]) == 2
+    assert [item["attempt_number"] for item in detail["ai_evaluations"]] == [1, 2]
+    assert detail["ai_evaluations"][1]["status"] == "SUCCEEDED"
+    assert len(detail["engine_decisions"]) == 2
+    assert [item["outcome"] for item in detail["engine_decisions"]] == [
+        "HUMAN_REVIEW_REQUIRED", "HUMAN_REVIEW_REQUIRED",
+    ]
+    assert sum(item["outcome"] == "AUTO_APPROVED" for item in detail["engine_decisions"]) == 0
+    with factory() as session:
+        retried_run = session.get(AuthWorkflowEvaluationRun, UUID(detail["ai_evaluations"][1]["id"]))
+        assert retried_run is not None
+        assert retried_run.policy_snapshot == original_policy_snapshot
+        assert retried_run.policy_snapshot_hash == original_policy_snapshot_hash
+        round_snapshot = session.scalar(select(AuthWorkflowRoundConfigurationSnapshot).where(
+            AuthWorkflowRoundConfigurationSnapshot.plan_id == UUID(draft["id"]),
+        ))
+        assert round_snapshot is not None
+        assert round_snapshot.snapshot_hash == original_round_snapshot_hash
+        assert round_snapshot.configurations["approval_policy"]["revision_id"] == approval_revision["revision_id"]
+        assert round_snapshot.configurations["approval_policy"]["revision_id"] != newer_policy_revision["revision_id"]
+        assert retried_run.policy_snapshot["policy"]["feasibility_threshold"] == 70
 
 
 def test_authenticated_provider_failure_is_persisted_and_checker_can_review(workflow_client):
@@ -773,7 +996,7 @@ def test_authenticated_provider_failure_is_persisted_and_checker_can_review(work
     assert submitted["processing_stage"] == "HUMAN_REVIEW_REQUIRED"
     assert submitted["ai_evaluations"][0]["status"] == "TIMED_OUT", json.dumps(submitted["ai_evaluations"][0], indent=2)
     assert submitted["ai_evaluations"][0]["provider"] == "MOCK_VLM"
-    assert submitted["ai_evaluations"][0]["attempts"] == 3
+    assert submitted["ai_evaluations"][0]["attempts"] == 2
     assert submitted["ai_evaluations"][0]["retried"] is True
     assert submitted["engine_decisions"][0]["outcome"] == "HUMAN_REVIEW_REQUIRED"
     assert "EVAL_VALID" in submitted["engine_decisions"][0]["decision"]["reason"]
@@ -798,6 +1021,10 @@ def test_review_recommendation_routes_to_checker_without_deciding_the_final_acti
     client, _factory, app = workflow_client
     maker = create_user(_factory, "maker.review-recommendation", ("MAKER",))
     checker = create_user(_factory, "checker.review-recommendation", ("CHECKER",))
+    admin = create_user(_factory, "admin.review-recommendation", ("ADMIN",))
+    create_configuration_revision(
+        authenticated_client(app, admin), "strategy_rubric", baseline_strategy_rubric_value(),
+    )
     login(client, maker)
     app.state.auth_workflow_configuration = auto_approval_configuration(checker.id)
     app.state.auth_workflow_provider = AuthenticatedMockVLMProvider("pass", model_version="mock-1")
@@ -857,7 +1084,7 @@ def test_local_vlm_extraction_persists_separately_and_missing_evaluators_route_c
     def inference(request):
         captured.append(request)
         return httpx.Response(200, json={
-            "model": "runtime-model-name",
+            "model": "configured-model-id",
             "system_fingerprint": "runtime-revision-1",
             "choices": [{
                 "message": {"role": "assistant", "content": json.dumps(extraction)},
@@ -867,8 +1094,13 @@ def test_local_vlm_extraction_persists_separately_and_missing_evaluators_route_c
 
     app.state.auth_workflow_provider = LocalVLMProvider(
         model="configured-model-id",
+        model_version="operator-pinned-revision-1",
         base_url="http://localhost:8000/v1",
         client=httpx.Client(transport=httpx.MockTransport(inference)),
+    )
+    from src.backend.application.auth_workflow_ai import unconfigured_approval_configuration
+    app.state.auth_workflow_configuration = unconfigured_approval_configuration(
+        app.state.auth_workflow_provider,
     )
     maker = create_user(factory, "maker.vlm", ("MAKER",))
     checker = create_user(factory, "checker.vlm", ("CHECKER",))
@@ -891,7 +1123,7 @@ def test_local_vlm_extraction_persists_separately_and_missing_evaluators_route_c
     assert result["engine_decisions"][0]["outcome"] == "HUMAN_REVIEW_REQUIRED"
     assert evaluation_run["status"] == "FAILED"
     assert evaluation_run["model_id"] == "configured-model-id"
-    assert evaluation_run["model_version"] is None
+    assert evaluation_run["model_version"] == "operator-pinned-revision-1"
     assert evaluation_run["evaluation"]["media_result"] is None
     assert evaluation_run["evaluation"]["feasibility_score"] is None
     assert evaluation_run["media_evaluation"]["status"] == "NOT_CONFIGURED"
@@ -905,11 +1137,23 @@ def test_local_vlm_extraction_persists_separately_and_missing_evaluators_route_c
     assert visual["attachments"][0]["object_detections"] == ["campaign banner"]
     assert visual["attachments"][0]["visual_quality"] == {"result": "PASS", "findings": []}
     assert visual["model_id"] == "configured-model-id"
-    assert visual["model_revision"] == "runtime-revision-1"
+    assert visual["model_version"] == "operator-pinned-revision-1"
+    assert visual["model_revision"] is None
+    assert visual["reported_model_id"] == "configured-model-id"
     assert visual["attachments"][0]["attachment_id"] == attached["attachments"][0]["id"]
     assert visual["attachments"][0]["content_hash"] == attached["attachments"][0]["content_hash"]
     assert visual["attachments"][0]["evidence"][0]["text"] == "Visible campaign headline"
     assert evaluation_run["evaluation"]["evidence"][0]["source_ref"] == attached["attachments"][0]["id"]
+    reloaded = client.get(f"/api/workflow/plans/{draft['id']}").json()
+    reloaded_visual = reloaded["ai_evaluations"][0]["visual_extraction"]
+    assert reloaded_visual == visual
+    assert reloaded_visual["model_version"] == "operator-pinned-revision-1"
+    assert reloaded_visual["model_revision"] is None
+    assert reloaded_visual["reported_model_id"] == "configured-model-id"
+    with factory() as session:
+        persisted_run = session.get(AuthWorkflowEvaluationRun, UUID(evaluation_run["id"]))
+        assert persisted_run is not None
+        assert persisted_run.visual_extraction == visual
     assert app.state.auth_workflow_configuration.policy.auto_approval_policy_enabled is False
 
 
@@ -1061,7 +1305,7 @@ def test_late_vlm_result_cannot_replace_a_run_recovered_during_inference(workflo
             }],
         }
         return httpx.Response(200, json={
-            "model": "runtime-model-name",
+            "model": "configured-model-id",
             "choices": [{
                 "message": {"role": "assistant", "content": json.dumps(extraction)},
                 "finish_reason": "stop",
@@ -1070,8 +1314,13 @@ def test_late_vlm_result_cannot_replace_a_run_recovered_during_inference(workflo
 
     app.state.auth_workflow_provider = LocalVLMProvider(
         model="configured-model-id",
+        model_version="late-test-model-revision",
         base_url="http://localhost:8000/v1",
         client=httpx.Client(transport=httpx.MockTransport(finish_after_recovery)),
+    )
+    from src.backend.application.auth_workflow_ai import unconfigured_approval_configuration
+    app.state.auth_workflow_configuration = unconfigured_approval_configuration(
+        app.state.auth_workflow_provider,
     )
     draft = make_plan(client, checker.id, title="Slow inference")
     plan_id = draft["id"]

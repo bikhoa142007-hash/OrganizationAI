@@ -133,6 +133,8 @@ an Auth request, and the API key is never persisted or logged:
 | Variable | Purpose |
 |---|---|
 | `LOCAL_VLM_MODEL` | Runtime model ID; not treated as an immutable revision |
+| `LOCAL_VLM_MODEL_VERSION` | Operator-pinned version; `sha256:` values are verified against Ollama inventory |
+| `LOCAL_VLM_IDENTITY_MODE` | Optional `OLLAMA_TAG_DIGEST` or `GENERIC_OPAQUE_REVISION`; digest pins infer Ollama mode |
 | `LOCAL_VLM_BASE_URL` | OpenAI-compatible API root including `/v1` |
 | `LOCAL_VLM_ALLOW_REMOTE` | Defaults to `false`; non-local endpoints require explicit opt-in and HTTPS |
 | `LOCAL_VLM_API_KEY` | Optional bearer credential for the configured runtime |
@@ -150,6 +152,14 @@ adapter permits loopback and `host.docker.internal` by default. A non-local host
 requires `LOCAL_VLM_ALLOW_REMOTE=true` and HTTPS; enable it only after explicitly
 approving that destination for private image data. The actual runtime/model
 remains operator-selected; no model is bundled or downloaded by this project.
+
+For an OpenAI-compatible runtime that does not expose Ollama's local `/api/tags`
+inventory, set `LOCAL_VLM_IDENTITY_MODE=GENERIC_OPAQUE_REVISION`. It checks the
+exact response model ID and records the configured value in `model_version`,
+while leaving the unverified `model_revision` null. Media and Strategy each have
+the matching `AUTH_WORKFLOW_MEDIA_IDENTITY_MODE` and
+`AUTH_WORKFLOW_STRATEGY_IDENTITY_MODE` settings. Identity mode and model version
+are captured in the submitted round snapshot and reused on retries.
 
 The adapter sends image bytes as base64 `image_url` content parts and requests a
 strict JSON Schema response. A runtime that lacks image or schema support is

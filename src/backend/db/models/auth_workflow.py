@@ -16,6 +16,7 @@ from sqlalchemy import (
     UniqueConstraint,
     Uuid,
     func,
+    text,
 )
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -212,9 +213,29 @@ class AuthWorkflowEvaluationRun(Base):
 
     __tablename__ = "auth_workflow_evaluation_runs"
     __table_args__ = (
-        UniqueConstraint("plan_id", "round_number", name="uq_auth_workflow_ai_run_plan_round"),
+        UniqueConstraint(
+            "plan_id", "round_number", "attempt_number",
+            name="uq_auth_workflow_ai_run_attempt",
+        ),
+        UniqueConstraint(
+            "plan_id", "round_number", "retry_idempotency_key",
+            name="uq_auth_workflow_ai_run_retry_key",
+        ),
         UniqueConstraint("run_id", name="uq_auth_workflow_ai_run_id"),
         UniqueConstraint("evaluation_id", name="uq_auth_workflow_ai_evaluation_id"),
+        CheckConstraint(
+            "attempt_number IN (1, 2)",
+            name="ck_auth_workflow_ai_run_attempt",
+        ),
+        CheckConstraint(
+            "(attempt_number = 1 AND retry_parent_run_id IS NULL AND retry_idempotency_key IS NULL AND retry_request_hash IS NULL) OR "
+            "(attempt_number = 2 AND retry_parent_run_id IS NOT NULL AND retry_idempotency_key IS NOT NULL AND retry_request_hash IS NOT NULL)",
+            name="ck_auth_workflow_ai_run_retry_metadata",
+        ),
+        CheckConstraint(
+            "result_disposition IS NULL OR result_disposition IN ('APPLIED', 'STALE')",
+            name="ck_auth_workflow_ai_run_result_disposition",
+        ),
         CheckConstraint(
             "status IN ('PENDING', 'PROCESSING', 'SUCCEEDED', 'FAILED', 'TIMED_OUT')",
             name="ck_auth_workflow_ai_run_status",
@@ -227,6 +248,13 @@ class AuthWorkflowEvaluationRun(Base):
     )
     version_number: Mapped[int] = mapped_column(Integer, nullable=False)
     round_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    attempt_number: Mapped[int] = mapped_column(Integer, nullable=False, default=1, server_default="1")
+    retry_parent_run_id: Mapped[UUID | None] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("auth_workflow_evaluation_runs.id", ondelete="RESTRICT"), nullable=True
+    )
+    retry_idempotency_key: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    retry_request_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    result_disposition: Mapped[str | None] = mapped_column(String(16), nullable=True)
     run_id: Mapped[str] = mapped_column(String(100), nullable=False)
     evaluation_id: Mapped[str] = mapped_column(String(100), nullable=False)
     idempotency_key: Mapped[str] = mapped_column(String(200), nullable=False)
@@ -259,8 +287,15 @@ class AuthWorkflowEngineDecision(Base):
 
     __tablename__ = "auth_workflow_engine_decisions"
     __table_args__ = (
-        UniqueConstraint("plan_id", "round_number", name="uq_auth_workflow_engine_decisions_plan_round"),
         UniqueConstraint("decision_id", name="uq_auth_workflow_engine_decisions_id"),
+        Index(
+            "uq_auth_workflow_engine_auto_approved_plan_round",
+            "plan_id",
+            "round_number",
+            unique=True,
+            postgresql_where=text("outcome = 'AUTO_APPROVED'"),
+            sqlite_where=text("outcome = 'AUTO_APPROVED'"),
+        ),
         CheckConstraint(
             "outcome IN ('AUTO_APPROVED', 'HUMAN_REVIEW_REQUIRED')",
             name="ck_auth_workflow_engine_decisions_outcome",

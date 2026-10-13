@@ -4,7 +4,7 @@ import os
 from sqlalchemy import select
 from sqlalchemy.orm import Session, sessionmaker
 
-from src.backend.db.models import Role, User, UserRole
+from src.backend.db.models import EmployeeProfile, Role, User, UserRole
 from src.backend.db.security import hash_password
 from src.backend.db.session import get_session_factory
 
@@ -55,6 +55,20 @@ def seed_development_users(
             assignment = session.get(UserRole, (user.id, roles[role_code].id))
             if assignment is None:
                 session.add(UserRole(user_id=user.id, role_id=roles[role_code].id))
+            employee_profile = session.scalar(
+                select(EmployeeProfile).where(EmployeeProfile.user_id == user.id)
+            )
+            if employee_profile is None:
+                session.add(EmployeeProfile(
+                    user_code=user.user_code,
+                    display_name=user.display_name,
+                    email=user.email,
+                    phone=user.phone,
+                    department="Marketing" if role_code in {"MAKER", "CHECKER"} else None,
+                    job_title=role_code.title(),
+                    employment_status="ACTIVE",
+                    user_id=user.id,
+                ))
             user_codes.append(user_code)
     return tuple(user_codes)
 

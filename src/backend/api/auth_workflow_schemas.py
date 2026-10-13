@@ -82,6 +82,8 @@ class WorkflowEvaluationResponse(AuthWorkflowDTO):
     id: str
     version_number: int
     round_number: int
+    attempt_number: int = 1
+    result_disposition: Literal["APPLIED", "STALE"] | None = None
     run_id: str
     evaluation_id: str
     correlation_id: str

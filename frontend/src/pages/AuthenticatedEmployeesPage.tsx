@@ -35,7 +35,7 @@ export function AuthenticatedEmployeesPage() {
   const [handoverLink, setHandoverLink] = useState('')
   const [creating, setCreating] = useState(false)
   const [newProfile, setNewProfile] = useState({ user_code: '', display_name: '', email: '', phone: '', department: '', job_title: '' })
-  const [deactivation, setDeactivation] = useState<{ employee: WorkflowEmployee; plans: EmployeePendingPlanPage['items']; checkers: WorkflowEmployee[]; replacements: Record<string, string> } | null>(null)
+  const [deactivation, setDeactivation] = useState<{ employee: WorkflowEmployee; plans: EmployeePendingPlanPage['items'] } | null>(null)
 
   const load = useCallback(async (nextOffset: number, nextFilters: EmployeeFilters) => {
     setError('')
@@ -183,19 +183,17 @@ export function AuthenticatedEmployeesPage() {
         await load(offset, filters)
         return
       }
-      const checkerPage = await authWorkflowService.listEmployees({ role: 'CHECKER', status: 'ACTIVE', employment_status: 'ACTIVE', limit: 200 })
-      const checkers = checkerPage.items.filter(item => item.account_status === 'ACTIVE' && item.account_id !== employee.account_id)
-      setDeactivation({ employee, plans, checkers, replacements: {} })
+      setDeactivation({ employee, plans })
     } catch (failure) {
       setMutationError(failure instanceof Error ? failure.message : String(failure))
     }
   }
 
   async function confirmDeactivation() {
-    if (!deactivation || deactivation.plans.some(plan => !deactivation.replacements[plan.id])) return
+    if (!deactivation) return
     setMutationError('')
     try {
-      await authWorkflowService.deactivateEmployee(deactivation.employee.id, deactivation.replacements)
+      await authWorkflowService.deactivateEmployee(deactivation.employee.id, {})
       setDeactivation(null)
       await load(offset, filters)
     } catch (failure) {
@@ -236,11 +234,10 @@ export function AuthenticatedEmployeesPage() {
       <button className="button button-secondary" type="button" onClick={() => setHandoverLink('')}>Ẩn liên kết</button>
     </section>}
     {deactivation && <section className="auth-workflow-state" role="dialog" aria-modal="true" aria-labelledby="employee-deactivate-title">
-      <h2 id="employee-deactivate-title">Chọn Checker thay thế cho {deactivation.employee.display_name}</h2>
-      <p>Mỗi hồ sơ Chờ duyệt cần một Checker đang hoạt động. Hệ thống chỉ đổi assignment sau khi có đủ lựa chọn và cùng lúc ngừng nhân viên.</p>
-      {deactivation.plans.map(plan => <label key={plan.id}>{plan.code}<select required value={deactivation.replacements[plan.id] || ''} onChange={event => setDeactivation(current => current ? ({ ...current, replacements: { ...current.replacements, [plan.id]: event.target.value } }) : current)}><option value="">Chọn Checker</option>{deactivation.checkers.filter(checker => checker.account_id !== plan.maker_id).map(checker => <option key={checker.account_id!} value={checker.account_id!}>{checker.display_name} · {checker.user_code}</option>)}</select></label>)}
-      {deactivation.checkers.length === 0 && <p role="alert">Không có Checker thay thế đủ điều kiện. Chưa thay đổi assignment hay trạng thái nhân viên.</p>}
-      <div className="button-row"><button className="button button-primary" type="button" disabled={deactivation.plans.some(plan => !deactivation.replacements[plan.id]) || deactivation.plans.some(plan => !deactivation.checkers.some(checker => checker.account_id !== plan.maker_id))} onClick={() => void confirmDeactivation()}>Chuyển hồ sơ và ngừng nhân viên</button><button className="button button-secondary" type="button" onClick={() => setDeactivation(null)}>Hủy</button></div>
+      <h2 id="employee-deactivate-title">Ngừng hoạt động {deactivation.employee.display_name}?</h2>
+      <p>Hồ sơ đang chờ sẽ được chuyển theo Checker mặc định đang hiệu lực của từng bộ phận. Nếu thiếu cấu hình hoặc Checker không còn hợp lệ, máy chủ sẽ hủy toàn bộ thao tác; hạn SLA được giữ nguyên.</p>
+      <ul aria-label="Hồ sơ đang chờ được chuyển">{deactivation.plans.map(plan => <li key={plan.id}>{plan.code}</li>)}</ul>
+      <div className="button-row"><button className="button button-primary" type="button" onClick={() => void confirmDeactivation()}>Chuyển theo cấu hình và ngừng nhân viên</button><button className="button button-secondary" type="button" onClick={() => setDeactivation(null)}>Hủy</button></div>
     </section>}
 
     <form className="auth-plan-filters" role="search" aria-label="Lọc nhân viên" onSubmit={applyFilters}>

@@ -1,0 +1,213 @@
+{
+  "cases": [
+    {
+      "case_id": "media-clean",
+      "error_code": "POLICY_OUTPUT_CONFLICT",
+      "expected": "PASS",
+      "expected_result_pass": false,
+      "latency_ms": 3786,
+      "max_retries": 0,
+      "policy_conflict_reason": "Media finding conflicts with its policy rule result.",
+      "policy_valid": false,
+      "prompt_version": "media-compliance-prompt-v5",
+      "provider_call": "SUCCEEDED",
+      "schema_valid": true,
+      "schema_version": "media-compliance-schema-v3",
+      "scripted_quality_pass": false,
+      "task": "MEDIA_COMPLIANCE",
+      "timeout_seconds": 20
+    },
+    {
+      "case_id": "media-marker",
+      "error_code": "POLICY_OUTPUT_CONFLICT",
+      "expected": "REVIEW_REQUIRED",
+      "expected_result_pass": false,
+      "latency_ms": 4373,
+      "max_retries": 0,
+      "policy_conflict_reason": "Media result conflicts with the configured literal rule.",
+      "policy_valid": false,
+      "prompt_version": "media-compliance-prompt-v5",
+      "provider_call": "SUCCEEDED",
+      "schema_valid": true,
+      "schema_version": "media-compliance-schema-v3",
+      "scripted_quality_pass": false,
+      "task": "MEDIA_COMPLIANCE",
+      "timeout_seconds": 20
+    },
+    {
+      "case_id": "strategy-complete",
+      "error_code": "POLICY_OUTPUT_CONFLICT",
+      "expected": "NO_MATERIAL_GAPS",
+      "expected_result_pass": false,
+      "latency_ms": 9963,
+      "max_retries": 0,
+      "policy_conflict_reason": "Strategy total does not equal the configured Decimal weighted score.",
+      "policy_valid": false,
+      "prompt_version": "strategy-evaluation-prompt-v5",
+      "provider_call": "SUCCEEDED",
+      "schema_valid": true,
+      "schema_version": "strategy-evaluation-schema-v5",
+      "scripted_quality_pass": false,
+      "task": "STRATEGY_EVALUATION",
+      "timeout_seconds": 20
+    },
+    {
+      "case_id": "strategy-incomplete",
+      "error_code": "POLICY_OUTPUT_CONFLICT",
+      "expected": "GAPS_REPORTED",
+      "expected_result_pass": false,
+      "latency_ms": 8212,
+      "max_retries": 0,
+      "policy_conflict_reason": "Strategy total does not equal the configured Decimal weighted score.",
+      "policy_valid": false,
+      "prompt_version": "strategy-evaluation-prompt-v5",
+      "provider_call": "SUCCEEDED",
+      "schema_valid": true,
+      "schema_version": "strategy-evaluation-schema-v5",
+      "scripted_quality_pass": false,
+      "task": "STRATEGY_EVALUATION",
+      "timeout_seconds": 20
+    }
+  ],
+  "endpoint_fingerprint": "9b514b1a65f6ebfaa4da53a116ea003831b044dc32a989733eace74554ef5b0c",
+  "gates": {
+    "independent_holdout": {
+      "cases": 0,
+      "status": "NOT_RUN"
+    },
+    "model_identity": {
+      "digest_pin_changed": false,
+      "status": "FAIL",
+      "task_model": "PASS",
+      "visual_model": "FAIL"
+    },
+    "pipeline_persistence_and_routing": {
+      "reason": "Harness-only verification; no temporary DB or full application wiring.",
+      "status": "NOT_RUN"
+    },
+    "provider_connection": {
+      "error_code": null,
+      "openai_compatible_models_endpoint": true,
+      "status": "PASS",
+      "task_model_list_contains_configured_id": true,
+      "visual_model_list_contains_configured_id": true
+    },
+    "real_task_inference": {
+      "cases_run": 4,
+      "status": "PASS"
+    },
+    "scripted_policy_quality": {
+      "passing_cases": 0,
+      "status": "FAIL",
+      "total_cases": 4
+    },
+    "task_schema_validity": {
+      "status": "PASS",
+      "total_cases": 4,
+      "valid_cases": 4
+    },
+    "unit_contract_tests": {
+      "command": "pytest -q tests/unit/ai_pipeline",
+      "executed_at": "2026-10-12T09:28:51.643Z",
+      "result": "82 passed",
+      "status": "PASS"
+    },
+    "visual_real_inference": {
+      "error_code": "MODEL_DIGEST_MISMATCH",
+      "image_sent": false,
+      "status": "BLOCKED"
+    }
+  },
+  "hardware": "NVIDIA GeForce RTX 5050 Laptop GPU, 8151 MiB, 610.74",
+  "limitations": [
+    "Synthetic development fixtures only; no independent holdout was available.",
+    "Results do not estimate general model accuracy.",
+    "This harness does not invoke application database persistence or full app routing."
+  ],
+  "max_retries": 0,
+  "models": {
+    "task": {
+      "base_context_length": 262144,
+      "configured_num_ctx": 8192,
+      "digest": "b2ef2f414e31e4e10ef46366751464631a5fa4b5c1bf183b1e3b9076ab2116ef",
+      "expected_digest": "sha256:b2ef2f414e31e4e10ef46366751464631a5fa4b5c1bf183b1e3b9076ab2116ef",
+      "family": "qwen3",
+      "identity_valid": true,
+      "model_id": "organizationai-qwen3:4b-ctx8192",
+      "parameter_size": "4.0B",
+      "present": true,
+      "quantization": "Q4_K_M",
+      "size_bytes": 2497293574
+    },
+    "visual": {
+      "base_context_length": 262144,
+      "configured_num_ctx": null,
+      "digest": "e8503d318d8df6622abc18a317c0e5eee044821322c87a16a6acddd62984da84",
+      "expected_digest": "sha256:1343d82ebee38e26a4dd6b0180b915eb91550184e67c505dea97509571c8f683",
+      "family": "qwen3vl",
+      "identity_valid": false,
+      "model_id": "qwen3-vl:4b",
+      "parameter_size": "4.4B",
+      "present": true,
+      "quantization": "Q4_K_M",
+      "size_bytes": 3335885274
+    }
+  },
+  "prompt_schema": {
+    "media": {
+      "prompt": "media-compliance-prompt-v5",
+      "schema": "media-compliance-schema-v3"
+    },
+    "strategy": {
+      "prompt": "strategy-evaluation-prompt-v5",
+      "schema": "strategy-evaluation-schema-v5"
+    },
+    "visual": {
+      "prompt": "visual-extraction-prompt-v2",
+      "schema": "visual-extraction-schema-v2"
+    }
+  },
+  "run_completed_at": "2026-10-12T09:26:11.628Z",
+  "run_started_at": "2026-10-12T09:25:43.526Z",
+  "runtime_version": "ollama version is 0.40.2",
+  "scope": "synthetic local inference; serial concurrency=1; no retry; no app database",
+  "source": {
+    "source_files_sha256": {
+      "scripts/ai_scope1/run_local_task_inference.py": "9459333c2560c0ae42550c1132fcab2e5f09ea777fd80b9b95416aac9e6043b7",
+      "src/ai_pipeline/authenticated_orchestrator.py": "ad65b240eb5892bd04481751971564e9a3ec920911972742a597b2c151b895db",
+      "src/ai_pipeline/orchestrator.py": "e763d29ed2775cb55b5b0fcab42c1ef20a0adbd33c205e7d54458688a70935ae",
+      "src/ai_pipeline/providers/ollama_identity.py": "c09d928aa65053f7a624fc9260a1d9b53b90a816119cff063c6e9fafc04a8bb2",
+      "src/ai_pipeline/providers/openai_provider.py": "4f365fbf5c328a6a97a0821df6f72b6d05fe9819035d30ca431fe267a18662bc",
+      "src/ai_pipeline/task_evaluation.py": "5e934cc9889f45f710519051d8d601329f28d85f0d136722bd1c40f57bb7e455",
+      "src/ai_pipeline/task_providers.py": "abf9c76096ef0659cb75572112445d90a29cb89b2c0179e99550e2e94eec5172",
+      "src/ai_pipeline/vlm_extraction.py": "be580785d27e2aa1db667d9b74818dcb2849e9878f6afc75446a3c530260a3cf",
+      "tests/unit/ai_pipeline/test_ollama_model_identity.py": "507cbc1a94ec9fbaf4abcbe245a472f27f30452425df9c64685055aed87425ce",
+      "tests/unit/ai_pipeline/test_task_output_conflicts.py": "418098cd627580eb9aff8abbf872d10e95a1d3cbf472ecc4549d700bde8012b8"
+    },
+    "source_fingerprint": "41eaedd07c819364ab2b785fc74c77d77c2d053b5ee076d32e47108cb2e88b20",
+    "source_sha": "965b52009b43fba0b846bed33d1cbadc733ee79e"
+  },
+  "timeout_seconds_per_inference": 20,
+  "visual_preflight": {
+    "application_routing": "NOT_RUN",
+    "attempts": 1,
+    "duration_ms": 83,
+    "error_code": "MODEL_DIGEST_MISMATCH",
+    "expected_digest": "sha256:1343d82ebee38e26a4dd6b0180b915eb91550184e67c505dea97509571c8f683",
+    "image_bytes": 119,
+    "image_request_sent": false,
+    "image_sha256": "6c84695a33485183f90f23982a6c597e628f12b4f0dd2e1446d6f314a568f78f",
+    "max_retries": 0,
+    "persistence": "NOT_RUN",
+    "prompt_version": "visual-extraction-prompt-v2",
+    "provider": "LOCAL_VLM",
+    "runtime_requests": [
+      {
+        "method": "GET",
+        "path": "/api/tags"
+      }
+    ],
+    "schema_version": "visual-extraction-schema-v2",
+    "status": "FAILED"
+  }
+}

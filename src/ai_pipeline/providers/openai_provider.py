@@ -18,6 +18,14 @@ from .base import (
     ProviderTimeout,
     VisualModelProvider,
 )
+from .ollama_identity import (
+    GENERIC_OPAQUE_REVISION,
+    IDENTITY_MODES,
+    OLLAMA_TAG_DIGEST,
+    is_sha256_pin,
+    resolve_identity_mode,
+    verify_ollama_model_digest,
+)
 from src.ai_pipeline.vlm_extraction import (
     OUTPUT_JSON_SCHEMA,
     SYSTEM_PROMPT,
@@ -60,6 +68,7 @@ class LocalVLMProvider(VisualModelProvider):
         max_response_bytes=None,
         max_input_bytes=None,
         allow_remote=None,
+        identity_mode=None,
         client=None,
     ):
         self.model_id = (model if model is not None else os.getenv("LOCAL_VLM_MODEL", "")).strip()
@@ -68,6 +77,16 @@ class LocalVLMProvider(VisualModelProvider):
             else os.getenv("LOCAL_VLM_MODEL_VERSION", "")
         )
         self.model_version = configured_version.strip() or None
+        configured_identity_mode = (
+            identity_mode if identity_mode is not None
+            else os.getenv("LOCAL_VLM_IDENTITY_MODE")
+        )
+        configured_identity_mode = (
+            configured_identity_mode.strip().upper()
+            if isinstance(configured_identity_mode, str) and configured_identity_mode.strip()
+            else None
+        )
+        self.identity_mode = resolve_identity_mode(configured_identity_mode, self.model_version)
         self.base_url = (base_url if base_url is not None else os.getenv("LOCAL_VLM_BASE_URL", "")).strip().rstrip("/")
         self.api_key = api_key if api_key is not None else os.getenv("LOCAL_VLM_API_KEY", "")
         self.timeout_seconds = _bounded_setting(
@@ -99,10 +118,18 @@ class LocalVLMProvider(VisualModelProvider):
             "INVALID_PROVIDER_CONFIGURATION" if invalid_setting else None
         ) or (
             "INVALID_PROVIDER_CONFIGURATION" if invalid_remote_setting else None
+        ) or (
+            "INVALID_PROVIDER_CONFIGURATION" if self.identity_mode not in IDENTITY_MODES else None
+        ) or (
+            "INVALID_PROVIDER_CONFIGURATION"
+            if self.identity_mode == OLLAMA_TAG_DIGEST and not is_sha256_pin(self.model_version)
+            else None
         )
 
     def health_check(self):
         if self.configuration_error or not self.model_id or not self.base_url:
+            return False
+        if not self.model_version:
             return False
         try:
             with self._client_context() as client:
@@ -111,8 +138,19 @@ class LocalVLMProvider(VisualModelProvider):
                     headers=self._headers(),
                     timeout=self.timeout_seconds,
                 )
-            return 200 <= response.status_code < 300
-        except (httpx.HTTPError, ValueError):
+                if not 200 <= response.status_code < 300:
+                    return False
+                if self.identity_mode == OLLAMA_TAG_DIGEST:
+                    verify_ollama_model_digest(
+                        client,
+                        base_url=self.base_url,
+                        model_id=self.model_id,
+                        expected_version=self.model_version,
+                        timeout_seconds=self.timeout_seconds,
+                        headers=self._headers(),
+                    )
+            return True
+        except (ProviderError, httpx.HTTPError, ValueError):
             return False
 
     def get_model_metadata(self):
@@ -121,6 +159,7 @@ class LocalVLMProvider(VisualModelProvider):
             "model_id": self.model_id or None,
             "runtime_protocol": "OPENAI_COMPATIBLE_CHAT_COMPLETIONS",
             "model_version": self.model_version,
+            "identity_mode": self.identity_mode,
         }
 
     def analyze_image(self, request):
@@ -134,11 +173,32 @@ class LocalVLMProvider(VisualModelProvider):
                 "The configured model changed after submission.",
                 code="MODEL_CONFIGURATION_CHANGED",
             )
+        snapshotted_identity_mode = request.metadata.get("model_identity_mode")
+        if snapshotted_identity_mode is not None and snapshotted_identity_mode != self.identity_mode:
+            raise ProviderConfigurationError(
+                "The configured model identity mode changed after submission.",
+                code="CONFIG_SNAPSHOT_MISMATCH",
+            )
         if request.model_version != self.model_version:
             raise ProviderConfigurationError(
                 "The configured model version changed after submission.",
                 code="MODEL_CONFIGURATION_CHANGED",
             )
+        if not self.model_version:
+            raise ProviderConfigurationError(
+                "A pinned model identity is required before image inference.", code="UNKNOWN_MODEL"
+            )
+        verified_model_version = None
+        if self.identity_mode == OLLAMA_TAG_DIGEST:
+            with self._client_context() as client:
+                verified_model_version = verify_ollama_model_digest(
+                    client,
+                    base_url=self.base_url,
+                    model_id=self.model_id,
+                    expected_version=self.model_version,
+                    timeout_seconds=self.timeout_seconds,
+                    headers=self._headers(),
+                )
 
         images = verified_images(request)
         input_bytes = sum(len(image["content"]) for image in images)
@@ -217,7 +277,11 @@ class LocalVLMProvider(VisualModelProvider):
             # Ollama's system_fingerprint (for example, "fp_ollama") identifies
             # the runtime, not the model weights. Use the locally configured
             # Ollama tag digest when one has been pinned.
-            model_revision=(self.model_version or _optional_metadata(response.get("system_fingerprint"))),
+            model_revision=(
+                verified_model_version
+                if self.identity_mode == OLLAMA_TAG_DIGEST
+                else None
+            ),
             reported_model_id=reported_model_id,
         )
 

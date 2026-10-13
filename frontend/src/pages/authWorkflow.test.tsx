@@ -4,6 +4,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { AuthProvider } from '../context/AuthContext'
 import { AuthApiError, authService } from '../services/auth'
 import { authWorkflowService } from '../services/authWorkflow'
+import { workflowCompletionService } from '../services/workflowCompletion'
 import type { WorkflowPlan } from '../types/authWorkflow'
 import { AuthenticatedWorkflowDetailPage } from './AuthenticatedWorkflowDetailPage'
 
@@ -60,6 +61,7 @@ function planFixture(): WorkflowPlan {
 }
 
 function renderDetail() {
+  vi.spyOn(workflowCompletionService, 'getInternalNotes').mockResolvedValue([])
   return render(
     <MemoryRouter initialEntries={['/workflow/plans/plan-1']}>
       <AuthProvider>
@@ -151,7 +153,7 @@ it('shows raw VLM extraction separately from incomplete media and strategy evalu
   expect(screen.getByRole('heading', { name: 'Media Compliance · Chưa cấu hình' })).toBeVisible()
   expect(screen.getByRole('heading', { name: 'Strategy Evaluation · Chưa cấu hình' })).toBeVisible()
   expect(screen.getByText('Chưa có điểm')).toBeVisible()
-  expect(screen.getByText(/Runtime không cung cấp/)).toBeVisible()
+  expect(screen.getByText(/Không có revision đã xác minh/)).toBeVisible()
 })
 
 it('shows the verified strategy score, weights, and weighted contributions', async () => {
