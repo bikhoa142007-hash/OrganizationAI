@@ -989,6 +989,16 @@ def test_authenticated_provider_failure_is_persisted_and_checker_can_review(work
     app.state.auth_workflow_strategy_provider = FakeAuthenticatedTaskProvider("STRATEGY_EVALUATION")
 
     draft = make_plan(client, checker.id, title="Provider timeout campaign")
+    updated_response = client.put(
+        f"/api/workflow/plans/{draft['id']}",
+        json={
+            "payload": {**draft["payload"], "title": "Provider timeout campaign revised"},
+            "checker_user_id": str(checker.id),
+            "expected_revision": draft["revision"],
+        },
+    )
+    assert updated_response.status_code == 200, updated_response.text
+    draft = updated_response.json()
     draft = upload_plan_image(client, draft["id"], draft["revision"])
     submitted = submit_plan(client, draft)
 
@@ -1000,8 +1010,39 @@ def test_authenticated_provider_failure_is_persisted_and_checker_can_review(work
     assert submitted["ai_evaluations"][0]["retried"] is True
     assert submitted["engine_decisions"][0]["outcome"] == "HUMAN_REVIEW_REQUIRED"
     assert "EVAL_VALID" in submitted["engine_decisions"][0]["decision"]["reason"]
+    expected_lifecycle = [
+        "CREATED",
+        "UPDATED",
+        "ATTACHMENT_UPLOADED",
+        "SUBMITTED",
+        "AI_EVALUATION_QUEUED",
+        "AI_EVALUATION_STARTED",
+        "AI_EVALUATION_COMPLETED",
+        "AI_REVIEW_ROUTED",
+    ]
+    lifecycle_events = [
+        event for event in submitted["history"]
+        if event["action"] in expected_lifecycle
+    ]
+    assert [event["action"] for event in lifecycle_events] == expected_lifecycle
+    assert all(
+        event["actor_type"] == "HUMAN" and event["actor_id"] == str(maker.id)
+        for event in lifecycle_events
+        if not event["action"].startswith("AI_")
+    )
+    assert all(
+        event["actor_type"] == "SYSTEM" and event["actor_id"] is None
+        for event in lifecycle_events
+        if event["action"].startswith("AI_")
+    )
 
     checker_client = authenticated_client(app, checker)
+    submission_notifications = checker_client.get("/api/workflow/notifications")
+    assert submission_notifications.status_code == 200
+    assert [
+        (item["event_type"], item["version_number"], item["round_number"])
+        for item in submission_notifications.json()["items"]
+    ] == [("PLAN_SUBMITTED", 1, 1)]
     decision = checker_client.post(
         f"/api/workflow/plans/{draft['id']}/rounds/1/decision",
         json={

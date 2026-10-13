@@ -636,6 +636,42 @@ def test_reassigned_checker_gets_immediate_warning_or_overdue_notice(db_factory)
 
         }
 
+def test_stale_warning_scan_is_suppressed_after_overdue_notification(db_factory):
+    admin, maker, checker = _user("ADMIN-8"), _user("MAKER-8"), _user("CHECKER-8")
+    started = datetime(2026, 10, 11, 8, tzinfo=timezone.utc)
+    with db_factory() as session:
+        session.add_all([admin, maker, checker])
+        session.flush()
+        plan, _, snapshot = _seed_round(
+            session, admin, started_at=started, maker=maker, checker=checker
+        )
+        session.commit()
+
+    assert auth_sla.process_due_sla_notifications(
+        db_factory, now=snapshot.due_at, batch_size=10
+    ) == 2
+    # A delayed scan from before the deadline must not emit a late warning
+    # after the overdue notification transaction has already committed.
+    assert auth_sla.process_due_sla_notifications(
+        db_factory, now=snapshot.warning_at, batch_size=10
+    ) == 0
+
+    with db_factory() as session:
+        notices = session.scalars(
+            select(AuthWorkflowNotification).where(
+                AuthWorkflowNotification.plan_id == plan.id
+            )
+        ).all()
+        assert {(item.event_type, item.recipient_user_id) for item in notices} == {
+            ("SLA_OVERDUE", maker.id), ("SLA_OVERDUE", checker.id),
+        }
+        events = session.scalars(
+            select(AuthWorkflowEvent).where(AuthWorkflowEvent.plan_id == plan.id)
+        ).all()
+        assert [event.action for event in events] == [
+            "SLA_OVERDUE_SENT", "SLA_OVERDUE_SENT",
+        ]
+
 def test_first_worker_scan_after_deadline_skips_warning_and_catches_up_overdue(db_factory):
     admin, maker, checker = _user("ADMIN-7"), _user("MAKER-7"), _user("CHECKER-7")
     started = datetime(2026, 10, 11, 8, tzinfo=timezone.utc)

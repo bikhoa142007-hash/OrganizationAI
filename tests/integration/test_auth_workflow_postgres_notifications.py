@@ -19,7 +19,7 @@ from uuid import UUID, uuid4
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, select
+from sqlalchemy import create_engine, func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, sessionmaker
 from scripts.postgres_test_target import verify_runner_provisioned_database
@@ -507,6 +507,55 @@ def test_postgres_retry_race_reuses_the_round_snapshot(postgres_workflow):
         assert sum(decision.outcome == "AUTO_APPROVED" for decision in decisions) <= 1
 
 
+def test_postgres_committed_submission_survives_provider_timeout(postgres_workflow):
+    state = postgres_workflow
+    app = state["app"]
+    checker = state["checker"]
+    factory = state["factory"]
+    app.state.auth_workflow_provider = AuthenticatedMockVLMProvider("timeout", model_version="mock-1")
+
+    plan = _create_plan(state["maker_client"], checker.id, "PostgreSQL committed timeout")
+    submitted = _upload_and_submit(state["maker_client"], plan)
+
+    assert submitted["status"] == "PENDING_APPROVAL"
+    assert submitted["processing_stage"] == "HUMAN_REVIEW_REQUIRED"
+    assert submitted["ai_evaluations"][0]["status"] == "TIMED_OUT"
+    expected_lifecycle = [
+        "CREATED", "ATTACHMENT_UPLOADED", "SUBMITTED", "AI_EVALUATION_QUEUED",
+        "AI_EVALUATION_STARTED", "AI_EVALUATION_COMPLETED", "AI_REVIEW_ROUTED",
+    ]
+    lifecycle_events = [
+        event for event in submitted["history"]
+        if event["action"] in expected_lifecycle
+    ]
+    assert [event["action"] for event in lifecycle_events] == expected_lifecycle
+    assert all(
+        event["actor_type"] == "SYSTEM" and event["actor_id"] is None
+        for event in lifecycle_events
+        if event["action"].startswith("AI_")
+    )
+
+    checker_notices = state["checker_client"].get("/api/workflow/notifications").json()
+    assert checker_notices["total"] == checker_notices["unread_count"] == 1
+    assert [
+        (item["event_type"], item["version_number"], item["round_number"])
+        for item in checker_notices["items"]
+    ] == [("PLAN_SUBMITTED", 1, 1)]
+    with factory() as session:
+        persisted = session.get(AuthWorkflowPlan, UUID(plan["id"]))
+        assert persisted is not None
+        assert (persisted.status, persisted.current_version, persisted.current_round) == (
+            "PENDING_APPROVAL", 1, 1,
+        )
+        run = session.scalar(select(AuthWorkflowEvaluationRun).where(
+            AuthWorkflowEvaluationRun.plan_id == persisted.id,
+            AuthWorkflowEvaluationRun.round_number == 1,
+        ))
+        assert run is not None and run.status == "TIMED_OUT"
+        assert session.scalar(select(func.count(AuthWorkflowNotification.id)).where(
+            AuthWorkflowNotification.plan_id == persisted.id,
+        )) == 1
+
 def test_postgres_policy_conflict_persists_safe_attempt_provenance_and_routes_to_checker(postgres_workflow):
     state = postgres_workflow
     app = state["app"]
@@ -595,6 +644,20 @@ def test_postgres_notification_lifecycle_permissions_replay_and_rollback(postgre
     plan = _create_plan(maker_client, checker.id, "PostgreSQL notification lifecycle")
     submitted = _upload_and_submit(maker_client, plan)
     assert submitted["ai_evaluations"][0]["provider"] == "MOCK_VLM"
+    expected_lifecycle = [
+        "CREATED", "ATTACHMENT_UPLOADED", "SUBMITTED", "AI_EVALUATION_QUEUED",
+        "AI_EVALUATION_STARTED", "AI_EVALUATION_COMPLETED", "AI_REVIEW_ROUTED",
+    ]
+    lifecycle_events = [
+        event for event in submitted["history"]
+        if event["action"] in expected_lifecycle
+    ]
+    assert [event["action"] for event in lifecycle_events] == expected_lifecycle
+    assert all(
+        event["actor_type"] == "SYSTEM" and event["actor_id"] is None
+        for event in lifecycle_events
+        if event["action"].startswith("AI_")
+    )
     notice_response = checker_client.get("/api/workflow/notifications")
     assert notice_response.status_code == 200
     notice_page = notice_response.json()
@@ -640,6 +703,8 @@ def test_postgres_notification_lifecycle_permissions_replay_and_rollback(postgre
     replayed_rejection = checker_client.post(decision_url, json=reject_body)
     assert rejected.status_code == replayed_rejection.status_code == 200
     assert rejected.json()["status"] == "REJECTED"
+    assert rejected.json()["history"] == replayed_rejection.json()["history"]
+    assert sum(event["action"] == "REJECTED" for event in rejected.json()["history"]) == 1
     maker_notices = maker_client.get("/api/workflow/notifications").json()
     assert [(item["event_type"], item["round_number"]) for item in maker_notices["items"]] == [("PLAN_REJECTED", 1)]
     rejected_plan = rejected.json()
@@ -668,6 +733,8 @@ def test_postgres_notification_lifecycle_permissions_replay_and_rollback(postgre
     approval_replay = next_checker_client.post(round_two_url, json=approve_body)
     assert approved.status_code == approval_replay.status_code == 200
     assert approved.json()["status"] == "APPROVED"
+    assert approved.json()["history"] == approval_replay.json()["history"]
+    assert sum(event["action"] == "APPROVED" for event in approved.json()["history"]) == 1
     assert {(item["event_type"], item["round_number"]) for item in maker_client.get("/api/workflow/notifications").json()["items"]} == {
         ("PLAN_REJECTED", 1), ("PLAN_APPROVED", 2),
     }
@@ -740,6 +807,12 @@ def test_postgres_notification_lifecycle_permissions_replay_and_rollback(postgre
     with factory() as session:
         persisted = session.get(AuthWorkflowPlan, UUID(rollback_submit_plan["id"]))
         assert persisted.status == "DRAFT" and persisted.current_version == 0
+        assert not any(
+            event["action"] in {"SUBMITTED", "AI_EVALUATION_QUEUED"}
+            for event in maker_client.get(
+                f"/api/workflow/plans/{rollback_submit_plan['id']}"
+            ).json()["history"]
+        )
         assert session.scalar(select(AuthWorkflowNotification.id).where(
             AuthWorkflowNotification.plan_id == persisted.id
         )) is None
@@ -760,6 +833,12 @@ def test_postgres_notification_lifecycle_permissions_replay_and_rollback(postgre
     with factory() as session:
         persisted = session.get(AuthWorkflowPlan, UUID(rollback_decision_plan["id"]))
         assert persisted.status == "PENDING_APPROVAL"
+        assert not any(
+            event["action"] in {"APPROVED", "REJECTED"}
+            for event in next_checker_client.get(
+                f"/api/workflow/plans/{rollback_decision_plan['id']}"
+            ).json()["history"]
+        )
         assert session.scalar(select(AuthWorkflowDecision.id).where(
             AuthWorkflowDecision.plan_id == persisted.id
         )) is None

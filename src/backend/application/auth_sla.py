@@ -284,6 +284,16 @@ def _record_sla_notification(
     else:
         raise ValueError("Unsupported SLA notification event type")
 
+    if event_type == "SLA_WARNING" and session.scalar(
+        select(AuthWorkflowNotification.id)
+        .where(
+            AuthWorkflowNotification.plan_id == plan.id,
+            AuthWorkflowNotification.round_number == snapshot.round_number,
+            AuthWorkflowNotification.event_type == "SLA_OVERDUE",
+        )
+        .limit(1)
+    ) is not None:
+        return False
     event_key = f"plan:{plan.id}:round:{snapshot.round_number}:{event_type.lower()}:user:{recipient_id}"
     if session.scalar(
         select(AuthWorkflowNotification.id).where(AuthWorkflowNotification.event_key == event_key)
