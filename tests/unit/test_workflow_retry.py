@@ -245,6 +245,12 @@ def test_retry_appends_a_new_run_after_claim_without_locking_during_evaluation(s
     assert session.get(RetryHarnessRun, original.id).failure_reason == "PROVIDER_TIMEOUT"
     assert session.get(AuthWorkflowPlan, plan.id).revision == 7
     assert session.query(AuthWorkflowEvent).count() == 1
+    retry_event = session.query(AuthWorkflowEvent).filter_by(
+        action="AI_EVALUATION_RETRY_REQUESTED",
+    ).one()
+    assert retry_event.details["approval_round"] == 1
+    assert retry_event.details["round"] == 1
+    assert retry_event.details["result"] == "RETRY_ACCEPTED"
     assert session.query(AuthWorkflowNotification).count() == 0
 
 

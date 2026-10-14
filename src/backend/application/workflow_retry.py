@@ -460,7 +460,9 @@ def _claim_retry(
             status_before=plan.status,
             status_after=plan.status,
             details={
+                "round": retry_run.round_number,
                 "approval_round": round_number,
+                "result": "RETRY_ACCEPTED",
                 "version": expected_plan_version,
                 "attempt_number": latest.attempt_number + 1,
                 "run_id": retry_run.run_id,
