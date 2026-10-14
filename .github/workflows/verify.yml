@@ -234,14 +234,18 @@ jobs:
 
           base_url = verify_runner_provisioned_database(os.environ)
           databases = (
+              os.environ["AUTH_E2E_POSTGRES_TEST_DATABASE"],
               os.environ["SLA_POSTGRES_TEST_DATABASE"],
               os.environ["SLA_EMPTY_POSTGRES_TEST_DATABASE"],
           )
           if any(
-              not re.fullmatch(r"organizationai_sla_[a-z0-9_]{1,40}", name)
+              not (
+                  re.fullmatch(r"organizationai_auth_e2e_[a-z0-9_]{1,40}", name)
+                  or re.fullmatch(r"organizationai_sla_[a-z0-9_]{1,40}", name)
+              )
               for name in databases
           ):
-              raise RuntimeError("Run-scoped SLA database name is invalid.")
+              raise RuntimeError("Run-scoped Auth/SLA database name is invalid.")
 
           with psycopg.connect(
               host=base_url.host,
@@ -288,6 +292,7 @@ jobs:
           POSTGRES_TEST_DATABASE: organizationai_test_${{ github.run_id }}_${{ github.run_attempt }}
           POSTGRES_TEST_USER: organizationai_test
           POSTGRES_TEST_RUN_ID: ${{ github.run_id }}_${{ github.run_attempt }}
+          AUTH_E2E_POSTGRES_TEST_DATABASE: organizationai_auth_e2e_${{ github.run_id }}_${{ github.run_attempt }}
           SLA_POSTGRES_TEST_DATABASE: organizationai_sla_acceptance_${{ github.run_id }}_${{ github.run_attempt }}
           SLA_EMPTY_POSTGRES_TEST_DATABASE: organizationai_sla_empty_${{ github.run_id }}_${{ github.run_attempt }}
       - name: Verify complete PostgreSQL acceptance marker selection
@@ -421,7 +426,7 @@ jobs:
         env:
           APP_ENV: demo
           AUTH_SEED_PASSWORD: ci-only-auth-password
-          DATABASE_URL: postgresql+psycopg://organizationai_test:ci-only-test-password@127.0.0.1:${{ job.services.postgres.ports[5432] }}/organizationai_test_${{ github.run_id }}_${{ github.run_attempt }}
+          DATABASE_URL: postgresql+psycopg://organizationai_test:ci-only-test-password@127.0.0.1:${{ job.services.postgres.ports[5432] }}/organizationai_auth_e2e_${{ github.run_id }}_${{ github.run_attempt }}
           JWT_SECRET: ci-only-test-jwt-secret-at-least-32-characters
           AUTH_WORKFLOW_AI_PROVIDER: MOCK_VLM
           AUTH_WORKFLOW_MOCK_SCENARIO: review
