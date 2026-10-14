@@ -736,6 +736,15 @@ def test_postgres_notification_lifecycle_permissions_replay_and_rollback(postgre
         for event in lifecycle_events
         if event["action"].startswith("AI_")
     )
+    assert all(event["created_at"] is not None for event in lifecycle_events)
+    assert all("result" in event["details"] for event in lifecycle_events)
+    assert lifecycle_events[0]["details"]["actor_role"] == "MAKER"
+    assert lifecycle_events[2]["details"]["actor_role"] == "MAKER"
+    assert (lifecycle_events[2]["details"]["version"], lifecycle_events[2]["details"]["round"]) == (1, 1)
+    evaluation_event = next(event for event in lifecycle_events if event["action"] == "AI_EVALUATION_COMPLETED")
+    assert evaluation_event["details"]["result"] == submitted["ai_evaluations"][0]["status"]
+    assert evaluation_event["details"]["result_summary"]["status"] == submitted["ai_evaluations"][0]["status"]
+    assert "PRIVATE-OBJECTIVE-DO-NOT-LEAK" not in json.dumps(lifecycle_events)
     notice_response = checker_client.get("/api/workflow/notifications")
     assert notice_response.status_code == 200
     notice_page = notice_response.json()
@@ -757,6 +766,7 @@ def test_postgres_notification_lifecycle_permissions_replay_and_rollback(postgre
     with factory() as session:
         stored_submit_notice = session.get(AuthWorkflowNotification, UUID(submit_notice["id"]))
         assert stored_submit_notice is not None and stored_submit_notice.read_at is None
+        assert stored_submit_notice.event_key.endswith(f"user:{checker.id}")
 
     # Repeated GET does not mutate; repeated mark-read is safe and stable.
     assert checker_client.get("/api/workflow/notifications").json()["unread_count"] == 1
@@ -785,6 +795,12 @@ def test_postgres_notification_lifecycle_permissions_replay_and_rollback(postgre
     assert sum(event["action"] == "REJECTED" for event in rejected.json()["history"]) == 1
     maker_notices = maker_client.get("/api/workflow/notifications").json()
     assert [(item["event_type"], item["round_number"]) for item in maker_notices["items"]] == [("PLAN_REJECTED", 1)]
+    assert reject_body["reason"] in maker_notices["items"][0]["message"]
+    rejected_event = rejected.json()["history"][-1]
+    assert rejected_event["details"]["actor_role"] == "CHECKER"
+    assert rejected_event["details"]["result"] == "SUCCESS"
+    assert rejected_event["details"]["human_decision_id"]
+    assert rejected_event["details"]["evaluation_id"] == submitted["ai_evaluations"][0]["evaluation_id"]
     rejected_plan = rejected.json()
     updated = maker_client.put(f"/api/workflow/plans/{plan['id']}", json={
         "expected_revision": rejected_plan["revision"],
@@ -813,6 +829,15 @@ def test_postgres_notification_lifecycle_permissions_replay_and_rollback(postgre
     assert approved.json()["status"] == "APPROVED"
     assert approved.json()["history"] == approval_replay.json()["history"]
     assert sum(event["action"] == "APPROVED" for event in approved.json()["history"]) == 1
+    approval_event = approved.json()["history"][-1]
+    assert approval_event["details"]["actor_role"] == "CHECKER"
+    assert (approval_event["details"]["version"], approval_event["details"]["round"]) == (2, 2)
+    assert approval_event["details"]["result"] == "SUCCESS"
+    assert approval_event["details"]["human_decision_id"]
+    round_two_evaluation = next(
+        item for item in resubmitted["ai_evaluations"] if item["round_number"] == 2
+    )
+    assert approval_event["details"]["evaluation_id"] == round_two_evaluation["evaluation_id"]
     assert {(item["event_type"], item["round_number"]) for item in maker_client.get("/api/workflow/notifications").json()["items"]} == {
         ("PLAN_REJECTED", 1), ("PLAN_APPROVED", 2),
     }
@@ -873,6 +898,7 @@ def test_postgres_notification_lifecycle_permissions_replay_and_rollback(postgre
 
     def insert_then_fail(*args, **kwargs):
         original_recorder(*args, **kwargs)
+        args[0].flush()
         raise RuntimeError("synthetic notification rollback")
 
     with monkeypatch.context() as patch:

@@ -825,6 +825,10 @@ def test_maker_submits_and_only_assigned_checker_can_approve(workflow_client):
     assert submitted["ai_evaluations"][0]["attempts"] == 1
     assert submitted["ai_evaluations"][0]["retried"] is False
     assert submitted["engine_decisions"][0]["outcome"] == "HUMAN_REVIEW_REQUIRED"
+    evaluation_event = next(event for event in submitted["history"] if event["action"] == "AI_EVALUATION_COMPLETED")
+    assert evaluation_event["details"]["evaluation_id"] == submitted["ai_evaluations"][0]["evaluation_id"]
+    assert evaluation_event["details"]["result_summary"]["status"] == submitted["ai_evaluations"][0]["status"]
+    assert "private synthetic transport response" not in json.dumps(evaluation_event["details"])
     locked_edit = client.put(f"/api/workflow/plans/{draft['id']}", json={
         "expected_revision": submitted["revision"],
         "payload": submitted["payload"],
@@ -879,6 +883,13 @@ def test_maker_submits_and_only_assigned_checker_can_approve(workflow_client):
         if event["plan_id"] == draft["id"] and event["action"] == "APPROVED"
     )
     assert decision_event["details"]["reason"] == "Reviewed."
+    assert decision_event["details"]["result"] == "SUCCESS"
+    assert decision_event["details"]["actor_role"] == "CHECKER"
+    assert (decision_event["details"]["version"], decision_event["details"]["round"]) == (1, 1)
+    assert decision_event["details"]["evaluation_id"] == submitted["ai_evaluations"][0]["evaluation_id"]
+    assert decision_event["details"]["engine_decision_id"] == submitted["engine_decisions"][0]["decision_id"]
+    assert decision_event["details"]["human_decision_id"]
+    assert decision_event["created_at"] is not None
     assert decision_event["details"]["override_reason"] == (
         "Provider configuration was unavailable; reviewed the submission manually."
     )
@@ -1637,7 +1648,7 @@ def test_in_app_notifications_are_private_idempotent_and_follow_plan_rounds(work
     assert {(item["event_type"], item["round_number"]) for item in maker_page["items"]} == {
         ("PLAN_REJECTED", 1), ("PLAN_APPROVED", 2),
     }
-    assert "Please add measurable targets." not in " ".join(item["message"] for item in maker_page["items"])
+    assert "Please add measurable targets." in next(item["message"] for item in maker_page["items"] if item["event_type"] == "PLAN_REJECTED")
     with factory() as session:
         assert session.query(AuthWorkflowNotification).count() == 4
 

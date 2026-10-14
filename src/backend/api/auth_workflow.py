@@ -65,7 +65,7 @@ def _enforce_permission(
 
 def _plan_list_principal(
     request: Request,
-    principal: AuthenticatedPrincipal = Depends(require_any_role("MAKER", "ADMIN")),
+    principal: AuthenticatedPrincipal = Depends(require_any_role("MAKER", "CHECKER", "ADMIN")),
 ) -> AuthenticatedPrincipal:
     _enforce_permission(request, principal, "MARKETING_PLAN_READ")
     if "ADMIN" in principal.roles:

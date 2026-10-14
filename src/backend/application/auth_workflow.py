@@ -78,6 +78,11 @@ def _valid_image(content: bytes, media_type: str) -> bool:
         return False
 
 
+def _require_permission(principal: AuthenticatedPrincipal, permission_code: str, correlation_id: str) -> None:
+    if permission_code not in principal.permissions:
+        _fail("FORBIDDEN", "You do not have permission to perform this action.", correlation_id)
+
+
 def _require_role(principal: AuthenticatedPrincipal, role: str, correlation_id: str) -> None:
     if role not in principal.roles:
         _fail("FORBIDDEN", "You do not have permission to perform this action.", correlation_id)
@@ -219,6 +224,39 @@ def _utc_datetime(value: datetime | None) -> datetime | None:
     return value
 
 
+def _audit_evaluation_summary(evaluation: dict[str, Any], decision: dict[str, Any]) -> dict[str, Any]:
+    """Keep only decision-relevant scalar outcomes in the workflow audit trail."""
+    findings = evaluation.get("media_findings") or []
+    errors = evaluation.get("agent_errors") or []
+    budget = decision.get("budget_validation") or {}
+    rule_checks = decision.get("rule_checks") or []
+    return {
+        "status": evaluation.get("status"),
+        "media_result": evaluation.get("media_result"),
+        "media_confidence": evaluation.get("media_confidence"),
+        "hard_violation_count": sum(item.get("severity") == "HARD_VIOLATION" for item in findings),
+        "warning_count": sum(item.get("severity") == "WARNING" for item in findings),
+        "feasibility_score": evaluation.get("feasibility_score"),
+        "criterion_scores": [
+            {
+                "criterion_id": item.get("criterion_id"),
+                "score": item.get("score"),
+                "maximum_score": item.get("maximum_score"),
+            }
+            for item in evaluation.get("criterion_scores") or []
+            if item.get("criterion_id")
+        ],
+        "feasibility_confidence": evaluation.get("feasibility_confidence"),
+        "agent_error_codes": sorted({item.get("code") for item in errors if item.get("code")}),
+        "budget_result": budget.get("result"),
+        "rule_results": [
+            {"rule_id": item.get("rule_id"), "result": item.get("result")}
+            for item in rule_checks if item.get("rule_id") and item.get("result")
+        ],
+        "decision_outcome": decision.get("outcome"),
+    }
+
+
 def _record_event(
     session: Session,
     *,
@@ -229,10 +267,20 @@ def _record_event(
     status_before: str | None,
     status_after: str,
     details: dict[str, Any],
+    actor_role: str | None = None,
+    result: str = "SUCCESS",
 ) -> AuthWorkflowEvent:
     last_sequence = session.scalar(
         select(func.max(AuthWorkflowEvent.sequence_number)).where(AuthWorkflowEvent.plan_id == plan_id)
     ) or 0
+    audit_details = dict(details)
+    plan = session.get(AuthWorkflowPlan, plan_id)
+    if plan is not None:
+        audit_details.setdefault("version", plan.current_version or None)
+        audit_details.setdefault("round", plan.current_round or None)
+    audit_details.setdefault("result", result)
+    if actor_role is not None:
+        audit_details.setdefault("actor_role", actor_role)
     event = AuthWorkflowEvent(
         id=uuid4(),
         plan_id=plan_id,
@@ -242,7 +290,7 @@ def _record_event(
         action=action,
         status_before=status_before,
         status_after=status_after,
-        details=details,
+        details=audit_details,
     )
     session.add(event)
     return event
@@ -256,6 +304,7 @@ def _record_notification(
     event_type: str,
     version_number: int,
     round_number: int,
+    reason: str | None = None,
 ) -> AuthWorkflowNotification:
     copy = {
         "PLAN_SUBMITTED": (
@@ -272,12 +321,14 @@ def _record_notification(
         ),
         "PLAN_REJECTED": (
             "Kế hoạch cần được chỉnh sửa",
-            f"Checker đã từ chối kế hoạch {plan.code} (vòng {round_number}). Mở kế hoạch để xem lý do.",
+            f"Checker đã từ chối kế hoạch {plan.code} (vòng {round_number}). Lý do: {reason.strip() if isinstance(reason, str) else ''}",
         ),
     }.get(event_type)
     if copy is None:
         raise ValueError("Unsupported workflow notification event type")
-    event_key = f"plan:{plan.id}:round:{round_number}:{event_type.lower()}"
+    if event_type == "PLAN_REJECTED" and (not isinstance(reason, str) or not reason.strip()):
+        raise ValueError("A rejection notification requires its decision reason")
+    event_key = f"plan:{plan.id}:round:{round_number}:{event_type.lower()}:user:{recipient_user_id}"
     existing = session.scalar(
         select(AuthWorkflowNotification).where(AuthWorkflowNotification.event_key == event_key)
     )
@@ -456,6 +507,12 @@ def list_plans(
     limit: int = 100,
     reviews_only: bool = False,
 ):
+    if reviews_only:
+        _require_permission(principal, "MARKETING_REVIEW_ASSIGNED", correlation_id)
+    else:
+        _require_permission(principal, "MARKETING_PLAN_READ", correlation_id)
+        if "ADMIN" in principal.roles:
+            _require_permission(principal, "MARKETING_PLAN_VIEW_ALL", correlation_id)
     _require_workflow_role(principal, correlation_id)
     conditions = []
     if "MAKER" in principal.roles and not reviews_only:
@@ -486,6 +543,10 @@ def get_plan(
     plan_id: UUID,
     correlation_id: str,
 ):
+    _require_permission(principal, "MARKETING_PLAN_READ", correlation_id)
+    _require_permission(principal, "MARKETING_HISTORY_READ", correlation_id)
+    if "ADMIN" in principal.roles:
+        _require_permission(principal, "MARKETING_PLAN_VIEW_ALL", correlation_id)
     _require_workflow_role(principal, correlation_id)
     plan = _plan_or_404(session, plan_id, correlation_id)
     _readable_plan(plan, principal, correlation_id)
@@ -560,8 +621,8 @@ def list_audit_events(
     offset: int = 0,
     limit: int = 100,
 ) -> dict[str, Any]:
-    if "ADMIN" not in principal.roles:
-        _fail("FORBIDDEN", "You do not have permission to view the audit log.", correlation_id)
+    _require_role(principal, "ADMIN", correlation_id)
+    _require_permission(principal, "ADMIN_AUDIT_READ", correlation_id)
     total = session.scalar(select(func.count(AuthWorkflowEvent.id))) or 0
     rows = session.execute(
         select(AuthWorkflowEvent, AuthWorkflowPlan.code, User.display_name)
@@ -605,6 +666,7 @@ def create_plan(
     idempotency_key: str | None = None,
 ):
     _require_role(principal, "MAKER", correlation_id)
+    _require_permission(principal, "MARKETING_PLAN_CREATE", correlation_id)
     request_hash = canonical_hash({
         "payload": payload,
         "checker_user_id": str(checker_id) if checker_id is not None else None,
@@ -643,7 +705,7 @@ def create_plan(
                 _record_event(
                     session, plan_id=plan.id, actor_id=principal.id,
                     action="CREATED", status_before=None, status_after=plan.status,
-                    details={"code": plan.code},
+                    details={"code": plan.code}, actor_role="MAKER",
                 )
                 session.flush()
                 session.refresh(plan)
@@ -674,6 +736,7 @@ def update_plan(
     correlation_id: str,
 ):
     _require_role(principal, "MAKER", correlation_id)
+    _require_permission(principal, "MARKETING_PLAN_EDIT_OWN", correlation_id)
     try:
         with _write_transaction(session):
             plan = _plan_or_404(session, plan_id, correlation_id, lock=True)
@@ -685,13 +748,28 @@ def update_plan(
             next_checker = checker_id if update_checker else plan.checker_id
             _validate_checker(session, principal, next_checker, correlation_id)
             before = plan.status
+            previous_checker = plan.checker_id
+            current_payload = plan.payload or {}
+            changed_fields = sorted(
+                key for key in set(current_payload) | set(payload)
+                if current_payload.get(key) != payload.get(key)
+            )
+            if previous_checker != next_checker:
+                changed_fields.append("checker_id")
             plan.payload = payload
             plan.checker_id = next_checker
             plan.revision += 1
             _record_event(
                 session, plan_id=plan.id, actor_id=principal.id,
                 action="UPDATED", status_before=before, status_after=plan.status,
-                details={"revision": plan.revision},
+                details={
+                    "revision": plan.revision,
+                    "changed_fields": changed_fields,
+                    **({
+                        "checker_id_before": str(previous_checker) if previous_checker else None,
+                        "checker_id_after": str(next_checker) if next_checker else None,
+                    } if previous_checker != next_checker else {}),
+                }, actor_role="MAKER",
             )
             session.flush()
             session.refresh(plan)
@@ -713,6 +791,7 @@ def upload_attachment(
     correlation_id: str,
 ):
     _require_role(principal, "MAKER", correlation_id)
+    _require_permission(principal, "MARKETING_ATTACHMENT_MANAGE", correlation_id)
     if len(content) > MAX_ATTACHMENT_BYTES:
         _fail("VALIDATION_ERROR", "Attachment exceeds the 5 MB limit.", correlation_id)
     if not _valid_image(content, media_type):
@@ -738,6 +817,7 @@ def upload_attachment(
                 session, plan_id=plan.id, actor_id=principal.id,
                 action="ATTACHMENT_UPLOADED", status_before=before, status_after=plan.status,
                 details={"attachment_id": str(attachment.id), "content_hash": attachment.content_hash},
+                actor_role="MAKER",
             )
             session.flush()
             session.refresh(plan)
@@ -761,6 +841,7 @@ def submit_plan(
     model_id: str | None = None,
 ):
     _require_role(principal, "MAKER", correlation_id)
+    _require_permission(principal, "MARKETING_PLAN_SUBMIT", correlation_id)
     try:
         with _write_transaction(session):
             plan = _plan_or_404(session, plan_id, correlation_id, lock=True)
@@ -880,6 +961,7 @@ def submit_plan(
             _record_event(
                 session, plan_id=plan.id, actor_id=principal.id,
                 action="SUBMITTED", status_before=before, status_after=plan.status,
+                actor_role="MAKER",
                 details={
                     "version": plan.current_version,
                     "round": plan.current_round,
@@ -961,7 +1043,9 @@ def _record_ignored_stale_result(
             "run_id": run.run_id,
             "evaluation_id": run.evaluation_id,
             "input_hash": run.input_hash,
+            "reason_code": "STALE_OR_ALREADY_APPLIED",
         },
+        result="IGNORED_STALE",
     )
 
 
@@ -1214,6 +1298,7 @@ def evaluate_submission(
                     session, plan_id=plan.id, actor_id=None, actor_type="SYSTEM",
                     action="AI_REVIEW_ROUTED", status_before=plan.status,
                     status_after=plan.status,
+                    result="HUMAN_REVIEW_REQUIRED",
                     details={
                         "version": run.version_number,
                         "round": run.round_number,
@@ -1264,6 +1349,7 @@ def evaluate_submission(
                 session, plan_id=plan.id, actor_id=None, actor_type="SYSTEM",
                 action="AI_EVALUATION_COMPLETED", status_before="PENDING_APPROVAL",
                 status_after=plan.status,
+                result=run.status,
                 details={
                     "version": run.version_number,
                     "round": run.round_number,
@@ -1274,11 +1360,13 @@ def evaluate_submission(
                     "model_version": run.model_version,
                     "evaluation_status": run.status,
                     "failure_reason": run.failure_reason,
+                    "result_summary": _audit_evaluation_summary(evaluation, decision),
                 },
             )
             _record_event(
                 session, plan_id=plan.id, actor_id=None, actor_type="SYSTEM",
                 action=action, status_before="PENDING_APPROVAL", status_after=plan.status,
+                result=bundle.decision.outcome,
                 details={
                     "version": run.version_number,
                     "round": run.round_number,
@@ -1527,6 +1615,12 @@ def decide_plan(
     correlation_id: str,
 ):
     _require_role(principal, "CHECKER", correlation_id)
+    if action == "APPROVED":
+        _require_permission(principal, "MARKETING_APPROVE", correlation_id)
+    elif action == "REJECTED":
+        _require_permission(principal, "MARKETING_REJECT", correlation_id)
+    else:
+        _fail("VALIDATION_ERROR", "Decision action is invalid.", correlation_id)
     normalized_reason = reason.strip() if reason and reason.strip() else None
     normalized_override_reason = (
         override_reason.strip() if override_reason and override_reason.strip() else None
@@ -1606,10 +1700,17 @@ def decide_plan(
                 _record_event(
                     session, plan_id=plan.id, actor_id=principal.id,
                     action=action, status_before=before, status_after=plan.status,
+                    actor_role="CHECKER",
                     details={
+                        "version": plan.current_version,
                         "round": round_number,
                         "reason": normalized_reason,
                         "override_reason": normalized_override_reason,
+                        "human_decision_id": str(decision.id),
+                        **({
+                            "engine_decision_id": engine_route.decision_id,
+                            "evaluation_id": evaluation_run.evaluation_id if evaluation_run is not None else None,
+                        } if engine_route is not None else {}),
                     },
                 )
                 _record_notification(
@@ -1619,6 +1720,7 @@ def decide_plan(
                     event_type="PLAN_APPROVED" if action == "APPROVED" else "PLAN_REJECTED",
                     version_number=plan.current_version,
                     round_number=round_number,
+                    reason=normalized_reason,
                 )
                 session.flush()
                 session.refresh(plan)
@@ -1636,6 +1738,9 @@ def get_attachment(
     attachment_id: UUID,
     correlation_id: str,
 ):
+    _require_permission(principal, "MARKETING_PLAN_READ", correlation_id)
+    if "ADMIN" in principal.roles:
+        _require_permission(principal, "MARKETING_PLAN_VIEW_ALL", correlation_id)
     _require_workflow_role(principal, correlation_id)
     plan = _plan_or_404(session, plan_id, correlation_id)
     _readable_plan(plan, principal, correlation_id)

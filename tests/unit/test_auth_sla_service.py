@@ -327,6 +327,11 @@ def test_configuration_starts_unconfigured_and_is_revisioned_with_audit(db_facto
         assert session.scalar(select(func.count(AuthWorkflowSlaConfiguration.id))) == 2
 
         assert session.scalar(select(func.count(AdminAuditEvent.id))) == 2
+        audit_events = session.scalars(select(AdminAuditEvent)).all()
+        assert all(event.actor_id == admin.id for event in audit_events)
+        assert all(event.created_at is not None for event in audit_events)
+        assert all(event.action == "SLA_CONFIGURATION_UPDATED" for event in audit_events)
+        assert all("audit_metadata" not in event.after_state for event in audit_events)
 
 
 
@@ -573,6 +578,15 @@ def test_warning_and_overdue_notifications_are_recipient_scoped_and_idempotent(d
         }
 
         assert session.scalar(select(func.count(AuthWorkflowEvent.id))) == 3
+        events = session.scalars(select(AuthWorkflowEvent).where(
+            AuthWorkflowEvent.plan_id == plan.id
+        ).order_by(AuthWorkflowEvent.sequence_number)).all()
+        assert {(event.action, event.details["recipient_id"], event.details["result"], event.details["channel"])
+                for event in events} == {
+            ("SLA_WARNING_SENT", str(checker.id), "RECORDED", "IN_APP"),
+            ("SLA_OVERDUE_SENT", str(maker.id), "RECORDED", "IN_APP"),
+            ("SLA_OVERDUE_SENT", str(checker.id), "RECORDED", "IN_APP"),
+        }
 
 
 

@@ -299,7 +299,7 @@ def _record_sla_notification(
         select(AuthWorkflowNotification.id).where(AuthWorkflowNotification.event_key == event_key)
     ) is not None:
         return False
-    session.add(AuthWorkflowNotification(
+    notification = AuthWorkflowNotification(
         id=uuid4(),
         recipient_user_id=recipient_id,
         plan_id=plan.id,
@@ -309,7 +309,8 @@ def _record_sla_notification(
         message=message,
         version_number=snapshot.version_number,
         round_number=snapshot.round_number,
-    ))
+    )
+    session.add(notification)
     last_sequence = session.scalar(
         select(func.max(AuthWorkflowEvent.sequence_number)).where(AuthWorkflowEvent.plan_id == plan.id)
     ) or 0
@@ -325,6 +326,9 @@ def _record_sla_notification(
         details={
             "version": snapshot.version_number,
             "round": snapshot.round_number,
+            "result": "RECORDED",
+            "channel": "IN_APP",
+            "notification_id": str(notification.id),
             "recipient_id": str(recipient_id),
             "sla_configuration_revision": snapshot.configuration_revision,
             "sla_due_at": _utc(snapshot.due_at).isoformat(),
