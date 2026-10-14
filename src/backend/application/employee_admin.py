@@ -26,6 +26,15 @@ if TYPE_CHECKING:
 
 ACTIVATION_TOKEN_TTL = timedelta(minutes=30)
 RESET_TOKEN_TTL = timedelta(minutes=30)
+EMPLOYEE_PROFILE_EDITABLE_FIELDS = frozenset({
+    "user_code",
+    "display_name",
+    "email",
+    "phone",
+    "department",
+    "job_title",
+    "employment_start_date",
+})
 
 
 def _require_admin(principal: AuthenticatedPrincipal, correlation_id: str) -> None:
@@ -221,6 +230,13 @@ def create_employee(session: Session, principal: AuthenticatedPrincipal, correla
 def update_employee(session: Session, principal: AuthenticatedPrincipal, employee_id: UUID,
                     correlation_id: str, changes: dict[str, Any]) -> dict:
     _require_admin(principal, correlation_id)
+    forbidden_fields = set(changes) - EMPLOYEE_PROFILE_EDITABLE_FIELDS
+    if forbidden_fields:
+        raise ApplicationError(
+            "VALIDATION_ERROR",
+            "Employee status, account linkage, and system fields require dedicated administrative actions.",
+            correlation_id,
+        )
     try:
         with _write_transaction(session):
             profile = session.scalar(select(EmployeeProfile).where(EmployeeProfile.id == employee_id).with_for_update())

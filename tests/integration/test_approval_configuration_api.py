@@ -306,6 +306,56 @@ def _linked_employee(factory, prefix: str) -> tuple[UUID, UUID]:
         return profile.id, user.id
 
 
+def test_postgres_employee_update_rejects_status_mass_assignment(configuration_postgres):
+    _engine, factory = configuration_postgres
+    admin = _admin(factory)
+    principal = _principal(admin, ("ADMIN",))
+    profile_id, checker_id = _linked_employee(factory, "GOV-STATUS")
+    suffix = uuid4().hex[:12]
+
+    with factory.begin() as session:
+        checker_role = session.scalar(select(Role).where(Role.code == "CHECKER"))
+        if checker_role is None:
+            checker_role = Role(code="CHECKER", name="Checker", is_builtin=True)
+            session.add(checker_role)
+            session.flush()
+        session.add(UserRole(user_id=checker_id, role_id=checker_role.id))
+        session.add(AuthWorkflowPlan(
+            code=f"GOV-STATUS-{suffix}",
+            maker_id=admin.id,
+            checker_id=checker_id,
+            payload={"department": "Synthetic"},
+            status="PENDING_APPROVAL",
+            processing_stage="HUMAN_REVIEW_REQUIRED",
+            current_version=1,
+            current_round=1,
+        ))
+
+    with factory() as session:
+        with pytest.raises(ApplicationError, match="dedicated administrative action"):
+            employee_admin.update_employee(
+                session,
+                principal,
+                profile_id,
+                "synthetic-employee-status",
+                {"employment_status": "INACTIVE"},
+            )
+
+    with factory() as session:
+        profile = session.get(EmployeeProfile, profile_id)
+        user = session.get(User, checker_id)
+        plan = session.scalar(select(AuthWorkflowPlan).where(AuthWorkflowPlan.checker_id == checker_id))
+        assert profile.employment_status == "ACTIVE"
+        assert user.employment_status == "ACTIVE"
+        assert user.status == "ACTIVE"
+        assert user.session_version == 0
+        assert plan is not None and plan.status == "PENDING_APPROVAL"
+        assert session.scalar(select(AdminAuditEvent.id).where(
+            AdminAuditEvent.employee_id == profile_id,
+            AdminAuditEvent.action == "EMPLOYEE_UPDATED",
+        )) is None
+
+
 def test_postgres_custom_role_crud_assignment_and_audit(configuration_postgres):
     _engine, factory = configuration_postgres
     admin = _admin(factory)
