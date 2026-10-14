@@ -85,13 +85,47 @@ Use only the config's disposable local demo database and mock providers; do not 
 
 Do not perform public acceptance on a deployment until D supplies the deployed SHA and confirms the isolated environment, request quota, concurrency limit, and deployment profile. A local or historical test result is not public acceptance evidence.
 
-## Current integration source baseline (2026-10-14)
+## Prior integration source baseline (2026-10-14; SHA b5c5dba82e3455f46837424e4f9061cb609daf26)
 
 - D supplied source candidate `b5c5dba82e3455f46837424e4f9061cb609daf26` as the current comparison baseline. Its ancestry from frontend-live baseline `425b417309c7a9db5ee2bd71a74f5cdad6704178` was verified. The Judge worktree remains on its existing branch; no reset or rebase was performed.
 - Relative to `425b417`, D-owned shared wiring changes include `src/backend/api/app.py` and `frontend/src/routes/AppRoutes.tsx`. The Judge package in the candidate includes `src/backend/api/public_judge.py`, `src/backend/api/public_judge_schemas.py`, `frontend/src/services/publicJudgeService.ts`, `frontend/src/pages/VerifyDashboardPage.tsx`, `tests/unit/verify/test_public_judge.py`, and this runbook. Do not edit the page or stylesheet while collaborator UI ownership remains unresolved.
 - The `public_judge.py`, schema, service, page, and test file contents in `b5c5dba` match the corresponding Judge snapshots at code/test commit `e053237d56c86a81156a3122e93331ee0abd14f9`; this runbook matches docs commit `45854e7782e94a59b716706dce1ac0772838f52f`. Those local commit SHAs are not ancestors of `b5c5dba`; this is a read-only content comparison, not a rebase.
 - Backend test evidence on the matching Judge code snapshot: `tests/unit/verify/test_public_judge.py` and `tests/unit/verify/test_harness.py` reported 10 passed with two Starlette/httpx deprecation warnings. The event-loop regression failed against the synchronous call and passed after the threadpool offload.
 - Browser evidence below belongs to prior candidate `d6fb87c3068a61f127af32403d5ec4a4ad976e78`. The diff from `d6fb87c` to `b5c5dba` includes the threadpool change and regression test, so the prior browser PASS does not verify the new source SHA. No E2E result tied to `b5c5dba` is recorded here.
+
+## Current D integration reference (2026-10-15; SHA 9c7f5411745de4d4d4362992eb216d8e4dc346a8)
+
+- D supplied `9c7f5411745de4d4d4362992eb216d8e4dc346a8` as a local integration source reference built from frontend-live baseline `425b417309c7a9db5ee2bd71a74f5cdad6704178`. Its ancestry from that baseline was verified by read-only Git inspection. It is not a deployed SHA and does not establish public acceptance.
+- The source tree contains Judge paths as well as D-owned shared wiring. This reference is for comparison in future Judge work only. The Judge branch was based at `f8f3c1c3a38a4a7b7a097be6b3b8f6c314feb226` before this documentation-only update; it was not reset or rebased to `9c7f541`.
+- D reports local synthetic results for the integrated GOV/OPS/AI packages: workflow/config PostgreSQL `16/16`, SLA PostgreSQL `6/6`, APR-05/draft `15/15`, and retry unit `23/23`. These are D-reported package results, not Judge browser evidence, public acceptance, or real-provider quality results.
+- At the start of this Judge review, no browser result tied to `9c7f541` had been supplied. The local browser run below was then executed against this exact source SHA. No deployed/public acceptance evidence is available.
+
+## Local Judge browser evidence (2026-10-15; source SHA 9c7f5411745de4d4d4362992eb216d8e4dc346a8)
+
+- Ran `frontend/e2e/public-judge.spec.ts`, test `public Challenge A runs isolated Mock suites and classifies new synthetic input`, from the D integration worktree at the exact SHA above. Playwright reported `1 passed (7.3s)`; its console-error assertion passed.
+- Focused checks on the same source SHA also passed: `python -m pytest -q tests/unit/verify/test_public_judge.py tests/unit/verify/test_harness.py` reported `10 passed` with two Starlette/httpx deprecation warnings; `npm test -- src/pages/VerifyDashboardPage.test.tsx src/services/publicJudgeService.test.ts` reported 2 files and 9 tests passed.
+- The disposable run used `APP_ENV=demo`, `MOCK_VLM`, a newly generated temporary SQLite file named `demo-*.sqlite3`, localhost ports 8008/5178, and a temporary Playwright output directory. It used no production DB/provider settings and made no public requests. The repo-local Python environment was selected with `ORGANIZATIONAI_TEST_PYTHON` because the D worktree has no `.venv`.
+- The browser asserted the public page loads without an account, shows its first-step instruction, submits one general-suite request with no Authorization or Cookie header, reports `4/4 PASS`, then reports `5/5 PASS` for escalation. The screenshot shows three `AUTO_APPROVED` cases and two `HUMAN_REVIEW_REQUIRED` cases, with a per-run id and timestamps.
+- The same browser run evaluated a fresh form input and then an unlisted channel; the latter returned `HUMAN_REVIEW_REQUIRED / POLICY_OUT_OF_SCOPE` with a specific transfer question. Separate backend unit coverage checks fact mismatch, out-of-scope channel, and budget over the simulation authority limit, and checks audit fields and epistemic wording.
+- Visual review of this exact-SHA screenshot confirms a layout defect: the new-input fields and labels flow inline and overlap. Functional E2E passed, but the new-input form is not visually ready for public use. UI ownership remains with the collaborator; no UI file was changed.
+- Screenshot retained as local temporary evidence at `%TEMP%\organizationai-judge-e2e-output-9c7-3686a7b9e6f24149b5599b389a343c5d\public-judge-public-Challe-954b8-ssifies-new-synthetic-input\challenge-a-public.png`. It contains only synthetic Judge data. The initial attempt stopped before app startup because its temporary database name did not match the required `demo-*.sqlite3` pattern; the corrected disposable run above passed.
+
+## Challenge A brief acceptance gaps (local source 9c7f541; 2026-10-15)
+
+| Brief criterion | Evidence at this source | Status / remaining gap |
+| --- | --- | --- |
+| Public entry without account; first instruction is actionable | Local `/challenge-a` browser run; page text and first instruction asserted; request had no Authorization or Cookie header | Local functional PASS. A deployed public URL/SHA has not been supplied. |
+| Verify chung: one action, four real run cases, pass/fail and run timestamp | Playwright clicked `Run 4 cases`; response rendered per-run data; screenshot shows run id and timestamps | `4/4 PASS`, `MOCK` only. |
+| Verify → Escalation: five cases, three automatic and two transferred | Same browser run and screenshot; expected/actual route and case result rendered | `5/5 PASS`, `MOCK` only; observed 3 automatic and 2 human-review outcomes. |
+| New input; field-driven result rather than case-id/fixed result | Browser submitted a new form payload and changed its channel; unit cases vary fact match, policy scope, and authority fields | Local functional PASS for deterministic simulation. `quality_status=NOT_MEASURED`; this does not measure real AI inference. |
+| Distinguish missing/uncertain fact, out-of-policy input, and exceeded authority | Unit assertions cover `FACT_UNCERTAIN`, `POLICY_OUT_OF_SCOPE`, and `AUTHORITY_EXCEEDED` separately | Local unit coverage PASS; only policy-scope transfer was exercised in the browser run. |
+| Ask a concrete, contextual transfer question; do not treat flagged input as verified truth | Unit assertions check conflicting budget fields, ask for an authoritative source, include the unsupported channel/limit, and require wording that does not confirm either conflicting value | Local unit coverage PASS. Inputs and results remain `USER_SUPPLIED_UNVERIFIED`. |
+| Audit action, time, input and reason | Input response contains `INPUT_EVALUATED`, timestamp, input SHA-256 and reason; fixed-suite rows return an audit projection | Present in the immediate response. No durable audit/history is implemented by this Judge contract. |
+| Intervention/stop/override follows contract; do not claim irreversible work was undone | Router contract exposes no stop or override endpoint; requests are ephemeral and no approval is committed | No undo is claimed. Stop/override controls are absent; confirm with D whether the Challenge A contract requires any Judge-only control before calling this criterion complete. |
+| Isolate Judge from production data/accounts and bound requests/concurrency | Local no-auth request assertion; isolated in-memory workflow per suite case; strict body limit and process-local request/concurrency gate documented in router contract | Local design evidence only. Proxy/edge body cap and deployed topology/quota have not been verified. |
+| At least 15 dataset cases and policy consistent with behavior | Server fixture test asserts at least 15 unique case IDs; policy values and classifier behavior are documented and covered by input tests | Local unit coverage PASS; Mock fixture behavior only. |
+
+The screenshot verifies functional behavior but also records the unresolved form layout defect above. This local source run is not public deployment acceptance; a deployed SHA and environment verification remain outstanding.
 
 ## Prior D local-candidate evidence (2026-10-14; SHA d6fb87c3068a61f127af32403d5ec4a4ad976e78)
 
@@ -103,9 +137,9 @@ Do not perform public acceptance on a deployment until D supplies the deployed S
 
 ## Current readiness gaps
 
-- The current source reference is D candidate `b5c5dba82e3455f46837424e4f9061cb609daf26`, descended from `425b417309c7a9db5ee2bd71a74f5cdad6704178`. It is not a deployed SHA and does not establish public deployment acceptance.
+- The latest source reference is D candidate `9c7f5411745de4d4d4362992eb216d8e4dc346a8`, descended from `425b417309c7a9db5ee2bd71a74f5cdad6704178`. It is not a deployed SHA and does not establish public deployment acceptance. The Judge worktree remains on its separate branch; no rebase was performed.
 - The 30/60-second rate limit and one-active-POST gate are process-local/global among visitors on each process. D reports the current Render topology as one instance/one Uvicorn worker; a topology change requires reassessing aggregate limits.
-- The Mock E2E pass and screenshot above belong to prior candidate `d6fb87c3068a61f127af32403d5ec4a4ad976e78`; `b5c5dba` adds the threadpool change after that run, so rerun E2E on the current source before claiming browser verification. The screenshot also shows the new-input form layout defect; UI edits remain pending file-level ownership clearance.
+- The exact-source `9c7f541` local E2E and focused unit results are recorded above. Browser assertions passed, but visual review shows the new-input form layout defect; UI edits remain pending file-level ownership clearance. This functional local evidence does not establish deployed/public behavior.
 - A 16 KiB router body limit exists; proxy/edge body-cap evidence is still required before public deployment.
 - No real provider inference or quality evaluation was run. Mock functional PASS is not a real-AI quality PASS.
 - The immediate input response contains an audit summary and hash but no durable audit/history; retention needs a separately approved data contract.
