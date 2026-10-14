@@ -267,6 +267,55 @@ def test_evaluator_exception_is_persisted_as_failed_human_review(session):
     assert session.get(AuthWorkflowPlan, plan.id).revision == 8
     assert session.get(RetryHarnessRun, original.id).failure_reason == "PROVIDER_ERROR"
     assert session.query(AuthWorkflowEvent).count() == 2
+    failure_event = session.query(AuthWorkflowEvent).filter_by(
+        action="AI_EVALUATION_RETRY_FAILED",
+    ).one()
+    assert failure_event.details["failure_code"] == "RETRY_EVALUATOR_ERROR"
+    assert failure_event.details["result_disposition"] == "APPLIED"
+    assert failure_event.details["processing_stage_before"] == "HUMAN_REVIEW_REQUIRED"
+    assert failure_event.details["processing_stage_after"] == "HUMAN_REVIEW_REQUIRED"
+    assert failure_event.details["result"] == "HUMAN_REVIEW_REQUIRED"
+    assert failure_event.details["round"] == 1
+    assert session.query(AuthWorkflowNotification).count() == 0
+
+
+def test_stale_retry_failure_audit_marks_result_ignored_stale(session):
+    checker = principal("CHECKER")
+    plan, _version, _original = add_retryable_round(session, checker.id)
+
+    def approval_wins_during_evaluation(db, plan_id, *_args):
+        current_plan = db.get(AuthWorkflowPlan, plan_id)
+        current_plan.status = "APPROVED"
+        current_plan.processing_stage = "COMPLETED"
+        db.add(AuthWorkflowDecision(
+            plan_id=plan_id,
+            round_number=1,
+            checker_id=checker.id,
+            action="APPROVED",
+            reason=None,
+            override_reason=None,
+        ))
+        db.commit()
+        raise RuntimeError("late evaluator error")
+
+    response = retry(session, checker, plan, approval_wins_during_evaluation)
+    retry_run = session.query(RetryHarnessRun).filter_by(plan_id=plan.id, attempt_number=2).one()
+    failure_event = session.query(AuthWorkflowEvent).filter_by(
+        action="AI_EVALUATION_RETRY_FAILED",
+    ).one()
+
+    assert response["run_status"] == "FAILED"
+    assert response["processing_stage"] == "COMPLETED"
+    assert response["result_disposition"] == "STALE"
+    assert retry_run.result_disposition == "STALE"
+    assert session.get(AuthWorkflowPlan, plan.id).status == "APPROVED"
+    assert failure_event.details["approval_round"] == 1
+    assert failure_event.details["round"] == 1
+    assert failure_event.details["failure_code"] == "RETRY_EVALUATOR_ERROR"
+    assert failure_event.details["result_disposition"] == "STALE"
+    assert failure_event.details["processing_stage_before"] == "COMPLETED"
+    assert failure_event.details["processing_stage_after"] == "COMPLETED"
+    assert failure_event.details["result"] == "IGNORED_STALE"
     assert session.query(AuthWorkflowNotification).count() == 0
 
 
