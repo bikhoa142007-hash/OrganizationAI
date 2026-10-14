@@ -322,7 +322,7 @@ def postgres_workflow(monkeypatch):
                 "checker_assignment",
                 {
                     "maker_may_select_other": True,
-                    "defaults": [{"department": "Marketing", "checker_id": str(checker.id)}],
+                    "defaults": [{"department": "marketing", "checker_id": str(checker.id)}],
                 },
                 expected_revision=expected_assignment_revision,
             )
