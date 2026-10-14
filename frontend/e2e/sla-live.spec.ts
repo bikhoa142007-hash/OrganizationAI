@@ -7,10 +7,11 @@ const apiBaseValue = process.env.VITE_API_BASE_URL
 const password = process.env.AUTH_SEED_PASSWORD
 const clockFile = process.env.SLA_TEST_CLOCK_FILE
 const apiContainer = process.env.SLA_TEST_API_CONTAINER
+const localWorkerPython = process.env.ORGANIZATIONAI_TEST_PYTHON
 const clockFileInApi = process.env.SLA_TEST_CLOCK_CONTAINER_FILE ?? '/sla-test/clock.json'
 const workerScriptInApi = process.env.SLA_TEST_WORKER_SCRIPT ?? '/workspace/scripts/run_sla_clocked_worker.py'
-if (!apiBaseValue || !password || !clockFile || !apiContainer) {
-  throw new Error('Set VITE_API_BASE_URL, AUTH_SEED_PASSWORD, SLA_TEST_CLOCK_FILE, and SLA_TEST_API_CONTAINER for SLA browser acceptance.')
+if (!apiBaseValue || !password || !clockFile || (!apiContainer && !localWorkerPython)) {
+  throw new Error('Set VITE_API_BASE_URL, AUTH_SEED_PASSWORD, SLA_TEST_CLOCK_FILE, and either SLA_TEST_API_CONTAINER or ORGANIZATIONAI_TEST_PYTHON for isolated SLA browser acceptance.')
 }
 const apiBase = apiBaseValue.replace(/\/$/, '')
 const image = resolve(import.meta.dirname, '../../tests/fixtures/ba/v2.1/images/creative-pass.png')
@@ -106,13 +107,14 @@ function localDateTime(minutesAgo: number): string {
 }
 
 function runWorker(): number {
-  const result = execFileSync('docker', [
-    'exec', '-e', `SLA_TEST_CLOCK_FILE=${clockFileInApi}`, apiContainer,
-    'python', workerScriptInApi,
-  ], {
-    encoding: 'utf8',
-    stdio: ['ignore', 'pipe', 'pipe'],
-  }).trim()
+  const result = apiContainer
+    ? execFileSync('docker', [
+      'exec', '-e', `SLA_TEST_CLOCK_FILE=${clockFileInApi}`, apiContainer,
+      'python', workerScriptInApi,
+    ], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true }).trim()
+    : execFileSync(localWorkerPython!, [
+      resolve(import.meta.dirname, '../../scripts/run_sla_clocked_worker.py'),
+    ], { encoding: 'utf8', env: process.env, stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true }).trim()
   const match = result.match(/^notifications_created=(\d+)$/m)
   if (!match) throw new Error(`Temporary SLA worker returned an unexpected result: ${result.slice(0, 200)}`)
   return Number(match[1])
@@ -180,6 +182,7 @@ test('Admin configures SLA; Maker submits, Checker receives reminders, decides l
     await maker.getByRole('link', { name: 'Tạo kế hoạch' }).click()
     const title = `Temporary SLA browser ${new Date().toISOString()}`
     await maker.getByLabel('Tên kế hoạch').fill(title)
+    await maker.getByLabel('Bộ phận').fill('Marketing')
     const checkerSelect = maker.getByLabel('Người phê duyệt')
     await checkerSelect.selectOption(checkerId)
     await maker.getByRole('button', { name: 'Lưu bản nháp' }).click()

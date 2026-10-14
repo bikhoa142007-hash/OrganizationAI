@@ -1097,7 +1097,7 @@ def _verify_employee_account_lifecycle(engine, password: str) -> dict:
             session.add(AuthWorkflowPlan(
                 code=f"PG-EMP-{run_marker}-{suffix}", maker_id=seeded_account_ids[maker_suffix],
                 checker_id=seeded_account_ids[checker_suffix],
-                payload={"department": "Marketing"}, status="PENDING_APPROVAL",
+                payload={"department": "employee-admin-synthetic"}, status="PENDING_APPROVAL",
                 processing_stage="HUMAN_REVIEW_REQUIRED",
             ))
 
@@ -1780,16 +1780,23 @@ def _verify_employee_account_lifecycle(engine, password: str) -> dict:
                 expected_account_id=str(seeded_account_ids["departing_checker"]),
                 expected_consumed=False,
             )
+            assignment_history_response = admin.get(
+                "/api/workflow/configuration/checker_assignment/history",
+            )
+            _require_status(assignment_history_response, "Checker assignment history before employee fixture")
+            assignment_items = assignment_history_response.json().get("items", [])
+            current_assignment_revision = assignment_items[0]["revision"] if assignment_items else None
+            expected_assignment_revision = (current_assignment_revision or 0) + 1
             configured_default = admin.post(
                 "/api/workflow/configuration/checker_assignment/revisions",
                 json={
-                    "expected_revision": None,
+                    "expected_revision": current_assignment_revision,
                     "effective_at": datetime.now(timezone.utc).isoformat(),
                     "change_reason": "Synthetic PostgreSQL default Checker deactivation fixture.",
                     "value": {
                         "maker_may_select_other": False,
                         "defaults": [
-                            {"department": "Marketing", "checker_id": str(seeded_account_ids["replacement_checker"])},
+                            {"department": "employee-admin-synthetic", "checker_id": str(seeded_account_ids["replacement_checker"])},
                         ],
                     },
                 },
@@ -1797,8 +1804,8 @@ def _verify_employee_account_lifecycle(engine, password: str) -> dict:
             configured_payload = _response_payload(
                 configured_default, "Synthetic Checker assignment configuration", expected_status=201,
             )
-            if configured_payload.get("revision") != 1 or configured_payload.get("kind") != "checker_assignment":
-                raise AssertionError("Synthetic default Checker configuration did not create the first revision.")
+            if configured_payload.get("revision") != expected_assignment_revision or configured_payload.get("kind") != "checker_assignment":
+                raise AssertionError("Synthetic default Checker configuration did not append the expected revision.")
             changed = admin.post(
                 f"/api/workflow/employees/{seeded_employee_ids['departing_checker']}/deactivation",
                 json={"reassignments": {}},

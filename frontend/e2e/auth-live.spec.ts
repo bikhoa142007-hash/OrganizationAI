@@ -93,16 +93,38 @@ test.beforeAll(async ({ browser }) => {
     }, apiBase)
 
     await login(admin, 'admin', '/workflow/plans', 'ADMIN')
+    const assignmentReason = 'Synthetic PostgreSQL browser acceptance default Checker assignment.'
     await admin.goto('/workflow/configuration')
     await admin.getByLabel('Loại cấu hình').selectOption('checker_assignment')
-    await admin.getByLabel('Giá trị JSON').fill(JSON.stringify({
-      maker_may_select_other: false,
-      defaults: [{ department: 'Marketing', checker_id: checkerId }],
-    }, null, 2))
-    await admin.getByLabel(/Hiệu lực từ thời điểm/).fill(localDateTime(1))
-    await admin.getByLabel('Lý do thay đổi').fill('Synthetic PostgreSQL browser acceptance default Checker assignment.')
-    await admin.getByRole('button', { name: 'Tạo revision bất biến' }).click()
-    await expect(admin.getByRole('status').filter({ hasText: 'Đã tạo revision 1' })).toBeVisible()
+    const existingRevision = await admin.evaluate(async ({ base, checkerId, reason }) => {
+      const response = await fetch(`${base}/workflow/configuration/checker_assignment/history?offset=0&limit=200`, { credentials: 'include' })
+      if (!response.ok) throw new Error(`Could not load synthetic Checker assignment history (HTTP ${response.status}).`)
+      const history = await response.json() as { items: Array<{ revision: number; change_reason: string; value: Record<string, unknown> }> }
+      const existing = history.items.find(item => item.change_reason === reason)
+      if (!existing) return null
+      const value = existing.value as { maker_may_select_other?: unknown; defaults?: Array<{ department?: unknown; checker_id?: unknown }> }
+      const exactFixture = value.maker_may_select_other === false
+        && Array.isArray(value.defaults)
+        && value.defaults.some(item => item.department === 'e2e-browser' && item.checker_id === checkerId)
+      if (!exactFixture) throw new Error('Existing synthetic Checker assignment revision has different fixture data.')
+      return existing.revision
+    }, { base: apiBase, checkerId, reason: assignmentReason })
+    let revisionNumber = existingRevision
+    if (revisionNumber === null) {
+      await admin.getByLabel('Giá trị JSON').fill(JSON.stringify({
+        maker_may_select_other: false,
+        defaults: [{ department: 'e2e-browser', checker_id: checkerId }],
+      }, null, 2))
+      await admin.getByLabel(/Hiệu lực từ thời điểm/).fill(localDateTime(1))
+      await admin.getByLabel('Lý do thay đổi').fill(assignmentReason)
+      await admin.getByRole('button', { name: 'Tạo revision bất biến' }).click()
+      const status = admin.getByRole('status').filter({ hasText: /Đã tạo revision \d+/ })
+      await expect(status).toBeVisible()
+      const match = (await status.textContent())?.match(/Đã tạo revision (\d+)/)
+      if (!match) throw new Error('Configuration revision status did not include a revision number.')
+      revisionNumber = Number(match[1])
+    }
+    await expect(admin.getByRole('region', { name: 'Lịch sử revision cấu hình' }).getByRole('heading', { name: new RegExp(`^Revision ${revisionNumber} ·`) })).toBeVisible()
   } finally {
     await makerContext.close()
     await adminContext.close()
@@ -127,6 +149,7 @@ async function readMakerPlans(page: Page) {
 async function enterDraftTitle(page: Page, title: string, checkerId?: string): Promise<string> {
   await expect(page.getByLabel('Tên kế hoạch')).toBeVisible()
   await page.getByLabel('Tên kế hoạch').fill(title)
+  await page.getByLabel('Bộ phận').fill('e2e-browser')
   const checkerSelect = page.getByLabel('Người phê duyệt')
   await expect(checkerSelect.locator('option').nth(1)).toBeAttached()
   const selectedCheckerId = checkerId ?? await checkerSelect.locator('option').nth(1).getAttribute('value')
@@ -209,6 +232,7 @@ test('live Auth Maker-to-Checker browser workflow preserves a rejected version t
       await maker.getByRole('link', { name: 'Tạo kế hoạch' }).click()
       title = `Synthetic local Auth browser ${new Date().toISOString()}`
       await maker.getByLabel('Tên kế hoạch').fill(title)
+      await maker.getByLabel('Bộ phận').fill('e2e-browser')
       const checkerSelect = maker.getByLabel('Người phê duyệt')
       await expect(checkerSelect.locator('option').nth(1)).toBeAttached()
       await checkerSelect.selectOption({ index: 1 })
@@ -218,7 +242,7 @@ test('live Auth Maker-to-Checker browser workflow preserves a rejected version t
 
       await maker.getByRole('link', { name: 'Chỉnh sửa và gửi lại' }).click()
       await maker.getByRole('textbox', { name: 'Mục tiêu', exact: true }).fill('Measure qualified product trial registrations.')
-      await maker.getByLabel('Bộ phận').fill('Marketing')
+      await maker.getByLabel('Bộ phận').fill('e2e-browser')
       await maker.getByLabel('Ngày bắt đầu').fill('2026-11-01')
       await maker.getByLabel('Ngày kết thúc').fill('2026-11-30')
       await maker.getByLabel('Ngân sách (đơn vị nhỏ nhất)').fill('50000000')
