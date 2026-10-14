@@ -7,7 +7,7 @@ from uuid import UUID, uuid4
 import pytest
 from sqlalchemy import select
 
-from src.backend.application import approval_configuration
+from src.backend.application import approval_configuration, checker_assignment_configuration
 from src.backend.db.models.approval_configuration import (
     AuthWorkflowConfigurationRevision,
     AuthWorkflowRoundConfigurationSnapshot,
@@ -170,6 +170,126 @@ def test_new_effective_config_only_changes_new_round_snapshot_and_retry_reuses_o
             AuthWorkflowRoundConfigurationSnapshot.plan_id == plan_id,
             AuthWorkflowRoundConfigurationSnapshot.approval_round == 1,
         )) is not None
+
+
+def test_checker_assignment_uses_department_default_and_gates_maker_switch(admin_db):
+    factory, admin = admin_db
+    _, maker_id = _person(factory, "MAKER", "AssignmentMaker")
+    _, default_checker_id = _person(factory, "CHECKER", "DefaultChecker")
+    _, alternate_checker_id = _person(factory, "CHECKER", "AlternateChecker")
+    now = datetime.now(timezone.utc)
+    first_effective_at = now - timedelta(minutes=2)
+    second_effective_at = now + timedelta(minutes=1)
+
+    _create_revision(
+        factory,
+        admin,
+        kind="checker_assignment",
+        expected_revision=None,
+        effective_at=first_effective_at,
+        value={
+            "maker_may_select_other": False,
+            "defaults": [{"department": "Marketing", "checker_id": str(default_checker_id)}],
+        },
+    )
+
+    with factory() as session:
+        default_result = checker_assignment_configuration.resolve_checker_assignment(
+            session, "Marketing", maker_id, None, first_effective_at,
+        )
+        assert default_result.eligible is True
+        assert default_result.checker_id == default_checker_id
+        assert default_result.source == "DEFAULT"
+
+        explicit_default = checker_assignment_configuration.resolve_checker_assignment(
+            session, "Marketing", maker_id, default_checker_id, first_effective_at,
+        )
+        assert explicit_default.eligible is True
+        assert explicit_default.checker_id == default_checker_id
+        assert explicit_default.source == "DEFAULT"
+
+        denied_switch = checker_assignment_configuration.resolve_checker_assignment(
+            session, "Marketing", maker_id, alternate_checker_id, first_effective_at,
+        )
+        assert denied_switch.eligible is False
+        assert denied_switch.status == "NO_ELIGIBLE_CHECKER"
+        assert denied_switch.checker_id is None
+
+    second_revision = _create_revision(
+        factory,
+        admin,
+        kind="checker_assignment",
+        expected_revision=1,
+        effective_at=second_effective_at,
+        value={
+            "maker_may_select_other": True,
+            "defaults": [{"department": "Marketing", "checker_id": str(default_checker_id)}],
+        },
+    )
+
+    with factory() as session:
+        allowed_switch = checker_assignment_configuration.resolve_checker_assignment(
+            session, "Marketing", maker_id, alternate_checker_id, second_effective_at,
+        )
+        assert allowed_switch.eligible is True
+        assert allowed_switch.checker_id == alternate_checker_id
+        assert allowed_switch.source == "MAKER_SELECTED"
+
+        plan = AuthWorkflowPlan(
+            code=f"CFG-CHECKER-PLAN-{uuid4().hex[:10]}",
+            maker_id=maker_id,
+            checker_id=alternate_checker_id,
+            payload={"department": "Marketing"},
+            status="PENDING_APPROVAL",
+            current_version=1,
+            current_round=1,
+        )
+        session.add(plan)
+        session.flush()
+        snapshot = approval_configuration.capture_round_configuration_snapshot(
+            session,
+            plan_id=plan.id,
+            plan_version=1,
+            approval_round=1,
+            department_id="Marketing",
+            maker_id=maker_id,
+            selected_checker_id=alternate_checker_id,
+            effective_at=second_effective_at,
+        )
+        assert snapshot.checker_assignment["checker_id"] == str(alternate_checker_id)
+        assert snapshot.checker_assignment["source"] == "MAKER_SELECTED"
+        assert snapshot.checker_assignment["configuration_revision_id"] == second_revision["revision_id"]
+        assert snapshot.checker_assignment["configuration_revision"] == second_revision["revision"]
+        assert snapshot.checker_assignment["configuration_hash"] == second_revision["configuration_hash"]
+
+        missing_department_default = checker_assignment_configuration.resolve_checker_assignment(
+            session, "Sales", maker_id, alternate_checker_id, second_effective_at,
+        )
+        assert missing_department_default.eligible is False
+        assert missing_department_default.status == "NO_ELIGIBLE_CHECKER"
+        assert missing_department_default.checker_id is None
+
+
+def test_checker_assignment_revision_rejects_inactive_default_checker(admin_db):
+    factory, admin = admin_db
+    _, checker_id = _person(factory, "CHECKER", "InactiveDefaultChecker")
+    with factory.begin() as session:
+        user = session.get(User, checker_id)
+        user.status = "DISABLED"
+
+    with pytest.raises(ApplicationError, match="not an active employee with Checker authority") as error:
+        _create_revision(
+            factory,
+            admin,
+            kind="checker_assignment",
+            expected_revision=None,
+            effective_at=datetime.now(timezone.utc),
+            value={
+                "maker_may_select_other": False,
+                "defaults": [{"department": "Marketing", "checker_id": str(checker_id)}],
+            },
+        )
+    assert error.value.code == "VALIDATION_ERROR"
 
 
 def test_stale_expected_revision_conflicts_without_overwriting_history(admin_db):

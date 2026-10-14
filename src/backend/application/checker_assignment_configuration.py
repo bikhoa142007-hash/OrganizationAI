@@ -154,6 +154,12 @@ def resolve_checker_assignment(
     default_id = UUID(match["checker_id"]) if match else None
     may_choose = value.get("maker_may_select_other") is True
 
+    if default_id is None:
+        return CheckerAssignmentResult(
+            None, False, "NO_ELIGIBLE_CHECKER", **metadata, source="NONE",
+            reason="No default Checker is configured for this department.",
+        )
+
     if selected_checker_id is None:
         candidate_id = default_id
         source: Literal["DEFAULT", "MAKER_SELECTED", "EXPLICIT_UNCONFIGURED", "NONE"] = "DEFAULT" if candidate_id else "NONE"
