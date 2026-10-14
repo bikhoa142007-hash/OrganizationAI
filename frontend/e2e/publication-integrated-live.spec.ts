@@ -242,7 +242,8 @@ test('integrated dashboard, config snapshots, Checker notes, terminal errors and
     }, { base: apiBase, id: terminalPlanId, revision: terminalPlan.revision })
     expect(assignedTerminalRetry.status).toBe(409)
     await checker.goto(`/workflow/plans/${terminalPlanId}`)
-    await expect(checker.locator('.auth-workflow-alert').filter({ hasText: 'EVALUATOR_RUBRIC_UNSUPPORTED' }).first()).toBeVisible()
+    await expect(checker.locator('.auth-ai-results')).toContainText('Hồ sơ đang chờ Checker xem xét.')
+    await expect(checker.locator('.auth-ai-results')).not.toContainText('EVALUATOR_RUBRIC_UNSUPPORTED')
     await expect(checker.getByRole('button', { name: 'Chạy lại AI' })).toHaveCount(0)
     await expect(checker.getByRole('heading', { name: 'Ghi chú nội bộ' })).toBeVisible()
     await checker.getByLabel('Thêm ghi chú cho Checker').fill('Synthetic private Checker note for browser acceptance.')
@@ -276,7 +277,7 @@ test('integrated dashboard, config snapshots, Checker notes, terminal errors and
     await checker.goto(`/workflow/plans/${retryPlanId}`)
     await expect(checker.getByRole('button', { name: 'Chạy lại AI' })).toBeVisible()
     await checker.getByRole('button', { name: 'Chạy lại AI' }).click()
-    await expect(checker.getByRole('status').filter({ hasText: 'Lần chạy' })).toBeVisible({ timeout: 180_000 })
+    await expect(checker.getByRole('region', { name: 'Chạy lại đánh giá AI' }).getByRole('status')).toHaveText('Hồ sơ đang chờ Checker xem xét.', { timeout: 180_000 })
     await expect.poll(async () => (await readPlan(checker, retryPlanId)).ai_evaluations.length).toBe(2)
     const retried = await readPlan(checker, retryPlanId)
     expect(retried.ai_evaluations.map(item => item.attempt_number)).toEqual([1, 2])
@@ -304,7 +305,8 @@ test('integrated dashboard, config snapshots, Checker notes, terminal errors and
       attempt_number: 1, failure_code: 'POLICY_OUTPUT_CONFLICT',
     })
     await checker.goto(`/workflow/plans/${conflictPlanId}`)
-    await expect(checker.locator('.auth-workflow-alert').filter({ hasText: 'POLICY_OUTPUT_CONFLICT' }).first()).toBeVisible()
+    await expect(checker.locator('.auth-ai-results')).toContainText('Hồ sơ đang chờ Checker xem xét.')
+    await expect(checker.locator('.auth-ai-results')).not.toContainText('POLICY_OUTPUT_CONFLICT')
     await expect(checker.getByRole('button', { name: 'Chạy lại AI' })).toHaveCount(0)
     const conflictRetry = await checker.evaluate(async ({ base, id, revision }) => {
       const response = await fetch(`${base}/workflow/plans/${id}/rounds/1/evaluation-retries`, {

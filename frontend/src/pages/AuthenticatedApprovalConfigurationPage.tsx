@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import {
   approvalConfigurationService,
   configurationKinds,
@@ -52,25 +52,37 @@ export function AuthenticatedApprovalConfigurationPage() {
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const loadRequestId = useRef(0)
 
-  async function load(selectedKind: ConfigurationKind) {
+  const load = useCallback(async (selectedKind: ConfigurationKind) => {
+    const requestId = ++loadRequestId.current
     setLoading(true)
     setError('')
+    setCurrent(null)
+    setHistory(null)
     try {
       const [currentResult, historyResult] = await Promise.all([
         approvalConfigurationService.current(),
         approvalConfigurationService.history(selectedKind),
       ])
+      if (requestId !== loadRequestId.current) return
       setCurrent(currentResult)
       setHistory(historyResult)
     } catch (failure) {
-      setError(failure instanceof Error ? failure.message : String(failure))
+      if (requestId === loadRequestId.current) {
+        setError(failure instanceof Error ? failure.message : String(failure))
+        setCurrent(null)
+        setHistory(null)
+      }
     } finally {
-      setLoading(false)
+      if (requestId === loadRequestId.current) setLoading(false)
     }
-  }
+  }, [])
 
-  useEffect(() => { void load(kind) }, [kind])
+  useEffect(() => {
+    void load(kind)
+    return () => { loadRequestId.current += 1 }
+  }, [kind, load])
 
   const currentItem = useMemo(() => current?.items.find(item => item.kind === kind) ?? null, [current, kind])
   const latestRevision = useMemo(() => history?.items.reduce<ConfigurationRevision | null>(
@@ -162,6 +174,9 @@ export function AuthenticatedApprovalConfigurationPage() {
 
     <label htmlFor="approval-configuration-kind">Loại cấu hình
       <select id="approval-configuration-kind" value={kind} onChange={event => {
+        setLoading(true)
+        setCurrent(null)
+        setHistory(null)
         setKind(event.target.value as ConfigurationKind)
         setValueText('{}')
         setError('')
@@ -201,7 +216,9 @@ export function AuthenticatedApprovalConfigurationPage() {
 
     <section aria-label="Lịch sử revision cấu hình">
       <h2>Lịch sử {kindLabels[kind]}</h2>
-      {history?.items.length ? history.items.map(revision => <RevisionSummary key={revision.revision_id} revision={revision} />) : <p>Chưa có revision được lưu.</p>}
+      {history?.items.length
+        ? history.items.map(revision => <RevisionSummary key={revision.revision_id} revision={revision} />)
+        : !loading && <p>Chưa có revision được lưu.</p>}
     </section>
   </section>
 }

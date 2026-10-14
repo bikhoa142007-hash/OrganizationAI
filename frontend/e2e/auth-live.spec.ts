@@ -248,7 +248,7 @@ test('live Auth Maker-to-Checker browser workflow preserves a rejected version t
     await expect(checker.getByRole('link', { name: new RegExp(title) })).toBeVisible()
     await openAndReadNotification(checker, firstRound.code, planId, 'Kế hoạch cần được duyệt')
     await expect(checker.getByRole('heading', { name: title, exact: true })).toBeVisible()
-    await checker.getByLabel('Lý do override AI').fill('Synthetic local review; Checker inspected the submitted snapshot.')
+    await checker.getByLabel('Lý do xử lý khác với đề xuất AI').fill('Synthetic local review; Checker inspected the submitted snapshot.')
     await checker.getByRole('button', { name: 'Từ chối', exact: true }).click()
     await expect(checker.getByRole('alert')).toContainText('Nhập lý do từ chối')
     await checker.getByLabel('Lý do hoặc nhận xét').fill('Clarify how verified trials are attributed to the campaign.')
@@ -274,7 +274,7 @@ test('live Auth Maker-to-Checker browser workflow preserves a rejected version t
     await checker.goto(`/workflow/plans/${planId}`)
     await expect(checker.locator('.auth-workflow-page-heading .workflow-status')).toHaveText('Chờ duyệt')
     await checker.getByLabel('Lý do hoặc nhận xét').fill('The second submission addresses the requested attribution detail.')
-    await checker.getByLabel('Lý do override AI').fill('Synthetic local review; Checker inspected the revised snapshot.')
+    await checker.getByLabel('Lý do xử lý khác với đề xuất AI').fill('Synthetic local review; Checker inspected the revised snapshot.')
     await checker.getByRole('button', { name: 'Phê duyệt', exact: true }).click()
     await expect(checker.locator('.auth-workflow-page-heading .workflow-status')).toHaveText('Đã duyệt')
 
@@ -396,7 +396,7 @@ test('creation intent replays a lost PostgreSQL draft response and rejects chang
   }
   await page.route(`${apiBase}/workflow/plans`, abortCommittedResponse)
   await page.getByRole('button', { name: 'Lưu bản nháp' }).click()
-  await expect(page.getByRole('alert').filter({ hasText: 'Không nhận được xác nhận từ máy chủ' })).toBeVisible()
+  await expect(page.getByRole('alert').filter({ hasText: 'Chưa nhận được xác nhận' })).toBeVisible()
   expect(serverCreatedStatus).toBe(201)
   expect(serverCreatedId).toMatch(/^[0-9a-f-]{36}$/i)
   expect((interceptedBody.value?.payload as { title?: string } | undefined)?.title).toBe(title)
@@ -447,8 +447,8 @@ test('creation intent replays a lost PostgreSQL draft response and rejects chang
   expect(changedPayloadResponse.status()).toBe(409)
   const conflict = await changedPayloadResponse.json() as { code: string }
   expect(conflict.code).toBe('IDEMPOTENCY_CONFLICT')
-  await expect(page.getByRole('heading', { name: 'Ý định tạo này đã được dùng với nội dung khác' })).toBeVisible()
-  await expect(page.getByText(/Máy chủ không tạo thêm bản nháp/)).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Yêu cầu tạo bản nháp đã được dùng cho nội dung khác' })).toBeVisible()
+  await expect(page.getByText(/Hệ thống không tạo thêm bản nháp/)).toBeVisible()
   await expect(page.getByRole('link', { name: 'Mở biểu mẫu mới' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Lưu bản nháp' })).toBeDisabled()
   await page.getByRole('link', { name: 'Mở biểu mẫu mới' }).click()

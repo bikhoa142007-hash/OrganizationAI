@@ -1,5 +1,5 @@
 import { afterEach, expect, it, vi } from 'vitest'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { AuthProvider } from '../context/AuthContext'
 import { AuthApiError, authService } from '../services/auth'
@@ -73,6 +73,7 @@ it('loads Maker pages, combines live client filters and writes only frontend URL
   renderList()
 
   expect(await screen.findByRole('link', { name: 'Spring launch (REQ-SPRING)' })).toBeVisible()
+  expect(screen.getByText('WORKFLOW POSTGRESQL · MAKER')).toBeVisible()
   expect(listPlans).toHaveBeenCalledExactlyOnceWith(0, 100)
   expect(listReviews).not.toHaveBeenCalled()
   expect(screen.getByText('3 kết quả trong 3 yêu cầu đã tải')).toBeVisible()
@@ -106,6 +107,22 @@ it('loads Maker pages, combines live client filters and writes only frontend URL
   expect(screen.getByLabelText('Ngày tạo đến')).toHaveValue('')
   expect(screen.getByRole('link', { name: 'Spring launch (REQ-SPRING)' })).toBeVisible()
   expect(listPlans).toHaveBeenCalledTimes(1)
+})
+
+it('shows a neutral label for an unrecognized plan status without exposing its value', async () => {
+  vi.spyOn(authService, 'me').mockResolvedValue(maker)
+  const unknownPlan = planFixture(11, {
+    status: 'UNRECOGNIZED_PRIVATE_STATE' as unknown as WorkflowPlan['status'],
+  })
+  vi.spyOn(authWorkflowService, 'listPlans').mockResolvedValue([unknownPlan])
+
+  renderList()
+
+  const planLink = await screen.findByRole('link', { name: 'Campaign 11 (MKT-11)' })
+  const row = planLink.closest('tr')
+  expect(row).not.toBeNull()
+  expect(within(row!).getByText('Trạng thái chưa xác định')).toBeVisible()
+  expect(row).not.toHaveTextContent('UNRECOGNIZED_PRIVATE_STATE')
 })
 
 it('restores valid URL filters, normalizes invalid values, and does not call list APIs while filtering', async () => {
@@ -173,7 +190,7 @@ it('keeps loaded rows and retries the same page after a temporary Maker list err
 
   expect(await screen.findByRole('link', { name: 'Campaign 0 (MKT-0)' })).toBeVisible()
   fireEvent.click(screen.getByRole('button', { name: /Tải lại/ }))
-  expect(await screen.findByRole('alert')).toHaveTextContent('Dịch vụ workflow đang gặp sự cố')
+  expect(await screen.findByRole('alert')).toHaveTextContent('Hệ thống đang gặp sự cố')
   expect(screen.getByRole('link', { name: 'Campaign 0 (MKT-0)' })).toBeVisible()
   fireEvent.click(screen.getByRole('button', { name: 'Thử tải lại' }))
   expect(await screen.findByRole('link', { name: 'Campaign 100 (MKT-100)' })).toBeVisible()
@@ -189,6 +206,17 @@ it('uses only the Checker review endpoint for the Checker list mode', async () =
   renderList('/workflow/reviews')
 
   expect(await screen.findByRole('link', { name: 'Campaign 9 (MKT-9)' })).toBeVisible()
+  expect(screen.getByText('Quản lý kế hoạch · Checker')).toBeVisible()
   expect(listReviews).toHaveBeenCalledExactlyOnceWith(0, 100)
   expect(listPlans).not.toHaveBeenCalled()
+})
+
+it('shows a Maker-friendly empty state without internal workflow terminology', async () => {
+  vi.spyOn(authService, 'me').mockResolvedValue(maker)
+  vi.spyOn(authWorkflowService, 'listPlans').mockResolvedValue([])
+  renderList()
+
+  expect(await screen.findByRole('heading', { name: 'Chưa có kế hoạch' })).toBeVisible()
+  expect(screen.getByText('Tạo bản nháp đầu tiên để bắt đầu quản lý kế hoạch.')).toBeVisible()
+  expect(screen.queryByText(/workflow Auth/i)).not.toBeInTheDocument()
 })

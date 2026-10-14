@@ -49,7 +49,8 @@ it('reuses the idempotency key after a transient failure and reports fail-closed
   expect(await screen.findByRole('alert')).toHaveTextContent('Không thể chạy lại đánh giá AI.')
   fireEvent.click(screen.getByRole('button', { name: 'Chạy lại AI' }))
 
-  expect(await screen.findByRole('status')).toHaveTextContent('kết thúc cần Checker xem xét')
+  expect(await screen.findByRole('status')).toHaveTextContent('Hồ sơ đang chờ Checker xem xét.')
+  expect(screen.getByRole('status')).not.toHaveTextContent(result.run_id)
   expect(retry).toHaveBeenCalledTimes(2)
   expect(retry).toHaveBeenNthCalledWith(1, props.planId, 3, {
     expected_plan_version: 2,
@@ -67,9 +68,23 @@ it('keeps the successful retry result visible after the round retry limit is rea
   const { rerender } = render(<ManualEvaluationRetryPanel {...props} />)
 
   fireEvent.click(screen.getByRole('button', { name: 'Chạy lại AI' }))
-  expect(await screen.findByRole('status')).toHaveTextContent(result.run_id)
+  expect(await screen.findByRole('status')).toHaveTextContent('Hồ sơ đang chờ Checker xem xét.')
+  expect(screen.getByRole('status')).not.toHaveTextContent(result.run_id)
   rerender(<ManualEvaluationRetryPanel {...props} isRetryAvailable={false} />)
 
-  expect(screen.getByRole('status')).toHaveTextContent(result.run_id)
+  expect(screen.getByRole('status')).toHaveTextContent('Hồ sơ đang chờ Checker xem xét.')
+  expect(screen.getByRole('status')).not.toHaveTextContent(result.run_id)
   expect(screen.queryByRole('button', { name: 'Chạy lại AI' })).not.toBeInTheDocument()
+})
+
+it('explains a changed workflow state without exposing internal revision terminology', async () => {
+  vi.spyOn(workflowCompletionService, 'retryEvaluation')
+    .mockRejectedValue(new AuthApiError(409, 'Stale revision.', 'CONFLICT'))
+  render(<ManualEvaluationRetryPanel {...props} />)
+
+  fireEvent.click(screen.getByRole('button', { name: 'Chạy lại AI' }))
+
+  expect(await screen.findByRole('alert')).toHaveTextContent('Thông tin hồ sơ đã thay đổi')
+  expect(screen.getByRole('alert')).toHaveTextContent('Hãy tải lại trạng thái trước khi thử lại.')
+  expect(screen.getByRole('alert')).not.toHaveTextContent(/revision|Stale revision|CONFLICT/)
 })
