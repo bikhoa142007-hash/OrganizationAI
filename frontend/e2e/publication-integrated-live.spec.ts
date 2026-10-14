@@ -137,6 +137,7 @@ async function createSubmittedPlan(page: Page, title: string): Promise<string> {
 
 function runPythonJson(source: string, ...args: string[]): unknown {
   const output = execFileSync(python!, ['-c', source, ...args], {
+    cwd: resolve(import.meta.dirname, '../..'),
     encoding: 'utf8',
     env: process.env,
     windowsHide: true,

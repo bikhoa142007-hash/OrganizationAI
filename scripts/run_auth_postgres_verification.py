@@ -33,7 +33,7 @@ from fastapi import Request as FastAPIRequest
 
 
 ROOT = Path(__file__).resolve().parents[1]
-HEAD_REVISION = "20261010_10"
+HEAD_REVISION = "20261012_16"
 PRE_EMPLOYEE_REVISION = "20261009_08"
 RESERVED_PORTS = {8010, 5173, 5433, 18010, 15173}
 EVIDENCE_ROOT = ROOT / "docs" / "integration" / "evidence"
@@ -1096,7 +1096,8 @@ def _verify_employee_account_lifecycle(engine, password: str) -> dict:
         ):
             session.add(AuthWorkflowPlan(
                 code=f"PG-EMP-{run_marker}-{suffix}", maker_id=seeded_account_ids[maker_suffix],
-                checker_id=seeded_account_ids[checker_suffix], payload={}, status="PENDING_APPROVAL",
+                checker_id=seeded_account_ids[checker_suffix],
+                payload={"department": "Marketing"}, status="PENDING_APPROVAL",
                 processing_stage="HUMAN_REVIEW_REQUIRED",
             ))
 
@@ -1779,11 +1780,30 @@ def _verify_employee_account_lifecycle(engine, password: str) -> dict:
                 expected_account_id=str(seeded_account_ids["departing_checker"]),
                 expected_consumed=False,
             )
+            configured_default = admin.post(
+                "/api/workflow/configuration/checker_assignment/revisions",
+                json={
+                    "expected_revision": None,
+                    "effective_at": datetime.now(timezone.utc).isoformat(),
+                    "change_reason": "Synthetic PostgreSQL default Checker deactivation fixture.",
+                    "value": {
+                        "maker_may_select_other": False,
+                        "defaults": [
+                            {"department": "Marketing", "checker_id": str(seeded_account_ids["replacement_checker"])},
+                        ],
+                    },
+                },
+            )
+            configured_payload = _response_payload(
+                configured_default, "Synthetic Checker assignment configuration", expected_status=201,
+            )
+            if configured_payload.get("revision") != 1 or configured_payload.get("kind") != "checker_assignment":
+                raise AssertionError("Synthetic default Checker configuration did not create the first revision.")
             changed = admin.post(
                 f"/api/workflow/employees/{seeded_employee_ids['departing_checker']}/deactivation",
-                json={"reassignments": {plan_id: str(seeded_account_ids["replacement_checker"])}},
+                json={"reassignments": {}},
             )
-            _require_status(changed, "atomic Checker reassignment and deactivation")
+            _require_status(changed, "atomic configured-default Checker reassignment and deactivation")
             _require_status(departing_checker.get("/api/auth/me"), "revoked Checker session", expected_status=401)
             checker_old_token = recipient.post("/api/auth/activate", json={
                 "token": checker_reset_token, "password": "Inactive-checker-token-should-fail-123!",
@@ -1873,7 +1893,8 @@ def _verify_employee_account_lifecycle(engine, password: str) -> dict:
                 },
                 "checker_lifecycle": {"lock_with_pending_blocked": True,
                                       "role_revoke_with_pending_blocked": True,
-                                      "deactivation_requires_each_replacement": True,
+                                      "deactivation_requires_configured_default": True,
+                                      "configured_default_revision_applied": True,
                                       "invalid_reassignment_rollback": True,
                                       "reassignment_deactivation_account_lock_audit_atomic": True,
                                       "old_session_revoked": True, "outstanding_tokens_invalidated": True},
@@ -2126,9 +2147,6 @@ def _run_full() -> int:
         _write_text(temp_run / "seed-auth.log", seed_out + seed_err)
         directory = _helper(python, "directory", env=auth_env, secrets=secrets)
         evidence["admin_directory_postgres"] = directory
-        evidence["employee_account_postgres"] = _helper(
-            python, "employee-admin", env=auth_env, secrets=secrets, timeout=180,
-        )
 
         api_log, frontend_log = temp_run / "api.log", temp_run / "frontend.log"
         api_handle = api_log.open("w", encoding="utf-8")
@@ -2182,6 +2200,10 @@ def _run_full() -> int:
             raise RuntimeError(f"Auth E2E gate failed: {stats!r}")
         if "creation intent replays a lost PostgreSQL draft response and rejects changed content" not in report_text:
             raise RuntimeError("The idempotency-across-reload Auth E2E case is absent from the report.")
+        # The helper writes a checker-assignment revision; run it after browser tests so it cannot contaminate their config snapshot.
+        evidence["employee_account_postgres"] = _helper(
+            python, "employee-admin", env=auth_env, secrets=secrets, timeout=180,
+        )
         evidence["auth_e2e"] = {
             "status": "PASS", "expected": stats["expected"], "skipped": stats["skipped"],
             "unexpected": stats["unexpected"], "flaky": stats["flaky"],
