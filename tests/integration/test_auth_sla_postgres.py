@@ -535,7 +535,7 @@ def test_postgres_decision_and_checker_reassignment_win_worker_lock_races(sla_po
     with factory() as session:
         approval_configuration.create_configuration_revision(
             session,
-            _principal(people["ADMIN"], "ADMIN"),
+            _principal(people["ADMIN"], "ADMIN", ("ADMIN_APPROVER_MANAGE",)),
             "sla-reassignment-default-checker",
             kind="checker_assignment",
             expected_revision=None,
