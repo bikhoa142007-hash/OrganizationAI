@@ -54,7 +54,17 @@ def configuration_postgres():
         base_engine.dispose()
 
 
-def _principal(user: User, roles: tuple[str, ...]) -> AuthenticatedPrincipal:
+def _principal(
+    user: User,
+    roles: tuple[str, ...],
+    *,
+    permissions: tuple[str, ...] | None = None,
+) -> AuthenticatedPrincipal:
+    effective_permissions = permissions if permissions is not None else tuple(sorted({
+        permission
+        for role in roles
+        for permission in role_admin.BUILTIN_PERMISSIONS.get(role, ())
+    }))
     return AuthenticatedPrincipal(
         id=user.id,
         user_code=user.user_code,
@@ -64,7 +74,7 @@ def _principal(user: User, roles: tuple[str, ...]) -> AuthenticatedPrincipal:
         display_name=user.display_name,
         status="ACTIVE",
         roles=roles,
-        permissions=(),
+        permissions=effective_permissions,
     )
 
 
@@ -119,6 +129,30 @@ def test_admin_api_returns_unconfigured_and_rejects_maker(configuration_postgres
 
     maker_client = _app(factory, _principal(admin_user, ("MAKER",)))
     assert maker_client.get("/api/workflow/configuration").status_code == 403
+
+
+def test_checker_assignment_config_requires_approver_permission(configuration_postgres):
+    _engine, factory = configuration_postgres
+    admin = _admin(factory)
+    permissions = tuple(
+        permission for permission in role_admin.BUILTIN_PERMISSIONS["ADMIN"]
+        if permission != "ADMIN_APPROVER_MANAGE"
+    )
+    client = _app(factory, _principal(admin, ("ADMIN",), permissions=permissions))
+
+    history = client.get("/api/workflow/configuration/checker_assignment/history")
+    assert history.status_code == 403
+
+    revision = client.post(
+        "/api/workflow/configuration/checker_assignment/revisions",
+        json={
+            "expected_revision": None,
+            "effective_at": (datetime.now(timezone.utc) + timedelta(minutes=1)).isoformat(),
+            "change_reason": "Synthetic denied permission test.",
+            "value": {"maker_may_select_other": False, "defaults": []},
+        },
+    )
+    assert revision.status_code == 403
 
 
 def test_admin_revision_requires_allowed_browser_origin_and_keeps_auto_approval_off(configuration_postgres):
@@ -316,6 +350,30 @@ def test_postgres_custom_role_crud_assignment_and_audit(configuration_postgres):
         "employee_id": str(profile_id),
         "roles": ["CUSTOM_GOV_REVIEW"],
     }
+
+    with factory.begin() as session:
+        session.add(AuthWorkflowPlan(
+            code=f"GOV-PENDING-{uuid4().hex[:12]}",
+            maker_id=admin.id,
+            checker_id=user_id,
+            payload={"department": "Synthetic"},
+            status="PENDING_APPROVAL",
+            processing_stage="HUMAN_REVIEW_REQUIRED",
+            current_version=1,
+            current_round=1,
+        ))
+
+    with factory() as session:
+        with pytest.raises(ApplicationError, match="Reassign pending plans"):
+            role_admin.update_role(
+                session,
+                principal,
+                role_id,
+                "synthetic-role-test",
+                name="Synthetic role without Checker authority",
+                description="Must preserve access to pending work.",
+                permissions=["MARKETING_REVIEW_ASSIGNED", "MARKETING_APPROVE"],
+            )
 
     with factory() as session:
         assert session.scalar(

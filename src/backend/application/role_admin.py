@@ -164,6 +164,39 @@ def update_role(session: Session, principal: AuthenticatedPrincipal, role_id: UU
             raise ApplicationError("NOT_FOUND", "Role not found.", correlation_id)
         if role.is_builtin or role.code in BUILTIN_PERMISSIONS:
             raise ApplicationError("CONFLICT", "Built-in roles are immutable.", correlation_id)
+        assigned_users = session.scalars(
+            select(User)
+            .join(UserRole, UserRole.user_id == User.id)
+            .where(UserRole.role_id == role.id)
+            .options(selectinload(User.user_roles).selectinload(UserRole.role).selectinload(Role.permissions))
+            .with_for_update()
+        ).unique().all()
+        next_permissions = set(permissions)
+        for user in assigned_users:
+            active_roles = [link.role for link in user.user_roles if link.role.status == "ACTIVE"]
+            current_codes = _effective_role_codes(active_roles)
+            if "CHECKER" not in current_codes:
+                continue
+            other_roles = [item for item in active_roles if item.id != role.id]
+            effective_permissions = {
+                permission.permission_code
+                for item in other_roles
+                for permission in item.permissions
+            } | next_permissions
+            next_codes = {item.code for item in other_roles}
+            next_codes.update(
+                code for code, required in PERMISSION_ROLE_REQUIREMENTS.items()
+                if required <= effective_permissions
+            )
+            if "CHECKER" not in next_codes:
+                pending_count = session.scalar(select(func.count(AuthWorkflowPlan.id)).where(
+                    AuthWorkflowPlan.checker_id == user.id,
+                    AuthWorkflowPlan.status == "PENDING_APPROVAL",
+                )) or 0
+                if pending_count:
+                    raise ApplicationError(
+                        "CONFLICT", "Reassign pending plans before removing Checker access.", correlation_id,
+                    )
         before = {"name": role.name, "description": role.description,
                   "permissions": sorted(link.permission_code for link in role.permissions)}
         role.name, role.description = name.strip(), description

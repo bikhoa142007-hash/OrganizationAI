@@ -36,7 +36,9 @@ def admin_db():
         session.flush()
         session.add(UserRole(user_id=admin.id, role_id=session.scalar(select(Role.id).where(Role.code == "ADMIN"))))
         session.flush()
-        principal = SimpleNamespace(id=admin.id, roles=("ADMIN",), permissions=())
+        principal = SimpleNamespace(
+            id=admin.id, roles=("ADMIN",), permissions=("ADMIN_APPROVER_MANAGE",),
+        )
     try:
         yield factory, principal
     finally:
@@ -421,6 +423,43 @@ def test_custom_checker_permission_bundle_is_a_valid_replacement_and_cannot_be_r
     with factory() as session:
         with pytest.raises(ApplicationError, match="Reassign pending plans"):
             role_admin.replace_employee_roles(session, principal, replacement_id, "test", [])
+
+
+def test_custom_checker_role_cannot_drop_effective_checker_access_with_pending_work(admin_db):
+    factory, principal = admin_db
+    checker_profile_id, checker_id = add_profile(
+        factory, "EMP-CUSTOM-CHECKER", "Custom Checker", roles=("MAKER",),
+    )
+    _, maker_id = add_profile(factory, "EMP-CHECKER-MAKER", "Plan Maker", roles=("MAKER",))
+    permissions = ["MARKETING_REVIEW_ASSIGNED", "MARKETING_APPROVE", "MARKETING_REJECT"]
+    with factory() as session:
+        custom = role_admin.create_role(
+            session, principal, "test", "CUSTOM_PENDING_REVIEW", "Pending Review", None, permissions,
+        )
+        role_id = UUID(custom["id"])
+        role_admin.replace_employee_roles(
+            session, principal, checker_profile_id, "test", [custom["code"]],
+        )
+    with factory.begin() as session:
+        session.add(AuthWorkflowPlan(
+            code="PLAN-CUSTOM-CHECKER-ROLE-LOCK",
+            maker_id=maker_id,
+            checker_id=checker_id,
+            payload={"department": "Marketing"},
+            status="PENDING_APPROVAL",
+            processing_stage="HUMAN_REVIEW_REQUIRED",
+            current_version=1,
+            current_round=1,
+        ))
+    with factory() as session:
+        with pytest.raises(ApplicationError, match="Reassign pending plans"):
+            role_admin.update_role(
+                session, principal, role_id, "test", name="Review without rejection",
+                description=None, permissions=permissions[:-1],
+            )
+    with factory() as session:
+        role = session.get(Role, role_id)
+        assert {item.permission_code for item in role.permissions} == set(permissions)
 
 @pytest.mark.parametrize(
     "operation",

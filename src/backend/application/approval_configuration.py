@@ -304,9 +304,17 @@ def _value_is_enabled(kind: str, value: Mapping[str, Any]) -> bool:
     return False
 
 
-def _require_admin(principal: Any, correlation_id: str) -> None:
+CONFIGURATION_KIND_PERMISSIONS = {
+    "checker_assignment": "ADMIN_APPROVER_MANAGE",
+}
+
+
+def _require_admin(principal: Any, correlation_id: str, *, kind: str | None = None) -> None:
     if "ADMIN" not in getattr(principal, "roles", ()):
         raise ApplicationError("FORBIDDEN", "Administrator role is required to manage workflow configuration.", correlation_id)
+    required_permission = CONFIGURATION_KIND_PERMISSIONS.get(kind)
+    if required_permission and required_permission not in getattr(principal, "permissions", ()):
+        raise ApplicationError("FORBIDDEN", "You do not have permission to manage this workflow configuration.", correlation_id)
 
 
 def _write_transaction(session: Session):
@@ -460,7 +468,7 @@ def create_configuration_revision(
     change_reason: str,
     value: Any,
 ) -> dict[str, Any]:
-    _require_admin(principal, correlation_id)
+    _require_admin(principal, correlation_id, kind=kind)
     if kind not in CONFIGURATION_KINDS:
         raise ApplicationError("VALIDATION_ERROR", "Unknown configuration kind.", correlation_id)
     if expected_revision is not None and (type(expected_revision) is not int or expected_revision < 1):
@@ -573,7 +581,14 @@ def configuration_revision_dict(
     }
 
 
-def current_configuration(session: Session, *, as_of: datetime | None = None) -> dict[str, Any]:
+def current_configuration(
+    session: Session,
+    principal: Any,
+    correlation_id: str,
+    *,
+    as_of: datetime | None = None,
+) -> dict[str, Any]:
+    _require_admin(principal, correlation_id)
     moment = _require_utc(as_of or datetime.now(timezone.utc), "as_of")
     result = []
     for kind in CONFIGURATION_KINDS:
@@ -600,11 +615,14 @@ def current_configuration(session: Session, *, as_of: datetime | None = None) ->
 def configuration_history(
     session: Session,
     kind: str,
+    principal: Any,
+    correlation_id: str,
     *,
     offset: int = 0,
     limit: int = 100,
     as_of: datetime | None = None,
 ) -> dict[str, Any]:
+    _require_admin(principal, correlation_id, kind=kind)
     if kind not in CONFIGURATION_KINDS:
         raise ApplicationError("VALIDATION_ERROR", "Unknown configuration kind.", "configuration-history")
     if offset < 0 or not 1 <= limit <= 200:

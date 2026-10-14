@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
+from types import SimpleNamespace
 from uuid import UUID, uuid4
 
 import pytest
@@ -49,6 +50,12 @@ def _person(factory, role: str, label: str) -> tuple[UUID, UUID]:
 
 
 def _create_revision(factory, principal, *, kind, expected_revision, effective_at, value):
+    if kind == "checker_assignment":
+        principal = SimpleNamespace(
+            id=principal.id,
+            roles=principal.roles,
+            permissions=tuple(set(getattr(principal, "permissions", ())) | {"ADMIN_APPROVER_MANAGE"}),
+        )
     with factory() as session:
         return approval_configuration.create_configuration_revision(
             session,
@@ -186,7 +193,9 @@ def test_stale_expected_revision_conflicts_without_overwriting_history(admin_db)
         assert error.value.code == "CONFLICT"
 
     with factory() as session:
-        history = approval_configuration.configuration_history(session, "budget")
+        history = approval_configuration.configuration_history(
+            session, "budget", admin, "stale-config-history",
+        )
         assert history["total"] == 1
         assert history["items"][0]["revision_id"] == first["revision_id"]
         assert history["items"][0]["status"] == "DISABLED"

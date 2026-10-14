@@ -28,21 +28,25 @@ def _correlation(request: Request) -> str:
 
 @router.get("", response_model=ConfigurationCurrentResponse)
 def get_current_configuration(
+    request: Request,
     principal: AuthenticatedPrincipal = Depends(require_role("ADMIN")),
     session: Session = Depends(get_auth_db),
 ):
-    return configuration.current_configuration(session)
+    return configuration.current_configuration(session, principal, _correlation(request))
 
 
 @router.get("/{kind}/history", response_model=ConfigurationHistoryResponse)
 def get_configuration_history(
     kind: str,
+    request: Request,
     principal: AuthenticatedPrincipal = Depends(require_role("ADMIN")),
     session: Session = Depends(get_auth_db),
     offset: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=200),
 ):
-    return configuration.configuration_history(session, kind, offset=offset, limit=limit)
+    return configuration.configuration_history(
+        session, kind, principal, _correlation(request), offset=offset, limit=limit,
+    )
 
 
 @router.post("/{kind}/revisions", response_model=ConfigurationRevisionResponse, status_code=201)
