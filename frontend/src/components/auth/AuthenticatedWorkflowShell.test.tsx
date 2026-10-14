@@ -57,3 +57,22 @@ it('keeps keyboard focus inside the open navigation drawer and restores it on cl
   fireEvent.click(container.querySelector('.auth-workflow-sidebar-scrim')!)
   expect(toggle).toHaveFocus()
 })
+
+it('shows only admin navigation entries covered by effective permissions', async () => {
+  vi.spyOn(authService, 'me').mockResolvedValue({
+    ...maker,
+    id: 'admin-id',
+    user_code: 'USR-ADMIN',
+    username: 'admin',
+    roles: ['ADMIN'],
+    effective_permissions: ['ADMIN_ROLE_MANAGE'],
+  })
+
+  renderShell()
+
+  expect(await screen.findByRole('heading', { name: 'Kế hoạch của tôi' })).toBeVisible()
+  expect(screen.getByRole('link', { name: 'Vai trò' })).toBeVisible()
+  expect(screen.queryByRole('link', { name: 'Nhật ký kiểm toán' })).not.toBeInTheDocument()
+  expect(screen.queryByRole('link', { name: 'Nhân viên' })).not.toBeInTheDocument()
+  expect(screen.queryByRole('link', { name: 'Cấu hình SLA' })).not.toBeInTheDocument()
+})

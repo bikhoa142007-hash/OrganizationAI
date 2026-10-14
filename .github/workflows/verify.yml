@@ -310,6 +310,9 @@ jobs:
               "tests/integration/test_auth_workflow_postgres_notifications.py::test_postgres_retry_race_reuses_the_round_snapshot",
               "tests/integration/test_auth_workflow_postgres_notifications.py::test_postgres_policy_conflict_persists_safe_attempt_provenance_and_routes_to_checker",
               "tests/integration/test_auth_workflow_postgres_notifications.py::test_postgres_notification_lifecycle_permissions_replay_and_rollback",
+              "tests/integration/test_approval_configuration_api.py::test_postgres_custom_role_crud_assignment_and_audit",
+              "tests/integration/test_approval_configuration_api.py::test_postgres_role_admin_keeps_admin_grants_self_assignment_and_builtins_locked",
+              "tests/integration/test_approval_configuration_api.py::test_checker_assignment_config_requires_approver_permission",
           }
           result = subprocess.run(
               [sys.executable, "-m", "pytest", "--collect-only", "-q", "-m", "postgres"],
@@ -331,7 +334,7 @@ jobs:
               print(f"Missing PostgreSQL acceptance tests: {sorted(expected - selected)}", file=sys.stderr)
               print(f"Unexpected PostgreSQL-marked tests: {sorted(selected - expected)}", file=sys.stderr)
               raise SystemExit(1)
-          print("Verified exact PostgreSQL marker selection: all 13 configuration, retry, SLA, and notification acceptance tests.")
+          print("Verified exact PostgreSQL marker selection: all 16 configuration, retry, SLA, and notification acceptance tests.")
           PY
         working-directory: .
         env:
