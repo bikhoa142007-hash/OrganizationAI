@@ -11,9 +11,23 @@ Status: implementation contract for the Challenge A Judge only. The automatic ou
 - The Judge router has no Auth dependency, actor header, Auth database, shared demo database, persistent result store, history endpoint, stop endpoint, or override endpoint. D must review and mount it only inside an isolated composition after reviewing trusted client-IP handling, request quotas, and concurrency.
 - No public clock/admin controls, CORS changes, rate limiter, or production workflow access is part of this work package.
 
+The existing `/demo/verify` route renders the page in Demo mode by default and continues to call the current `VerifyService`, including its 15-case regression suite. Its visible `DEMO · MOCK` label explicitly disqualifies those runs as public acceptance evidence. The future public route must opt into `VerifyDashboardPage mode="public"`; that mode calls `publicJudgeService` and must remain unwired until D approves isolated composition.
+
+## Public router contract and D boundary
+
+- Router prefix is `/api/public/judge` in `src/backend/api/public_judge.py`; D can include this router only after isolation review. It is not included in `src/backend/api/app.py` by this worktree.
+- `POST /api/public/judge/runs` accepts exactly `{"suite":"general"}` or `{"suite":"escalation"}`. The response contains a generated run id, suite status, `mode=MOCK`, `data_classification=SYNTHETIC`, timestamps/duration, summary, and per-case server expected/actual routes, PASS/FAIL/ERROR, input snapshot, evidence, questions, audit projection, and applied rule ids.
+- `POST /api/public/judge/input-runs` accepts only the strict typed fields in `public_judge_schemas.py` (`title`, `department`, `objective`, `summary`, `target_audience`, `channel`, `currency`, `budget_vnd`, `source_budget_vnd`). It returns `mode=MOCK`, `processing_mode=DETERMINISTIC_INPUT_SIMULATION`, `USER_SUPPLIED_UNVERIFIED`, `NOT_MEASURED`, outcome/category/reason/question, timestamps, run id, and an immediate audit summary with input SHA-256. It persists nothing.
+- Request and response schemas reject unknown fields. Body limit is 16 KiB in the router; D must also enforce a body cap at the proxy/edge before mounting.
+- The frontend sends `POST` with `Content-Type: application/json`, `credentials: omit`, no actor/auth/idempotency header, and `cache: no-store`. It sends no cookie and the router uses no Auth dependency or actor namespace.
+- Errors follow `{code,message,correlation_id,http_status}`: `VALIDATION_ERROR` 422, `INPUT_TOO_LARGE` 413, `RATE_LIMITED` 429, `UNAVAILABLE` 503. Error responses do not include stack/provider text.
+- The router does not read `Forwarded`, `X-Forwarded-For`, or any client-IP header and implements no quota/concurrency limiter. D must establish Render's trusted proxy chain/source, choose the application-visible client-IP source, and approve/enforce request and concurrent-run quotas before mount.
+- CORS is unchanged here. D must allow only the approved Judge frontend origin and required `POST`/preflight `OPTIONS` plus `Content-Type` in the isolated public composition; public Judge requests do not require credentials. Do not loosen the Auth app's shared CORS policy to make this work.
+- No stop/status/retry/override/admin/clock endpoints exist. Browser timeout means unknown completion, not cancellation.
+
 ## New-input simulation policy
 
-Policy identifier: `JUDGE-INPUT-SIMULATION-1.0`. This deterministic simulation accepts a small allowlist of text and numeric fields. It is not submitted as a marketing plan and it does not invoke VLM or strategy inference.
+Policy identifier: `JUDGE-INPUT-SIMULATION-1.0`. This deterministic simulation accepts a small allowlist of text and numeric fields. It is not submitted as a marketing plan and it does not invoke VLM or strategy inference. The department, channel, currency, and budget values below are provisional Judge-only simulation defaults. PO approval is pending; do not present them as company policy or expose the endpoint until approval and D's isolation review are complete.
 
 All submitted fields remain `USER_SUPPLIED_UNVERIFIED`; `quality_status` is always `NOT_MEASURED`. The response contains only an outcome, reason, contextual handoff question where needed, timestamp, input SHA-256, and an in-memory audit summary. The body, result, and provider output are not saved or logged. Do not enter confidential or personal data.
 

@@ -1,10 +1,12 @@
 import { AlertCircle, CheckCircle2, ChevronRight, Clock3, FlaskConical, Play, XCircle } from 'lucide-react'
 import { useMemo, useState, type FormEvent } from 'react'
+import { Link } from 'react-router-dom'
 import { PageHeader, StatePanel, StatusBadge, formatDateTime } from '../components/ui'
-import { publicJudgeService, type PublicJudgeInputResult, type PublicJudgeSuite } from '../services/publicJudgeService'
-import type { VerifyResultRow, VerifyRun } from '../types'
+import { publicJudgeService, type PublicJudgeInputResult } from '../services/publicJudgeService'
+import { useServices } from '../services/ServiceProvider'
+import type { VerifyResultRow, VerifyRun, VerifySuite } from '../types'
 
-const suiteCounts: Record<PublicJudgeSuite, number> = { general: 4, escalation: 5 }
+const suiteCounts: Record<VerifySuite, number> = { general: 4, escalation: 5, regression: 15 }
 
 const inputDefaults = {
   title: 'Synthetic campaign',
@@ -18,8 +20,10 @@ const inputDefaults = {
   sourceBudgetVnd: '50000000',
 }
 
-export function VerifyDashboardPage() {
-  const [suite, setSuite] = useState<PublicJudgeSuite>('general')
+export function VerifyDashboardPage({ mode = 'demo' }: { mode?: 'demo' | 'public' }) {
+  const isPublic = mode === 'public'
+  const services = useServices()
+  const [suite, setSuite] = useState<VerifySuite>('general')
   const [run, setRun] = useState<VerifyRun | null>(null)
   const [starting, setStarting] = useState(false)
   const [error, setError] = useState('')
@@ -32,7 +36,14 @@ export function VerifyDashboardPage() {
 
   async function start() {
     setStarting(true); setError(''); setRun(null); setSelectedCaseId('')
-    try { setRun(await publicJudgeService.startRun(suite)) } catch (reason) { setError(reason instanceof Error ? reason.message : 'Không thể bắt đầu Verify từ service.') } finally { setStarting(false) }
+    try {
+      let result: VerifyRun
+      if (isPublic) {
+        if (suite === 'regression') throw new Error('Public Judge does not expose the regression suite.')
+        result = await publicJudgeService.startRun(suite)
+      } else result = await services.verify.startRun(suite)
+      setRun(result)
+    } catch (reason) { setError(reason instanceof Error ? reason.message : 'Không thể bắt đầu Verify từ service.') } finally { setStarting(false) }
   }
 
   async function evaluateInput(event: FormEvent<HTMLFormElement>) {
@@ -60,24 +71,28 @@ export function VerifyDashboardPage() {
   }
 
   return <section className="verify-page">
-    <PageHeader eyebrow="Challenge A / Public Judge" title="Verify workflow" description="Mỗi lần bấm chạy workflow tổng hợp mới qua backend và đối chiếu expected do server giữ. Timeout không chứng minh server đã dừng; Judge không có thao tác stop hoặc undo." actions={<button className="button button-primary" type="button" onClick={() => void start()} disabled={starting}><Play /> {starting ? 'Đang chạy...' : `Run ${suiteCounts[suite]} cases`}</button>} />
+    <PageHeader eyebrow={isPublic ? 'Challenge A / Public Judge' : 'Challenge A / Judge Demo'} title={isPublic ? 'Verify workflow' : 'Verify workflow · Demo'} description={isPublic ? 'Mỗi lần bấm chạy workflow tổng hợp mới qua backend và đối chiếu expected do server giữ. Timeout không chứng minh server đã dừng; Judge không có thao tác stop hoặc undo.' : 'Chạy bộ fixture trong Judge Demo hiện có. Kết quả MOCK chỉ xác nhận demo workflow, không phải public acceptance hoặc inference thật.'} actions={<button className="button button-primary" type="button" onClick={() => void start()} disabled={starting}><Play /> {starting ? 'Đang chạy...' : `Run ${suiteCounts[suite]} cases`}</button>} />
 
-    <div className="verify-notice"><FlaskConical /><div><strong>Judge công khai, không cần tạo tài khoản</strong><p>Verify chạy dữ liệu SYNTHETIC trong workflow in-memory riêng cho từng ca. Provider là MOCK; đây không phải inference thật và không đọc Auth, tài khoản hay dữ liệu production.</p><p>Đầu vào mới được gắn USER_SUPPLIED_UNVERIFIED, xử lý trong request rồi bỏ; không nhập dữ liệu cá nhân hoặc bí mật. Mô phỏng này không đo chất lượng AI và không ghi nhận một phê duyệt thật.</p></div></div>
+    {isPublic
+      ? <div className="verify-notice"><FlaskConical /><div><strong>Judge công khai, không cần tạo tài khoản</strong><p>Verify chạy dữ liệu SYNTHETIC trong workflow in-memory riêng cho từng ca. Provider là MOCK; đây không phải inference thật và không đọc Auth, tài khoản hay dữ liệu production.</p><p>Đầu vào mới được gắn USER_SUPPLIED_UNVERIFIED, xử lý trong request rồi bỏ; không nhập dữ liệu cá nhân hoặc bí mật. Mô phỏng này không đo chất lượng AI và không ghi nhận một phê duyệt thật.</p></div></div>
+      : <div className="verify-notice"><FlaskConical /><div><strong>Judge Demo · MOCK — không phải public acceptance</strong><p>Giữ nguyên Verify service và suite hiện có cho route demo. Dữ liệu và kết quả ở đây chỉ kiểm tra workflow demo, không chứng minh inference thật hoặc public Judge đã được triển khai.</p><Link className="button button-secondary" to="/demo/plans/new">Nhập kế hoạch tổng hợp mới</Link></div></div>}
 
-    <p className="verify-first-use">Bước đầu tiên: bấm “Run 4 cases” để chạy Verify chung.</p>
+    <p className="verify-first-use">{isPublic ? 'Bước đầu tiên: bấm “Run 4 cases” để chạy Verify chung.' : `Bước đầu tiên: bấm “Run ${suiteCounts[suite]} cases” để chạy Judge Demo.`}</p>
 
     <div className="segmented-control" aria-label="Chọn Verify suite">
       <button type="button" aria-pressed={suite === 'general'} className={suite === 'general' ? 'active' : ''} onClick={() => { setSuite('general'); setRun(null); setSelectedCaseId('') }}>Verify chung · 4 ca</button>
       <button type="button" aria-pressed={suite === 'escalation'} className={suite === 'escalation' ? 'active' : ''} onClick={() => { setSuite('escalation'); setRun(null); setSelectedCaseId('') }}>Verify → Escalation · 5 ca</button>
+      {!isPublic && <button type="button" aria-pressed={suite === 'regression'} className={suite === 'regression' ? 'active' : ''} onClick={() => { setSuite('regression'); setRun(null); setSelectedCaseId('') }}>Bộ hồi quy tổng hợp · 15 ca</button>}
     </div>
-    <p className="detail-timestamp">Catalog tham chiếu có 15 ca tổng hợp; hai suite công khai tập trung vào 4 ca Verify chung và 5 ca Verify → Escalation.</p>
+    {isPublic && <p className="detail-timestamp">Catalog tham chiếu có 15 ca tổng hợp; hai suite công khai tập trung vào 4 ca Verify chung và 5 ca Verify → Escalation.</p>}
 
     {starting && <StatePanel kind="loading" title={`Đang chạy ${suiteCounts[suite]} ca`} description="Backend thực thi từng case trong database in-memory mới." />}
     {error && <StatePanel kind="error" title="Verify không hoàn tất" description={error} action={<button className="button button-secondary" onClick={() => void start()}>Chạy lại</button>} />}
     {!run && !starting && !error && <StatePanel kind="empty" title="Chưa có lần chạy" description="Chọn một bộ Verify rồi bấm Run. Kết quả chỉ xuất hiện sau khi backend thực thi case." />}
+    {run && !isPublic && <div className="verify-notice"><FlaskConical /><div><strong>DEMO RUN · MOCK</strong><p>Kết quả dưới đây thuộc Judge Demo và không được tính là public acceptance.</p></div></div>}
     {run && <RunContent run={run} selected={selected} onSelect={setSelectedCaseId} />}
 
-    <section className="content-section public-judge-input">
+    {isPublic && <section className="content-section public-judge-input">
       <div className="section-toolbar"><div><p className="page-eyebrow">Đầu vào mới</p><h3>Thử một bộ dữ liệu có cấu trúc</h3></div><span className="readonly-label">Không lưu</span></div>
       <p>Simulation v1 chỉ áp dụng cho DEMO-DEPT-01, kênh DEMO_SOCIAL hoặc DEMO_EMAIL, tiền tệ VND và ngân sách không quá 100.000.000 VND. Ngoài phạm vi, thiếu/xung đột fact, hoặc vượt trần sẽ chuyển tiếp để người có thẩm quyền xem.</p>
       <form className="form-grid" onSubmit={event => void evaluateInput(event)}>
@@ -94,7 +109,7 @@ export function VerifyDashboardPage() {
       </form>
       {inputError && <StatePanel kind="error" title="Không thể đánh giá đầu vào" description={inputError} />}
       {inputRun && <section className="verify-summary" aria-live="polite"><div className="section-toolbar"><div><p className="page-eyebrow">Kết quả mô phỏng</p><h3>{inputRun.outcome}</h3></div><span className="readonly-label">{inputRun.category ?? 'Không chuyển tiếp'}</span></div><dl><div><dt>Mode / chất lượng</dt><dd>{inputRun.mode} · {inputRun.qualityStatus}</dd></div><div><dt>Phân loại dữ liệu</dt><dd>{inputRun.dataClassification}</dd></div><div><dt>Policy scope</dt><dd>{inputRun.policyVersion}</dd></div><div><dt>Hoàn tất</dt><dd>{formatDateTime(inputRun.completedAt)}</dd></div><div><dt>Thời lượng</dt><dd>{inputRun.durationMs} ms</dd></div><div><dt>Audit action</dt><dd>{inputRun.audit.action}</dd></div><div className="definition-wide"><dt>Lý do</dt><dd>{inputRun.reason}</dd></div><div className="definition-wide"><dt>Input SHA-256</dt><dd><code>{inputRun.audit.inputSha256}</code></dd></div></dl>{inputRun.handoffQuestion && <section className="verify-escalation-questions"><h4>Câu hỏi chuyển tiếp</h4><p>{inputRun.handoffQuestion}</p></section>}</section>}
-    </section>
+    </section>}
   </section>
 }
 
