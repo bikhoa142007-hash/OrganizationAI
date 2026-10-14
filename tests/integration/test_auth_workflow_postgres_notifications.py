@@ -530,10 +530,16 @@ def test_postgres_retry_race_reuses_the_round_snapshot(postgres_workflow):
 
 
 @pytest.mark.parametrize(
-    ("stale_after_claim", "expected_disposition", "expected_status", "expected_stage"),
+    (
+        "stale_after_claim",
+        "expected_disposition",
+        "expected_result",
+        "expected_status",
+        "expected_stage",
+    ),
     [
-        (False, "APPLIED", "PENDING_APPROVAL", "HUMAN_REVIEW_REQUIRED"),
-        (True, "STALE", "APPROVED", "COMPLETED"),
+        (False, "APPLIED", "HUMAN_REVIEW_REQUIRED", "PENDING_APPROVAL", "HUMAN_REVIEW_REQUIRED"),
+        (True, "STALE", "IGNORED_STALE", "APPROVED", "COMPLETED"),
     ],
 )
 def test_postgres_retry_evaluator_failure_audit_persists_disposition_and_round(
@@ -541,6 +547,7 @@ def test_postgres_retry_evaluator_failure_audit_persists_disposition_and_round(
     monkeypatch,
     stale_after_claim,
     expected_disposition,
+    expected_result,
     expected_status,
     expected_stage,
 ):
@@ -626,6 +633,8 @@ def test_postgres_retry_evaluator_failure_audit_persists_disposition_and_round(
         assert failure_event.actor_type == "SYSTEM"
         assert failure_event.actor_id is None
         assert failure_event.status_before == failure_event.status_after == expected_status
+        assert failure_event.details["result"] == expected_result
+        assert failure_event.details["round"] == 1
         assert failure_event.details["approval_round"] == 1
         assert failure_event.details["version"] == 1
         assert failure_event.details["attempt_number"] == 2
