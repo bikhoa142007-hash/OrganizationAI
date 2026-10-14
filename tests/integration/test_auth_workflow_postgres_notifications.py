@@ -307,6 +307,20 @@ def postgres_workflow(monkeypatch):
     for client, user in zip(clients, (maker, checker, next_checker, outsider)):
         _login(client, user.username, password)
     try:
+        assignment_admin = _create_user(factory, f"pg_admin_assignment_{suffix}", "ADMIN", password)
+        assignment_admin_client = TestClient(app, raise_server_exceptions=False)
+        try:
+            _login(assignment_admin_client, assignment_admin.username, password)
+            _create_configuration_revision(
+                assignment_admin_client,
+                "checker_assignment",
+                {
+                    "maker_may_select_other": True,
+                    "defaults": [{"department": "Marketing", "checker_id": str(checker.id)}],
+                },
+            )
+        finally:
+            assignment_admin_client.close()
         yield {
             "app": app,
             "default_configuration": default_configuration,
