@@ -520,8 +520,25 @@ def test_postgres_retry_race_reuses_the_round_snapshot(postgres_workflow):
             AuthWorkflowEngineDecision.plan_id == plan_id,
             AuthWorkflowEngineDecision.round_number == 1,
         )).all()
+        retry_request_events = session.scalars(select(AuthWorkflowEvent).where(
+            AuthWorkflowEvent.plan_id == plan_id,
+            AuthWorkflowEvent.action == "AI_EVALUATION_RETRY_REQUESTED",
+        )).all()
         assert len(runs) == 2
         assert [run.attempt_number for run in runs] == [1, 2]
+        assert len(retry_request_events) == 1
+        retry_request_event = retry_request_events[0]
+        assert retry_request_event.actor_type == "HUMAN"
+        assert retry_request_event.actor_id == checker.id
+        assert retry_request_event.status_before == retry_request_event.status_after == "PENDING_APPROVAL"
+        assert retry_request_event.created_at is not None
+        assert retry_request_event.details["result"] == "RETRY_ACCEPTED"
+        assert retry_request_event.details["version"] == failed["current_version"] == 1
+        assert retry_request_event.details["round"] == retry_request_event.details["approval_round"] == 1
+        assert retry_request_event.details["attempt_number"] == runs[1].attempt_number == 2
+        assert retry_request_event.details["run_id"] == runs[1].run_id
+        assert retry_request_event.details["retry_parent_run_id"] == str(runs[0].id)
+        assert retry_request_event.details["failure_codes"] == ["PROVIDER_ERROR"]
         assert runs[1].policy_snapshot == frozen_policy
         assert runs[1].policy_snapshot_hash == frozen_policy_hash
         assert round_snapshot.snapshot_hash == frozen_round_hash
