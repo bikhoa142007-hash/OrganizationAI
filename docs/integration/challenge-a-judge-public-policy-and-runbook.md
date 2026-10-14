@@ -85,7 +85,15 @@ Use only the config's disposable local demo database and mock providers; do not 
 
 Do not perform public acceptance on a deployment until D supplies the deployed SHA and confirms the isolated environment, request quota, concurrency limit, and deployment profile. A local or historical test result is not public acceptance evidence.
 
-## D local-candidate evidence (2026-10-14)
+## Current integration source baseline (2026-10-14)
+
+- D supplied source candidate `b5c5dba82e3455f46837424e4f9061cb609daf26` as the current comparison baseline. Its ancestry from frontend-live baseline `425b417309c7a9db5ee2bd71a74f5cdad6704178` was verified. The Judge worktree remains on its existing branch; no reset or rebase was performed.
+- Relative to `425b417`, D-owned shared wiring changes include `src/backend/api/app.py` and `frontend/src/routes/AppRoutes.tsx`. The Judge package in the candidate includes `src/backend/api/public_judge.py`, `src/backend/api/public_judge_schemas.py`, `frontend/src/services/publicJudgeService.ts`, `frontend/src/pages/VerifyDashboardPage.tsx`, `tests/unit/verify/test_public_judge.py`, and this runbook. Do not edit the page or stylesheet while collaborator UI ownership remains unresolved.
+- The `public_judge.py`, schema, service, page, and test file contents in `b5c5dba` match the corresponding Judge snapshots at code/test commit `e053237d56c86a81156a3122e93331ee0abd14f9`; this runbook matches docs commit `45854e7782e94a59b716706dce1ac0772838f52f`. Those local commit SHAs are not ancestors of `b5c5dba`; this is a read-only content comparison, not a rebase.
+- Backend test evidence on the matching Judge code snapshot: `tests/unit/verify/test_public_judge.py` and `tests/unit/verify/test_harness.py` reported 10 passed with two Starlette/httpx deprecation warnings. The event-loop regression failed against the synchronous call and passed after the threadpool offload.
+- Browser evidence below belongs to prior candidate `d6fb87c3068a61f127af32403d5ec4a4ad976e78`. The diff from `d6fb87c` to `b5c5dba` includes the threadpool change and regression test, so the prior browser PASS does not verify the new source SHA. No E2E result tied to `b5c5dba` is recorded here.
+
+## Prior D local-candidate evidence (2026-10-14; SHA d6fb87c3068a61f127af32403d5ec4a4ad976e78)
 
 - Candidate SHA: `d6fb87c3068a61f127af32403d5ec4a4ad976e78` (local integration candidate, not a deployed SHA).
 - Playwright test: `frontend/e2e/public-judge.spec.ts`, test `public Challenge A runs isolated Mock suites and classifies new synthetic input`. Evidence artifact ID: `public-judge-public-Challe-954b8-ssifies-new-synthetic-input`; screenshot: `frontend/test-results/public-judge-public-Challe-954b8-ssifies-new-synthetic-input/challenge-a-public.png`.
@@ -95,9 +103,9 @@ Do not perform public acceptance on a deployment until D supplies the deployed S
 
 ## Current readiness gaps
 
-- D mounted the route in local candidate `d6fb87c3068a61f127af32403d5ec4a4ad976e78`; this does not identify a deployed SHA or prove public deployment acceptance.
+- The current source reference is D candidate `b5c5dba82e3455f46837424e4f9061cb609daf26`, descended from `425b417309c7a9db5ee2bd71a74f5cdad6704178`. It is not a deployed SHA and does not establish public deployment acceptance.
 - The 30/60-second rate limit and one-active-POST gate are process-local/global among visitors on each process. D reports the current Render topology as one instance/one Uvicorn worker; a topology change requires reassessing aggregate limits.
-- The local Mock E2E passed functionally, but the screenshot shows the new-input form layout defect described above. UI edits remain pending file-level ownership clearance.
+- The Mock E2E pass and screenshot above belong to prior candidate `d6fb87c3068a61f127af32403d5ec4a4ad976e78`; `b5c5dba` adds the threadpool change after that run, so rerun E2E on the current source before claiming browser verification. The screenshot also shows the new-input form layout defect; UI edits remain pending file-level ownership clearance.
 - A 16 KiB router body limit exists; proxy/edge body-cap evidence is still required before public deployment.
 - No real provider inference or quality evaluation was run. Mock functional PASS is not a real-AI quality PASS.
 - The immediate input response contains an audit summary and hash but no durable audit/history; retention needs a separately approved data contract.
