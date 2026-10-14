@@ -21,7 +21,7 @@ The existing `/demo/verify` route remains in Demo mode and continues to call `Ve
 - Request and response schemas reject unknown fields. The router limits bodies to 16 KiB. Proxy/edge enforcement of a body cap has not been evidenced; confirm it before public deployment.
 - The frontend sends `POST` with `Content-Type: application/json`, `credentials: omit`, no actor/auth/idempotency header, and `cache: no-store`. It sends no cookie and the router uses no Auth dependency or actor namespace.
 - Errors follow `{code,message,correlation_id,http_status}`: `VALIDATION_ERROR` 422, `INPUT_TOO_LARGE` 413, `RATE_LIMITED` 429, `UNAVAILABLE` 503. Error responses do not include stack/provider text.
-- D's candidate applies a process-local gate to Judge POSTs: 30 requests per rolling 60 seconds and at most 1 active POST per process. It does not partition by visitor/IP or trust `Forwarded`/`X-Forwarded-For`. D reports current Render topology as 1 instance and 1 Uvicorn worker, so all visitors share this process quota. Additional workers or instances have independent gates and increase aggregate capacity; this is not a distributed deployment-wide limit.
+- D's candidate applies a process-local gate to Judge POSTs: 30 requests per rolling 60 seconds and at most 1 active POST per process. It does not partition by visitor/IP or trust `Forwarded`/`X-Forwarded-For`. Deployment instance/worker count has not been verified in this review and must be confirmed before public acceptance. Additional workers or instances have independent gates and increase aggregate capacity; this is not a distributed deployment-wide limit.
 - The candidate keeps the existing `settings.cors_origins` CORS allowlist; no Auth CORS policy was expanded for Judge. The Judge client sends `POST` JSON with `credentials: omit` and no actor/auth headers. Do not loosen the shared allowlist to make this work.
 - No stop/status/retry/override/admin/clock endpoints exist. Browser timeout means unknown completion, not cancellation.
 
@@ -116,7 +116,7 @@ Do not perform public acceptance on a deployment until D supplies the deployed S
 | Brief criterion | Evidence at this source | Status / remaining gap |
 | --- | --- | --- |
 | Public entry without account; first instruction is actionable | Local `/challenge-a` browser run; page text and first instruction asserted; request had no Authorization or Cookie header | Local functional PASS. A deployed public URL/SHA has not been supplied. |
-| Verify chung: one action, four real run cases, pass/fail and run timestamp | Playwright clicked `Run 4 cases`; response rendered per-run data; screenshot shows run id and timestamps | `4/4 PASS`, `MOCK` only. |
+| Verify chung: one action, four cases executed in one Mock run, pass/fail and run timestamp | Playwright clicked `Run 4 cases`; response rendered per-run data; screenshot shows run id and timestamps | `4/4 PASS`, `MOCK` only. |
 | Verify → Escalation: five cases, three automatic and two transferred | Same browser run and screenshot; expected/actual route and case result rendered | `5/5 PASS`, `MOCK` only; observed 3 automatic and 2 human-review outcomes. |
 | New input; field-driven result rather than case-id/fixed result | Browser submitted a new form payload and changed its channel; unit cases vary fact match, policy scope, and authority fields | Local functional PASS for deterministic simulation. `quality_status=NOT_MEASURED`; this does not measure real AI inference. |
 | Distinguish missing/uncertain fact, out-of-policy input, and exceeded authority | Unit assertions cover `FACT_UNCERTAIN`, `POLICY_OUT_OF_SCOPE`, and `AUTHORITY_EXCEEDED` separately | Local unit coverage PASS; only policy-scope transfer was exercised in the browser run. |
@@ -139,7 +139,7 @@ The screenshot verifies functional behavior but also records the unresolved form
 ## Current readiness gaps
 
 - The latest source reference is D candidate `47c9374eda3b210d6939bba6f6791e870cec7715`, descended from `425b417309c7a9db5ee2bd71a74f5cdad6704178`. It is not a deployed SHA and does not establish public deployment acceptance. The Judge worktree remains on its separate branch; no rebase was performed.
-- The 30/60-second rate limit and one-active-POST gate are process-local/global among visitors on each process. D reports the current Render topology as one instance/one Uvicorn worker; a topology change requires reassessing aggregate limits.
+- The 30/60-second rate limit and one-active-POST gate are process-local/global among visitors on each process. Deployment instance/worker count has not been verified here; verify it before public acceptance and reassess aggregate limits for the deployed topology.
 - The exact-source `9c7f541` local E2E and focused unit results are recorded above. D's later `47c9374` diff has no Judge/frontend changes, but browser behavior was not rerun at that SHA. Visual review shows the new-input form layout defect; UI edits remain pending file-level ownership clearance. This functional local evidence does not establish deployed/public behavior.
 - A 16 KiB router body limit exists; proxy/edge body-cap evidence is still required before public deployment.
 - No real provider inference or quality evaluation was run. Mock functional PASS is not a real-AI quality PASS.
