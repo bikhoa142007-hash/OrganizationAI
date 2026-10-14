@@ -15,6 +15,7 @@ const protectedPlanIds = new Set([
   '0c50b0eb-d31c-40a8-8fdd-99bcaa083e62',
 ])
 const image = resolve(import.meta.dirname, '../../tests/fixtures/ba/v2.1/images/creative-pass.png')
+let syntheticCheckerId = ''
 
 type LivePlan = {
   id: string
@@ -91,6 +92,7 @@ test.beforeAll(async ({ browser }) => {
       if (!checkers.length) throw new Error('The temporary Auth seed has no eligible Checker.')
       return checkers[0].id
     }, apiBase)
+    syntheticCheckerId = checkerId
 
     await login(admin, 'admin', '/workflow/plans', 'ADMIN')
     const assignmentReason = 'Synthetic PostgreSQL browser acceptance default Checker assignment.'
@@ -115,7 +117,7 @@ test.beforeAll(async ({ browser }) => {
         maker_may_select_other: false,
         defaults: [{ department: 'e2e-browser', checker_id: checkerId }],
       }, null, 2))
-      await admin.getByLabel(/Hiệu lực từ thời điểm/).fill(localDateTime(1))
+      await admin.getByLabel(/Hiệu lực từ thời điểm/).fill(localDateTime(24 * 60))
       await admin.getByLabel('Lý do thay đổi').fill(assignmentReason)
       await admin.getByRole('button', { name: 'Tạo revision bất biến' }).click()
       const status = admin.getByRole('status').filter({ hasText: /Đã tạo revision \d+/ })
@@ -125,6 +127,24 @@ test.beforeAll(async ({ browser }) => {
       revisionNumber = Number(match[1])
     }
     await expect(admin.getByRole('region', { name: 'Lịch sử revision cấu hình' }).getByRole('heading', { name: new RegExp(`^Revision ${revisionNumber} ·`) })).toBeVisible()
+    const activeAssignment = await admin.evaluate(async ({ base, checkerId }) => {
+      const response = await fetch(`${base}/workflow/configuration`, { credentials: 'include' })
+      if (!response.ok) throw new Error(`Could not read current Checker assignment configuration (HTTP ${response.status}).`)
+      const config = await response.json() as { items?: Array<{
+        kind?: string
+        status?: string
+        current_revision?: { value?: { maker_may_select_other?: unknown; defaults?: Array<{ department?: unknown; checker_id?: unknown }> } } | null
+      }> }
+      const assignment = config.items?.find(item => item.kind === 'checker_assignment')
+      return {
+        effective: assignment?.status === 'EFFECTIVE',
+        hasExpectedDefault: assignment?.current_revision?.value?.defaults?.some(
+          item => item.department === 'e2e-browser' && item.checker_id === checkerId,
+        ) ?? false,
+        makerMaySelectOther: assignment?.current_revision?.value?.maker_may_select_other ?? null,
+      }
+    }, { base: apiBase, checkerId })
+    expect(activeAssignment).toEqual({ effective: true, hasExpectedDefault: true, makerMaySelectOther: false })
   } finally {
     await makerContext.close()
     await adminContext.close()
@@ -235,7 +255,8 @@ test('live Auth Maker-to-Checker browser workflow preserves a rejected version t
       await maker.getByLabel('Bộ phận').fill('e2e-browser')
       const checkerSelect = maker.getByLabel('Người phê duyệt')
       await expect(checkerSelect.locator('option').nth(1)).toBeAttached()
-      await checkerSelect.selectOption({ index: 1 })
+      await checkerSelect.selectOption(syntheticCheckerId)
+      await expect(checkerSelect).toHaveValue(syntheticCheckerId)
       await maker.getByRole('button', { name: 'Lưu bản nháp' }).click()
       await expect(maker.getByRole('heading', { name: title, exact: true })).toBeVisible()
       await expect(maker.locator('.auth-workflow-page-heading .workflow-status')).toHaveText('Bản nháp')
@@ -393,7 +414,7 @@ test('creation intent replays a lost PostgreSQL draft response and rejects chang
   if (!intentId) throw new Error('The new form did not receive a creation intent.')
   expect(intentId).toMatch(/^[\da-f]{8}-[\da-f]{4}-4[\da-f]{3}-[89ab][\da-f]{3}-[\da-f]{12}$/i)
 
-  const checkerId = await enterDraftTitle(page, title)
+  const checkerId = await enterDraftTitle(page, title, syntheticCheckerId)
   const requestBody = { payload: { title, objective: '', summary: '', department: '', start_date: '', end_date: '',
     budget_minor_units: '', currency: 'VND', target_audience: '', channels: [], kpi_expected: '', notes: '' },
   checker_user_id: checkerId }
