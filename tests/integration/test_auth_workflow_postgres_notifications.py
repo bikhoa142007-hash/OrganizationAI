@@ -311,6 +311,12 @@ def postgres_workflow(monkeypatch):
         assignment_admin_client = TestClient(app, raise_server_exceptions=False)
         try:
             _login(assignment_admin_client, assignment_admin.username, password)
+            assignment_history = assignment_admin_client.get(
+                "/api/workflow/configuration/checker_assignment/history"
+            )
+            assert assignment_history.status_code == 200, assignment_history.text
+            assignment_items = assignment_history.json()["items"]
+            expected_assignment_revision = assignment_items[0]["revision"] if assignment_items else None
             _create_configuration_revision(
                 assignment_admin_client,
                 "checker_assignment",
@@ -318,6 +324,7 @@ def postgres_workflow(monkeypatch):
                     "maker_may_select_other": True,
                     "defaults": [{"department": "Marketing", "checker_id": str(checker.id)}],
                 },
+                expected_revision=expected_assignment_revision,
             )
         finally:
             assignment_admin_client.close()
