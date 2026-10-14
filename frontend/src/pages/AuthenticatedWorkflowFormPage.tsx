@@ -472,13 +472,13 @@ function apiFailureText(error: AuthApiError | null, action: WorkflowAction) {
 }
 
 function workflowStatusLabel(status: WorkflowPlan['status'] | undefined) {
-  if (!status) return 'đang được cập nhật'
-  return ({
+  const labels: Partial<Record<WorkflowPlan['status'], string>> = {
     DRAFT: 'bản nháp',
     PENDING_APPROVAL: 'đang chờ duyệt',
     APPROVED: 'đã được duyệt',
     REJECTED: 'đã bị từ chối',
-  } as Record<WorkflowPlan['status'], string>)[status]
+  }
+  return status ? labels[status] ?? 'chưa xác định' : 'chưa xác định'
 }
 
 function operationLabel(action: Exclude<BusyAction, null>) {

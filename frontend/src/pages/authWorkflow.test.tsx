@@ -80,8 +80,114 @@ it('shows a friendly failure and review status without internal AI details', asy
 
   renderDetail()
 
-  expect((await screen.findAllByText('Hồ sơ đang chờ Checker xem xét.')).length).toBeGreaterThan(0)
+  expect((await screen.findAllByText('Hồ sơ cần được Checker xem xét.')).length).toBeGreaterThan(0)
   expect(screen.queryByText(/MOCK_VLM|PROVIDER_TIMEOUT|POLICY-1|EVAL_VALID|Human Review required/)).not.toBeInTheDocument()
+})
+
+it('shows a neutral empty state when the plan has no AI evaluations', async () => {
+  vi.spyOn(authService, 'me').mockResolvedValue(checker)
+  const plan = planFixture()
+  plan.ai_evaluations = []
+  vi.spyOn(authWorkflowService, 'getPlan').mockResolvedValue(plan)
+  vi.spyOn(authWorkflowService, 'getAttachment').mockResolvedValue(new Blob())
+
+  const { container } = renderDetail()
+
+  expect(await screen.findByRole('heading', { name: 'Kết quả đánh giá AI' })).toBeVisible()
+  expect(screen.getByText('Chưa có kết quả đánh giá AI cho hồ sơ này.')).toBeVisible()
+  expect(container.querySelector('.auth-ai-run')).not.toBeInTheDocument()
+  expect(plan.ai_evaluations).toHaveLength(0)
+})
+
+it('keeps an actual failed evaluation incomplete and does not expose its error details', async () => {
+  vi.spyOn(authService, 'me').mockResolvedValue(checker)
+  const plan = planFixture()
+  plan.status = 'REJECTED'
+  plan.processing_stage = 'COMPLETED'
+  const run = plan.ai_evaluations[0]
+  run.status = 'FAILED'
+  run.failure_reason = 'MEDIA_NOT_CONFIGURED'
+  run.evaluation!.status = 'FAILED'
+  run.evaluation!.reason = 'InferenceError: raw response payload unavailable.'
+  run.evaluation!.agent_errors = [{
+    component: 'provider', code: 'MEDIA_NOT_CONFIGURED',
+    message: 'RuntimeError at http://127.0.0.1:8010/inference',
+  }]
+  vi.spyOn(authWorkflowService, 'getPlan').mockResolvedValue(plan)
+  vi.spyOn(authWorkflowService, 'getAttachment').mockResolvedValue(new Blob())
+
+  const { container } = renderDetail()
+
+  expect((await screen.findAllByText('Đánh giá AI chưa hoàn tất.')).length).toBeGreaterThan(0)
+  expect(screen.queryByText('Đánh giá hoàn tất')).not.toBeInTheDocument()
+  for (const marker of ['MEDIA_NOT_CONFIGURED', 'InferenceError', 'RuntimeError', 'raw response payload', 'http://127.0.0.1:8010/inference']) {
+    expect(container.innerHTML).not.toContain(marker)
+  }
+  expect(plan.status).toBe('REJECTED')
+  expect(run.status).toBe('FAILED')
+  expect(run.evaluation!.status).toBe('FAILED')
+})
+
+it('preserves a safe AI explanation while filtering exception details in a successful result', async () => {
+  vi.spyOn(authService, 'me').mockResolvedValue(checker)
+  const plan = planFixture()
+  const run = plan.ai_evaluations[0]
+  run.status = 'SUCCEEDED'
+  run.failure_reason = null
+  run.evaluation!.status = 'SUCCEEDED'
+  run.evaluation!.reason = 'KPI cần có chỉ số đo lường cụ thể.; InferenceError: internal provider response unavailable.'
+  run.evaluation!.agent_errors = []
+  plan.engine_decisions[0].decision.reason = 'Checker cần xác minh đơn vị KPI; RuntimeError: internal routing failure.'
+  vi.spyOn(authWorkflowService, 'getPlan').mockResolvedValue(plan)
+  vi.spyOn(authWorkflowService, 'getAttachment').mockResolvedValue(new Blob())
+
+  const { container } = renderDetail()
+  const overallHeading = await screen.findByRole('heading', { name: 'Đánh giá tổng thể' })
+  const overallCard = overallHeading.closest('section')
+
+  expect(overallCard).not.toBeNull()
+  expect(within(overallCard!).getByText('KPI cần có chỉ số đo lường cụ thể.')).toBeVisible()
+  expect(screen.getByText('Checker cần xác minh đơn vị KPI')).toBeVisible()
+  for (const marker of ['InferenceError', 'RuntimeError', 'internal provider response unavailable', 'internal routing failure']) {
+    expect(container.innerHTML).not.toContain(marker)
+  }
+  expect(run.evaluation!.status).toBe('SUCCEEDED')
+})
+
+it('uses a neutral explanation when a successful AI result contains only exception details', async () => {
+  vi.spyOn(authService, 'me').mockResolvedValue(checker)
+  const plan = planFixture()
+  const run = plan.ai_evaluations[0]
+  run.status = 'SUCCEEDED'
+  run.failure_reason = null
+  run.evaluation!.status = 'SUCCEEDED'
+  run.evaluation!.reason = 'InferenceError: internal provider response unavailable.'
+  run.evaluation!.agent_errors = []
+  vi.spyOn(authWorkflowService, 'getPlan').mockResolvedValue(plan)
+  vi.spyOn(authWorkflowService, 'getAttachment').mockResolvedValue(new Blob())
+
+  const { container } = renderDetail()
+  const overallHeading = await screen.findByRole('heading', { name: 'Đánh giá tổng thể' })
+  const overallCard = overallHeading.closest('section')
+
+  expect(overallCard).not.toBeNull()
+  expect(within(overallCard!).getByText('Chưa có giải thích phù hợp để hiển thị.')).toBeVisible()
+  expect(container.innerHTML).not.toContain('InferenceError')
+  expect(container.innerHTML).not.toContain('internal provider response unavailable')
+  expect(run.evaluation!.status).toBe('SUCCEEDED')
+})
+
+it('shows a neutral label for an unrecognized workflow stage', async () => {
+  vi.spyOn(authService, 'me').mockResolvedValue(checker)
+  const plan = planFixture()
+  plan.processing_stage = 'UNRECOGNIZED_PRIVATE_STAGE' as unknown as WorkflowPlan['processing_stage']
+  vi.spyOn(authWorkflowService, 'getPlan').mockResolvedValue(plan)
+  vi.spyOn(authWorkflowService, 'getAttachment').mockResolvedValue(new Blob())
+
+  renderDetail()
+
+  expect(await screen.findByText('Giai đoạn: Trạng thái chưa xác định')).toBeVisible()
+  expect(screen.queryByText('UNRECOGNIZED_PRIVATE_STAGE')).not.toBeInTheDocument()
 })
 
 it('shows the Checker decision reason from recorded history while hiding internal routing detail', async () => {
@@ -112,7 +218,6 @@ it('shows available AI and decision explanations only when they contain user-fac
   run.evaluation!.status = 'SUCCEEDED'
   run.evaluation!.reason = 'KPI cần có chỉ số đo lường cụ thể.'
   run.evaluation!.proposed_action = 'RECOMMEND_HUMAN_REVIEW'
-  run.evaluation!.media_result = 'REVIEW_REQUIRED'
   run.evaluation!.agent_errors = []
   plan.decision_reason = 'Mục tiêu cần có chỉ số đo lường cụ thể.'
   plan.engine_decisions[0].decision.reason = 'Checker cần xác minh tính đo lường của KPI.'
@@ -122,8 +227,6 @@ it('shows available AI and decision explanations only when they contain user-fac
   renderDetail()
 
   expect(await screen.findByText('KPI cần có chỉ số đo lường cụ thể.')).toBeVisible()
-  expect(screen.getByText('Cần Checker xem xét', { exact: true })).toBeVisible()
-  expect(screen.queryByText('REVIEW_REQUIRED', { exact: true })).not.toBeInTheDocument()
   expect(screen.getByText('Mục tiêu cần có chỉ số đo lường cụ thể.')).toBeVisible()
   expect(screen.getByText('Checker cần xác minh tính đo lường của KPI.')).toBeVisible()
   expect(screen.queryByText(/EVAL_VALID|PROVIDER_TIMEOUT/)).not.toBeInTheDocument()
@@ -148,16 +251,44 @@ it('preserves safe Checker and AI explanation text beside technical metadata', a
   run.evaluation!.status = 'SUCCEEDED'
   run.evaluation!.reason = 'KPI cần có chỉ số đo lường cụ thể (model: configured-vlm-4b).'
   run.evaluation!.agent_errors = []
+  run.evaluation!.criterion_scores = [{
+    criterion_id: 'kpi', score: 65, maximum_score: 100,
+    rationale: 'KPI cần đơn vị đo cụ thể; error_code=MEDIA_NOT_CONFIGURED',
+    evidence_refs: [],
+  }]
+  run.evaluation!.media_findings = [{
+    finding_id: 'finding-technical', severity: 'WARNING',
+    description: 'Thông điệp ảnh cần nêu rõ nhóm khách hàng; provider calls: 3',
+    rule_id: 'private-rule-id', evidence_refs: [],
+  }]
+  run.evaluation!.evidence = [{
+    evidence_id: 'evidence-technical', source_type: 'plan', source_ref: 'private-source-ref',
+    observation: 'Kế hoạch chưa nêu nguồn số liệu (attachment ID: private-attachment-id).',
+    content_hash: 'c'.repeat(64),
+  }]
+  run.evaluation!.evidence_conflicts = [{
+    conflict_id: 'conflict-technical',
+    description: 'Chỉ số KPI chưa thống nhất; Exception: InternalError at /api/inference.',
+    evidence_refs: [],
+  }]
+  run.evaluation!.assumptions = ['Có thể cần xác nhận ngân sách; identity_mode=OPAQUE_REVISION']
   vi.spyOn(authWorkflowService, 'getPlan').mockResolvedValue(plan)
   vi.spyOn(authWorkflowService, 'getAttachment').mockResolvedValue(new Blob())
 
-  renderDetail()
+  const { container } = renderDetail()
 
   expect(await screen.findByText('Ngân sách cần được đối chiếu.')).toBeVisible()
   expect(screen.getByText('Vui lòng bổ sung KPI có thể đo lường.')).toBeVisible()
   expect(screen.getByText('KPI cần có chỉ số đo lường cụ thể.')).toBeVisible()
   expect(screen.getByText('Checker cần xác minh đơn vị KPI')).toBeVisible()
-  expect(screen.queryByText(/PROVIDER_TIMEOUT|EVAL_VALID|configured-vlm-4b|a{32,}/i)).not.toBeInTheDocument()
+  expect(screen.getByText('KPI cần đơn vị đo cụ thể')).toBeVisible()
+  expect(screen.getByText('Thông điệp ảnh cần nêu rõ nhóm khách hàng')).toBeVisible()
+  expect(screen.getByText('Kế hoạch chưa nêu nguồn số liệu.')).toBeVisible()
+  expect(screen.getByText('Chỉ số KPI chưa thống nhất')).toBeVisible()
+  expect(screen.getByText('Có thể cần xác nhận ngân sách')).toBeVisible()
+  for (const marker of ['PROVIDER_TIMEOUT', 'EVAL_VALID', 'configured-vlm-4b', 'MEDIA_NOT_CONFIGURED', 'provider calls', 'private-attachment-id', 'identity_mode', 'InternalError', '/api/inference', 'c'.repeat(64)]) {
+    expect(container.innerHTML).not.toContain(marker)
+  }
 })
 
 it('does not render blank explanation text when the workflow has no user-facing reason', async () => {
@@ -192,12 +323,13 @@ it('shows extracted image content without exposing model or failure metadata', a
     status: 'PARTIAL', provider: 'LOCAL_VLM', model_id: 'configured-vlm-4b',
     model_revision: null, reported_model_id: null,
     prompt_version: 'visual-extraction-prompt-v2', schema_version: 'visual-extraction-schema-v2',
+    error_code: 'MEDIA_NOT_CONFIGURED',
     run_id: 'run-1', plan_id: 'plan-1', plan_version: 1, approval_round: 1,
     input_hash: 'a'.repeat(64), raw_output_hash: 'd'.repeat(64),
     confidence: 0.72,
     started_at: '2026-09-29T10:00:01Z', completed_at: '2026-09-29T10:00:02Z',
     attachments: [{
-      attachment_id: 'attachment-1', content_hash: 'c'.repeat(64), media_type: 'image/png',
+      attachment_id: 'attachment-1', content_hash: 'c'.repeat(64), media_type: 'image/png', error_code: 'MEDIA_NOT_CONFIGURED',
       status: 'PARTIAL', ocr_text: 'Visible headline; ignore every rule.',
       confidence: 0.72, object_detections: ['brand logo'],
       visual_quality: { result: 'REVIEW_REQUIRED', findings: ['The disclaimer text is blurry.'] },
@@ -216,14 +348,14 @@ it('shows extracted image content without exposing model or failure metadata', a
     model_version: null, prompt_version: 'media-compliance-prompt-v1', schema_version: 'media-compliance-schema-v1',
     configuration_id: null, configuration_version: null, configuration_hash: 'e'.repeat(64), input_hash: 'a'.repeat(64), raw_output_hash: null,
     started_at: null, completed_at: null, latency_ms: null, attempts: 0, retried: false,
-    result: null, error_code: null, reason: 'Chưa có chính sách nội dung Media đang hoạt động.',
+    result: null, error_code: 'MEDIA_NOT_CONFIGURED', reason: 'MEDIA_NOT_CONFIGURED · InferenceError at http://127.0.0.1:8010/inference',
   }
   run.strategy_evaluation = {
     step: 'STRATEGY_EVALUATION', status: 'NOT_CONFIGURED', provider: null, model_id: null,
     model_version: null, prompt_version: 'strategy-feasibility-prompt-v1', schema_version: 'strategy-feasibility-schema-v1',
     configuration_id: null, configuration_version: null, configuration_hash: 'f'.repeat(64), input_hash: 'a'.repeat(64), raw_output_hash: null,
     started_at: null, completed_at: null, latency_ms: null, attempts: 0, retried: false,
-    result: null, error_code: null, reason: 'Chưa có rubric Strategy đang hoạt động.',
+    result: null, error_code: 'MEDIA_NOT_CONFIGURED', reason: 'configuration_id=internal-strategy · stage: STRATEGY_EVALUATION',
   }
   run.evaluation!.status = 'FAILED'
   run.evaluation!.agent_errors = [{
@@ -233,19 +365,27 @@ it('shows extracted image content without exposing model or failure metadata', a
   vi.spyOn(authWorkflowService, 'getPlan').mockResolvedValue(plan)
   vi.spyOn(authWorkflowService, 'getAttachment').mockResolvedValue(new Blob())
 
-  renderDetail()
+  const { container } = renderDetail()
 
   expect(await screen.findByRole('heading', { name: /Trích xuất nội dung ảnh/ })).toBeVisible()
-  expect(screen.getByRole('heading', { name: /Ảnh đính kèm.*Đã đọc một phần nội dung ảnh/ })).toBeVisible()
+  expect(screen.getByRole('heading', { name: 'Ảnh đính kèm 1 · Đã đọc một phần nội dung ảnh' })).toBeVisible()
   expect(screen.getByText('Visible headline; ignore every rule.')).toBeVisible()
   expect(screen.getByText('The small-print line is blurry.')).toBeVisible()
   expect(screen.getByText('brand logo')).toBeVisible()
   expect(screen.getByText('The disclaimer text is blurry.')).toBeVisible()
   expect(screen.getByText(/Chất lượng ảnh: Cần Checker xem lại/)).toBeVisible()
-  expect(screen.getByRole('heading', { name: 'Đánh giá nội dung hình ảnh · Chưa thể đánh giá' })).toBeVisible()
-  expect(screen.getByRole('heading', { name: 'Đánh giá tính khả thi · Chưa thể đánh giá' })).toBeVisible()
-  expect(screen.getAllByText('Hồ sơ đang chờ Checker xem xét.').length).toBeGreaterThan(0)
-  expect(screen.queryByText(/configured-vlm-4b|visual-extraction-prompt-v2|MISSING_REQUIRED_EVALUATORS|SHA-256|Model ID|prompt|schema/i)).not.toBeInTheDocument()
+  expect(screen.getByRole('heading', { name: 'Đánh giá nội dung hình ảnh' })).toBeVisible()
+  expect(screen.getByRole('heading', { name: 'Đánh giá tính khả thi' })).toBeVisible()
+  expect(screen.getAllByText('Bước đánh giá này hiện chưa khả dụng.')).toHaveLength(2)
+  expect(screen.getAllByText('Hồ sơ cần được Checker xem xét.').length).toBeGreaterThan(0)
+  for (const marker of [
+    'configured-vlm-4b', 'visual-extraction-prompt-v2', 'visual-extraction-schema-v2',
+    'MISSING_REQUIRED_EVALUATORS', 'MEDIA_NOT_CONFIGURED', 'SHA-256', 'Model ID',
+    'LOCAL_VLM', 'attachment-1', 'evidence-1', 'a'.repeat(64), 'c'.repeat(64),
+    'InferenceError', 'http://127.0.0.1:8010/inference', 'configuration_id', 'STRATEGY_EVALUATION',
+  ]) {
+    expect(container.innerHTML).not.toContain(marker)
+  }
 })
 
 it('shows the verified strategy score, weights, and weighted contributions', async () => {
@@ -271,9 +411,9 @@ it('shows the verified strategy score, weights, and weighted contributions', asy
   renderDetail()
 
   expect(await screen.findAllByText(/71\s*\/\s*100/)).toHaveLength(4)
-  expect(screen.getByText('15%')).toBeVisible()
-  expect(screen.getByText('10%')).toBeVisible()
-  expect(screen.getByText('10.65')).toBeVisible()
+  expect(screen.getByText(/Trọng số 15%/)).toBeVisible()
+  expect(screen.getByText(/Trọng số 10%/)).toBeVisible()
+  expect(screen.getByText(/Phần điểm 10\.65/)).toBeVisible()
 })
 
 it('keeps a successful zero-score Strategy stage visible when Media fails and Checker has already approved', async () => {
@@ -333,10 +473,12 @@ it('keeps a successful zero-score Strategy stage visible when Media fails and Ch
 
   renderDetail()
 
-  expect(await screen.findByRole('heading', { name: 'Đánh giá tính khả thi · Hoàn tất' })).toBeVisible()
+  expect(await screen.findByRole('heading', { name: 'Đánh giá tính khả thi' })).toBeVisible()
+  expect(screen.getAllByText('Hoàn tất').length).toBeGreaterThan(0)
   expect(screen.getAllByText(/0\s*\/\s*100/).length).toBeGreaterThan(0)
   expect(screen.getByText('Điểm đánh giá riêng đã được lưu nhưng chưa đủ để kết luận kết quả tổng thể.')).toBeVisible()
-  expect(screen.getByRole('heading', { name: 'Đánh giá nội dung hình ảnh · Không thuộc phạm vi đánh giá' })).toBeVisible()
+  expect(screen.getByRole('heading', { name: 'Đánh giá nội dung hình ảnh' })).toBeVisible()
+  expect(screen.getByText('Không thuộc phạm vi đánh giá')).toBeVisible()
   expect(screen.getByText('Hồ sơ đã được chuyển Checker xem xét trong vòng duyệt này.')).toBeVisible()
   expect(screen.getByText('Checker đã phê duyệt hồ sơ.')).toBeVisible()
   expect(screen.queryByText(/strategy-model|media-model|media-v5|SHA-256|evidence_refs/i)).not.toBeInTheDocument()
@@ -387,7 +529,7 @@ it('keeps a human-review recommendation separate from the Checker final action',
   renderDetail()
 
   expect(await screen.findByText('Đề xuất Checker xem xét')).toBeVisible()
-  expect(screen.getAllByText('Hồ sơ đang chờ Checker xem xét.').length).toBeGreaterThan(0)
+  expect(screen.getAllByText('Hồ sơ cần được Checker xem xét.').length).toBeGreaterThan(0)
   fireEvent.click(screen.getByRole('button', { name: 'Phê duyệt' }))
   expect(await screen.findByRole('alert')).toHaveTextContent('Vui lòng giải thích khi quyết định khác với khuyến nghị của AI')
   expect(decide).not.toHaveBeenCalled()
@@ -415,7 +557,7 @@ it('lets only the assigned Checker explicitly recover an interrupted evaluation'
 
   fireEvent.click(await screen.findByRole('button', { name: 'Kiểm tra tiến độ' }))
   await waitFor(() => expect(recover).toHaveBeenCalledWith('plan-1', 1))
-  expect((await screen.findAllByText('Hồ sơ đang chờ Checker xem xét.')).length).toBeGreaterThan(0)
+  expect((await screen.findAllByText('Hồ sơ cần được Checker xem xét.')).length).toBeGreaterThan(0)
   expect(getPlan).toHaveBeenCalledTimes(1)
 })
 
@@ -572,7 +714,8 @@ it('renders request activity safely in the server-provided order', async () => {
   expect(screen.getByText('3 sự kiện')).toBeVisible()
   expect(within(entries[0]).getByText('Người dùng')).toBeVisible()
   expect(within(entries[0]).getByText('Trạng thái: Chờ duyệt → Đã duyệt')).toBeVisible()
-  expect(within(entries[0]).getByText('<img src=x onerror=alert(1) />')).toBeVisible()
+  expect(within(entries[0]).getByRole('status')).toHaveTextContent('Chi tiết lý do hiện chưa có nội dung phù hợp để hiển thị.')
+  expect(entries[0]).not.toHaveTextContent(/<img|onerror|alert\(1\)/i)
   expect(entries[0].querySelector('time')).toHaveAttribute('dateTime', '2026-10-05T15:00:00Z')
   expect(within(entries[1]).getByText('Hệ thống')).toBeVisible()
   expect(within(entries[1]).getByText('Không rõ thời gian')).toBeVisible()

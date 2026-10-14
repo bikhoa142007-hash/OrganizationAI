@@ -93,6 +93,19 @@ it('edits an existing draft with its current expected revision', async () => {
   expect(await screen.findByTestId('current-route')).toHaveTextContent('/workflow/plans/plan-1')
 })
 
+it.each([
+  ['missing', undefined],
+  ['unrecognized', 'UNRECOGNIZED_PRIVATE_STATUS'],
+])('shows a neutral label for a %s workflow status', async (_description, status) => {
+  readyCheckers()
+  const currentPlan = planFixture({ status: status as unknown as WorkflowPlan['status'] })
+  vi.spyOn(authWorkflowService, 'getPlan').mockResolvedValue(currentPlan)
+  renderForm('/workflow/plans/plan-1/edit')
+
+  expect(await screen.findByText(/Trạng thái hiện tại: chưa xác định\./)).toBeVisible()
+  expect(screen.queryByText(/đang được cập nhật|UNRECOGNIZED_PRIVATE_STATUS/i)).not.toBeInTheDocument()
+})
+
 it('shows contract-specific field errors before submit and does not call the API', async () => {
   readyCheckers()
   const create = vi.spyOn(authWorkflowService, 'createPlan')
