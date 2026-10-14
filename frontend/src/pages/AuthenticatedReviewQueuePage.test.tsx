@@ -66,8 +66,8 @@ it('keeps already loaded reviews when a later page fails and permits an explicit
 
   expect(await screen.findByRole('link', { name: 'Campaign 0 (MKT-0)' })).toBeVisible()
   fireEvent.click(screen.getByRole('button', { name: 'Tải thêm hồ sơ' }))
-  expect(await screen.findByRole('alert')).toHaveTextContent('Dịch vụ workflow đang gặp sự cố')
-  expect(screen.getByText('Mã tham chiếu: trace-page')).toBeVisible()
+  expect(await screen.findByRole('alert')).toHaveTextContent('Hệ thống đang gặp sự cố')
+  expect(screen.getByRole('alert')).not.toHaveTextContent(/trace-page|Mã tham chiếu/)
   expect(screen.getByRole('link', { name: 'Campaign 99 (MKT-99)' })).toBeVisible()
 
   fireEvent.click(screen.getByRole('button', { name: 'Thử lại' }))
@@ -83,8 +83,8 @@ it('shows an empty queue and lets the user retry an initial service error', asyn
     .mockResolvedValueOnce([])
   renderQueue()
 
-  expect(await screen.findByRole('alert')).toHaveTextContent('Dịch vụ workflow đang gặp sự cố')
-  expect(screen.getByText('Mã tham chiếu: trace-initial')).toBeVisible()
+  expect(await screen.findByRole('alert')).toHaveTextContent('Hệ thống đang gặp sự cố')
+  expect(screen.getByRole('alert')).not.toHaveTextContent(/trace-initial|Mã tham chiếu/)
   fireEvent.click(screen.getByRole('button', { name: 'Thử lại' }))
 
   expect(await screen.findByRole('heading', { name: 'Không có hồ sơ chờ duyệt được giao cho bạn.' })).toBeVisible()

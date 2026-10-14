@@ -1,3 +1,4 @@
+import { CalendarDays, ClipboardCheck, Filter, RotateCcw, Search, UsersRound } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import {
   activeWorkflowPlanFilterCount,
@@ -40,46 +41,61 @@ export function WorkflowPlanFilters({ filters, departments, urlNotice, onChange,
   if (filters.created_from) chips.push({ label: `Tạo từ: ${filters.created_from}`, field: 'ngày tạo từ', key: 'created_from' })
   if (filters.created_to) chips.push({ label: `Tạo đến: ${filters.created_to}`, field: 'ngày tạo đến', key: 'created_to' })
 
-  return <section className="auth-plan-filters" aria-label="Tìm kiếm và lọc yêu cầu">
+  return <section className="auth-plan-filters" role="search" aria-label="Tìm kiếm và lọc yêu cầu">
     <details open className="auth-plan-filter-disclosure">
-      <summary>Tìm kiếm và lọc <span>{activeCount ? `${activeCount} đang áp dụng` : 'trong dữ liệu đã tải'}</span></summary>
+      <summary>
+        <span className="auth-plan-filter-heading">
+          <span className="auth-plan-filter-heading-icon"><Filter aria-hidden="true" /></span>
+          <span className="auth-plan-filter-title">Tìm kiếm và lọc</span>
+        </span>
+        <span className="auth-plan-filter-count">{activeCount ? `${activeCount} đang áp dụng` : 'trong dữ liệu đã tải'}</span>
+      </summary>
       <div className="auth-plan-filter-controls">
         <div className="auth-plan-search-field">
           <label htmlFor="workflow-plan-search">Tìm trong các yêu cầu đã tải</label>
-          <input
-            id="workflow-plan-search"
-            type="search"
-            maxLength={120}
-            aria-describedby="workflow-plan-search-help"
-            value={queryDraft}
-            placeholder="Tên, mã, người lập hoặc bộ phận"
-            onChange={event => {
-              const value = event.target.value.slice(0, 120)
-              setQueryDraft(value)
-              update({ ...filters, q: value })
-            }}
-          />
+          <div className="auth-plan-search-input">
+            <Search aria-hidden="true" />
+            <input
+              id="workflow-plan-search"
+              type="search"
+              maxLength={120}
+              aria-describedby="workflow-plan-search-help"
+              value={queryDraft}
+              placeholder="Tên, mã, người lập hoặc bộ phận"
+              onChange={event => {
+                const value = event.target.value.slice(0, 120)
+                setQueryDraft(value)
+                update({ ...filters, q: value })
+              }}
+            />
+          </div>
           <small id="workflow-plan-search-help">{queryDraft.length}/120 ký tự · Chỉ tìm trong dữ liệu đã tải.</small>
         </div>
-        <label htmlFor="workflow-plan-status-filter">Trạng thái
+        <label className="auth-plan-filter-select" htmlFor="workflow-plan-status-filter">
+          <span className="auth-plan-filter-label"><ClipboardCheck aria-hidden="true" />Trạng thái</span>
           <select id="workflow-plan-status-filter" value={filters.status} onChange={event => update({ ...filters, status: event.target.value as WorkflowPlanFilterValues['status'] })}>
             <option value="">Tất cả trạng thái</option>
             {WORKFLOW_PLAN_STATUSES.map(status => <option key={status} value={status}>{WORKFLOW_PLAN_STATUS_LABELS[status]}</option>)}
           </select>
         </label>
-        <label htmlFor="workflow-plan-department-filter">Bộ phận
+        <label className="auth-plan-filter-select" htmlFor="workflow-plan-department-filter">
+          <span className="auth-plan-filter-label"><UsersRound aria-hidden="true" />Bộ phận</span>
           <select id="workflow-plan-department-filter" value={filters.department} onChange={event => update({ ...filters, department: event.target.value })}>
             <option value="">Tất cả bộ phận</option>
             {departmentOptions.map(department => <option key={department} value={department}>{department}</option>)}
           </select>
         </label>
-        <label htmlFor="workflow-plan-created-from">Ngày tạo từ
+        <label htmlFor="workflow-plan-created-from">
+          <span className="auth-plan-filter-label"><CalendarDays aria-hidden="true" />Ngày tạo từ</span>
           <input id="workflow-plan-created-from" type="date" max={filters.created_to || undefined} value={filters.created_from} onChange={event => update({ ...filters, created_from: event.target.value })} />
         </label>
-        <label htmlFor="workflow-plan-created-to">Ngày tạo đến
+        <label htmlFor="workflow-plan-created-to">
+          <span className="auth-plan-filter-label"><CalendarDays aria-hidden="true" />Ngày tạo đến</span>
           <input id="workflow-plan-created-to" type="date" min={filters.created_from || undefined} value={filters.created_to} onChange={event => update({ ...filters, created_to: event.target.value })} />
         </label>
-        <button className="button button-secondary auth-plan-clear-filters" type="button" disabled={activeCount === 0} onClick={onClear}>Xóa bộ lọc</button>
+        <button className="button button-secondary auth-plan-clear-filters" type="button" disabled={activeCount === 0} onClick={onClear}>
+          <RotateCcw aria-hidden="true" />Xóa bộ lọc
+        </button>
       </div>
     </details>
     {dateRangeError && <p className="auth-plan-filter-notice" role="alert">{dateRangeError}</p>}

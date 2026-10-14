@@ -151,7 +151,7 @@ export function AuthenticatedWorkflowFormPage() {
       const exceedsPixelLimit = bitmap.width * bitmap.height > 25_000_000
       bitmap.close()
       if (requestId === fileValidationRequest.current && exceedsPixelLimit) {
-        setFieldErrors(current => ({ ...current, attachment: 'Ảnh vượt quá giới hạn 25 megapixel của backend.' }))
+        setFieldErrors(current => ({ ...current, attachment: 'Ảnh không được vượt quá 25 megapixel.' }))
       }
     } catch {
       if (requestId === fileValidationRequest.current) {
@@ -211,7 +211,7 @@ export function AuthenticatedWorkflowFormPage() {
         currentPlan = saved
         setPlan(saved)
         navigate(`/workflow/plans/${saved.id}`, {
-          state: { workflowNotice: 'Yêu cầu đã được gửi. Trạng thái bên dưới lấy từ phản hồi của máy chủ.' },
+          state: { workflowNotice: 'Yêu cầu đã được gửi. Trạng thái bên dưới phản ánh kết quả mới nhất.' },
         })
       } else {
         navigate(`/workflow/plans/${saved.id}`, {
@@ -238,7 +238,7 @@ export function AuthenticatedWorkflowFormPage() {
           if (currentAction === 'submitting' && !['DRAFT', 'REJECTED'].includes(latest.status)) {
             navigate(`/workflow/plans/${latest.id}`, {
               replace: true,
-              state: { workflowNotice: 'Trạng thái mới nhất đã được tải từ máy chủ sau khi kết nối bị gián đoạn.' },
+              state: { workflowNotice: 'Đã tải trạng thái mới nhất sau khi kết nối bị gián đoạn.' },
             })
           }
         } catch {
@@ -256,16 +256,14 @@ export function AuthenticatedWorkflowFormPage() {
     setFieldErrors({})
     setApiError(null)
     setRevisionConflict(false)
-    setNotice('Đã thay nội dung biểu mẫu bằng phiên bản mới nhất trên máy chủ.')
+    setNotice('Biểu mẫu đã được cập nhật theo phiên bản mới nhất.')
   }
 
   if (planLoading) return <p className="auth-workflow-state" role="status">Đang tải bản nháp…</p>
   if (planId && !plan) return <section className="auth-workflow-page auth-workflow-form-page">
     <Link className="auth-back-link" to="/workflow/plans"><ArrowLeft /> Quay lại danh sách</Link>
     <div className="auth-workflow-alert is-error" role="alert">
-      <div><strong>{apiFailureHeading(planError, 'loading')}</strong><p>{apiFailureText(planError, 'loading')}</p>
-        {planError?.correlationId && <small>Mã tham chiếu: {planError.correlationId}</small>}
-      </div>
+      <div><strong>{apiFailureHeading(planError, 'loading')}</strong><p>{apiFailureText(planError, 'loading')}</p></div>
       <button className="button button-secondary" type="button" onClick={() => {
         setPlanLoading(true)
         setPlanError(null)
@@ -279,31 +277,29 @@ export function AuthenticatedWorkflowFormPage() {
 
   return <section className="auth-workflow-page auth-workflow-form-page">
     <Link className="auth-back-link" to={plan ? `/workflow/plans/${plan.id}` : '/workflow/plans'}><ArrowLeft /> Quay lại</Link>
-    <div className="auth-workflow-page-heading"><div><p className="page-eyebrow">Maker · PostgreSQL</p><h1>{plan ? 'Cập nhật kế hoạch' : 'Tạo kế hoạch marketing'}</h1><p>Bản nháp có thể chưa đầy đủ. Nội dung gửi đi sẽ được chụp thành version chỉ đọc.</p></div>
-      <span className={`workflow-status${hasUnsavedChanges ? ' status-draft' : ''}`}>{hasUnsavedChanges ? 'Có thay đổi chưa lưu' : `Đã lưu · revision ${plan?.revision ?? '—'}`}</span>
+    <div className="auth-workflow-page-heading"><div><p className="page-eyebrow">Maker</p><h1>{plan ? 'Cập nhật kế hoạch' : 'Tạo kế hoạch marketing'}</h1><p>Bản nháp có thể chưa đầy đủ. Nội dung gửi đi sẽ được lưu thành phiên bản chỉ đọc.</p></div>
+      <span className={`workflow-status${hasUnsavedChanges ? ' status-draft' : ''}`}>{hasUnsavedChanges ? 'Có thay đổi chưa lưu' : 'Đã lưu'}</span>
     </div>
 
-    {apiError && <section className="auth-workflow-alert is-error" role="alert">
-      <div><strong>{apiFailureHeading(apiError, failedAction)}</strong><p>{apiFailureText(apiError, failedAction)}</p>
-        {apiError.correlationId && <small>Mã tham chiếu: {apiError.correlationId}</small>}
-      </div>
+    {apiError && !creationIntentConflict && !revisionConflict && <section className="auth-workflow-alert is-error" role="alert">
+      <div><strong>{apiFailureHeading(apiError, failedAction)}</strong><p>{apiFailureText(apiError, failedAction)}</p></div>
     </section>}
     {unknownCreate && <section className="auth-workflow-state is-error" aria-labelledby="unknown-create-title">
       <h2 id="unknown-create-title">Chưa xác định được kết quả tạo bản nháp</h2>
-      <p>Ý định tạo này vẫn được giữ trong địa chỉ trang sau khi tải lại. Hãy kiểm tra danh sách trước khi gửi lại cùng nội dung; mở một biểu mẫu mới nếu muốn tạo kế hoạch khác.</p>
+      <p>Chưa xác định bản nháp đã được tạo hay chưa. Hãy kiểm tra danh sách kế hoạch trước khi gửi lại. Nếu chưa thấy hồ sơ, hãy mở biểu mẫu mới để tiếp tục.</p>
       <div className="button-row"><Link className="button button-secondary" to="/workflow/plans" target="_blank" rel="noreferrer">Mở danh sách trong tab mới</Link>
         <button className="button button-secondary" type="button" onClick={() => setUnknownCreate(false)}>Tôi đã kiểm tra — cho phép thử lại</button></div>
     </section>}
     {creationIntentConflict && <section className="auth-workflow-state is-conflict" role="alert" aria-labelledby="creation-intent-conflict-title">
-      <h2 id="creation-intent-conflict-title">Ý định tạo này đã được dùng với nội dung khác</h2>
-      <p>Máy chủ không tạo thêm bản nháp. Mở danh sách để kiểm tra bản đã tạo; nếu muốn tạo kế hoạch khác, hãy bắt đầu một biểu mẫu mới.</p>
+      <h2 id="creation-intent-conflict-title">Yêu cầu tạo bản nháp đã được dùng cho nội dung khác</h2>
+      <p>Hệ thống không tạo thêm bản nháp. Hãy kiểm tra danh sách hoặc bắt đầu một biểu mẫu mới để tạo kế hoạch khác.</p>
       <div className="button-row"><Link className="button button-secondary" to="/workflow/plans" target="_blank" rel="noreferrer">Mở danh sách kế hoạch</Link>
         <Link className="button button-primary" to="/workflow/plans/new" reloadDocument>Mở biểu mẫu mới</Link></div>
     </section>}
     {notice && <div className="auth-workflow-alert is-success" role="status"><Check /><p>{notice}</p></div>}
-    {locked && <div className="auth-workflow-alert is-review" role="status"><p>Kế hoạch đã gửi hoặc đã duyệt nên biểu mẫu chỉ đọc. Trạng thái hiện tại: {plan?.status}.</p></div>}
+    {locked && <div className="auth-workflow-alert is-review" role="status"><p>Kế hoạch đã gửi hoặc đã duyệt nên biểu mẫu chỉ đọc. Trạng thái hiện tại: {workflowStatusLabel(plan?.status)}.</p></div>}
     {revisionConflict && plan && <section className="auth-workflow-state is-conflict" role="status">
-      <div><h2>Máy chủ có revision mới hơn</h2><p>Các giá trị bạn đang nhập vẫn được giữ. Bản mới nhất là revision {plan.revision}, cập nhật {new Date(plan.updated_at).toLocaleString('vi-VN')}.</p>
+      <div><h2>Kế hoạch đã được cập nhật</h2><p>Các giá trị bạn đang nhập vẫn được giữ. Bản mới nhất được cập nhật {new Date(plan.updated_at).toLocaleString('vi-VN')}.</p>
         <p><strong>Tiêu đề đang lưu:</strong> {plan.payload.title || 'Chưa có tên'} · <strong>Checker:</strong> {plan.checker_name || 'Chưa gán'}</p></div>
       <button className="button button-secondary" type="button" onClick={useLatestPlan}>Dùng bản mới nhất</button>
     </section>}
@@ -346,7 +342,7 @@ export function AuthenticatedWorkflowFormPage() {
           </label>
           <label className="auth-field" htmlFor="workflow-currency">Mã tiền tệ
             <input id="workflow-currency" maxLength={3} value={payload.currency} aria-invalid={Boolean(fieldErrors.currency)} aria-describedby={fieldErrors.currency ? 'workflow-currency-error' : 'workflow-currency-help'} onChange={event => update('currency', event.target.value)} />
-            {fieldErrors.currency ? <span className="auth-field-error" id="workflow-currency-error">{fieldErrors.currency}</span> : <small id="workflow-currency-help">Tối đa 3 ký tự, theo mã được backend chấp nhận.</small>}
+            {fieldErrors.currency ? <span className="auth-field-error" id="workflow-currency-error">{fieldErrors.currency}</span> : <small id="workflow-currency-help">Nhập ký hiệu tiền tệ gồm tối đa 3 ký tự, ví dụ VND.</small>}
           </label>
           <label className="auth-field" htmlFor="workflow-audience">Đối tượng mục tiêu
             <input id="workflow-audience" maxLength={2000} value={payload.target_audience} aria-invalid={Boolean(fieldErrors.target_audience)} aria-describedby={fieldErrors.target_audience ? 'workflow-audience-error' : undefined} onChange={event => update('target_audience', event.target.value)} />
@@ -378,17 +374,17 @@ export function AuthenticatedWorkflowFormPage() {
           {file && <button className="button button-quiet" type="button" onClick={() => void selectFile(null)}>Bỏ ảnh đang chọn</button>}
           {fieldErrors.attachment && <span className="auth-field-error" role="alert">{fieldErrors.attachment}</span>}
         </div>
-        <p className="auth-workflow-form-hint">Ảnh hỗ trợ PNG, JPEG hoặc WebP; tối đa 5 MiB và 25 megapixel. Backend sẽ kiểm tra lại file khi tải lên.</p>
+        <p className="auth-workflow-form-hint">Chỉ hỗ trợ ảnh PNG, JPEG hoặc WebP; dung lượng tối đa 5 MiB và kích thước tối đa 25 megapixel.</p>
         {!file && !plan?.attachments.length && <p className="auth-workflow-form-hint">Chưa có ảnh tải lên. Gửi duyệt yêu cầu ít nhất một ảnh.</p>}
       </fieldset>
 
-      {checkerError && <div className="auth-workflow-alert is-error" role="alert"><div><strong>Không tải được danh sách Checker</strong><p>{apiFailureText(checkerError, 'loading')}</p>{checkerError.correlationId && <small>Mã tham chiếu: {checkerError.correlationId}</small>}</div><button className="button button-secondary" type="button" onClick={() => void loadCheckers()} disabled={checkersLoading}>Thử lại</button></div>}
+      {checkerError && <div className="auth-workflow-alert is-error" role="alert"><div><strong>Không tải được danh sách Checker</strong><p>{apiFailureText(checkerError, 'loading')}</p></div><button className="button button-secondary" type="button" onClick={() => void loadCheckers()} disabled={checkersLoading}>Thử lại</button></div>}
       {!checkersLoading && !checkerError && checkers.length === 0 && <div className="auth-workflow-alert is-review" role="status"><p>Hiện chưa có Checker khả dụng. Bạn vẫn có thể lưu bản nháp; chưa thể gửi duyệt.</p></div>}
       {fileValidationPending && <p className="auth-workflow-operation" role="status" aria-live="polite">Đang kiểm tra kích thước ảnh…</p>}
       {busyAction && <p className="auth-workflow-operation" role="status" aria-live="polite">{operationLabel(busyAction)}</p>}
-      <div className="auth-workflow-form-footer"><p>Gửi duyệt sẽ lưu snapshot và chạy đánh giá theo cấu hình backend. Giao diện không ước lượng phần trăm tiến độ.</p><div className="button-row">
+      <div className="auth-workflow-form-footer"><p>Sau khi gửi, bạn có thể xem trạng thái đánh giá trong hồ sơ. Tiến độ sẽ được cập nhật khi có kết quả.</p><div className="button-row">
         <button className="button button-secondary" type="button" disabled={busyAction !== null || fileValidationPending || locked || unknownCreate || creationIntentConflict} onClick={() => void save(false)}>{busyAction === 'saving' ? 'Đang lưu…' : 'Lưu bản nháp'}</button>
-        <button className="button button-primary" type="submit" disabled={busyAction !== null || fileValidationPending || locked || unknownCreate || creationIntentConflict || checkersLoading || checkers.length === 0}><Send /> {busyAction === 'submitting' ? 'Đang gửi và chờ phản hồi…' : busyAction === 'uploading' ? 'Đang tải ảnh lên…' : 'Gửi duyệt'}</button>
+        <button className="button button-primary" type="submit" disabled={busyAction !== null || fileValidationPending || locked || unknownCreate || creationIntentConflict || checkersLoading || checkers.length === 0}><Send /> {busyAction === 'submitting' ? 'Đang gửi kế hoạch…' : busyAction === 'uploading' ? 'Đang tải ảnh lên…' : 'Gửi duyệt'}</button>
       </div></div>
     </form>
   </section>
@@ -411,9 +407,9 @@ function validatePayload(payload: WorkflowPayload, options: {
     if (!payload[field].trim()) errors[field] = `${label} là bắt buộc khi gửi duyệt.`
   }
   if (!payload.start_date) errors.start_date = 'Chọn ngày bắt đầu trước khi gửi.'
-  else if (!isCalendarDate(payload.start_date)) errors.start_date = 'Ngày bắt đầu phải là ngày ISO hợp lệ.'
+  else if (!isCalendarDate(payload.start_date)) errors.start_date = 'Ngày bắt đầu không hợp lệ. Hãy chọn lại ngày trên lịch.'
   if (!payload.end_date) errors.end_date = 'Chọn ngày kết thúc trước khi gửi.'
-  else if (!isCalendarDate(payload.end_date)) errors.end_date = 'Ngày kết thúc phải là ngày ISO hợp lệ.'
+  else if (!isCalendarDate(payload.end_date)) errors.end_date = 'Ngày kết thúc không hợp lệ. Hãy chọn lại ngày trên lịch.'
   if (isCalendarDate(payload.start_date) && isCalendarDate(payload.end_date) && payload.end_date < payload.start_date) {
     errors.end_date = 'Ngày kết thúc phải bằng hoặc sau ngày bắt đầu.'
   }
@@ -440,7 +436,7 @@ function isCalendarDate(value: string) {
 
 function validateAttachment(file: File) {
   if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) return 'Chỉ hỗ trợ ảnh PNG, JPEG hoặc WebP.'
-  if (file.size > 5 * 1024 * 1024) return 'Ảnh vượt quá giới hạn 5 MiB của backend.'
+  if (file.size > 5 * 1024 * 1024) return 'Dung lượng ảnh không được vượt quá 5 MiB.'
   return ''
 }
 
@@ -450,35 +446,45 @@ function asApiError(reason: unknown, fallback: string) {
 }
 
 function apiFailureHeading(error: AuthApiError | null, action: WorkflowAction) {
-  if (error?.code === 'IDEMPOTENCY_CONFLICT') return 'Ý định tạo bản nháp đã được dùng với nội dung khác'
+  if (error?.code === 'IDEMPOTENCY_CONFLICT') return 'Yêu cầu tạo bản nháp đã được dùng cho nội dung khác'
   if (error?.status === 404) return 'Không tìm thấy kế hoạch'
-  if (error?.status === 409 || error?.code === 'CONFLICT') return 'Kế hoạch đã thay đổi trên máy chủ'
+  if (error?.status === 409 || error?.code === 'CONFLICT') return 'Kế hoạch đã được cập nhật ở nơi khác'
   if (error?.status === 422 || error?.code === 'VALIDATION_ERROR') return 'Dữ liệu chưa được chấp nhận'
   if (error?.status === 401) return 'Phiên đăng nhập đã hết hạn'
   if (error?.status === 403) return 'Không có quyền thực hiện thao tác này'
-  if (error?.status === 0 && error.code === 'NETWORK_ERROR') return action === 'loading' ? 'Không thể kết nối workflow' : 'Không nhận được xác nhận từ máy chủ'
+  if (error?.status === 0 && error.code === 'NETWORK_ERROR') return action === 'loading' ? 'Không thể tải dữ liệu lúc này' : 'Chưa nhận được xác nhận'
   return 'Không thể hoàn tất yêu cầu'
 }
 
 function apiFailureText(error: AuthApiError | null, action: WorkflowAction) {
-  if (error?.code === 'IDEMPOTENCY_CONFLICT') return 'Ý định này đã lưu nội dung khác trước đó. Máy chủ không tạo bản nháp mới. Kiểm tra danh sách hoặc mở một biểu mẫu mới để bắt đầu ý định khác.'
+  if (error?.code === 'IDEMPOTENCY_CONFLICT') return 'Hệ thống không tạo thêm bản nháp. Hãy kiểm tra danh sách hoặc mở một biểu mẫu mới để tiếp tục.'
   if (error?.status === 404) return 'Kế hoạch không còn tồn tại hoặc không thuộc phạm vi tài khoản hiện tại.'
-  if (error?.status === 409 || error?.code === 'CONFLICT') return `${error.message} Các giá trị bạn đang nhập vẫn được giữ; hãy kiểm tra revision mới nhất trước khi lưu lại.`
-  if (error?.status === 422 || error?.code === 'VALIDATION_ERROR') return error.message
+  if (error?.status === 409 || error?.code === 'CONFLICT') return 'Kế hoạch đã thay đổi trên hệ thống. Các giá trị bạn đang nhập vẫn được giữ; hãy tải lại trạng thái trước khi lưu lại.'
+  if (error?.status === 422 || error?.code === 'VALIDATION_ERROR') return 'Thông tin chưa hợp lệ hoặc chưa đầy đủ. Hãy kiểm tra các trường trong biểu mẫu rồi thử lại.'
   if (error?.status === 401) return 'Hãy đăng nhập lại để tiếp tục. Biểu mẫu không xóa các giá trị đang nhập.'
   if (error?.status === 403) return 'Quyền truy cập đã bị từ chối. Không thể tiếp tục thao tác với kế hoạch này.'
   if (error?.status === 0 && error.code === 'NETWORK_ERROR') return action === 'loading'
     ? 'Kiểm tra kết nối rồi thử tải lại.'
     : 'Dữ liệu hiện tại vẫn được giữ. Hãy tải lại trạng thái trước khi lặp lại thao tác.'
-  if (error?.status === 0) return error.message
-  if (error && error.status >= 500) return 'Dịch vụ workflow chưa hoàn tất yêu cầu. Dữ liệu trong biểu mẫu vẫn được giữ.'
-  return error?.message || 'Thử lại sau khi kiểm tra các trường trong biểu mẫu.'
+  if (error?.status === 0) return action === 'loading' ? 'Không thể tải dữ liệu lúc này. Hãy kiểm tra kết nối rồi thử lại.' : 'Chưa nhận được xác nhận. Dữ liệu trong biểu mẫu vẫn được giữ; hãy kiểm tra trạng thái trước khi lặp lại thao tác.'
+  if (error && error.status >= 500) return 'Hệ thống chưa thể hoàn tất yêu cầu. Dữ liệu trong biểu mẫu vẫn được giữ.'
+  return 'Không thể hoàn tất yêu cầu. Dữ liệu trong biểu mẫu vẫn được giữ; hãy kiểm tra các trường rồi thử lại.'
+}
+
+function workflowStatusLabel(status: WorkflowPlan['status'] | undefined) {
+  if (!status) return 'đang được cập nhật'
+  return ({
+    DRAFT: 'bản nháp',
+    PENDING_APPROVAL: 'đang chờ duyệt',
+    APPROVED: 'đã được duyệt',
+    REJECTED: 'đã bị từ chối',
+  } as Record<WorkflowPlan['status'], string>)[status]
 }
 
 function operationLabel(action: Exclude<BusyAction, null>) {
   return ({
     saving: 'Đang lưu nội dung kế hoạch…',
     uploading: 'Đang tải ảnh lên…',
-    submitting: 'Đang gửi kế hoạch và chờ máy chủ phản hồi…',
+    submitting: 'Đang gửi kế hoạch…',
   })[action]
 }

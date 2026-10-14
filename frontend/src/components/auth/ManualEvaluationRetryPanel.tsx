@@ -22,23 +22,25 @@ function messageFor(error: unknown): string {
     if (error.status === 401) return 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.'
     if (error.status === 403) return 'Chỉ Checker đang được giao cho kế hoạch này mới có thể chạy lại AI.'
     if (error.status === 404) return 'Không tìm thấy kế hoạch hoặc vòng duyệt.'
-    if (error.status === 409) return 'Vòng duyệt hoặc revision đã thay đổi, hoặc lần chạy này không đủ điều kiện.'
+    if (error.status === 409) return 'Thông tin hồ sơ đã thay đổi hoặc yêu cầu không còn phù hợp. Hãy tải lại trạng thái trước khi thử lại.'
   }
   return 'Không thể chạy lại đánh giá AI. Hãy thử lại cùng yêu cầu hiện tại.'
 }
 
 function resultMessage(result: WorkflowEvaluationRetry): string {
   if (result.result_disposition === 'STALE') {
-    return `Lần chạy ${result.run_id} đã được lưu nhưng không áp dụng vào trạng thái hiện tại.`
+    return 'Kết quả đánh giá không được áp dụng vì trạng thái hồ sơ đã thay đổi. Hãy tải lại trạng thái trước khi tiếp tục.'
   }
-  if (result.run_status === 'FAILED' || result.run_status === 'TIMED_OUT'
-    || result.processing_stage === 'HUMAN_REVIEW_REQUIRED') {
-    return `Lần chạy ${result.run_id} kết thúc cần Checker xem xét. Evidence của lần chạy trước vẫn được giữ nguyên.`
+  if (result.processing_stage === 'HUMAN_REVIEW_REQUIRED') {
+    return 'Hồ sơ đang chờ Checker xem xét.'
   }
   if (result.processing_stage === 'AI_AUTO_APPROVED') {
-    return `Lần chạy ${result.run_id} hoàn tất và kế hoạch đã được tự động duyệt.`
+    return 'Kế hoạch đã được tự động phê duyệt.'
   }
-  return `Đã ghi nhận lần chạy ${result.run_id}. Evidence của lần chạy trước vẫn được giữ nguyên.`
+  if (result.run_status === 'FAILED' || result.run_status === 'TIMED_OUT') {
+    return 'AI chưa thể hoàn tất đánh giá. Hãy tải lại trạng thái hồ sơ để xem thông tin mới nhất.'
+  }
+  return 'Đã ghi nhận yêu cầu đánh giá. Hãy tải lại trạng thái hồ sơ để xem kết quả mới nhất.'
 }
 
 export function ManualEvaluationRetryPanel({
@@ -97,7 +99,7 @@ export function ManualEvaluationRetryPanel({
       <RotateCcw aria-hidden="true" />
       <h2 id={headingId}>Chạy lại đánh giá AI</h2>
     </div>
-    <p>Lần chạy mới dùng snapshot của vòng hiện tại. Evidence của lần chạy trước vẫn được giữ nguyên.</p>
+    <p>Yêu cầu mới sử dụng nội dung hồ sơ trong vòng duyệt hiện tại. Các kết quả trước đó vẫn được lưu lại.</p>
     {error && <p className="auth-workflow-alert is-error" role="alert">{error}</p>}
     {message && <p className="auth-workflow-alert is-progress" role="status">{message}</p>}
     {isRetryAvailable && <button className="button button-secondary" type="button" onClick={() => void retry()} disabled={busy}>

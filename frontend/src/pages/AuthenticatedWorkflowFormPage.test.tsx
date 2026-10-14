@@ -121,7 +121,7 @@ it('shows Checker loading and disables submit until the current Checker response
   expect(screen.getByLabelText(/Người phê duyệt/)).toBeEnabled()
 })
 
-it('rejects attachments that exceed the backend byte limit before calling upload', async () => {
+it('rejects oversized attachments before calling upload', async () => {
   readyCheckers()
   const create = vi.spyOn(authWorkflowService, 'createPlan')
   renderForm()
@@ -129,12 +129,12 @@ it('rejects attachments that exceed the backend byte limit before calling upload
   const largeImage = new File([new Uint8Array(5 * 1024 * 1024 + 1)], 'large.png', { type: 'image/png' })
   fireEvent.change(screen.getByLabelText('Chọn ảnh đính kèm'), { target: { files: [largeImage] } })
 
-  expect(await screen.findByText('Ảnh vượt quá giới hạn 5 MiB của backend.')).toBeVisible()
+  expect(await screen.findByText('Dung lượng ảnh không được vượt quá 5 MiB.')).toBeVisible()
   fireEvent.click(screen.getByRole('button', { name: 'Lưu bản nháp' }))
   expect(create).not.toHaveBeenCalled()
 })
 
-it('rejects images above the backend pixel limit before create or upload', async () => {
+it('rejects oversized images before create or upload', async () => {
   readyCheckers()
   const close = vi.fn()
   vi.stubGlobal('createImageBitmap', vi.fn().mockResolvedValue({ width: 5001, height: 5000, close }))
@@ -143,7 +143,7 @@ it('rejects images above the backend pixel limit before create or upload', async
 
   const largeImage = new File(['image'], 'large.png', { type: 'image/png' })
   fireEvent.change(screen.getByLabelText('Chọn ảnh đính kèm'), { target: { files: [largeImage] } })
-  expect(await screen.findByText('Ảnh vượt quá giới hạn 25 megapixel của backend.')).toBeVisible()
+  expect(await screen.findByText('Ảnh không được vượt quá 25 megapixel.')).toBeVisible()
   fireEvent.click(screen.getByRole('button', { name: 'Lưu bản nháp' }))
   expect(create).not.toHaveBeenCalled()
   expect(close).toHaveBeenCalledOnce()
@@ -197,7 +197,7 @@ it('reuses the URL creation intent after a reload', async () => {
 
   fireEvent.change(screen.getByLabelText('Tên kế hoạch'), { target: { value: 'Same intent' } })
   fireEvent.click(screen.getByRole('button', { name: 'Lưu bản nháp' }))
-  expect(await screen.findByRole('alert')).toHaveTextContent('Không nhận được xác nhận từ máy chủ')
+  expect(await screen.findByRole('alert')).toHaveTextContent('Chưa nhận được xác nhận')
   firstPage.unmount()
 
   renderForm(`/workflow/plans/new?creation_intent=${intentId}&creation_pending=1`)
@@ -223,8 +223,8 @@ it('explains that changed data cannot reuse a consumed creation intent', async (
   fireEvent.click(screen.getByRole('button', { name: 'Tôi đã kiểm tra — cho phép thử lại' }))
   fireEvent.click(screen.getByRole('button', { name: 'Lưu bản nháp' }))
 
-  expect(await screen.findByRole('heading', { name: 'Ý định tạo này đã được dùng với nội dung khác' })).toBeVisible()
-  expect(screen.getByText(/Máy chủ không tạo thêm bản nháp/)).toBeVisible()
+  expect(await screen.findByRole('heading', { name: 'Yêu cầu tạo bản nháp đã được dùng cho nội dung khác' })).toBeVisible()
+  expect(screen.getByText(/Hệ thống không tạo thêm bản nháp/)).toBeVisible()
   expect(screen.getByRole('link', { name: 'Mở danh sách kế hoạch' })).toHaveAttribute('href', '/workflow/plans')
   expect(screen.getByRole('link', { name: 'Mở biểu mẫu mới' })).toHaveAttribute('href', '/workflow/plans/new')
   expect(screen.getByRole('button', { name: 'Lưu bản nháp' })).toBeDisabled()
@@ -285,8 +285,8 @@ it('keeps the typed values and selected file after a 422 upload error', async ()
   fireEvent.change(screen.getByLabelText('Chọn ảnh đính kèm'), { target: { files: [image] } })
   fireEvent.click(screen.getByRole('button', { name: 'Lưu bản nháp' }))
 
-  expect(await screen.findByRole('alert')).toHaveTextContent('Upload a valid PNG, JPEG, or WebP image.')
-  expect(screen.getByText('Mã tham chiếu: trace-422')).toBeVisible()
+  expect(await screen.findByRole('alert')).toHaveTextContent('Thông tin chưa hợp lệ hoặc chưa đầy đủ.')
+  expect(screen.queryByText('Mã tham chiếu: trace-422')).not.toBeInTheDocument()
   expect(screen.getByLabelText('Tên kế hoạch')).toHaveValue('My campaign')
   expect(screen.getByText(/campaign.png.*chờ tải lên/)).toBeVisible()
 })
@@ -302,9 +302,9 @@ it('refreshes a conflicted revision without replacing local edits until the user
   fireEvent.change(await screen.findByLabelText('Tên kế hoạch'), { target: { value: 'My local edit' } })
   fireEvent.click(screen.getByRole('button', { name: 'Lưu bản nháp' }))
 
-  expect(await screen.findByRole('heading', { name: 'Máy chủ có revision mới hơn' })).toBeVisible()
+  expect(await screen.findByRole('heading', { name: 'Kế hoạch đã được cập nhật' })).toBeVisible()
   expect(screen.getByLabelText('Tên kế hoạch')).toHaveValue('My local edit')
-  expect(screen.getByText(/revision 5/)).toBeVisible()
+  expect(screen.getByText(/Các giá trị bạn đang nhập vẫn được giữ/)).toBeVisible()
   fireEvent.click(screen.getByRole('button', { name: 'Dùng bản mới nhất' }))
   expect(screen.getByLabelText('Tên kế hoạch')).toHaveValue('Server version')
 })
@@ -319,7 +319,7 @@ it('retains form values after a 422 create response', async () => {
   fireEvent.change(screen.getByLabelText('Tên kế hoạch'), { target: { value: 'Keep this draft' } })
   fireEvent.click(screen.getByRole('button', { name: 'Lưu bản nháp' }))
 
-  expect(await screen.findByRole('alert')).toHaveTextContent('title is required before submission.')
+  expect(await screen.findByRole('alert')).toHaveTextContent('Thông tin chưa hợp lệ hoặc chưa đầy đủ.')
   expect(screen.getByLabelText('Tên kế hoạch')).toHaveValue('Keep this draft')
   expect(create).toHaveBeenCalledOnce()
 })

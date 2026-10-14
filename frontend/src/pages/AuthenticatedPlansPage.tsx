@@ -1,4 +1,4 @@
-import { FilePlus2, RefreshCw } from 'lucide-react'
+import { CheckCircle2, CircleAlert, CircleX, Clock3, FilePlus2, FileText, Minus, RefreshCw, type LucideIcon } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { WorkflowPlanFilters } from '../components/auth/workflow/WorkflowPlanFilters'
@@ -13,11 +13,26 @@ import {
   workflowPlanDepartments,
   writeWorkflowPlanFilters,
 } from '../services/workflowPlanFilters'
-import type { WorkflowPlan } from '../types/authWorkflow'
+import type { WorkflowPlan, WorkflowSlaStatus } from '../types/authWorkflow'
 
 const PAGE_SIZE = 100
 type ListMode = 'plans' | 'reviews'
 type ListFailure = { error: AuthApiError; kind: 'first' | 'more'; offset: number }
+
+const planStatusIcons: Record<WorkflowPlan['status'], LucideIcon> = {
+  DRAFT: FileText,
+  PENDING_APPROVAL: Clock3,
+  APPROVED: CheckCircle2,
+  REJECTED: CircleX,
+}
+const slaStatusIcons: Record<WorkflowSlaStatus, LucideIcon> = {
+  NOT_APPLICABLE: Minus,
+  IN_PROGRESS: Clock3,
+  WARNING: CircleAlert,
+  OVERDUE: CircleAlert,
+  CLOSED_ON_TIME: CheckCircle2,
+  CLOSED_LATE: CircleX,
+}
 
 export function AuthenticatedPlansPage({ reviews = false }: { reviews?: boolean }) {
   const { roles } = useAuth()
@@ -166,6 +181,9 @@ export function AuthenticatedPlansPage({ reviews = false }: { reviews?: boolean 
       : isAdmin
         ? 'Tài khoản quản trị xem kế hoạch và chỉ tạo bản nháp theo quyền Maker.'
         : 'Các bản nháp, hồ sơ đã gửi và lịch sử do tài khoản hiện tại tạo.'
+  const eyebrow = !reviews && roles.includes('MAKER') && !isAdmin
+    ? 'WORKFLOW POSTGRESQL · MAKER'
+    : `Quản lý kế hoạch · ${reviews ? 'Checker' : isAdmin ? 'Quản trị viên' : 'Maker'}`
   const isInitialLoading = initialLoading || (dataMode !== mode && !failure)
   const pageError = failure?.error
 
@@ -174,14 +192,14 @@ export function AuthenticatedPlansPage({ reviews = false }: { reviews?: boolean 
     else setReloadCount(value => value + 1)
   }
 
-  return <section className="auth-workflow-page">
-    <div className="auth-workflow-page-heading">
-      <div>
-        <p className="page-eyebrow">Workflow PostgreSQL · {reviews ? 'Checker' : isAdmin ? 'Administrator' : 'Maker'}</p>
+  return <section className={`auth-workflow-page auth-workflow-list-page ${reviews ? 'auth-review-list-page' : 'auth-plans-list-page'}`}>
+    <div className={`auth-workflow-page-heading${reviews ? '' : ' auth-plans-hero'}`}>
+      <div className="auth-plans-hero-copy">
+        <p className="page-eyebrow">{eyebrow}</p>
         <h1>{title}</h1>
         <p>{description}</p>
       </div>
-      <div className="button-row">
+      <div className={`button-row${reviews ? '' : ' auth-plans-hero-actions'}`}>
         <button className="button button-secondary" type="button" onClick={() => setReloadCount(value => value + 1)} disabled={isInitialLoading || refreshing || loadingMore}>
           <RefreshCw aria-hidden="true" /> {refreshing ? 'Đang tải…' : 'Tải lại'}
         </button>
@@ -189,23 +207,26 @@ export function AuthenticatedPlansPage({ reviews = false }: { reviews?: boolean 
       </div>
     </div>
 
-    {isInitialLoading && <p className="auth-workflow-state" role="status">Đang tải danh sách kế hoạch…</p>}
+    {isInitialLoading && <p className="auth-workflow-state auth-plans-state-loading" role="status">Đang tải danh sách kế hoạch…</p>}
     {refreshing && visiblePlans.length > 0 && <p className="auth-plan-refresh-status" role="status">Đang đồng bộ danh sách. Các yêu cầu đã tải vẫn được giữ.</p>}
 
     {!isInitialLoading && pageError && visiblePlans.length === 0 && <section className="auth-workflow-state is-error" role="alert">
       <h2>Không tải được danh sách</h2><p>{listErrorText(pageError)}</p>
-      {pageError.correlationId && <p className="auth-workflow-error-reference">Mã tham chiếu: {pageError.correlationId}</p>}
       <button className="button button-secondary" type="button" onClick={retryFailure}>Thử lại</button>
     </section>}
 
     {!isInitialLoading && pageError && visiblePlans.length > 0 && failure?.kind === 'first' && <div className="auth-workflow-alert is-error" role="alert">
-      <div><p>{listErrorText(pageError)}</p>{pageError.correlationId && <small className="auth-workflow-error-reference">Mã tham chiếu: {pageError.correlationId}</small>}</div>
+      <p>{listErrorText(pageError)}</p>
       <button className="button button-secondary" type="button" onClick={retryFailure} disabled={refreshing}>Thử tải lại</button>
     </div>}
 
     {!isInitialLoading && !pageError && visiblePlans.length === 0 && <section className="auth-workflow-state">
       <h2>{reviews ? 'Không có hồ sơ chờ duyệt được giao cho bạn.' : 'Chưa có kế hoạch'}</h2>
-      <p>{reviews ? 'Hồ sơ sẽ xuất hiện tại đây khi được giao cho tài khoản Checker hiện tại.' : 'Tạo bản nháp đầu tiên để bắt đầu workflow Auth.'}</p>
+      <p>{reviews
+        ? 'Hồ sơ sẽ xuất hiện tại đây khi được giao cho tài khoản Checker hiện tại.'
+        : roles.includes('MAKER')
+          ? 'Tạo bản nháp đầu tiên để bắt đầu quản lý kế hoạch.'
+          : 'Chưa có kế hoạch trong phạm vi quyền quản trị.'}</p>
     </section>}
 
     {visiblePlans.length > 0 && <>
@@ -216,35 +237,40 @@ export function AuthenticatedPlansPage({ reviews = false }: { reviews?: boolean 
         onChange={updateFilters}
         onClear={clearFilters}
       />
-      <div className="auth-plan-result-count" aria-live="polite">
-        <strong>{filteredPlans.length} kết quả trong {visiblePlans.length} yêu cầu đã tải</strong>
-        <span>{hasMore ? 'Kết quả chỉ áp dụng cho dữ liệu đã tải; có thể tải thêm để mở rộng phạm vi.' : 'Đã tải hết các yêu cầu được trả về trong phạm vi quyền truy cập của bạn.'}</span>
-      </div>
+      <section className="auth-plan-results-card" aria-label="Kết quả kế hoạch">
+        <div className="auth-plan-result-count" aria-live="polite">
+          <span className="auth-plan-results-icon" aria-hidden="true"><FileText /></span>
+          <div className="auth-plan-result-copy">
+            <strong>{filteredPlans.length} kết quả trong {visiblePlans.length} yêu cầu đã tải</strong>
+            <span>{hasMore ? 'Kết quả chỉ áp dụng cho dữ liệu đã tải; có thể tải thêm để mở rộng phạm vi.' : 'Đã tải hết các yêu cầu được trả về trong phạm vi quyền truy cập của bạn.'}</span>
+          </div>
+        </div>
 
-      {filteredPlans.length > 0 ? <div className={`auth-workflow-table-wrap auth-plan-results-wrap${reviews ? ' auth-review-queue-wrap' : ''}`}>
-        <table className={`auth-workflow-table auth-plan-results-table${reviews ? ' auth-review-queue-table' : ''}`}>
-          <thead><tr>
-            <th scope="col">Yêu cầu / Mã</th><th scope="col">Bộ phận</th><th scope="col">Trạng thái</th>
-            <th scope="col">Người lập</th><th scope="col">Checker</th><th scope="col">Ngày tạo</th>
-            <th scope="col">Cập nhật</th><th scope="col">Vòng duyệt</th><th scope="col">SLA</th>
-          </tr></thead>
-          <tbody>{filteredPlans.map(plan => <WorkflowPlanRow key={plan.id} plan={plan} />)}</tbody>
-        </table>
-      </div> : <section className="auth-workflow-state auth-plan-no-results" aria-live="polite">
-        <h2>Không có yêu cầu khớp với bộ lọc.</h2>
-        <p>{hasMore ? 'Chưa có kết quả phù hợp trong dữ liệu đã tải. Tải thêm hồ sơ để tiếp tục tìm trong phạm vi tài khoản.' : 'Đã tìm hết dữ liệu hiện có trong phạm vi tài khoản.'}</p>
-        <button className="button button-secondary" type="button" onClick={clearFilters} disabled={!Object.values(filters).some(Boolean)}>Xóa bộ lọc</button>
-      </section>}
+        {filteredPlans.length > 0 ? <div className={`auth-workflow-table-wrap auth-plan-results-wrap${reviews ? ' auth-review-queue-wrap' : ''}`} role="region" aria-label="Bảng kế hoạch đã tải" tabIndex={0}>
+          <table className={`auth-workflow-table auth-plan-results-table${reviews ? ' auth-review-queue-table' : ''}`}>
+            <thead><tr>
+              <th scope="col">Yêu cầu / Mã</th><th scope="col">Bộ phận</th><th scope="col">Trạng thái</th>
+              <th scope="col">Người lập</th><th scope="col">Checker</th><th scope="col">Ngày tạo</th>
+              <th scope="col">Cập nhật</th><th scope="col">Vòng duyệt</th><th scope="col">SLA</th>
+            </tr></thead>
+            <tbody>{filteredPlans.map(plan => <WorkflowPlanRow key={plan.id} plan={plan} />)}</tbody>
+          </table>
+        </div> : <section className="auth-workflow-state auth-plan-no-results" aria-live="polite">
+          <h2>Không có yêu cầu khớp với bộ lọc.</h2>
+          <p>{hasMore ? 'Chưa có kết quả phù hợp trong dữ liệu đã tải. Tải thêm hồ sơ để tiếp tục tìm trong phạm vi tài khoản.' : 'Đã tìm hết dữ liệu hiện có trong phạm vi tài khoản.'}</p>
+          <button className="button button-secondary" type="button" onClick={clearFilters} disabled={!Object.values(filters).some(Boolean)}>Xóa bộ lọc</button>
+        </section>}
 
-      <div className="auth-plan-pagination" aria-live="polite">
-        {failure?.kind === 'more' && <div className="auth-workflow-alert is-error" role="alert">
-          <div><p>{listErrorText(failure.error)}</p>{failure.error.correlationId && <small className="auth-workflow-error-reference">Mã tham chiếu: {failure.error.correlationId}</small>}</div>
-            <button className="button button-secondary" type="button" onClick={retryFailure} disabled={loadingMore}>Thử lại</button>
-        </div>}
-        {loadingMore && <p className="auth-workflow-state" role="status">Đang tải thêm hồ sơ…</p>}
-        {!failure && hasMore && !loadingMore && <button className="button button-secondary" type="button" onClick={() => void loadMore()}>Tải thêm hồ sơ</button>}
-        {!hasMore && !loadingMore && !failure && <p role="status">{reviews ? 'Đã tải hết hồ sơ được giao.' : isAdmin ? 'Đã tải hết kế hoạch trong phạm vi quản trị.' : 'Đã tải hết kế hoạch do bạn tạo.'}</p>}
-      </div>
+        <div className="auth-plan-pagination" aria-live="polite">
+          {failure?.kind === 'more' && <div className="auth-workflow-alert is-error" role="alert">
+            <p>{listErrorText(failure.error)}</p>
+              <button className="button button-secondary" type="button" onClick={retryFailure} disabled={loadingMore}>Thử lại</button>
+          </div>}
+          {loadingMore && <p className="auth-workflow-state auth-plans-state-loading" role="status">Đang tải thêm hồ sơ…</p>}
+          {!failure && hasMore && !loadingMore && <button className="button button-secondary" type="button" onClick={() => void loadMore()}>Tải thêm hồ sơ</button>}
+          {!hasMore && !loadingMore && !failure && <p role="status">{reviews ? 'Đã tải hết hồ sơ được giao.' : isAdmin ? 'Đã tải hết kế hoạch trong phạm vi quản trị.' : 'Đã tải hết kế hoạch do bạn tạo.'}</p>}
+        </div>
+      </section>
     </>}
   </section>
 }
@@ -258,17 +284,19 @@ function WorkflowPlanRow({ plan }: { plan: WorkflowPlan }) {
   const stage = readText(plan?.processing_stage)
   const round = typeof plan?.current_round === 'number' && Number.isFinite(plan.current_round) && plan.current_round > 0
     ? plan.current_round : '—'
+  const StatusIcon = planStatusIcons[plan.status] ?? CircleAlert
+  const SlaIcon = plan.sla_current ? slaStatusIcons[plan.sla_current.status] : null
 
   return <tr>
     <td data-label="Yêu cầu / Mã"><Link aria-label={code ? `${title} (${code})` : title} to={`/workflow/plans/${encodeURIComponent(plan.id)}`}><strong>{title}</strong><small>{code || 'Không có mã'}</small></Link></td>
     <td data-label="Bộ phận">{readText(plan?.payload?.department).trim() || 'Chưa cung cấp'}</td>
-    <td data-label="Trạng thái"><span className={`workflow-status status-${status.toLowerCase()}`}>{statusLabel(status)}</span>{['AI_PENDING', 'AI_PROCESSING'].includes(stage) && <small className="auth-stage-note">AI đang đánh giá</small>}{stage === 'HUMAN_REVIEW_REQUIRED' && <small className="auth-stage-note">Chờ Checker xem xét</small>}</td>
+    <td data-label="Trạng thái"><span className={`workflow-status status-${status.toLowerCase()}`}><StatusIcon className="auth-plan-status-icon" aria-hidden="true" />{statusLabel(status)}</span>{['AI_PENDING', 'AI_PROCESSING'].includes(stage) && <small className="auth-stage-note">AI đang đánh giá</small>}{stage === 'HUMAN_REVIEW_REQUIRED' && <small className="auth-stage-note">Hồ sơ đang chờ Checker xem xét.</small>}</td>
     <td data-label="Người lập">{readText(plan?.maker_name).trim() || 'Không rõ'}</td>
     <td data-label="Checker">{readText(plan?.checker_name).trim() || 'Chưa gán'}</td>
     <td data-label="Ngày tạo">{createdDate || '—'}</td>
     <td data-label="Cập nhật">{updatedDate || '—'}</td>
     <td data-label="Vòng duyệt">{round}</td>
-    <td data-label="SLA">{plan.sla_current?.applicable ? <><span className={`workflow-sla-status status-${plan.sla_current.status.toLowerCase()}`}>{slaStatusLabel(plan.sla_current.status)}</span><small className="auth-stage-note">Hạn {formatSlaDeadline(plan.sla_current.due_at)}</small></> : plan.current_round > 0 ? <span>Không áp dụng</span> : <span>—</span>}</td>
+    <td data-label="SLA">{plan.sla_current?.applicable ? <><span className={`workflow-sla-status status-${plan.sla_current.status.toLowerCase()}`}>{SlaIcon && <SlaIcon className="auth-plan-status-icon" aria-hidden="true" />}{slaStatusLabel(plan.sla_current.status)}</span><small className="auth-stage-note">Hạn {formatSlaDeadline(plan.sla_current.due_at)}</small></> : plan.current_round > 0 ? <span className="workflow-sla-status status-not_applicable"><Minus className="auth-plan-status-icon" aria-hidden="true" />Không áp dụng</span> : <span>—</span>}</td>
   </tr>
 }
 
@@ -304,7 +332,7 @@ function readText(value: unknown) {
 
 function statusLabel(status: string) {
   return ({ DRAFT: 'Bản nháp', PENDING_APPROVAL: 'Chờ duyệt', APPROVED: 'Đã duyệt', REJECTED: 'Đã từ chối' } as Record<string, string>)[status]
-    ?? (status ? status.replaceAll('_', ' ') : 'Không xác định')
+    ?? 'Trạng thái chưa xác định'
 }
 
 function asListError(reason: unknown, fallback: string) {
@@ -319,13 +347,13 @@ function shouldClearLoadedList(error: AuthApiError) {
 }
 
 function listErrorText(error: AuthApiError) {
-  if (error.code === 'INVALID_RESPONSE') return 'Dịch vụ workflow trả về danh sách không hợp lệ. Hãy thử tải lại.'
-  if (error.status === 0 || error.code === 'NETWORK_ERROR') return 'Không kết nối được dịch vụ workflow. Kiểm tra kết nối rồi thử lại.'
+  if (error.code === 'INVALID_RESPONSE') return 'Chưa thể hiển thị danh sách hiện tại. Hãy thử tải lại.'
+  if (error.status === 0 || error.code === 'NETWORK_ERROR') return 'Không thể kết nối để tải danh sách. Kiểm tra kết nối rồi thử lại.'
   if (error.status === 401 || error.code === 'UNAUTHENTICATED') return 'Phiên đăng nhập đã hết hạn. Đăng nhập lại để xem danh sách.'
   if (error.status === 403 || error.code === 'FORBIDDEN') return 'Tài khoản hiện tại không có quyền xem danh sách này.'
   if (error.status === 404 || error.code === 'NOT_FOUND') return 'Danh sách hoặc hồ sơ này hiện không khả dụng.'
   if (error.status === 409 || error.code === 'CONFLICT') return 'Dữ liệu hàng chờ đã thay đổi. Tải lại danh sách để đồng bộ.'
-  if (error.status === 422 || error.code === 'VALIDATION_ERROR') return 'Dịch vụ không chấp nhận yêu cầu tải danh sách. Hãy tải lại.'
-  if (error.status >= 500) return 'Dịch vụ workflow đang gặp sự cố. Hãy thử lại sau.'
-  return error.message || 'Không thể tải danh sách kế hoạch.'
+  if (error.status === 422 || error.code === 'VALIDATION_ERROR') return 'Hệ thống chưa thể tải danh sách. Hãy thử tải lại.'
+  if (error.status >= 500) return 'Hệ thống đang gặp sự cố. Hãy thử lại sau.'
+  return 'Không thể tải danh sách kế hoạch. Hãy thử tải lại.'
 }
