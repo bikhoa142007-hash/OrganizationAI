@@ -572,8 +572,20 @@ def test_postgres_retry_evaluator_failure_audit_persists_disposition_and_round(
     )
     admin_client = TestClient(app, raise_server_exceptions=False)
     _login(admin_client, admin.username, os.environ["AUTH_SEED_PASSWORD"])
+
+    def create_current_revision(kind, value):
+        history = admin_client.get(
+            f"/api/workflow/configuration/{kind}/history?offset=0&limit=1"
+        )
+        assert history.status_code == 200, history.text
+        revisions = history.json()["items"]
+        expected_revision = revisions[0]["revision"] if revisions else None
+        return _create_configuration_revision(
+            admin_client, kind, value, expected_revision=expected_revision,
+        )
+
     try:
-        _create_configuration_revision(admin_client, "approval_policy", {
+        create_current_revision("approval_policy", {
             "enabled": False,
             "media_confidence_threshold": 0.85,
             "feasibility_score_threshold_exclusive": 70,
@@ -586,7 +598,7 @@ def test_postgres_retry_evaluator_failure_audit_persists_disposition_and_round(
             "criteria": [{"criterion_id": key, "label": label, "weight": weight}
                          for key, label, weight in STRATEGY_CRITERIA],
         }
-        _create_configuration_revision(admin_client, "strategy_rubric", retry_rubric)
+        create_current_revision("strategy_rubric", retry_rubric)
     finally:
         admin_client.close()
 
