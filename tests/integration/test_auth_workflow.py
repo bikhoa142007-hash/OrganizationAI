@@ -82,6 +82,7 @@ def workflow_client(monkeypatch) -> Iterator[tuple[TestClient, sessionmaker[Sess
             yield session
 
     app.dependency_overrides[get_auth_db] = override_db
+    app.state.workflow_test_factory = factory
     with TestClient(app) as client:
         yield client, factory, app
     engine.dispose()
@@ -138,12 +139,18 @@ def test_workflow_and_admin_routes_enforce_catalog_permissions(workflow_client):
     assign_role_permissions(factory, "MAKER", ())
     login(client, maker)
     assert client.get("/api/workflow/plans").status_code == 403
-    draft_body = {"checker_user_id": str(checker.id), "payload": {"title": "Permission test"}}
+    draft_body = {
+        "checker_user_id": str(checker.id),
+        "payload": {"title": "Permission test", "department": "marketing"},
+    }
     assert client.post("/api/workflow/plans", json=draft_body).status_code == 403
 
     assign_role_permissions(
         factory, "MAKER", ("MARKETING_PLAN_READ", "MARKETING_PLAN_CREATE")
     )
+    permission_admin_client = authenticated_client(app, admin)
+    configure_test_checker_assignment(permission_admin_client, checker.id, "marketing")
+    permission_admin_client.close()
     assert client.get("/api/workflow/plans").status_code == 200
     draft = client.post("/api/workflow/plans", json=draft_body)
     assert draft.status_code == 201, draft.text
@@ -357,6 +364,7 @@ def test_admin_employee_directory_is_authorized_filtered_paginated_and_read_only
 
 def make_plan(client: TestClient, checker_id: UUID, *, title: str = "Spring campaign",
               channels: tuple[str, ...] = ()) -> dict:
+    configure_test_checker_assignment(client, checker_id, "marketing")
     response = client.post("/api/workflow/plans", json={
         "checker_user_id": str(checker_id),
         "payload": {
@@ -508,6 +516,33 @@ def create_configuration_revision(client: TestClient, kind: str, value: dict, *,
     )
     assert response.status_code == 201, response.text
     return response.json()
+
+
+def configure_test_checker_assignment(client: TestClient, checker_id: UUID, department: str) -> None:
+    app = client.app
+    factory = app.state.workflow_test_factory
+    admin = getattr(app.state, "workflow_test_admin", None)
+    if admin is None:
+        admin = create_user(factory, f"test.assignment.admin.{uuid4().hex[:8]}", ("ADMIN",))
+        app.state.workflow_test_admin = admin
+    admin_client = authenticated_client(app, admin)
+    try:
+        expected_revision = getattr(app.state, "workflow_test_assignment_revision", None)
+        revision = create_configuration_revision(
+            admin_client,
+            "checker_assignment",
+            {
+                "maker_may_select_other": True,
+                "defaults": [{
+                    "department": department,
+                    "checker_id": str(checker_id),
+                }],
+            },
+            expected_revision=expected_revision,
+        )
+        app.state.workflow_test_assignment_revision = revision["revision"]
+    finally:
+        admin_client.close()
 
 
 def baseline_strategy_rubric_value(*, version="snapshot-r1") -> dict:
@@ -748,11 +783,15 @@ def test_draft_creation_replays_an_idempotency_key_without_duplicate_plan_or_eve
     maker = create_user(factory, "maker.idempotent-create", ("MAKER",))
     checker = create_user(factory, "checker.idempotent-create", ("CHECKER",))
     other_maker = create_user(factory, "maker.other-idempotent-create", ("MAKER",))
+    assignment_admin = create_user(factory, "admin.idempotent-create", ("ADMIN",))
+    assignment_admin_client = authenticated_client(app, assignment_admin)
+    configure_test_checker_assignment(assignment_admin_client, checker.id, "marketing")
+    assignment_admin_client.close()
     login(client, maker)
     headers = {"Idempotency-Key": "draft-intent-1"}
     body = {
         "checker_user_id": str(checker.id),
-        "payload": {"title": "Retry-safe draft"},
+        "payload": {"title": "Retry-safe draft", "department": "marketing"},
     }
 
     first = client.post("/api/workflow/plans", json=body, headers=headers)
@@ -1541,6 +1580,7 @@ def test_rejection_needs_reason_and_resubmission_preserves_prior_version(workflo
             "title": "Spring campaign revised",
             "objective": "Reach qualified customers",
             "summary": "A revised campaign with measurement targets.",
+            "department": "marketing",
             "start_date": "2026-10-01",
             "end_date": "2026-10-31",
             "budget_minor_units": "50000000",
@@ -1672,10 +1712,14 @@ def test_submission_rejects_incomplete_plan_even_when_attachment_exists(workflow
     client, factory, _app = workflow_client
     maker = create_user(factory, "maker.one", ("MAKER",))
     checker = create_user(factory, "checker.one", ("CHECKER",))
+    assignment_admin = create_user(factory, "admin.incomplete-submit", ("ADMIN",))
+    assignment_admin_client = authenticated_client(_app, assignment_admin)
+    configure_test_checker_assignment(assignment_admin_client, checker.id, "marketing")
+    assignment_admin_client.close()
     login(client, maker)
     created = client.post("/api/workflow/plans", json={
         "checker_user_id": str(checker.id),
-        "payload": {"title": "Incomplete campaign"},
+        "payload": {"title": "Incomplete campaign", "department": "marketing"},
     })
     assert created.status_code == 201
     attached = upload_plan_image(client, created.json()["id"], created.json()["revision"])
@@ -1706,3 +1750,241 @@ def test_attachment_mime_and_image_contents_must_match(workflow_client):
 
     assert fake_jpeg.status_code == 422
     assert mismatched_mime.status_code == 422
+
+
+def test_effective_checker_assignment_applies_department_default_when_creating_draft(workflow_client):
+    client, factory, app = workflow_client
+    maker = create_user(factory, "assignment.default.maker", ("MAKER",))
+    checker = create_user(factory, "assignment.default.checker", ("CHECKER",))
+    admin = create_user(factory, "assignment.default.admin", ("ADMIN",))
+    maker_client = authenticated_client(app, maker)
+    admin_client = authenticated_client(app, admin)
+    create_configuration_revision(admin_client, "checker_assignment", {
+        "maker_may_select_other": False,
+        "defaults": [{"department": "Marketing", "checker_id": str(checker.id)}],
+    })
+
+    created = maker_client.post("/api/workflow/plans", json={
+        "payload": {"title": "Defaulted draft", "department": "Marketing"},
+    })
+
+    assert created.status_code == 201, created.text
+    plan = created.json()
+    assert plan["checker_id"] == str(checker.id)
+    created_event = next(event for event in plan["history"] if event["action"] == "CREATED")
+    assert created_event["details"]["checker_id"] == str(checker.id)
+
+
+def test_effective_checker_assignment_blocks_unapproved_selection_on_create_and_update(workflow_client):
+    client, factory, app = workflow_client
+    maker = create_user(factory, "assignment.block.maker", ("MAKER",))
+    default_checker = create_user(factory, "assignment.block.default", ("CHECKER",))
+    alternate_checker = create_user(factory, "assignment.block.alternate", ("CHECKER",))
+    admin = create_user(factory, "assignment.block.admin", ("ADMIN",))
+    maker_client = authenticated_client(app, maker)
+    admin_client = authenticated_client(app, admin)
+    create_configuration_revision(admin_client, "checker_assignment", {
+        "maker_may_select_other": False,
+        "defaults": [{"department": "Marketing", "checker_id": str(default_checker.id)}],
+    })
+
+    rejected_create = maker_client.post("/api/workflow/plans", json={
+        "checker_user_id": str(alternate_checker.id),
+        "payload": {"title": "Disallowed explicit Checker", "department": "Marketing"},
+    })
+    assert rejected_create.status_code == 422
+
+    created = maker_client.post("/api/workflow/plans", json={
+        "payload": {"title": "Defaulted draft", "department": "Marketing"},
+    })
+    assert created.status_code == 201, created.text
+    plan = created.json()
+    rejected_update = maker_client.put(f"/api/workflow/plans/{plan['id']}", json={
+        "expected_revision": plan["revision"],
+        "checker_user_id": str(alternate_checker.id),
+        "payload": plan["payload"],
+    })
+    assert rejected_update.status_code == 422
+
+    unchanged = maker_client.get(f"/api/workflow/plans/{plan['id']}")
+    assert unchanged.status_code == 200
+    assert unchanged.json()["checker_id"] == str(default_checker.id)
+    assert unchanged.json()["revision"] == plan["revision"]
+
+
+def test_effective_checker_assignment_allows_explicit_choice_only_when_policy_enabled(workflow_client):
+    client, factory, app = workflow_client
+    maker = create_user(factory, "assignment.allowed.maker", ("MAKER",))
+    default_checker = create_user(factory, "assignment.allowed.default", ("CHECKER",))
+    alternate_checker = create_user(factory, "assignment.allowed.alternate", ("CHECKER",))
+    admin = create_user(factory, "assignment.allowed.admin", ("ADMIN",))
+    maker_client = authenticated_client(app, maker)
+    admin_client = authenticated_client(app, admin)
+    create_configuration_revision(admin_client, "checker_assignment", {
+        "maker_may_select_other": True,
+        "defaults": [{"department": "Marketing", "checker_id": str(default_checker.id)}],
+    })
+
+    created = maker_client.post("/api/workflow/plans", json={
+        "payload": {"title": "Defaulted draft", "department": "Marketing"},
+    })
+    assert created.status_code == 201, created.text
+    plan = created.json()
+    updated = maker_client.put(f"/api/workflow/plans/{plan['id']}", json={
+        "expected_revision": plan["revision"],
+        "checker_user_id": str(alternate_checker.id),
+        "payload": plan["payload"],
+    })
+
+    assert updated.status_code == 200, updated.text
+    assert updated.json()["checker_id"] == str(alternate_checker.id)
+
+
+def test_department_change_without_checker_selection_uses_new_department_default(workflow_client):
+    client, factory, app = workflow_client
+    maker = create_user(factory, "assignment.department.maker", ("MAKER",))
+    marketing_checker = create_user(factory, "assignment.department.marketing", ("CHECKER",))
+    sales_checker = create_user(factory, "assignment.department.sales", ("CHECKER",))
+    admin = create_user(factory, "assignment.department.admin", ("ADMIN",))
+    maker_client = authenticated_client(app, maker)
+    admin_client = authenticated_client(app, admin)
+    create_configuration_revision(admin_client, "checker_assignment", {
+        "maker_may_select_other": False,
+        "defaults": [
+            {"department": "Marketing", "checker_id": str(marketing_checker.id)},
+            {"department": "Sales", "checker_id": str(sales_checker.id)},
+        ],
+    })
+
+    created = maker_client.post("/api/workflow/plans", json={
+        "payload": {"title": "Department reassignment", "department": "Marketing"},
+    })
+    assert created.status_code == 201, created.text
+    plan = created.json()
+    updated_payload = {**plan["payload"], "department": "Sales"}
+    updated = maker_client.put(f"/api/workflow/plans/{plan['id']}", json={
+        "expected_revision": plan["revision"],
+        "payload": updated_payload,
+    })
+
+    assert updated.status_code == 200, updated.text
+    assert updated.json()["checker_id"] == str(sales_checker.id)
+
+
+def test_submit_resolves_effective_default_when_draft_has_no_checker(workflow_client):
+    client, factory, app = workflow_client
+    maker = create_user(factory, "assignment.submit.maker", ("MAKER",))
+    checker = create_user(factory, "assignment.submit.checker", ("CHECKER",))
+    admin = create_user(factory, "assignment.submit.admin", ("ADMIN",))
+    maker_client = authenticated_client(app, maker)
+    admin_client = authenticated_client(app, admin)
+    payload = {
+        "title": "Default Checker at submit",
+        "objective": "Reach qualified customers",
+        "summary": "A measured campaign with a clear audience and outcome.",
+        "department": "Marketing",
+        "start_date": "2026-10-01",
+        "end_date": "2026-10-31",
+        "budget_minor_units": "50000000",
+        "currency": "VND",
+        "channels": ["social"],
+    }
+    created = maker_client.post("/api/workflow/plans", json={"payload": payload})
+    assert created.status_code == 201, created.text
+    plan = created.json()
+    assert plan["checker_id"] is None
+
+    create_configuration_revision(admin_client, "checker_assignment", {
+        "maker_may_select_other": False,
+        "defaults": [{"department": "Marketing", "checker_id": str(checker.id)}],
+    })
+    uploaded = maker_client.post(
+        f"/api/workflow/plans/{plan['id']}/attachments",
+        data={"expected_revision": str(plan["revision"])},
+        files={"file": ("campaign.png", PNG, "image/png")},
+    )
+    assert uploaded.status_code == 200, uploaded.text
+    submitted = maker_client.post(
+        f"/api/workflow/plans/{plan['id']}/submit",
+        json={"expected_revision": uploaded.json()["revision"]},
+    )
+
+    assert submitted.status_code == 200, submitted.text
+    assert submitted.json()["checker_id"] == str(checker.id)
+    assert submitted.json()["current_version"] == submitted.json()["current_round"] == 1
+
+
+def test_submission_without_effective_checker_assignment_config_is_blocked(workflow_client):
+    client, factory, app = workflow_client
+    maker = create_user(factory, "assignment.unconfigured.maker", ("MAKER",))
+    checker = create_user(factory, "assignment.unconfigured.checker", ("CHECKER",))
+    maker_client = authenticated_client(app, maker)
+    plan_response = maker_client.post("/api/workflow/plans", json={
+        "payload": {
+            "title": "Unconfigured assignment draft",
+            "objective": "Reach qualified customers",
+            "summary": "A measured campaign with a clear audience and outcome.",
+            "department": "marketing",
+            "start_date": "2026-10-01",
+            "end_date": "2026-10-31",
+            "budget_minor_units": "50000000",
+            "currency": "VND",
+            "channels": ["social"],
+        },
+    })
+    assert plan_response.status_code == 201, plan_response.text
+    plan = plan_response.json()
+    with factory.begin() as session:
+        stored_plan = session.get(AuthWorkflowPlan, UUID(plan["id"]))
+        assert stored_plan is not None
+        stored_plan.checker_id = checker.id
+    uploaded = maker_client.post(
+        f"/api/workflow/plans/{plan['id']}/attachments",
+        data={"expected_revision": str(plan["revision"])},
+        files={"file": ("campaign.png", PNG, "image/png")},
+    )
+    assert uploaded.status_code == 200, uploaded.text
+
+    submitted = maker_client.post(
+        f"/api/workflow/plans/{plan['id']}/submit",
+        json={"expected_revision": uploaded.json()["revision"]},
+    )
+
+    assert submitted.status_code == 422
+    unchanged = maker_client.get(f"/api/workflow/plans/{plan['id']}")
+    assert unchanged.status_code == 200
+    assert unchanged.json()["status"] == "DRAFT"
+    assert unchanged.json()["current_version"] == unchanged.json()["current_round"] == 0
+    assert all(event["action"] != "SUBMITTED" for event in unchanged.json()["history"])
+    assert unchanged.json()["versions"] == []
+    assert unchanged.json()["sla_history"] == []
+
+
+def test_explicit_checker_is_rejected_on_create_and_update_without_effective_assignment(workflow_client):
+    client, factory, app = workflow_client
+    maker = create_user(factory, "assignment.unconfigured-choice.maker", ("MAKER",))
+    checker = create_user(factory, "assignment.unconfigured-choice.checker", ("CHECKER",))
+    maker_client = authenticated_client(app, maker)
+
+    draft_response = maker_client.post("/api/workflow/plans", json={
+        "payload": {"title": "Unassigned draft", "department": "Marketing"},
+    })
+    assert draft_response.status_code == 201, draft_response.text
+    draft = draft_response.json()
+    assert draft["checker_id"] is None
+
+    rejected_create = maker_client.post("/api/workflow/plans", json={
+        "checker_user_id": str(checker.id),
+        "payload": {"title": "Unconfigured explicit Checker", "department": "Marketing"},
+    })
+    rejected_update = maker_client.put(f"/api/workflow/plans/{draft['id']}", json={
+        "expected_revision": draft["revision"],
+        "checker_user_id": str(checker.id),
+        "payload": draft["payload"],
+    })
+
+    assert rejected_create.status_code == rejected_update.status_code == 422
+    unchanged = maker_client.get(f"/api/workflow/plans/{draft['id']}")
+    assert unchanged.status_code == 200
+    assert unchanged.json()["checker_id"] is None
+    assert unchanged.json()["revision"] == draft["revision"]

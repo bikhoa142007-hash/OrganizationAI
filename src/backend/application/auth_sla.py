@@ -195,6 +195,7 @@ def update_configuration(
                 after_state={
                     **_audit_state(configuration),
                     "change_reason": reason,
+                    "result": "SUCCESS",
                 },
             ))
             session.flush()

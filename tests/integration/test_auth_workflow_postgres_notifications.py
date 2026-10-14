@@ -628,10 +628,113 @@ def test_postgres_late_vlm_result_is_audited_after_recovery(postgres_workflow):
         "AI_RECOVERY_REVIEW_ROUTED",
         "AI_RESULT_IGNORED_STALE",
     ]
+    recovery_event = submitted["history"][-2]
+    assert recovery_event["status_before"] == recovery_event["status_after"] == "PENDING_APPROVAL"
+    assert recovery_event["details"]["processing_stage_before"] == "AI_PROCESSING"
+    assert recovery_event["details"]["processing_stage_after"] == "HUMAN_REVIEW_REQUIRED"
+    assert recovery_event["details"]["result"] == "HUMAN_REVIEW_REQUIRED"
+    assert recovery_event["details"]["run_id"] == run["run_id"]
+    assert recovery_event["details"]["evaluation_id"] == run["evaluation_id"]
+    assert recovery_event["details"]["correlation_id"] == run["correlation_id"]
+    assert recovery_event["details"]["input_hash"] == run["input_hash"]
+    assert recovery_event["details"]["run_status_before"] == "PROCESSING"
+    assert recovery_event["details"]["run_status_after"] == "FAILED"
+    assert recovery_event["details"]["failure_code"] == "RUN_INTERRUPTED"
+    assert recovery_event["details"]["result_disposition"] == "APPLIED"
+    assert recovery_event["details"]["decision_id"] == submitted["engine_decisions"][0]["decision_id"]
+    assert recovery_event["details"]["engine_decision_outcome"] == submitted["engine_decisions"][0]["outcome"]
     ignored_result = submitted["history"][-1]
     assert ignored_result["actor_type"] == "SYSTEM"
     assert ignored_result["actor_id"] is None
     assert (ignored_result["details"]["version"], ignored_result["details"]["round"]) == (1, 1)
+
+
+def test_postgres_recovery_without_version_snapshot_audits_missing_version_route(postgres_workflow):
+    state = postgres_workflow
+    factory = state["factory"]
+    maker_client = state["maker_client"]
+    checker = state["checker"]
+    plan = _create_plan(maker_client, checker.id, "PostgreSQL recovery without version snapshot")
+    plan_id = UUID(plan["id"])
+    correlation_id = f"missing-version-recovery-{uuid4().hex[:12]}"
+    run_id = f"RUN-MISSING-VERSION-{uuid4().hex[:12]}"
+    evaluation_id = f"EVAL-MISSING-VERSION-{uuid4().hex[:12]}"
+
+    with factory.begin() as session:
+        stored_plan = session.get(AuthWorkflowPlan, plan_id)
+        assert stored_plan is not None
+        stored_plan.status = "PENDING_APPROVAL"
+        stored_plan.processing_stage = "AI_PROCESSING"
+        stored_plan.current_version = 1
+        stored_plan.current_round = 1
+        session.add(AuthWorkflowEvaluationRun(
+            id=uuid4(),
+            plan_id=plan_id,
+            version_number=1,
+            round_number=1,
+            attempt_number=1,
+            run_id=run_id,
+            evaluation_id=evaluation_id,
+            idempotency_key=f"idempotency-{uuid4().hex}",
+            correlation_id=correlation_id,
+            input_hash="b" * 64,
+            provider="MOCK_VLM",
+            model_id="synthetic-model",
+            model_version="synthetic-version",
+            policy_version="synthetic-policy-v1",
+            policy_snapshot_id="synthetic-policy-v1",
+            policy_snapshot_hash="a" * 64,
+            policy_snapshot={},
+            status="PROCESSING",
+            attempts=1,
+            retried=False,
+            started_at=datetime.now(timezone.utc) - timedelta(minutes=3),
+        ))
+
+    with factory() as session:
+        workflow.recover_stale_evaluations(
+            session,
+            "missing-version-recovery-test",
+            age_seconds=120,
+            visible_plan_ids=(plan_id,),
+        )
+    with factory() as session:
+        workflow.recover_stale_evaluations(
+            session,
+            "missing-version-recovery-replay",
+            age_seconds=120,
+            visible_plan_ids=(plan_id,),
+        )
+
+    response = maker_client.get(f"/api/workflow/plans/{plan_id}")
+    assert response.status_code == 200, response.text
+    recovered = response.json()
+    assert recovered["status"] == "PENDING_APPROVAL"
+    assert recovered["processing_stage"] == "HUMAN_REVIEW_REQUIRED"
+    assert recovered["versions"] == []
+    recovery_event = next(
+        event for event in recovered["history"]
+        if event["action"] == "AI_RECOVERY_REVIEW_ROUTED"
+    )
+    assert recovery_event["actor_type"] == "SYSTEM"
+    assert recovery_event["actor_id"] is None
+    assert recovery_event["status_before"] == recovery_event["status_after"] == "PENDING_APPROVAL"
+    assert recovery_event["details"]["processing_stage_before"] == "AI_PROCESSING"
+    assert recovery_event["details"]["processing_stage_after"] == "HUMAN_REVIEW_REQUIRED"
+    assert recovery_event["details"]["result"] == "HUMAN_REVIEW_REQUIRED"
+    assert (recovery_event["details"]["version"], recovery_event["details"]["round"]) == (1, 1)
+    assert recovery_event["details"]["run_id"] == run_id
+    assert recovery_event["details"]["evaluation_id"] == evaluation_id
+    assert recovery_event["details"]["correlation_id"] == correlation_id
+    assert recovery_event["details"]["input_hash"] == "b" * 64
+    assert recovery_event["details"]["run_status_before"] == "PROCESSING"
+    assert recovery_event["details"]["run_status_after"] == "FAILED"
+    assert recovery_event["details"]["failure_code"] == "RUN_INTERRUPTED_SNAPSHOT_UNAVAILABLE"
+    assert recovery_event["details"]["result_disposition"] == "APPLIED"
+    assert "decision_id" not in recovery_event["details"]
+    assert "engine_decision_outcome" not in recovery_event["details"]
+    assert recovery_event["details"]["reason"] == "RUN_INTERRUPTED_SNAPSHOT_UNAVAILABLE"
+    assert sum(event["action"] == "AI_RECOVERY_REVIEW_ROUTED" for event in recovered["history"]) == 1
 
 
 def test_postgres_policy_conflict_persists_safe_attempt_provenance_and_routes_to_checker(postgres_workflow):

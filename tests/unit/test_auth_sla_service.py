@@ -332,6 +332,7 @@ def test_configuration_starts_unconfigured_and_is_revisioned_with_audit(db_facto
         assert all(event.created_at is not None for event in audit_events)
         assert all(event.action == "SLA_CONFIGURATION_UPDATED" for event in audit_events)
         assert all("audit_metadata" not in event.after_state for event in audit_events)
+        assert all(event.after_state["result"] == "SUCCESS" for event in audit_events)
 
 
 

@@ -22,6 +22,7 @@ from src.backend.application.approval_configuration import (
     get_round_configuration_snapshot,
     lock_configuration_registry,
 )
+from src.backend.application.checker_assignment_configuration import resolve_checker_assignment
 from src.backend.application.role_admin import effective_role_filter
 from src.backend.db.models import (
     AuthWorkflowAttachment,
@@ -132,6 +133,38 @@ def _validate_checker(
         _fail("VALIDATION_ERROR", "A Maker cannot be assigned to approve their own plan.", correlation_id)
     if _checker_user(session, checker_id) is None:
         _fail("VALIDATION_ERROR", "The selected Checker is not an active Checker account.", correlation_id)
+
+
+def _resolve_plan_checker_assignment(
+    session: Session,
+    principal: AuthenticatedPrincipal,
+    payload: dict[str, Any],
+    selected_checker_id: UUID | None,
+    effective_at: datetime,
+    correlation_id: str,
+    *,
+    lock_configuration: bool = False,
+):
+    department = payload.get("department")
+    assignment = resolve_checker_assignment(
+        session,
+        department if isinstance(department, str) else None,
+        principal.id,
+        selected_checker_id,
+        effective_at,
+        lock_eligible_checker=True,
+        lock_configuration=lock_configuration,
+    )
+    if (
+        selected_checker_id is not None
+        and (assignment.status != "CONFIGURED" or not assignment.eligible)
+    ):
+        _fail(
+            "VALIDATION_ERROR",
+            "The selected Checker is not allowed by the effective department assignment.",
+            correlation_id,
+        )
+    return assignment
 
 
 def _plan_or_404(session: Session, plan_id: UUID, correlation_id: str, *, lock: bool = False):
@@ -684,6 +717,11 @@ def create_plan(
                     _fail("IDEMPOTENCY_CONFLICT", "The draft request key was already used for different plan data.", correlation_id)
                 result = _plan_dict(session, existing)
             else:
+                checker_assignment = _resolve_plan_checker_assignment(
+                    session, principal, payload, checker_id, _now_datetime(), correlation_id,
+                    lock_configuration=True,
+                )
+                checker_id = checker_assignment.checker_id
                 _validate_checker(session, principal, checker_id, correlation_id)
                 plan_id = uuid4()
                 plan = AuthWorkflowPlan(
@@ -705,7 +743,12 @@ def create_plan(
                 _record_event(
                     session, plan_id=plan.id, actor_id=principal.id,
                     action="CREATED", status_before=None, status_after=plan.status,
-                    details={"code": plan.code}, actor_role="MAKER",
+                    details={
+                        "code": plan.code,
+                        "checker_id": str(plan.checker_id) if plan.checker_id else None,
+                        "checker_assignment_source": checker_assignment.source,
+                        "checker_assignment_revision": checker_assignment.configuration_revision,
+                    }, actor_role="MAKER",
                 )
                 session.flush()
                 session.refresh(plan)
@@ -745,11 +788,19 @@ def update_plan(
                 _fail("CONFLICT", "Submitted and approved plans are read-only.", correlation_id)
             if plan.revision != expected_revision:
                 _fail("CONFLICT", "The plan changed. Reload it before saving.", correlation_id)
+            current_payload = plan.payload or {}
+            previous_checker = plan.checker_id
+            department_changed = current_payload.get("department") != payload.get("department")
             next_checker = checker_id if update_checker else plan.checker_id
+            if not update_checker and department_changed:
+                next_checker = None
+            checker_assignment = _resolve_plan_checker_assignment(
+                session, principal, payload, next_checker, _now_datetime(), correlation_id,
+                lock_configuration=True,
+            )
+            next_checker = checker_assignment.checker_id
             _validate_checker(session, principal, next_checker, correlation_id)
             before = plan.status
-            previous_checker = plan.checker_id
-            current_payload = plan.payload or {}
             changed_fields = sorted(
                 key for key in set(current_payload) | set(payload)
                 if current_payload.get(key) != payload.get(key)
@@ -852,7 +903,6 @@ def submit_plan(
                 _fail("CONFLICT", "The plan changed. Reload it before submitting.", correlation_id)
             _validate_submission(plan.payload, correlation_id)
             lock_configuration_registry(session)
-            _validate_checker(session, principal, plan.checker_id, correlation_id, required=True)
             attachments = session.scalars(
                 select(AuthWorkflowAttachment)
                 .where(AuthWorkflowAttachment.plan_id == plan.id)
@@ -868,6 +918,37 @@ def submit_plan(
             sla_snapshot = start_round_snapshot(
                 session, plan=plan, started_at=submitted_at, correlation_id=correlation_id
             )
+            round_configuration_snapshot = capture_round_configuration_snapshot(
+                session,
+                plan_id=plan.id,
+                plan_version=plan.current_version,
+                approval_round=plan.current_round,
+                department_id=(
+                    plan.payload.get("department")
+                    if isinstance(plan.payload.get("department"), str)
+                    else None
+                ),
+                maker_id=plan.maker_id,
+                selected_checker_id=plan.checker_id,
+                effective_at=submitted_at,
+            )
+            checker_assignment = round_configuration_snapshot.checker_assignment
+            resolved_checker_id = checker_assignment.get("checker_id")
+            if (
+                checker_assignment.get("status") != "CONFIGURED"
+                or not checker_assignment.get("eligible")
+                or not isinstance(resolved_checker_id, str)
+            ):
+                _fail(
+                    "VALIDATION_ERROR",
+                    "A Checker assignment must be effective and eligible before submission.",
+                    correlation_id,
+                )
+            try:
+                plan.checker_id = UUID(resolved_checker_id)
+            except ValueError:
+                _fail("VALIDATION_ERROR", "The configured Checker assignment is invalid.", correlation_id)
+            _validate_checker(session, principal, plan.checker_id, correlation_id, required=True)
             plan.processing_stage = "AI_PENDING"
             plan.decision_reason = None
             plan.revision += 1
@@ -900,30 +981,6 @@ def submit_plan(
                 snapshot_hash=snapshot_hash,
                 submitted_by=principal.id,
             ))
-            round_configuration_snapshot = capture_round_configuration_snapshot(
-                session,
-                plan_id=plan.id,
-                plan_version=plan.current_version,
-                approval_round=plan.current_round,
-                department_id=(
-                    plan.payload.get("department")
-                    if isinstance(plan.payload.get("department"), str)
-                    else None
-                ),
-                maker_id=plan.maker_id,
-                selected_checker_id=plan.checker_id,
-                effective_at=submitted_at,
-            )
-            checker_assignment = round_configuration_snapshot.checker_assignment
-            if (
-                not checker_assignment.get("eligible")
-                or checker_assignment.get("checker_id") != str(plan.checker_id)
-            ):
-                _fail(
-                    "VALIDATION_ERROR",
-                    "The configured Checker assignment is not eligible for this round.",
-                    correlation_id,
-                )
             configuration = apply_round_configuration_snapshot(
                 configuration, round_configuration_snapshot,
             )
@@ -1463,6 +1520,9 @@ def recover_stale_evaluations(
                     AuthWorkflowVersion.plan_id == plan.id,
                     AuthWorkflowVersion.round_number == run.round_number,
                 ))
+                recovery_status_before = plan.status
+                recovery_stage_before = plan.processing_stage
+                recovery_run_status_before = run.status
                 failure_reason = "AI evaluation was interrupted; Checker review is required."
                 if version is None:
                     run.status = "FAILED"
@@ -1474,10 +1534,24 @@ def recover_stale_evaluations(
                     plan.revision += 1
                     _record_event(
                         session, plan_id=plan.id, actor_id=None, actor_type="SYSTEM",
-                        action="AI_RECOVERY_REVIEW_ROUTED", status_before=plan.status,
+                        action="AI_RECOVERY_REVIEW_ROUTED", status_before=recovery_status_before,
                         status_after=plan.status,
-                        details={"round": run.round_number, "run_id": run.run_id,
-                                 "reason": run.failure_reason},
+                        result="HUMAN_REVIEW_REQUIRED",
+                        details={
+                            "version": run.version_number,
+                            "round": run.round_number,
+                            "run_id": run.run_id,
+                            "evaluation_id": run.evaluation_id,
+                            "correlation_id": run.correlation_id,
+                            "input_hash": run.input_hash,
+                            "run_status_before": recovery_run_status_before,
+                            "run_status_after": run.status,
+                            "failure_code": run.failure_reason,
+                            "result_disposition": run.result_disposition,
+                            "processing_stage_before": recovery_stage_before,
+                            "processing_stage_after": plan.processing_stage,
+                            "reason": run.failure_reason,
+                        },
                     )
                     continue
 
@@ -1538,7 +1612,11 @@ def recover_stale_evaluations(
                     "round": run.round_number,
                     "run_id": run.run_id,
                     "evaluation_id": run.evaluation_id,
+                    "correlation_id": run.correlation_id,
+                    "run_status_before": recovery_run_status_before,
                     "input_hash": run.input_hash,
+                    "processing_stage_before": recovery_stage_before,
+                    "processing_stage_after": plan.processing_stage,
                     "reason": failure_reason,
                 }
                 for column in ("media_evaluation", "strategy_evaluation"):
@@ -1567,10 +1645,15 @@ def recover_stale_evaluations(
                     run.failure_reason = "RUN_INTERRUPTED_DECISION_POLICY_ERROR"
                     run.evaluation = failure.evaluation
                     run.visual_extraction = failure.visual_extraction
+                details["run_status_after"] = run.status
+                details["failure_code"] = run.failure_reason
+                details["result_disposition"] = run.result_disposition
+                if bundle is not None:
+                    details["engine_decision_outcome"] = bundle.decision.outcome
                 _record_event(
                     session, plan_id=plan.id, actor_id=None, actor_type="SYSTEM",
-                    action="AI_RECOVERY_REVIEW_ROUTED", status_before=plan.status,
-                    status_after=plan.status, details=details,
+                    action="AI_RECOVERY_REVIEW_ROUTED", status_before=recovery_status_before,
+                    status_after=plan.status, result="HUMAN_REVIEW_REQUIRED", details=details,
                 )
         except IntegrityError:
             session.rollback()
