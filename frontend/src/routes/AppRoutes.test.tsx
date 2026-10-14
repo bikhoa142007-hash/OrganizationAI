@@ -12,6 +12,8 @@ import {
   type ConfigurationRevision,
 } from '../services/approvalConfiguration'
 import { SessionProvider } from '../services/SessionProvider'
+import { ServicesProvider } from '../services/ServiceProvider'
+import { createApiServices } from '../services/api'
 import type { WorkflowPayload, WorkflowPlan } from '../types/authWorkflow'
 import { AppRoutes } from './AppRoutes'
 
@@ -34,7 +36,7 @@ const admin = {
 const adminMaker = { ...admin, id: 'admin-maker-id', username: 'admin.maker', roles: ['ADMIN', 'MAKER'] }
 
 function renderApplication(path = '/') {
-  return render(<MemoryRouter initialEntries={[path]}><SessionProvider><AuthProvider><AppRoutes /></AuthProvider></SessionProvider></MemoryRouter>)
+  return render(<MemoryRouter initialEntries={[path]}><ServicesProvider services={createApiServices()}><SessionProvider><AuthProvider><AppRoutes /></AuthProvider></SessionProvider></ServicesProvider></MemoryRouter>)
 }
 
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals() })
@@ -43,6 +45,16 @@ beforeEach(() => {
 })
 
 describe('Auth-first route entry', () => {
+  it('exposes the public Challenge A Judge without Auth or Demo gating', async () => {
+    const loadPrincipal = vi.spyOn(authService, 'me')
+
+    renderApplication('/challenge-a')
+
+    expect(await screen.findByRole('heading', { name: 'Verify workflow' })).toBeVisible()
+    expect(screen.getByText('Judge công khai, không cần tạo tài khoản')).toBeVisible()
+    expect(loadPrincipal).not.toHaveBeenCalled()
+  })
+
   it('protects approval configuration with the Admin role', async () => {
     vi.spyOn(authService, 'me').mockResolvedValue(maker)
     const deniedLoad = vi.spyOn(approvalConfigurationService, 'current')
