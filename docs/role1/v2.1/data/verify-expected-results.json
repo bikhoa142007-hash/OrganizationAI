@@ -1,0 +1,25 @@
+{
+  "sources": [
+    {
+      "file": "scope-phase-1.md",
+      "original_path": "C:\\Users\\Admin\\Downloads\\scope-phase-1.md",
+      "snapshot": "sources/scope-phase-1.md",
+      "sha256": "c952d35596a9053a3bb5800dd3be37e1d0081293b7a3068e48bf962efbadf69f",
+      "size_bytes": 69555,
+      "read_status": "READ",
+      "source_role": "PRODUCT_BASELINE"
+    },
+    {
+      "file": "sprint-1-deliverables.md",
+      "original_path": "C:\\Users\\Admin\\Downloads\\sprint-1-deliverables.md",
+      "snapshot": "sources/sprint-1-deliverables.md",
+      "sha256": "41e12255f316333c5649b860a2a59a109664c15e51d577f4a95641a379286d0b",
+      "size_bytes": 18372,
+      "read_status": "READ",
+      "source_role": "SPRINT_SUBSET"
+    }
+  ],
+  "original_role_allocation_status": "NOT_FOUND_AT_PREVIOUS_PATH",
+  "prior_role_package": "outputs/role1-package",
+  "notes": "Prior package is assistant-authored secondary material, not primary approval authority."
+}

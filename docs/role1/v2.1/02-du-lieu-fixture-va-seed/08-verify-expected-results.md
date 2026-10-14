@@ -1,6 +1,6 @@
 # 07 · Năm đầu vào Verify và hướng dẫn chạy
 
-> **Sửa v2.1:** GT-007/008/009 và VERIFY-A04 giữ FACT_UNCERTAIN; thêm dữ kiện có cấu trúc trong input.fact_verification. Đây là **extension fixture đề xuất**, chưa xác minh schema WP1/WP2 thực tế. Không tự coi thêm field vào JSON là engine đã hỗ trợ. Xem [hướng dẫn mapping](19-wp1-wp2-mapping-and-regression.md) trước khi import.
+> **Sửa v2.1:** GT-007/008/009 và VERIFY-A04 giữ FACT_UNCERTAIN; thêm dữ kiện có cấu trúc trong input.fact_verification. Đây là **extension fixture đề xuất**, chưa xác minh schema WP1/WP2 thực tế. Không tự coi thêm field vào JSON là engine đã hỗ trợ. Xem [hướng dẫn mapping](../05-truy-vet-thay-doi-va-regression/19-wp1-wp2-mapping-and-regression.md) trước khi import.
 
 > Bộ Role 1 · Bản 2.1 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1.
 > Trạng thái: bản soạn để review; không phải xác nhận PO đã phê duyệt hoặc ứng dụng đã chạy đạt.
@@ -23,7 +23,7 @@ Verify là bộ 5 input nhỏ để kiểm nhất quán của decision engine; h
 
 ## 2. Dữ liệu đầu vào
 
-[verify-inputs.json](../../../tests/fixtures/ba/v2.1/verify-inputs.json) có 5 input đầy đủ; [base-policy.json](../../../tests/fixtures/ba/v2.1/base-policy.json) là cấu hình demo tương ứng. Actual chưa có. Input giữ loại trường của file 12/16: context + plan_snapshot + policy_snapshot + agent_outputs + conflict/error metadata + input_hash.
+[verify-inputs.json](../data/verify-inputs.json) có 5 input đầy đủ; [base-policy.json](../data/base-policy.json) là cấu hình demo tương ứng. Actual chưa có. Input giữ loại trường của file 12/16: context + plan_snapshot + policy_snapshot + agent_outputs + conflict/error metadata + input_hash.
 
 VERIFY-A04 form budget 50.000.000 VND, ảnh chứa 120m và 180m, confidence 0.61; đây là uncertainty sau submit, không phải thiếu required field. VERIFY-A05 budget 100.000.001 VND vượt limit 100.000.000 VND; không liên quan chức danh.
 

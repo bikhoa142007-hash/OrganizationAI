@@ -1,6 +1,6 @@
 # 08 · Nhãn kỳ vọng Verify và quy tắc so sánh
 
-> **Sửa v2.1:** GT-007/008/009 và VERIFY-A04 giữ FACT_UNCERTAIN; thêm dữ kiện có cấu trúc trong input.fact_verification. Đây là **extension fixture đề xuất**, chưa xác minh schema WP1/WP2 thực tế. Không tự coi thêm field vào JSON là engine đã hỗ trợ. Xem [hướng dẫn mapping](19-wp1-wp2-mapping-and-regression.md) trước khi import.
+> **Sửa v2.1:** GT-007/008/009 và VERIFY-A04 giữ FACT_UNCERTAIN; thêm dữ kiện có cấu trúc trong input.fact_verification. Đây là **extension fixture đề xuất**, chưa xác minh schema WP1/WP2 thực tế. Không tự coi thêm field vào JSON là engine đã hỗ trợ. Xem [hướng dẫn mapping](../05-truy-vet-thay-doi-va-regression/19-wp1-wp2-mapping-and-regression.md) trước khi import.
 
 > Bộ Role 1 · Bản 2.1 · Ngày 21/09/2026 · Phạm vi: tài liệu nghiệp vụ và evaluation cho Sprint 1.
 > Trạng thái: bản soạn để review; không phải xác nhận PO đã phê duyệt hoặc ứng dụng đã chạy đạt.
@@ -19,7 +19,7 @@
 | VERIFY-A04 | HUMAN_REVIEW_REQUIRED | PENDING_APPROVAL | null | FACT_UNCERTAIN | NOT_RUN |
 | VERIFY-A05 | HUMAN_REVIEW_REQUIRED | PENDING_APPROVAL | null | AUTHORITY_EXCEEDED | NOT_RUN |
 
-**Phân bổ dự kiến:** 3 auto, 2 human. Đây là nội dung expected, không phải “đã chạy đạt 3 auto/2 human”. Kết quả từng trường đầy đủ tại [verify-expected-results.json](../../../tests/fixtures/ba/v2.1/verify-expected-results.json).
+**Phân bổ dự kiến:** 3 auto, 2 human. Đây là nội dung expected, không phải “đã chạy đạt 3 auto/2 human”. Kết quả từng trường đầy đủ tại [verify-expected-results.json](../data/verify-expected-results.json).
 
 ## 2. Giải thích từng ca
 

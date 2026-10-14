@@ -25,7 +25,7 @@ Base-policy bytes, mọi policy_snapshot, scores/weights, confidence VLM/Media/S
 
 ## Diff từng field
 
-JSON Pointer trỏ vào root của từng file. ABSENT nghĩa chưa có field, khác null. Giá trị dưới đây lấy từ diff tự động, không gõ lại. Object mới được tách đến leaf; danh sách bị thay được ghi nguyên before/after. Bản machine-readable gồm các patch đầy đủ tại [changes-v2.1.json](../archive/v2.1/data/changes-v2.1.json).
+JSON Pointer trỏ vào root của từng file. ABSENT nghĩa chưa có field, khác null. Giá trị dưới đây lấy từ diff tự động, không gõ lại. Object mới được tách đến leaf; danh sách bị thay được ghi nguyên before/after. Bản machine-readable gồm các patch đầy đủ tại [changes-v2.1.json](../data/changes-v2.1.json).
 
 ### data/fixture-manifest.json
 
@@ -279,7 +279,7 @@ JSON Pointer trỏ vào root của từng file. ABSENT nghĩa chưa có field, k
 - Các tài liệu root đồng bộ route spelling/revision; 05 thay hẳn ba card để không có dữ liệu cũ mâu thuẫn; 08 sửa A04; các contract/seed/test docs bổ sung hướng dẫn.
 - PDF có sẵn chuyển vào legacy/ với README, giữ nguyên bytes, không dùng làm oracle v2.1.
 
-Chi tiết thay đổi văn bản cũ có tại [docs-v2.1.diff](../archive/v2.1/changes/docs-v2.1.diff). Đây không phải patch code engine. Tổng field leaf-level changes ghi trong bảng: 216.
+Chi tiết thay đổi văn bản cũ có tại [docs-v2.1.diff](../changes/docs-v2.1.diff). Đây không phải patch code engine. Tổng field leaf-level changes ghi trong bảng: 216.
 
 ## Điều kiện nghiệm thu
 

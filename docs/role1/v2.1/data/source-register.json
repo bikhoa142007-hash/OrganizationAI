@@ -1,0 +1,47 @@
+[
+  {
+    "fixture_key": "MOCK_PASS",
+    "mode": "MOCK",
+    "source_case": "GT-001",
+    "fault": null,
+    "expected_route": "AUTO_APPROVED",
+    "note": "Chỉ auto khi mọi gate khác đạt; không bypass Decision Engine."
+  },
+  {
+    "fixture_key": "MOCK_LOW_CONFIDENCE",
+    "mode": "MOCK",
+    "source_case": "GT-009",
+    "fault": null,
+    "expected_route": "HUMAN_REVIEW_REQUIRED",
+    "note": "Không rollback submit; giữ evidence."
+  },
+  {
+    "fixture_key": "MOCK_TIMEOUT",
+    "mode": "MOCK",
+    "source_case": "GT-001",
+    "fault": {
+      "component": "LOCAL_VLM",
+      "type": "TIMEOUT",
+      "valid_result_returned": false
+    },
+    "expected_route": "HUMAN_REVIEW_REQUIRED",
+    "expected_processing_stage": "AI_PROCESSING_FAILED",
+    "note": "Không tự fallback PASS sau timeout; fault qua test config."
+  },
+  {
+    "fixture_key": "MOCK_INVALID_OUTPUT",
+    "mode": "MOCK",
+    "source_case": "GT-001",
+    "fault": {
+      "component": "LOCAL_VLM",
+      "type": "OMIT_REQUIRED_FIELDS",
+      "omit": [
+        "confidence",
+        "model_version"
+      ]
+    },
+    "expected_route": "HUMAN_REVIEW_REQUIRED",
+    "expected_processing_stage": "AI_PROCESSING_FAILED",
+    "note": "Biến thể bổ sung cho ST-11; output invalid không thể tự duyệt."
+  }
+]

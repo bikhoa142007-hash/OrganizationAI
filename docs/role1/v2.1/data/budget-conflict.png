@@ -1,0 +1,44 @@
+{
+  "status": "NOT_VERIFIED",
+  "reason": "Actual WP1/WP2 schema, adapter and policy engine source are not present in the supplied ZIP or available workspace.",
+  "runtime_outcome_catalog": [
+    "AUTO_APPROVED",
+    "HUMAN_REVIEW_REQUIRED"
+  ],
+  "no_runtime_catalog_change": true,
+  "proposal_schema": "role1.fact-verification/1.0-proposed",
+  "deployment_gate": "Do not claim compatibility or deploy an invented mapping. Confirm against actual WP1/WP2 before application import.",
+  "mappings_to_confirm": [
+    {
+      "fixture_pointer": "/input/fact_verification/verification_status",
+      "wp_target_pointer": null,
+      "status": "PENDING_ACTUAL_CONTRACT"
+    },
+    {
+      "fixture_pointer": "/input/fact_verification/issues",
+      "wp_target_pointer": null,
+      "status": "PENDING_ACTUAL_CONTRACT"
+    },
+    {
+      "fixture_pointer": "/input/agent_outputs/vlm/evidence",
+      "wp_target_pointer": null,
+      "status": "PENDING_ACTUAL_CONTRACT"
+    },
+    {
+      "fixture_pointer": "/expected/primary_category",
+      "wp_output_pointer": null,
+      "status": "PENDING_ACTUAL_CONTRACT"
+    }
+  ],
+  "expected_engine_behavior_reported_by_user": {
+    "current_category": "POLICY_OUT_OF_SCOPE",
+    "media_interpretation": "MEDIA_PASS"
+  },
+  "application_regression_execution": "NOT_RUN",
+  "safe_mapping_requirements": [
+    "Validate actual WP1/WP2 enum and required fields before dispatch.",
+    "Preserve all issue fields, source values, evidence refs and unresolved status.",
+    "Do not read expected/case ID/filename as decision data.",
+    "If required uncertainty cannot be represented, stop integration validation and report an unmapped contract field; do not silently send MEDIA_PASS-only data."
+  ]
+}

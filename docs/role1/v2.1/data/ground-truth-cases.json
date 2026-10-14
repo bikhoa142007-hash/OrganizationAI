@@ -1,0 +1,99 @@
+{
+  "dataset_version": "ROLE1-DEMO-V2.1",
+  "classification": "SYNTHETIC",
+  "app_execution_status": "NOT_RUN",
+  "images": [
+    {
+      "path": "data/fixtures/creative-pass.png",
+      "sha256": "db5193a49b36567a2be1edfd16135beebe4d6144dc4442726b3163de56c47c90",
+      "size_bytes": 41493,
+      "width": 1280,
+      "height": 720,
+      "mime_type": "image/png",
+      "contains_real_personal_data": false
+    },
+    {
+      "path": "data/fixtures/budget-conflict.png",
+      "sha256": "6f0c5dc2a9edc284c4ca3ed9dc5156dcafd69ef5e925a0911c0b3b93c258931d",
+      "size_bytes": 44998,
+      "width": 1280,
+      "height": 720,
+      "mime_type": "image/png",
+      "contains_real_personal_data": false
+    },
+    {
+      "path": "data/fixtures/kpi-conflict.png",
+      "sha256": "13c73ad43b335d29efbe7331a10c9a18a77f031f1000ff4ca6f789559afda5dd",
+      "size_bytes": 48254,
+      "width": 1280,
+      "height": 720,
+      "mime_type": "image/png",
+      "contains_real_personal_data": false
+    },
+    {
+      "path": "data/fixtures/creative-low-quality.png",
+      "sha256": "4eb86ba25a3dcd82f00b533e3fc072d3e60b5812321a7a41f97a2416f137b1ae",
+      "size_bytes": 108531,
+      "width": 1280,
+      "height": 720,
+      "mime_type": "image/png",
+      "contains_real_personal_data": false
+    },
+    {
+      "path": "data/fixtures/scope-missing.png",
+      "sha256": "c588d0138629b3717c0898d4eeba07d67a9510fc6cceef6c42c90fe2d2061878",
+      "size_bytes": 46469,
+      "width": 1280,
+      "height": 720,
+      "mime_type": "image/png",
+      "contains_real_personal_data": false
+    },
+    {
+      "path": "data/fixtures/hard-claim-demo.png",
+      "sha256": "ca08398eb4e67de272cae08982bf70814d2577019566084832f52be19a72f2e7",
+      "size_bytes": 45850,
+      "width": 1280,
+      "height": 720,
+      "mime_type": "image/png",
+      "contains_real_personal_data": false
+    },
+    {
+      "path": "data/fixtures/synthetic-private-demo.png",
+      "sha256": "3e87fb31cd011af3ae93626ec04d5bb98a9bb66dd79e25d05b35248bf1dfa745",
+      "size_bytes": 43296,
+      "width": 1280,
+      "height": 720,
+      "mime_type": "image/png",
+      "contains_real_personal_data": false
+    }
+  ],
+  "files": [
+    {
+      "path": "data/base-policy.json",
+      "sha256": "94ffd06c66d4df4bade1275f46ff33fe0b274e20ea5156f561144e97b66464bb"
+    },
+    {
+      "path": "data/ground-truth-cases.json",
+      "sha256": "d7ccf17e7cf974b17209569309d4e1abd3dcca321b850e74f66beb7d908c43e0"
+    },
+    {
+      "path": "data/verify-inputs.json",
+      "sha256": "9a6740620ba714383660b0438fb324529c93b95955bba73646aff16085de8b41"
+    },
+    {
+      "path": "data/verify-expected-results.json",
+      "sha256": "0e109a6c64f2fc1473076ae6083e053ef385c61ec89388500814e10d8ca123bd"
+    },
+    {
+      "path": "data/fact-verification.schema.json",
+      "sha256": "bbf6a148c7d998400aba8e1f719ebd205f837e633eefedc9342077da80e50f38"
+    },
+    {
+      "path": "data/wp1-wp2-mapping-status.json",
+      "sha256": "18adbaac2a0e806f25fdaa8e447ef6ee4c5776309dd6661a7915d8895856dee5"
+    }
+  ],
+  "artifact_revision": "2.1",
+  "business_policy_version_unchanged": "2.0",
+  "wp1_wp2_compatibility_status": "NOT_VERIFIED"
+}

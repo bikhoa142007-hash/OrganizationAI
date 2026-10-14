@@ -1,0 +1,36 @@
+{
+  "policy_id": "DEMO-POLICY-V2",
+  "version": "2.0",
+  "data_classification": "SYNTHETIC",
+  "approval_status": "PROPOSED_NOT_PO_SIGNED",
+  "mode": "CONTROLLED_AUTO_APPROVAL",
+  "enabled": true,
+  "effective_from": "2026-10-01T00:00:00Z",
+  "effective_to": "2026-12-31T23:59:59Z",
+  "score_threshold": 70,
+  "score_operator": ">",
+  "vlm_confidence_threshold": 0.85,
+  "media_confidence_threshold": 0.85,
+  "media_confidence_gate_status": "PROPOSED_OQ_01",
+  "strategy_confidence_threshold": 0.8,
+  "criteria_weights": {
+    "objective": 15,
+    "audience": 15,
+    "channel": 15,
+    "timeline": 15,
+    "kpi": 15,
+    "budget_efficiency": 15,
+    "risk_control": 10
+  },
+  "content_policy_ref": "DEMO-CONTENT-V2",
+  "limit_snapshot": {
+    "id": "DEMO-LIMIT-V2",
+    "version": "2.0",
+    "amount_vnd": 100000000,
+    "currency": "VND",
+    "scope_department_id": "DEMO-DEPT-01",
+    "effective_from": "2026-10-01T00:00:00Z",
+    "effective_to": "2026-12-31T23:59:59Z",
+    "data_classification": "SYNTHETIC"
+  }
+}

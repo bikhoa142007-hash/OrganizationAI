@@ -1,0 +1,142 @@
+[
+  {
+    "id": "VERIFY-A01",
+    "expected": {
+      "route": "AUTO_APPROVED",
+      "business_status": "APPROVED",
+      "processing_stage": "AI_AUTO_APPROVED",
+      "final_decision": "APPROVED",
+      "decision_source": "AI_AUTO_APPROVAL",
+      "primary_category": null,
+      "required_reason_codes": [],
+      "hard_violation_auto_reject_allowed": false,
+      "assigned_checker_id": "DEMO-CHECKER-01",
+      "question_required": false,
+      "question_example": null,
+      "expected_app_execution_status": "NOT_RUN"
+    },
+    "actual": null,
+    "execution_status": "NOT_RUN"
+  },
+  {
+    "id": "VERIFY-A02",
+    "expected": {
+      "route": "AUTO_APPROVED",
+      "business_status": "APPROVED",
+      "processing_stage": "AI_AUTO_APPROVED",
+      "final_decision": "APPROVED",
+      "decision_source": "AI_AUTO_APPROVAL",
+      "primary_category": null,
+      "required_reason_codes": [],
+      "hard_violation_auto_reject_allowed": false,
+      "assigned_checker_id": "DEMO-CHECKER-01",
+      "question_required": false,
+      "question_example": null,
+      "expected_app_execution_status": "NOT_RUN"
+    },
+    "actual": null,
+    "execution_status": "NOT_RUN"
+  },
+  {
+    "id": "VERIFY-A03",
+    "expected": {
+      "route": "AUTO_APPROVED",
+      "business_status": "APPROVED",
+      "processing_stage": "AI_AUTO_APPROVED",
+      "final_decision": "APPROVED",
+      "decision_source": "AI_AUTO_APPROVAL",
+      "primary_category": null,
+      "required_reason_codes": [],
+      "hard_violation_auto_reject_allowed": false,
+      "assigned_checker_id": "DEMO-CHECKER-01",
+      "question_required": false,
+      "question_example": null,
+      "expected_app_execution_status": "NOT_RUN"
+    },
+    "actual": null,
+    "execution_status": "NOT_RUN"
+  },
+  {
+    "id": "VERIFY-A04",
+    "expected": {
+      "route": "HUMAN_REVIEW_REQUIRED",
+      "business_status": "PENDING_APPROVAL",
+      "processing_stage": "HUMAN_REVIEW_REQUIRED",
+      "final_decision": null,
+      "decision_source": null,
+      "primary_category": "FACT_UNCERTAIN",
+      "required_reason_codes": [
+        "VLM_LOW_CONFIDENCE",
+        "UNRESOLVED_CONFLICT"
+      ],
+      "hard_violation_auto_reject_allowed": false,
+      "assigned_checker_id": "DEMO-CHECKER-01",
+      "question_required": true,
+      "question_example": "Form ghi 50.000.000 VND, ảnh nêu phương án A 120.000.000 và B 180.000.000 VND. Hãy đối chiếu E-GT-007 và xác định ngân sách chính thức. Nếu cần sửa hồ sơ, từ chối có lý do để Maker gửi phiên bản mới.",
+      "expected_app_execution_status": "NOT_RUN",
+      "rationale": "Ngân sách khai báo trong form là 50.000.000 VND, còn ảnh có hai phương án 120.000.000 và 180.000.000 VND. Chưa có bằng chứng lựa chọn phương án chính thức. Đây là xung đột giá trị budget_vnd, không phải thiếu mapping policy. Giữ form hợp lệ; không tự thay ngân sách bằng OCR.",
+      "policy_references": [
+        {
+          "source": "sources/scope-phase-1.md",
+          "reference": "BR-AI-10",
+          "supports": "Confidence thấp/kết quả thiếu phải chuyển Human Review."
+        },
+        {
+          "source": "sources/sprint-1-deliverables.md",
+          "reference": "§4: unresolved_conflict_count = 0",
+          "supports": "Conflict chưa giải quyết chặn auto; không chứng minh thiếu policy mapping."
+        },
+        {
+          "source": "04-escalation-policy.md",
+          "reference": "FACT_UNCERTAIN / precedence",
+          "supports": "Taxonomy kế thừa: fact chưa chắc được phân biệt với policy ngoài phạm vi."
+        },
+        {
+          "source": "18-fact-uncertainty-correction.md",
+          "reference": "R1-FIX-CONFLICT-01",
+          "supports": "Quy tắc dữ liệu fixture bổ sung; chưa phải rule ID runtime WP1/WP2."
+        }
+      ],
+      "explanation_requirements": {
+        "affected_fields": [
+          "budget_vnd"
+        ],
+        "issue_types": [
+          "CONFLICTING_VALUES"
+        ],
+        "required_evidence_refs": [
+          "E-GT-007"
+        ],
+        "required_factual_issue_refs": [
+          "ISSUE-GT-007-01"
+        ],
+        "must_describe_unresolved_fact": true,
+        "media_result_alone_is_insufficient": true,
+        "wp_runtime_code_mapping_status": "NOT_VERIFIED"
+      }
+    },
+    "actual": null,
+    "execution_status": "NOT_RUN"
+  },
+  {
+    "id": "VERIFY-A05",
+    "expected": {
+      "route": "HUMAN_REVIEW_REQUIRED",
+      "business_status": "PENDING_APPROVAL",
+      "processing_stage": "HUMAN_REVIEW_REQUIRED",
+      "final_decision": null,
+      "decision_source": null,
+      "primary_category": "AUTHORITY_EXCEEDED",
+      "required_reason_codes": [
+        "BUDGET_LIMIT_EXCEEDED"
+      ],
+      "hard_violation_auto_reject_allowed": false,
+      "assigned_checker_id": "DEMO-CHECKER-01",
+      "question_required": true,
+      "question_example": "100.000.001 VND vượt hạn mức tự động 100.000.000 VND đúng 1 VND. Checker được giao vui lòng thẩm định theo quyền hiện có.",
+      "expected_app_execution_status": "NOT_RUN"
+    },
+    "actual": null,
+    "execution_status": "NOT_RUN"
+  }
+]
