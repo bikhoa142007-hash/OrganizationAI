@@ -44,8 +44,7 @@ The request body is limited to 16 KiB. Unknown fields, including fixture/oracle/
 
 - Fixed suites return each real in-memory run's action, timestamp, input hash, reason, expected/actual route, pass/fail, evidence references, and escalation question. The suite does not retain a server-side run record.
 - New-input evaluation returns an `INPUT_EVALUATED` audit summary with completion timestamp, SHA-256 of canonical typed input, and reason. That summary is delivered in the immediate response only; no persistent audit/history exists for this public input path because the approved data contract forbids retention.
-- There is no server stop or undo endpoint. A browser timeout or disconnect means the result is unknown and does not prove server work stopped. The UI must not claim cancellation or reversal; there are no production side effects to reverse.
-- There is no user override in this test endpoint. Checker override behavior stays in the authenticated workflow and is outside the public Judge.
+- Current Challenge A scope does not specify a public stop/undo or override control; these are not acceptance Musts. This Judge path has no production side effects to reverse. A browser timeout or disconnect means the result is unknown, not cancellation. Do not claim cancellation, reversal, or Checker override through this route.
 - Standard public errors use `{code, message, correlation_id, http_status}` and do not include stack traces, submitted field values, or provider text.
 
 ## Local verification
