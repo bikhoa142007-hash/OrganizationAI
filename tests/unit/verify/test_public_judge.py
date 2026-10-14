@@ -1,4 +1,5 @@
 import json
+from threading import Event, Thread
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -147,6 +148,57 @@ def test_errors_follow_the_public_envelope_and_never_echo_arbitrary_body():
     assert response.json()["http_status"] == 422
     assert response.json()["correlation_id"]
     assert "secret-suite" not in response.text
+
+
+def test_health_remains_responsive_while_public_suite_is_paused(monkeypatch):
+    from fastapi import FastAPI
+    from src.verify import runner
+
+    entered = Event()
+    release = Event()
+
+    def paused_suite(_suite):
+        entered.set()
+        if not release.wait(timeout=5):
+            raise TimeoutError("synthetic paused suite was not released")
+        return []
+
+    monkeypatch.setattr(runner, "run_suite", paused_suite)
+    app = FastAPI()
+    app.include_router(router)
+
+    @app.get("/api/health")
+    async def health():
+        return {"status": "ok"}
+
+    suite_results = []
+    health_results = []
+    health_done = Event()
+
+    with TestClient(app) as client:
+        def run_judge_suite():
+            suite_results.append(client.post("/api/public/judge/runs", json={"suite": "general"}))
+
+        suite_thread = Thread(target=run_judge_suite, daemon=True)
+        suite_thread.start()
+        assert entered.wait(timeout=2), "suite did not reach the synthetic pause"
+
+        def request_health():
+            try:
+                health_results.append(client.get("/api/health"))
+            finally:
+                health_done.set()
+
+        health_thread = Thread(target=request_health, daemon=True)
+        health_thread.start()
+        responsive_while_paused = health_done.wait(timeout=1)
+        release.set()
+        suite_thread.join(timeout=2)
+        health_thread.join(timeout=2)
+
+    assert responsive_while_paused, "a paused public suite blocked the shared ASGI event loop"
+    assert suite_results and suite_results[0].status_code == 200
+    assert health_results and health_results[0].status_code == 200
 
 
 def test_public_router_has_only_the_two_post_run_routes():

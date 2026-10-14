@@ -16,6 +16,7 @@ from uuid import uuid4
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel, ValidationError
+from starlette.concurrency import run_in_threadpool
 
 from src.backend.api.errors import error_response
 from src.backend.api.public_judge_schemas import (
@@ -212,7 +213,7 @@ async def run_fixed_suite(request: Request):
         # The oracle and all case content remain server-owned in run_suite.
         from src.verify.runner import run_suite
 
-        source_rows = run_suite(body.suite)
+        source_rows = await run_in_threadpool(run_suite, body.suite)
     except Exception:
         return _error("UNAVAILABLE", "Judge suite could not complete.", 503, correlation_id)
 
