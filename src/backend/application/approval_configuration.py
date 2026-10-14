@@ -552,6 +552,7 @@ def create_configuration_revision(
                     "configuration_hash": revision.configuration_hash,
                     "effective_at": _iso_utc(effective_at),
                     "change_reason": change_reason.strip(),
+                    "result": "SUCCESS",
                 },
             ))
             session.flush()

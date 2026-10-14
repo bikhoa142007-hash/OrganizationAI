@@ -41,9 +41,11 @@ def _write_transaction(session: Session):
 
 def _audit(session: Session, actor_id: UUID, employee_id: UUID | None, action: str,
            before: dict[str, Any] | None, after: dict[str, Any] | None) -> None:
+    successful_state = dict(after) if after is not None else {}
+    successful_state["result"] = "SUCCESS"
     session.add(AdminAuditEvent(
         actor_id=actor_id, employee_id=employee_id, action=action,
-        before_state=before, after_state=after,
+        before_state=before, after_state=successful_state,
     ))
 
 

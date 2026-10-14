@@ -174,6 +174,12 @@ def test_admin_revision_requires_allowed_browser_origin_and_keeps_auto_approval_
     response = client.post("/api/workflow/configuration/approval_policy/revisions", json=body, headers={"Origin": "http://localhost"})
     assert response.status_code == 201
     assert response.json()["value"]["enabled"] is False
+    with factory() as session:
+        audit = session.scalar(select(AdminAuditEvent).where(
+            AdminAuditEvent.action == "WORKFLOW_CONFIG_REVISION_CREATED",
+        ))
+        assert audit is not None
+        assert audit.after_state["result"] == "SUCCESS"
 
 
 def test_concurrent_first_revision_has_exactly_one_winner(configuration_postgres):
@@ -388,16 +394,18 @@ def test_postgres_custom_role_crud_assignment_and_audit(configuration_postgres):
         assert {
             link.permission_code for link in persisted.permissions
         } == set(checker_permissions + ["MARKETING_HISTORY_READ"])
-        actions = session.scalars(
-            select(AdminAuditEvent.action)
+        audit_events = session.scalars(
+            select(AdminAuditEvent)
             .where(AdminAuditEvent.actor_id == admin.id)
             .order_by(AdminAuditEvent.created_at, AdminAuditEvent.id)
         ).all()
+        actions = [event.action for event in audit_events]
         assert actions == [
             "CUSTOM_ROLE_CREATED",
             "CUSTOM_ROLE_UPDATED",
             "EMPLOYEE_ROLES_REPLACED",
         ]
+        assert all(event.after_state["result"] == "SUCCESS" for event in audit_events)
 
 
 def test_postgres_role_admin_keeps_admin_grants_self_assignment_and_builtins_locked(
@@ -573,6 +581,8 @@ def test_postgres_checker_reassignment_audit_records_version_round_and_result(co
         assert event.details["result"] == "SUCCESS"
         assert event.details["previous_checker_id"] == str(departing_id)
         assert event.details["new_checker_id"] == str(replacement_id)
-        assert session.scalar(select(AdminAuditEvent.id).where(
+        employee_audit = session.scalar(select(AdminAuditEvent).where(
             AdminAuditEvent.action == "EMPLOYEE_DEACTIVATED",
-        )) is not None
+        ))
+        assert employee_audit is not None
+        assert employee_audit.after_state["result"] == "SUCCESS"

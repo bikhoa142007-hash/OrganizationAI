@@ -99,6 +99,7 @@ def test_employee_profile_can_exist_without_an_account_and_is_audited(admin_db):
         assert employee["employment_status"] == "ACTIVE"
         audit = session.scalar(select(AdminAuditEvent).where(AdminAuditEvent.action == "EMPLOYEE_CREATED"))
         assert audit is not None and audit.employee_id == UUID(employee["id"])
+        assert audit.after_state["result"] == "SUCCESS"
 
 
 def test_account_activation_and_reset_links_are_single_use_and_never_store_raw_token(admin_db):
