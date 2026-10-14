@@ -949,6 +949,7 @@ def submit_plan(
             except ValueError:
                 _fail("VALIDATION_ERROR", "The configured Checker assignment is invalid.", correlation_id)
             _validate_checker(session, principal, plan.checker_id, correlation_id, required=True)
+            processing_stage_before = plan.processing_stage
             plan.processing_stage = "AI_PENDING"
             plan.decision_reason = None
             plan.revision += 1
@@ -1046,6 +1047,8 @@ def submit_plan(
                     "policy_snapshot_hash": policy_snapshot_hash,
                     "round_configuration_snapshot_id": str(round_configuration_snapshot.snapshot_id),
                     "round_configuration_snapshot_hash": round_configuration_snapshot.snapshot_hash,
+                    "processing_stage_before": processing_stage_before,
+                    "processing_stage_after": plan.processing_stage,
                 },
             )
             _record_notification(
@@ -1219,6 +1222,7 @@ def evaluate_submission(
                 run.attempts = 0
                 run.retried = False
                 run.started_at = _now_datetime()
+                processing_stage_before = plan.processing_stage
                 plan.processing_stage = "AI_PROCESSING"
                 plan.revision += 1
                 _record_event(
@@ -1233,6 +1237,8 @@ def evaluate_submission(
                         "input_hash": run.input_hash,
                         "provider": run.provider,
                         "model_version": run.model_version,
+                        "processing_stage_before": processing_stage_before,
+                        "processing_stage_after": plan.processing_stage,
                     },
                 )
                 session.flush()
@@ -1348,6 +1354,7 @@ def evaluate_submission(
                 run.failure_reason = "Decision policy could not complete; Checker review is required."
                 run.result_disposition = "APPLIED"
                 run.completed_at = _now_datetime()
+                processing_stage_before = plan.processing_stage
                 plan.processing_stage = "HUMAN_REVIEW_REQUIRED"
                 plan.decision_reason = run.failure_reason
                 plan.revision += 1
@@ -1362,6 +1369,8 @@ def evaluate_submission(
                         "run_id": run.run_id,
                         "evaluation_id": run.evaluation_id,
                         "reason": run.failure_reason,
+                        "processing_stage_before": processing_stage_before,
+                        "processing_stage_after": plan.processing_stage,
                     },
                 )
                 session.flush()
@@ -1418,6 +1427,8 @@ def evaluate_submission(
                     "evaluation_status": run.status,
                     "failure_reason": run.failure_reason,
                     "result_summary": _audit_evaluation_summary(evaluation, decision),
+                    "processing_stage_before": before_stage,
+                    "processing_stage_after": plan.processing_stage,
                 },
             )
             _record_event(
@@ -1434,6 +1445,8 @@ def evaluate_submission(
                     "policy_version": run.policy_version,
                     "policy_snapshot_hash": run.policy_snapshot_hash,
                     "input_hash": run.input_hash,
+                    "processing_stage_before": before_stage,
+                    "processing_stage_after": plan.processing_stage,
                 },
             )
             if bundle.decision.outcome == "AUTO_APPROVED":

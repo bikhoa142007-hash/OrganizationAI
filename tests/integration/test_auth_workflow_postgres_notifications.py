@@ -865,7 +865,18 @@ def test_postgres_notification_lifecycle_permissions_replay_and_rollback(postgre
     assert lifecycle_events[0]["details"]["actor_role"] == "MAKER"
     assert lifecycle_events[2]["details"]["actor_role"] == "MAKER"
     assert (lifecycle_events[2]["details"]["version"], lifecycle_events[2]["details"]["round"]) == (1, 1)
+    queued_event = next(event for event in lifecycle_events if event["action"] == "AI_EVALUATION_QUEUED")
+    started_event = next(event for event in lifecycle_events if event["action"] == "AI_EVALUATION_STARTED")
     evaluation_event = next(event for event in lifecycle_events if event["action"] == "AI_EVALUATION_COMPLETED")
+    routed_event = next(event for event in lifecycle_events if event["action"] == "AI_REVIEW_ROUTED")
+    assert queued_event["details"]["processing_stage_before"] == "DRAFT"
+    assert queued_event["details"]["processing_stage_after"] == "AI_PENDING"
+    assert started_event["details"]["processing_stage_before"] == "AI_PENDING"
+    assert started_event["details"]["processing_stage_after"] == "AI_PROCESSING"
+    assert evaluation_event["details"]["processing_stage_before"] == "AI_PROCESSING"
+    assert evaluation_event["details"]["processing_stage_after"] == "HUMAN_REVIEW_REQUIRED"
+    assert routed_event["details"]["processing_stage_before"] == "AI_PROCESSING"
+    assert routed_event["details"]["processing_stage_after"] == "HUMAN_REVIEW_REQUIRED"
     assert evaluation_event["details"]["result"] == submitted["ai_evaluations"][0]["status"]
     assert evaluation_event["details"]["result_summary"]["status"] == submitted["ai_evaluations"][0]["status"]
     assert "PRIVATE-OBJECTIVE-DO-NOT-LEAK" not in json.dumps(lifecycle_events)
@@ -934,6 +945,13 @@ def test_postgres_notification_lifecycle_permissions_replay_and_rollback(postgre
     assert updated.status_code == 200, updated.text
     resubmitted = _upload_and_submit(maker_client, updated.json())
     assert resubmitted["current_version"] == resubmitted["current_round"] == 2
+    resubmission_queue = next(
+        event for event in resubmitted["history"]
+        if event["action"] == "AI_EVALUATION_QUEUED"
+        and (event["details"]["version"], event["details"]["round"]) == (2, 2)
+    )
+    assert resubmission_queue["details"]["processing_stage_before"] == "COMPLETED"
+    assert resubmission_queue["details"]["processing_stage_after"] == "AI_PENDING"
     next_checker_notices = next_checker_client.get("/api/workflow/notifications").json()
     assert next_checker_notices["total"] == 1
     assert next_checker_notices["items"][0]["event_type"] == "PLAN_SUBMITTED"

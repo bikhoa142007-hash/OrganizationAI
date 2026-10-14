@@ -864,7 +864,18 @@ def test_maker_submits_and_only_assigned_checker_can_approve(workflow_client):
     assert submitted["ai_evaluations"][0]["attempts"] == 1
     assert submitted["ai_evaluations"][0]["retried"] is False
     assert submitted["engine_decisions"][0]["outcome"] == "HUMAN_REVIEW_REQUIRED"
+    queued_event = next(event for event in submitted["history"] if event["action"] == "AI_EVALUATION_QUEUED")
+    started_event = next(event for event in submitted["history"] if event["action"] == "AI_EVALUATION_STARTED")
     evaluation_event = next(event for event in submitted["history"] if event["action"] == "AI_EVALUATION_COMPLETED")
+    routed_event = next(event for event in submitted["history"] if event["action"] == "AI_REVIEW_ROUTED")
+    assert queued_event["details"]["processing_stage_before"] == "DRAFT"
+    assert queued_event["details"]["processing_stage_after"] == "AI_PENDING"
+    assert started_event["details"]["processing_stage_before"] == "AI_PENDING"
+    assert started_event["details"]["processing_stage_after"] == "AI_PROCESSING"
+    assert evaluation_event["details"]["processing_stage_before"] == "AI_PROCESSING"
+    assert evaluation_event["details"]["processing_stage_after"] == "HUMAN_REVIEW_REQUIRED"
+    assert routed_event["details"]["processing_stage_before"] == "AI_PROCESSING"
+    assert routed_event["details"]["processing_stage_after"] == "HUMAN_REVIEW_REQUIRED"
     assert evaluation_event["details"]["evaluation_id"] == submitted["ai_evaluations"][0]["evaluation_id"]
     assert evaluation_event["details"]["result_summary"]["status"] == submitted["ai_evaluations"][0]["status"]
     assert "private synthetic transport response" not in json.dumps(evaluation_event["details"])
@@ -1593,6 +1604,13 @@ def test_rejection_needs_reason_and_resubmission_preserves_prior_version(workflo
     assert resubmitted["status"] == "PENDING_APPROVAL"
     assert resubmitted["current_version"] == 2
     assert resubmitted["current_round"] == 2
+    resubmission_queue = next(
+        event for event in resubmitted["history"]
+        if event["action"] == "AI_EVALUATION_QUEUED"
+        and (event["details"]["version"], event["details"]["round"]) == (2, 2)
+    )
+    assert resubmission_queue["details"]["processing_stage_before"] == "COMPLETED"
+    assert resubmission_queue["details"]["processing_stage_after"] == "AI_PENDING"
     assert len(resubmitted["ai_evaluations"]) == 2
     assert resubmitted["ai_evaluations"][0]["input_hash"] != resubmitted["ai_evaluations"][1]["input_hash"]
     assert [version["payload"]["title"] for version in resubmitted["versions"]] == [
