@@ -15,7 +15,6 @@ from scripts.ai03_request_gate import (
     TASK_MODEL_VERSION,
     VLM_MODEL_ID,
     VLM_MODEL_VERSION,
-    RequestBudgetTransport,
     RequestGate,
     build_harness_orchestrator,
 )
@@ -244,11 +243,10 @@ def test_real_source_providers_use_gate_and_application_service_persists_review(
                 }
         return _completion(model_id, output)
 
-    transport = RequestBudgetTransport(
-        gate, inner=httpx.MockTransport(synthetic_ollama)
+    orchestrator, providers = build_harness_orchestrator(
+        gate, inner_transport=httpx.MockTransport(synthetic_ollama)
     )
-    with httpx.Client(transport=transport, timeout=20) as client:
-        orchestrator, providers = build_harness_orchestrator(gate, client)
+    with providers["client"] as client:
         assert isinstance(orchestrator, AuthenticatedEvaluationOrchestrator)
         assert providers["source_visual"]._client is client
         assert providers["source_media"]._client is client

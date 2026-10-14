@@ -15,6 +15,7 @@ APPROVED_OLLAMA_ORIGIN = "http://127.0.0.1:11434"
 MAX_REQUESTS_PER_CASE = 6
 MAX_INFERENCE_POSTS_PER_CASE = 3
 
+from src.ai_pipeline.authenticated_orchestrator import AuthenticatedEvaluationOrchestrator
 from src.ai_pipeline.providers.base import (
     ProviderNonRetryableError,
     ProviderTimeout,
@@ -141,9 +142,15 @@ class RequestGate:
             self._latch_locked(reason, provider_name)
             if call_id is not None:
                 call = next((item for item in self._calls if item["call_id"] == call_id), None)
-                if call is not None:
-                    call["status"] = "TIMED_OUT"
-                    call["error_code"] = "PROVIDER_TIMEOUT"
+            else:
+                call = next((
+                    item for item in reversed(self._calls)
+                    if item["status"] == "IN_PROGRESS"
+                    and (provider_name is None or item["provider"] == provider_name)
+                ), None)
+            if call is not None:
+                call["status"] = "TIMED_OUT"
+                call["error_code"] = "PROVIDER_TIMEOUT"
 
     def close(self, reason, *, provider_name=None):
         """Close the case gate for a resource threshold or another harness stop."""
@@ -378,6 +385,23 @@ class GatedTaskProvider:
         ):
             return self.delegate.evaluate(request)
 
+
+class HarnessAuthenticatedEvaluationOrchestrator(AuthenticatedEvaluationOrchestrator):
+    """Latch the request gate when the source orchestrator times out a task future."""
+
+    def __init__(self, *args, request_gate, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._request_gate = request_gate
+
+    def _run_step(self, task, *step_args, **step_kwargs):
+        result = super()._run_step(task, *step_args, **step_kwargs)
+        if result.get("status") == "TIMED_OUT":
+            provider_name = "MEDIA" if task == "MEDIA_COMPLIANCE" else "STRATEGY"
+            reason = result.get("error_code") or "PROVIDER_TIMEOUT"
+            if reason in {"PROVIDER_TIMEOUT", "PIPELINE_TIMEOUT"}:
+                self._request_gate.latch_timeout(provider_name, reason)
+        return result
+
 VLM_MODEL_ID = "qwen3-vl:4b"
 VLM_MODEL_VERSION = "sha256:e8503d318d8df6622abc18a317c0e5eee044821322c87a16a6acddd62984da84"
 TASK_MODEL_ID = "organizationai-qwen3:4b-ctx8192"
@@ -390,9 +414,13 @@ MAX_RESPONSE_BYTES = 262_144
 MAX_INPUT_BYTES = 1_048_576
 
 
-def build_harness_orchestrator(gate, client):
-    """Wire exact approved pins through real providers and the harness-only gate."""
-    from src.ai_pipeline.authenticated_orchestrator import AuthenticatedEvaluationOrchestrator
+def build_harness_orchestrator(gate, *, inner_transport=None):
+    """Create a client that always routes through this case's request gate."""
+    if not isinstance(gate, RequestGate):
+        raise TypeError("A RequestGate instance is required for the synthetic harness")
+    if inner_transport is not None and not isinstance(inner_transport, httpx.BaseTransport):
+        raise TypeError("inner_transport must be an HTTPX BaseTransport")
+
     from src.ai_pipeline.providers.openai_provider import LocalVLMProvider
     from src.ai_pipeline.task_evaluation import (
         MEDIA_PROMPT_VERSION,
@@ -407,73 +435,82 @@ def build_harness_orchestrator(gate, client):
     )
     from src.ai_pipeline.providers.ollama_identity import OLLAMA_TAG_DIGEST
 
-    visual_source = LocalVLMProvider(
-        model=VLM_MODEL_ID,
-        model_version=VLM_MODEL_VERSION,
-        base_url=OLLAMA_BASE_URL,
-        api_key="",
-        timeout_seconds=VLM_HTTP_TIMEOUT_SECONDS,
-        max_output_tokens=MAX_OUTPUT_TOKENS,
-        max_response_bytes=MAX_RESPONSE_BYTES,
-        max_input_bytes=MAX_INPUT_BYTES,
-        allow_remote=False,
-        identity_mode=OLLAMA_TAG_DIGEST,
-        client=client,
+    client = httpx.Client(
+        transport=RequestBudgetTransport(gate, inner=inner_transport),
+        timeout=CALL_DEADLINE_SECONDS,
     )
-    media_settings = TaskModelSettings(
-        task="MEDIA_COMPLIANCE",
-        provider=SUPPORTED_PROTOCOL,
-        base_url=OLLAMA_BASE_URL,
-        model_id=TASK_MODEL_ID,
-        model_version=TASK_MODEL_VERSION,
-        api_key="",
-        allow_remote=False,
-        timeout_seconds=CALL_DEADLINE_SECONDS,
-        max_output_tokens=MAX_OUTPUT_TOKENS,
-        max_response_bytes=MAX_RESPONSE_BYTES,
-        max_input_bytes=MAX_INPUT_BYTES,
-        max_retries=0,
-        prompt_version=MEDIA_PROMPT_VERSION,
-        schema_version=MEDIA_SCHEMA_VERSION,
-        identity_mode=OLLAMA_TAG_DIGEST,
-    )
-    strategy_settings = TaskModelSettings(
-        task="STRATEGY_EVALUATION",
-        provider=SUPPORTED_PROTOCOL,
-        base_url=OLLAMA_BASE_URL,
-        model_id=TASK_MODEL_ID,
-        model_version=TASK_MODEL_VERSION,
-        api_key="",
-        allow_remote=False,
-        timeout_seconds=CALL_DEADLINE_SECONDS,
-        max_output_tokens=MAX_OUTPUT_TOKENS,
-        max_response_bytes=MAX_RESPONSE_BYTES,
-        max_input_bytes=MAX_INPUT_BYTES,
-        max_retries=0,
-        prompt_version=STRATEGY_PROMPT_VERSION,
-        schema_version=STRATEGY_SCHEMA_VERSION,
-        identity_mode=OLLAMA_TAG_DIGEST,
-    )
-    media_source = OpenAICompatibleTaskProvider(media_settings, client=client)
-    strategy_source = OpenAICompatibleTaskProvider(strategy_settings, client=client)
-    visual = GatedVisualProvider(
-        visual_source, gate, deadline_seconds=CALL_DEADLINE_SECONDS
-    )
-    media = GatedTaskProvider(
-        media_source, gate, provider_name="MEDIA",
-        timeout_seconds=CALL_DEADLINE_SECONDS,
-    )
-    strategy = GatedTaskProvider(
-        strategy_source, gate, provider_name="STRATEGY",
-        timeout_seconds=CALL_DEADLINE_SECONDS,
-    )
-    orchestrator = AuthenticatedEvaluationOrchestrator(
-        visual,
-        media_provider=media,
-        strategy_provider=strategy,
-        timeout_seconds=100,
-        visual_max_retries=0,
-    )
+    try:
+        visual_source = LocalVLMProvider(
+            model=VLM_MODEL_ID,
+            model_version=VLM_MODEL_VERSION,
+            base_url=OLLAMA_BASE_URL,
+            api_key="",
+            timeout_seconds=VLM_HTTP_TIMEOUT_SECONDS,
+            max_output_tokens=MAX_OUTPUT_TOKENS,
+            max_response_bytes=MAX_RESPONSE_BYTES,
+            max_input_bytes=MAX_INPUT_BYTES,
+            allow_remote=False,
+            identity_mode=OLLAMA_TAG_DIGEST,
+            client=client,
+        )
+        media_settings = TaskModelSettings(
+            task="MEDIA_COMPLIANCE",
+            provider=SUPPORTED_PROTOCOL,
+            base_url=OLLAMA_BASE_URL,
+            model_id=TASK_MODEL_ID,
+            model_version=TASK_MODEL_VERSION,
+            api_key="",
+            allow_remote=False,
+            timeout_seconds=CALL_DEADLINE_SECONDS,
+            max_output_tokens=MAX_OUTPUT_TOKENS,
+            max_response_bytes=MAX_RESPONSE_BYTES,
+            max_input_bytes=MAX_INPUT_BYTES,
+            max_retries=0,
+            prompt_version=MEDIA_PROMPT_VERSION,
+            schema_version=MEDIA_SCHEMA_VERSION,
+            identity_mode=OLLAMA_TAG_DIGEST,
+        )
+        strategy_settings = TaskModelSettings(
+            task="STRATEGY_EVALUATION",
+            provider=SUPPORTED_PROTOCOL,
+            base_url=OLLAMA_BASE_URL,
+            model_id=TASK_MODEL_ID,
+            model_version=TASK_MODEL_VERSION,
+            api_key="",
+            allow_remote=False,
+            timeout_seconds=CALL_DEADLINE_SECONDS,
+            max_output_tokens=MAX_OUTPUT_TOKENS,
+            max_response_bytes=MAX_RESPONSE_BYTES,
+            max_input_bytes=MAX_INPUT_BYTES,
+            max_retries=0,
+            prompt_version=STRATEGY_PROMPT_VERSION,
+            schema_version=STRATEGY_SCHEMA_VERSION,
+            identity_mode=OLLAMA_TAG_DIGEST,
+        )
+        media_source = OpenAICompatibleTaskProvider(media_settings, client=client)
+        strategy_source = OpenAICompatibleTaskProvider(strategy_settings, client=client)
+        visual = GatedVisualProvider(
+            visual_source, gate, deadline_seconds=CALL_DEADLINE_SECONDS
+        )
+        media = GatedTaskProvider(
+            media_source, gate, provider_name="MEDIA",
+            timeout_seconds=CALL_DEADLINE_SECONDS,
+        )
+        strategy = GatedTaskProvider(
+            strategy_source, gate, provider_name="STRATEGY",
+            timeout_seconds=CALL_DEADLINE_SECONDS,
+        )
+        orchestrator = HarnessAuthenticatedEvaluationOrchestrator(
+            visual,
+            media_provider=media,
+            strategy_provider=strategy,
+            timeout_seconds=100,
+            visual_max_retries=0,
+            request_gate=gate,
+        )
+    except Exception:
+        client.close()
+        raise
     return orchestrator, {
         "visual": visual,
         "media": media,
@@ -483,4 +520,5 @@ def build_harness_orchestrator(gate, client):
         "source_visual": visual_source,
         "source_media": media_source,
         "source_strategy": strategy_source,
+        "client": client,
     }
