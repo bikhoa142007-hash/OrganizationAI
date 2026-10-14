@@ -405,6 +405,7 @@ test('creation intent replays a lost PostgreSQL draft response and rejects chang
 
   let serverCreatedId = ''
   let serverCreatedStatus = 0
+  let serverCreatedDiagnostic = 'no structured response body'
   const interceptedBody: { value?: Record<string, unknown> } = {}
   const abortCommittedResponse = async (route: Route) => {
     if (route.request().method() !== 'POST') {
@@ -414,14 +415,18 @@ test('creation intent replays a lost PostgreSQL draft response and rejects chang
     interceptedBody.value = route.request().postDataJSON() as Record<string, unknown>
     const committedResponse = await route.fetch()
     serverCreatedStatus = committedResponse.status()
-    const body = await committedResponse.json() as { id: string }
-    serverCreatedId = body.id
+    const body = await committedResponse.json() as { id?: string; code?: string; message?: string }
+    serverCreatedId = typeof body.id === 'string' ? body.id : ''
+    if (typeof body.code === 'string') {
+      const safeMessage = typeof body.message === 'string' ? body.message.slice(0, 160) : 'no message'
+      serverCreatedDiagnostic = `${body.code}: ${safeMessage}`
+    }
     await route.abort('failed')
   }
   await page.route(`${apiBase}/workflow/plans`, abortCommittedResponse)
   await page.getByRole('button', { name: 'Lưu bản nháp' }).click()
   await expect(page.getByRole('alert').filter({ hasText: 'Chưa nhận được xác nhận' })).toBeVisible()
-  expect(serverCreatedStatus).toBe(201)
+  expect(serverCreatedStatus, `Draft create response: HTTP ${serverCreatedStatus}; ${serverCreatedDiagnostic}`).toBe(201)
   expect(serverCreatedId).toMatch(/^[0-9a-f-]{36}$/i)
   expect((interceptedBody.value?.payload as { title?: string } | undefined)?.title).toBe(title)
   expect(interceptedBody.value?.checker_user_id).toBe(checkerId)
