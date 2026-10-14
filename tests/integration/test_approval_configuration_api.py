@@ -11,10 +11,11 @@ from fastapi.responses import JSONResponse
 from fastapi.testclient import TestClient
 import pytest
 from sqlalchemy import create_engine, select, text
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import selectinload, sessionmaker
 
 from src.backend.api import approval_configuration as configuration_api
-from src.backend.api.auth import AuthenticatedPrincipal, get_auth_db, get_current_principal
+from src.backend.api import auth_workflow
+from src.backend.api.auth import AuthenticatedPrincipal, _user_roles, get_auth_db, get_current_principal
 from src.backend.application import approval_configuration, employee_admin, role_admin
 from scripts.postgres_test_target import verify_runner_provisioned_database
 from src.backend.application.workflow import ApplicationError
@@ -78,10 +79,12 @@ def _principal(
     )
 
 
-def _app(factory, principal):
+def _app(factory, principal, *, include_workflow: bool = False):
     app = FastAPI()
     app.state.allowed_origins = {"http://localhost"}
     app.include_router(configuration_api.router)
+    if include_workflow:
+        app.include_router(auth_workflow.router)
 
     def db_session():
         with factory() as session:
@@ -304,6 +307,80 @@ def _linked_employee(factory, prefix: str) -> tuple[UUID, UUID]:
         session.add(profile)
         session.flush()
         return profile.id, user.id
+
+
+def test_postgres_employee_role_filter_uses_permissions_across_custom_roles(configuration_postgres):
+    _engine, factory = configuration_postgres
+    admin = _admin(factory)
+    principal = _principal(admin, ("ADMIN",))
+    maker_profile_id, maker_user_id = _linked_employee(factory, "GOV-SPLIT-MAKER")
+    checker_profile_id, checker_user_id = _linked_employee(factory, "GOV-SPLIT-CHECKER")
+    role_specs = (
+        (
+            "CUSTOM_GOV_SPLIT_MAKER_CORE",
+            "Synthetic Maker core",
+            ["MARKETING_PLAN_READ", "MARKETING_PLAN_CREATE", "MARKETING_PLAN_EDIT_OWN"],
+        ),
+        (
+            "CUSTOM_GOV_SPLIT_MAKER_SUBMIT",
+            "Synthetic Maker submit",
+            ["MARKETING_ATTACHMENT_MANAGE", "MARKETING_PLAN_SUBMIT", "MARKETING_HISTORY_READ"],
+        ),
+        (
+            "CUSTOM_GOV_SPLIT_CHECKER_CORE",
+            "Synthetic Checker core",
+            ["MARKETING_PLAN_READ", "MARKETING_REVIEW_ASSIGNED", "MARKETING_APPROVE"],
+        ),
+        (
+            "CUSTOM_GOV_SPLIT_CHECKER_FINALIZE",
+            "Synthetic Checker finalize",
+            ["MARKETING_REJECT", "MARKETING_HISTORY_READ"],
+        ),
+    )
+
+    for code, name, permissions in role_specs:
+        with factory() as session:
+            role_admin.create_role(
+                session,
+                principal,
+                "synthetic-split-role-test",
+                code,
+                name,
+                "Synthetic split-bundle acceptance role.",
+                permissions,
+            )
+
+    with factory() as session:
+        role_admin.replace_employee_roles(
+            session,
+            principal,
+            maker_profile_id,
+            "synthetic-split-role-test",
+            ["CUSTOM_GOV_SPLIT_MAKER_CORE", "CUSTOM_GOV_SPLIT_MAKER_SUBMIT"],
+        )
+        role_admin.replace_employee_roles(
+            session,
+            principal,
+            checker_profile_id,
+            "synthetic-split-role-test",
+            ["CUSTOM_GOV_SPLIT_CHECKER_CORE", "CUSTOM_GOV_SPLIT_CHECKER_FINALIZE"],
+        )
+
+    with factory() as session:
+        user_options = selectinload(User.user_roles).selectinload(UserRole.role).selectinload(Role.permissions)
+        maker = session.scalar(select(User).options(user_options).where(User.id == maker_user_id))
+        checker = session.scalar(select(User).options(user_options).where(User.id == checker_user_id))
+        assert maker is not None and "MAKER" in _user_roles(maker)
+        assert checker is not None and "CHECKER" in _user_roles(checker)
+
+    with _app(factory, principal, include_workflow=True) as client:
+        maker_response = client.get("/api/workflow/employees", params={"role": "MAKER"})
+        checker_response = client.get("/api/workflow/employees", params={"role": "CHECKER"})
+
+    assert maker_response.status_code == 200, maker_response.text
+    assert maker_profile_id in {UUID(item["id"]) for item in maker_response.json()["items"]}
+    assert checker_response.status_code == 200, checker_response.text
+    assert checker_profile_id in {UUID(item["id"]) for item in checker_response.json()["items"]}
 
 
 def test_postgres_employee_update_rejects_status_mass_assignment(configuration_postgres):

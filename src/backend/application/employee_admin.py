@@ -6,7 +6,7 @@ import secrets
 from typing import TYPE_CHECKING, Any
 from uuid import UUID, uuid4
 
-from sqlalchemy import and_, func, or_, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
@@ -125,15 +125,7 @@ def list_employees(
         ))
     if role:
         filters.append(EmployeeProfile.user_id.is_not(None))
-        role_filters = [UserRole.role.has(and_(Role.code == role, Role.status == "ACTIVE"))]
-        required_permissions = PERMISSION_ROLE_REQUIREMENTS.get(role)
-        if required_permissions:
-            role_filters.append(and_(*[
-                UserRole.role.has(and_(Role.status == "ACTIVE",
-                                       Role.permissions.any(RolePermission.permission_code == permission)))
-                for permission in sorted(required_permissions)
-            ]))
-        filters.append(User.user_roles.any(or_(*role_filters)))
+        filters.append(effective_role_filter(role))
     if status:
         filters.append(EmployeeProfile.user_id.is_not(None))
         if status == "PENDING_ACTIVATION":
