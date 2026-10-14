@@ -222,7 +222,7 @@ export function AuthenticatedWorkflowDetailPage() {
           <section className="auth-ai-phase"><h3>Đánh giá tổng thể</h3>{evaluation.status === 'SUCCEEDED' ? evaluationReason && <p><strong>Giải thích đánh giá:</strong> {evaluationReason}</p> : <p>{incompleteEvaluationMessage(plan, item.round_number)}</p>}</section>
           <p>Trạng thái đánh giá AI tổng thể: {evaluationStatusLabel(evaluation.status)}</p>
           <dl className="auth-workflow-definition-grid auth-ai-metrics">
-            <div><dt>Đánh giá nội dung hình ảnh</dt><dd>{evaluation.media_result || 'Chưa có kết quả'}{evaluation.media_confidence !== null && ` · ${percent(evaluation.media_confidence)}`}</dd></div>
+            <div><dt>Đánh giá nội dung hình ảnh</dt><dd>{mediaResultLabel(evaluation.media_result)}{evaluation.media_confidence !== null && ` · ${percent(evaluation.media_confidence)}`}</dd></div>
             <div><dt>Đánh giá tính khả thi</dt><dd>{strategyScore === null ? 'Chưa có điểm' : `${stageOnlyStrategyScore ? 'Điểm đánh giá riêng: ' : ''}${strategyScore} / 100`}{evaluation.feasibility_confidence !== null && ` · ${percent(evaluation.feasibility_confidence)}`}</dd></div>
             <div><dt>Khuyến nghị</dt><dd>{recommendationLabel(evaluation.proposed_action)}</dd></div>
           </dl>
@@ -600,6 +600,12 @@ function severityLabel(severity: string) {
 
 function ruleResultLabel(result: string) {
   return ({ PASS: 'Đạt', FAIL: 'Cần Checker xem xét', REVIEW_REQUIRED: 'Cần Checker xem xét', UNKNOWN: 'Chưa đủ thông tin' } as Record<string, string>)[result] ?? 'Cần xem xét'
+}
+
+function mediaResultLabel(result: 'PASS' | 'REVIEW_REQUIRED' | null) {
+  if (result === 'PASS') return 'Đạt yêu cầu'
+  if (result === 'REVIEW_REQUIRED') return 'Cần Checker xem xét'
+  return 'Chưa có kết quả'
 }
 
 function budgetValidationLabel(result: 'PASS' | 'FAIL' | 'UNKNOWN') {

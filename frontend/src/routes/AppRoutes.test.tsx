@@ -1,11 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { AuthProvider } from '../context/AuthContext'
 import { AuthApiError, authService } from '../services/auth'
 import { authWorkflowService } from '../services/authWorkflow'
-import { approvalConfigurationService } from '../services/approvalConfiguration'
+import {
+  approvalConfigurationService,
+  type ConfigurationCurrent,
+  type ConfigurationHistory,
+  type ConfigurationRevision,
+} from '../services/approvalConfiguration'
 import { SessionProvider } from '../services/SessionProvider'
 import type { WorkflowPayload, WorkflowPlan } from '../types/authWorkflow'
 import { AppRoutes } from './AppRoutes'
@@ -60,6 +65,72 @@ describe('Auth-first route entry', () => {
     expect(await screen.findByRole('note')).toHaveTextContent('evaluator hiện chỉ hỗ trợ bộ trọng số baseline 15/15/15/15/15/15/10')
     expect(screen.getByRole('note')).toHaveTextContent('EVALUATOR_RUBRIC_UNSUPPORTED')
   })
+  it('does not apply an older configuration history response after switching kinds', async () => {
+    vi.spyOn(authService, 'me').mockResolvedValue(admin)
+    const current: ConfigurationCurrent = { as_of: '2026-10-14T00:00:00Z', items: [] }
+    vi.spyOn(approvalConfigurationService, 'current').mockResolvedValue(current)
+
+    let resolvePolicyHistory!: (history: ConfigurationHistory) => void
+    const policyHistory = new Promise<ConfigurationHistory>(resolve => { resolvePolicyHistory = resolve })
+    const emptyCheckerHistory: ConfigurationHistory = {
+      kind: 'checker_assignment', as_of: '2026-10-14T00:00:00Z', items: [], offset: 0, limit: 50, total: 0,
+    }
+    const loadHistory = vi.spyOn(approvalConfigurationService, 'history').mockImplementation(async kind => {
+      if (kind === 'approval_policy') return policyHistory
+      return { ...emptyCheckerHistory, kind }
+    })
+    const stalePolicyRevision: ConfigurationRevision = {
+      revision_id: 'policy-revision-2',
+      kind: 'approval_policy',
+      revision: 2,
+      status: 'EFFECTIVE',
+      effective_at: '2026-10-13T00:00:00Z',
+      change_reason: 'Synthetic policy revision for stale-response regression.',
+      value: {},
+      configuration_hash: 'a'.repeat(64),
+      changed_by: 'admin-id',
+      created_at: '2026-10-13T00:00:00Z',
+    }
+    const checkerRevision: ConfigurationRevision = {
+      ...stalePolicyRevision,
+      revision_id: 'checker-revision-1',
+      kind: 'checker_assignment',
+      revision: 1,
+      value: { maker_may_select_other: false, defaults: [] },
+    }
+    const createRevision = vi.spyOn(approvalConfigurationService, 'createRevision').mockResolvedValue(checkerRevision)
+    const user = userEvent.setup()
+    renderApplication('/workflow/configuration')
+
+    await waitFor(() => expect(loadHistory).toHaveBeenCalledWith('approval_policy'))
+    await user.selectOptions(screen.getByLabelText('Loại cấu hình'), 'checker_assignment')
+    await waitFor(() => expect(loadHistory).toHaveBeenCalledWith('checker_assignment'))
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Tạo revision bất biến' })).toBeEnabled())
+
+    await act(async () => {
+      resolvePolicyHistory({
+        kind: 'approval_policy',
+        as_of: '2026-10-14T00:00:00Z',
+        items: [stalePolicyRevision],
+        offset: 0,
+        limit: 50,
+        total: 1,
+      })
+      await policyHistory
+    })
+
+    expect(screen.queryByText('Revision 2 · Đang hiệu lực')).not.toBeInTheDocument()
+    await user.clear(screen.getByLabelText('Giá trị JSON'))
+    fireEvent.change(screen.getByLabelText('Giá trị JSON'), { target: { value: '{"maker_may_select_other":false,"defaults":[{"department":"Marketing","checker_id":"b7a90116-e0fa-4a91-8658-572eb86a4d37"}]}' } })
+    await user.clear(screen.getByLabelText(/Hiệu lực từ thời điểm/))
+    await user.type(screen.getByLabelText(/Hiệu lực từ thời điểm/), '2026-10-14T16:30')
+    await user.type(screen.getByLabelText('Lý do thay đổi'), 'Synthetic stale configuration response regression.')
+    await user.click(screen.getByRole('button', { name: 'Tạo revision bất biến' }))
+
+    expect(await screen.findByText(/Đã tạo revision 1/)).toBeVisible()
+    expect(createRevision).toHaveBeenCalledWith('checker_assignment', expect.objectContaining({ expected_revision: null }))
+  })
+
   it('sends anonymous visitors from / to login', async () => {
     vi.spyOn(authService, 'me').mockRejectedValue(new AuthApiError(401, 'Authentication is required.'))
     renderApplication('/')

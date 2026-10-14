@@ -112,6 +112,7 @@ it('shows available AI and decision explanations only when they contain user-fac
   run.evaluation!.status = 'SUCCEEDED'
   run.evaluation!.reason = 'KPI cần có chỉ số đo lường cụ thể.'
   run.evaluation!.proposed_action = 'RECOMMEND_HUMAN_REVIEW'
+  run.evaluation!.media_result = 'REVIEW_REQUIRED'
   run.evaluation!.agent_errors = []
   plan.decision_reason = 'Mục tiêu cần có chỉ số đo lường cụ thể.'
   plan.engine_decisions[0].decision.reason = 'Checker cần xác minh tính đo lường của KPI.'
@@ -121,6 +122,8 @@ it('shows available AI and decision explanations only when they contain user-fac
   renderDetail()
 
   expect(await screen.findByText('KPI cần có chỉ số đo lường cụ thể.')).toBeVisible()
+  expect(screen.getByText('Cần Checker xem xét', { exact: true })).toBeVisible()
+  expect(screen.queryByText('REVIEW_REQUIRED', { exact: true })).not.toBeInTheDocument()
   expect(screen.getByText('Mục tiêu cần có chỉ số đo lường cụ thể.')).toBeVisible()
   expect(screen.getByText('Checker cần xác minh tính đo lường của KPI.')).toBeVisible()
   expect(screen.queryByText(/EVAL_VALID|PROVIDER_TIMEOUT/)).not.toBeInTheDocument()

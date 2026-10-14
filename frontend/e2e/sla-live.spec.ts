@@ -218,7 +218,7 @@ test('Admin configures SLA; Maker submits, Checker receives reminders, decides l
     await checker.goto(`/workflow/plans/${planId}`)
     await expect(checker.getByRole('heading', { name: title, exact: true })).toBeVisible()
     await expect(checker.locator('.workflow-sla-status')).toHaveText('Đang trong hạn')
-    await expect(checker.locator('.workflow-sla-card')).toContainText('Cấu hình revision 1')
+    await expect(checker.locator('.workflow-sla-card')).toContainText('Vòng 1 · Phiên bản 1')
 
     const warningAt = Date.parse(roundOne.sla_current!.warning_at!)
     const dueAt = Date.parse(roundOne.sla_current!.due_at!)
@@ -257,7 +257,7 @@ test('Admin configures SLA; Maker submits, Checker receives reminders, decides l
     expect(makerOverdue).toHaveLength(1)
     expect(runWorker()).toBe(0)
 
-    await checker.getByLabel('Lý do override AI').fill('Temporary acceptance: checker inspected the version-one snapshot.')
+    await checker.getByLabel('Lý do xử lý khác với đề xuất AI').fill('Temporary acceptance: checker inspected the version-one snapshot.')
     await checker.getByLabel('Lý do hoặc nhận xét').fill('Revise attribution details before approval.')
     await checker.getByRole('button', { name: 'Từ chối', exact: true }).click()
     await expect(checker.locator('.auth-workflow-page-heading .workflow-status')).toHaveText('Đã từ chối')
@@ -334,7 +334,7 @@ test('Admin configures SLA; Maker submits, Checker receives reminders, decides l
 
     await checker.goto(`/workflow/plans/${planId}`)
     await expect(checker.locator('.workflow-sla-status')).toHaveText('Quá hạn')
-    await checker.getByLabel('Lý do override AI').fill('Temporary acceptance: checker inspected the revised version-two snapshot.')
+    await checker.getByLabel('Lý do xử lý khác với đề xuất AI').fill('Temporary acceptance: checker inspected the revised version-two snapshot.')
     await checker.getByLabel('Lý do hoặc nhận xét').fill('Approved after attribution details were clarified.')
     await checker.getByRole('button', { name: 'Phê duyệt', exact: true }).click()
     await expect(checker.locator('.auth-workflow-page-heading .workflow-status')).toHaveText('Đã duyệt')
