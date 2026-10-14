@@ -8,26 +8,26 @@ Status: implementation contract for the Challenge A Judge only. The automatic ou
 - Verify chung runs four cases: three expected automatic outcomes and one human-review case. Verify → Escalation runs five cases: three expected automatic outcomes and two human-review cases. Each case gets a new in-memory workflow/repository and a server-generated run id.
 - `tests/fixtures/ba/v2.1/ground-truth-cases.json` is the 15-case reference catalog. Public requests cannot select individual cases, upload content, provide expected results, or configure policy/provider/model values.
 - The suite runs use the repository's mock fixture provider path. `mode=MOCK` is mandatory evidence labeling; a passing assertion proves the workflow matched its synthetic oracle, not that real inference is accurate.
-- The Judge router has no Auth dependency, actor header, Auth database, shared demo database, persistent result store, history endpoint, stop endpoint, or override endpoint. D must review and mount it only inside an isolated composition after reviewing trusted client-IP handling, request quotas, and concurrency.
-- No public clock/admin controls, CORS changes, rate limiter, or production workflow access is part of this work package.
+- The Judge router has no Auth dependency, actor namespace/header, Auth or shared demo database dependency, persistent result store, history endpoint, stop endpoint, or override endpoint. D mounted it in local candidate SHA `d6fb87c3068a61f127af32403d5ec4a4ad976e78`; this candidate state does not establish deployed/public acceptance.
+- No public clock/admin controls or production workflow access are part of this work package. D's candidate preserves the existing CORS allowlist and adds a process-local request/concurrency gate for Judge POSTs only.
 
-The existing `/demo/verify` route renders the page in Demo mode by default and continues to call the current `VerifyService`, including its 15-case regression suite. Its visible `DEMO · MOCK` label explicitly disqualifies those runs as public acceptance evidence. The future public route must opt into `VerifyDashboardPage mode="public"`; that mode calls `publicJudgeService` and must remain unwired until D approves isolated composition.
+The existing `/demo/verify` route remains in Demo mode and continues to call `VerifyService`, including its 15-case regression suite; its `DEMO · MOCK` label disqualifies those runs as public acceptance evidence. D's local integration candidate `d6fb87c3068a61f127af32403d5ec4a4ad976e78` adds `/challenge-a`, which renders `VerifyDashboardPage mode="public"` and calls `publicJudgeService`. This is local candidate wiring, not a deployed public acceptance result.
 
 ## Public router contract and D boundary
 
-- Router prefix is `/api/public/judge` in `src/backend/api/public_judge.py`; D can include this router only after isolation review. It is not included in `src/backend/api/app.py` by this worktree.
+- Router prefix is `/api/public/judge` in `src/backend/api/public_judge.py`. D's local candidate SHA `d6fb87c3068a61f127af32403d5ec4a4ad976e78` includes it in `src/backend/api/app.py` and adds the SPA route `/challenge-a` in `frontend/src/routes/AppRoutes.tsx`.
 - `POST /api/public/judge/runs` accepts exactly `{"suite":"general"}` or `{"suite":"escalation"}`. The response contains a generated run id, suite status, `mode=MOCK`, `data_classification=SYNTHETIC`, timestamps/duration, summary, and per-case server expected/actual routes, PASS/FAIL/ERROR, input snapshot, evidence, questions, audit projection, and applied rule ids.
 - `POST /api/public/judge/input-runs` accepts only the strict typed fields in `public_judge_schemas.py` (`title`, `department`, `objective`, `summary`, `target_audience`, `channel`, `currency`, `budget_vnd`, `source_budget_vnd`). It returns `mode=MOCK`, `processing_mode=DETERMINISTIC_INPUT_SIMULATION`, `USER_SUPPLIED_UNVERIFIED`, `NOT_MEASURED`, outcome/category/reason/question, timestamps, run id, and an immediate audit summary with input SHA-256. It persists nothing.
-- Request and response schemas reject unknown fields. Body limit is 16 KiB in the router; D must also enforce a body cap at the proxy/edge before mounting.
+- Request and response schemas reject unknown fields. The router limits bodies to 16 KiB. Proxy/edge enforcement of a body cap has not been evidenced; confirm it before public deployment.
 - The frontend sends `POST` with `Content-Type: application/json`, `credentials: omit`, no actor/auth/idempotency header, and `cache: no-store`. It sends no cookie and the router uses no Auth dependency or actor namespace.
 - Errors follow `{code,message,correlation_id,http_status}`: `VALIDATION_ERROR` 422, `INPUT_TOO_LARGE` 413, `RATE_LIMITED` 429, `UNAVAILABLE` 503. Error responses do not include stack/provider text.
-- The router does not read `Forwarded`, `X-Forwarded-For`, or any client-IP header and implements no quota/concurrency limiter. D must establish Render's trusted proxy chain/source, choose the application-visible client-IP source, and approve/enforce request and concurrent-run quotas before mount.
-- CORS is unchanged here. D must allow only the approved Judge frontend origin and required `POST`/preflight `OPTIONS` plus `Content-Type` in the isolated public composition; public Judge requests do not require credentials. Do not loosen the Auth app's shared CORS policy to make this work.
+- D's candidate applies a process-local gate to Judge POSTs: 30 requests per rolling 60 seconds and at most 1 active POST per process. It does not partition by visitor/IP or trust `Forwarded`/`X-Forwarded-For`. D reports current Render topology as 1 instance and 1 Uvicorn worker, so all visitors share this process quota. Additional workers or instances have independent gates and increase aggregate capacity; this is not a distributed deployment-wide limit.
+- The candidate keeps the existing `settings.cors_origins` CORS allowlist; no Auth CORS policy was expanded for Judge. The Judge client sends `POST` JSON with `credentials: omit` and no actor/auth headers. Do not loosen the shared allowlist to make this work.
 - No stop/status/retry/override/admin/clock endpoints exist. Browser timeout means unknown completion, not cancellation.
 
 ## New-input simulation policy
 
-Policy identifier: `JUDGE-INPUT-SIMULATION-1.0`. This deterministic simulation accepts a small allowlist of text and numeric fields. It is not submitted as a marketing plan and it does not invoke VLM or strategy inference. The department, channel, currency, and budget values below are Judge-only simulation defaults approved by the user on 2026-10-14 for this test scope only. This does not approve company policy or production auto-approval. Do not expose the endpoint until D's isolation review is complete.
+Policy identifier: `JUDGE-INPUT-SIMULATION-1.0`. This deterministic simulation accepts a small allowlist of text and numeric fields. It is not submitted as a marketing plan and it does not invoke VLM or strategy inference. The department, channel, currency, and budget values below are Judge-only simulation defaults approved by the user on 2026-10-14 for this test scope only. This does not approve company policy or production auto-approval. The endpoint is mounted only in D's local candidate; do not claim deployed/public acceptance or production auto-approval.
 
 All submitted fields remain `USER_SUPPLIED_UNVERIFIED`; `quality_status` is always `NOT_MEASURED`. The response contains only an outcome, reason, contextual handoff question where needed, timestamp, input SHA-256, and an in-memory audit summary. The body, result, and provider output are not saved or logged. Do not enter confidential or personal data.
 
@@ -64,7 +64,7 @@ cd frontend
 npm run test -- src/pages/VerifyDashboardPage.test.tsx src/services/publicJudgeService.test.ts
 ```
 
-Once D mounts the router and approves isolated local composition, browser acceptance should use a disposable local environment and record the exact deployed/local SHA:
+For local candidate acceptance on D's mounted `/challenge-a`, use a disposable environment and record the candidate SHA. This local evidence does not qualify as deployed/public acceptance:
 
 1. Open the public Judge entry in a fresh browser context with no account, cookie, or demo actor.
 2. Confirm the first instruction is one sentence and the first action runs general Verify once.
@@ -73,11 +73,31 @@ Once D mounts the router and approves isolated local composition, browser accept
 5. Confirm no Auth cookie/header is sent, request bodies are never retained, no stop/admin/clock route is exposed, and no production data is reachable.
 6. If the browser request times out, report outcome unknown. Do not report that server work stopped or was undone.
 
+
+Reproduce the integrated local browser run on the D candidate with the repository Playwright config:
+
+```powershell
+cd frontend
+npm run test:e2e -- --config playwright.config.ts e2e/public-judge.spec.ts
+```
+
+Use only the config's disposable local demo database and mock providers; do not set production DB/provider values.
+
 Do not perform public acceptance on a deployment until D supplies the deployed SHA and confirms the isolated environment, request quota, concurrency limit, and deployment profile. A local or historical test result is not public acceptance evidence.
+
+## D local-candidate evidence (2026-10-14)
+
+- Candidate SHA: `d6fb87c3068a61f127af32403d5ec4a4ad976e78` (local integration candidate, not a deployed SHA).
+- Playwright test: `frontend/e2e/public-judge.spec.ts`, test `public Challenge A runs isolated Mock suites and classifies new synthetic input`. Evidence artifact ID: `public-judge-public-Challe-954b8-ssifies-new-synthetic-input`; screenshot: `frontend/test-results/public-judge-public-Challe-954b8-ssifies-new-synthetic-input/challenge-a-public.png`.
+- The browser run reports Verify chung `4/4 PASS`, Verify → Escalation `5/5 PASS`, routine synthetic input `SIMULATED_AUTO_APPROVE`, and out-of-scope input `HUMAN_REVIEW_REQUIRED / POLICY_OUT_OF_SCOPE`. The escalation run ID visible in the screenshot is `JUDGE-dec872c6b9944830941862f4332d0a43`.
+- This evidence is local and `MOCK`: the suites use synthetic fixtures; custom input uses deterministic simulation, not VLM or strategy inference. `quality_status=NOT_MEASURED`; these results do not prove real-provider inference quality or deployed public behavior.
+- Visual review of the screenshot found the new-input form fields flowing inline and overlapping because `.form-grid`/`.form-field` have no styles. Logic E2E passed, but visual acceptance is incomplete. Judge has not changed page or stylesheet files while UI ownership is being resolved.
 
 ## Current readiness gaps
 
-- The router is intentionally unmounted. D owns shared app composition and must approve the mounting point and verify Auth/database isolation.
-- Request-rate and concurrency quotas are not implemented. D must verify the trusted client-IP source and approve quota values first.
-- Browser acceptance and the production deployment SHA are pending D's scheduled browser/build slot and deployment evidence.
-- The immediate response provides an input audit summary but no durable audit trail; retention requires a separately approved privacy/data contract.
+- D mounted the route in local candidate `d6fb87c3068a61f127af32403d5ec4a4ad976e78`; this does not identify a deployed SHA or prove public deployment acceptance.
+- The 30/60-second rate limit and one-active-POST gate are process-local/global among visitors on each process. D reports the current Render topology as one instance/one Uvicorn worker; a topology change requires reassessing aggregate limits.
+- The local Mock E2E passed functionally, but the screenshot shows the new-input form layout defect described above. UI edits remain pending file-level ownership clearance.
+- A 16 KiB router body limit exists; proxy/edge body-cap evidence is still required before public deployment.
+- No real provider inference or quality evaluation was run. Mock functional PASS is not a real-AI quality PASS.
+- The immediate input response contains an audit summary and hash but no durable audit/history; retention needs a separately approved data contract.
