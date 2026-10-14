@@ -42,6 +42,7 @@ from src.backend.db.models import (
     AuthWorkflowRoundConfigurationSnapshot,
     EmployeeProfile,
     Role,
+    RolePermission,
     User,
     UserRole,
 )
@@ -85,6 +86,49 @@ def _create_user(factory: sessionmaker[Session], username: str, role_code: str, 
         )
         session.add(user)
         session.flush()
+        session.add(UserRole(user_id=user.id, role_id=role.id))
+        session.add(EmployeeProfile(
+            id=user.id,
+            user_code=user.user_code,
+            display_name=user.display_name,
+            email=user.email,
+            phone=user.phone,
+            user_id=user.id,
+        ))
+        session.flush()
+        session.expunge(user)
+    return user
+
+
+def _create_partial_permission_user(
+    factory: sessionmaker[Session],
+    username: str,
+    role_code: str,
+    permissions: tuple[str, ...],
+    password: str,
+) -> User:
+    with factory.begin() as session:
+        role = Role(
+            id=uuid4(), code=role_code, name=role_code,
+            description="Synthetic partial permission role.",
+            is_builtin=False, status="ACTIVE",
+        )
+        user = User(
+            id=uuid4(),
+            user_code=f"PG-{uuid4().hex[:12].upper()}",
+            username=username,
+            email=f"{username}@example.invalid",
+            phone=None,
+            password_hash=hash_password(password),
+            display_name=username,
+            status="ACTIVE",
+        )
+        session.add_all((role, user))
+        session.flush()
+        session.add_all(
+            RolePermission(role_id=role.id, permission_code=permission)
+            for permission in permissions
+        )
         session.add(UserRole(user_id=user.id, role_id=role.id))
         session.add(EmployeeProfile(
             id=user.id,
@@ -346,6 +390,88 @@ def postgres_workflow(monkeypatch):
         for client in clients:
             client.close()
         engine.dispose()
+
+
+def _assert_partial_custom_roles_do_not_grant_workflow_scope(state, pending_plan_id: str) -> None:
+    factory = state["factory"]
+    app = state["app"]
+    suffix = uuid4().hex[:10]
+    partial_maker_permissions = (
+        "MARKETING_PLAN_READ", "MARKETING_HISTORY_READ", "MARKETING_PLAN_EDIT_OWN",
+    )
+    partial_checker_permissions = (
+        "MARKETING_PLAN_READ", "MARKETING_HISTORY_READ",
+        "MARKETING_REVIEW_ASSIGNED", "MARKETING_APPROVE",
+    )
+    partial_maker_role = f"CUSTOM_PARTIAL_MAKER_{suffix.upper()}"
+    partial_checker_role = f"CUSTOM_PARTIAL_CHECKER_{suffix.upper()}"
+    password = os.environ["AUTH_SEED_PASSWORD"]
+    partial_maker = _create_partial_permission_user(
+        factory, f"pg_partial_maker_{suffix}", partial_maker_role,
+        partial_maker_permissions, password,
+    )
+    partial_checker = _create_partial_permission_user(
+        factory, f"pg_partial_checker_{suffix}", partial_checker_role,
+        partial_checker_permissions, password,
+    )
+    partial_maker_client = TestClient(app, raise_server_exceptions=False)
+    partial_checker_client = TestClient(app, raise_server_exceptions=False)
+    original_checker_id = None
+    try:
+        _login(partial_maker_client, partial_maker.username, password)
+        _login(partial_checker_client, partial_checker.username, password)
+
+        maker_identity = partial_maker_client.get("/api/auth/me").json()["user"]
+        assert set(maker_identity["effective_permissions"]) == set(partial_maker_permissions)
+        assert partial_maker_role in maker_identity["roles"]
+        assert "MAKER" not in maker_identity["roles"]
+
+        checker_identity = partial_checker_client.get("/api/auth/me").json()["user"]
+        assert set(checker_identity["effective_permissions"]) == set(partial_checker_permissions)
+        assert partial_checker_role in checker_identity["roles"]
+        assert "CHECKER" not in checker_identity["roles"]
+
+        editable_draft = _create_plan(
+            state["maker_client"], state["checker"].id, "Partial Maker row-scope fixture",
+        )
+        with factory.begin() as session:
+            draft_row = session.get(AuthWorkflowPlan, UUID(editable_draft["id"]))
+            pending_row = session.get(AuthWorkflowPlan, UUID(pending_plan_id))
+            assert draft_row is not None and draft_row.status == "DRAFT"
+            assert pending_row is not None and pending_row.status == "PENDING_APPROVAL"
+            draft_row.maker_id = partial_maker.id
+            original_checker_id = pending_row.checker_id
+            pending_row.checker_id = partial_checker.id
+
+        maker_list = partial_maker_client.get("/api/workflow/plans")
+        maker_detail = partial_maker_client.get(f"/api/workflow/plans/{editable_draft['id']}")
+        maker_update = partial_maker_client.put(
+            f"/api/workflow/plans/{editable_draft['id']}",
+            json={"expected_revision": editable_draft["revision"], "payload": editable_draft["payload"]},
+        )
+        assert maker_list.status_code == 403, maker_list.text
+        assert maker_detail.status_code == 403, maker_detail.text
+        assert maker_update.status_code == 403, maker_update.text
+
+        checker_list = partial_checker_client.get("/api/workflow/plans")
+        checker_reviews = partial_checker_client.get("/api/workflow/reviews")
+        checker_detail = partial_checker_client.get(f"/api/workflow/plans/{pending_plan_id}")
+        checker_decision = partial_checker_client.post(
+            f"/api/workflow/plans/{pending_plan_id}/rounds/1/decision",
+            json={"action": "APPROVED", "override_reason": "Synthetic role-scope regression."},
+        )
+        assert checker_list.status_code == 403, checker_list.text
+        assert checker_reviews.status_code == 403, checker_reviews.text
+        assert checker_detail.status_code == 403, checker_detail.text
+        assert checker_decision.status_code == 403, checker_decision.text
+    finally:
+        if original_checker_id is not None:
+            with factory.begin() as session:
+                pending_row = session.get(AuthWorkflowPlan, UUID(pending_plan_id))
+                if pending_row is not None:
+                    pending_row.checker_id = original_checker_id
+        partial_maker_client.close()
+        partial_checker_client.close()
 
 
 def test_postgres_retry_race_reuses_the_round_snapshot(postgres_workflow):
@@ -1067,6 +1193,8 @@ def test_postgres_notification_lifecycle_permissions_replay_and_rollback(postgre
     plan = _create_plan(maker_client, checker.id, "PostgreSQL notification lifecycle")
     submitted = _upload_and_submit(maker_client, plan)
     assert submitted["ai_evaluations"][0]["provider"] == "MOCK_VLM"
+    # PO policy keeps complete role bundles; partial custom permissions do not grant row scope.
+    _assert_partial_custom_roles_do_not_grant_workflow_scope(state, submitted["id"])
     expected_lifecycle = [
         "CREATED", "ATTACHMENT_UPLOADED", "SUBMITTED", "AI_EVALUATION_QUEUED",
         "AI_EVALUATION_STARTED", "AI_EVALUATION_COMPLETED", "AI_REVIEW_ROUTED",
