@@ -556,6 +556,15 @@ def test_postgres_retry_evaluator_failure_audit_persists_disposition_and_round(
     factory = state["factory"]
     checker = state["checker"]
     checker_client = state["checker_client"]
+    media_settings = _task_settings("MEDIA_COMPLIANCE")
+    strategy_settings = _task_settings("STRATEGY_EVALUATION")
+    configuration = _auto_approval_configuration(checker.id)
+    app.state.auth_workflow_configuration = replace(
+        configuration,
+        policy=replace(configuration.policy, auto_approval_policy_enabled=False),
+        media_model_snapshot=media_settings.public_snapshot(),
+        strategy_model_snapshot=strategy_settings.public_snapshot(),
+    )
     app.state.auth_workflow_provider = AuthenticatedMockVLMProvider("pass", model_version="mock-1")
 
     class FailingMediaProvider(_SyntheticTaskProvider):
