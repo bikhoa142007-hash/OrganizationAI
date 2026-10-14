@@ -270,6 +270,27 @@ def test_checker_assignment_uses_department_default_and_gates_maker_switch(admin
         assert missing_department_default.checker_id is None
 
 
+def test_unconfigured_checker_assignment_fails_closed_with_explicit_checker(admin_db):
+    factory, _admin = admin_db
+    _, maker_id = _person(factory, "MAKER", "UnconfiguredMaker")
+    _, checker_id = _person(factory, "CHECKER", "UnconfiguredChecker")
+    effective_at = datetime.now(timezone.utc)
+
+    with factory() as session:
+        implicit = checker_assignment_configuration.resolve_checker_assignment(
+            session, "Marketing", maker_id, None, effective_at,
+        )
+        explicit = checker_assignment_configuration.resolve_checker_assignment(
+            session, "Marketing", maker_id, checker_id, effective_at,
+        )
+
+    for result in (implicit, explicit):
+        assert result.eligible is False
+        assert result.status == "UNCONFIGURED"
+        assert result.checker_id is None
+        assert result.source == "NONE"
+
+
 def test_checker_assignment_revision_rejects_inactive_default_checker(admin_db):
     factory, admin = admin_db
     _, checker_id = _person(factory, "CHECKER", "InactiveDefaultChecker")

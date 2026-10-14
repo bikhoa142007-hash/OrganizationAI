@@ -127,20 +127,9 @@ def resolve_checker_assignment(
     }
 
     if resolution.status == "UNCONFIGURED":
-        if selected_checker_id is None:
-            return CheckerAssignmentResult(
-                None, False, "UNCONFIGURED", **metadata, source="NONE",
-                reason="No default assignment configuration or explicit Checker was supplied.",
-            )
-        if selected_checker_id == maker_id or not _eligible_checker(session, selected_checker_id, lock=lock_eligible_checker):
-            return CheckerAssignmentResult(
-                None, False, "UNCONFIGURED", **metadata, source="NONE",
-                reason="The explicit Checker is not an active, eligible Checker distinct from the Maker.",
-            )
         return CheckerAssignmentResult(
-            selected_checker_id, True, "UNCONFIGURED", **metadata,
-            source="EXPLICIT_UNCONFIGURED",
-            reason="The existing explicit Checker is eligible; no assignment configuration is effective.",
+            None, False, "UNCONFIGURED", **metadata, source="NONE",
+            reason="No effective Checker assignment configuration exists for this department.",
         )
 
     if resolution.status != "EFFECTIVE" or not department_id:
