@@ -91,6 +91,18 @@ describe('Judge Verify dashboard', () => {
     expect(screen.getAllByText('FACT_UNCERTAIN').length).toBeGreaterThan(0)
   })
 
+  it('runs the 15-case regression through the existing Demo VerifyService', async () => {
+    const { fetchMock, startRun } = renderPage()
+
+    fireEvent.click(screen.getByRole('button', { name: /Bộ hồi quy tổng hợp.*15 ca/i }))
+    fireEvent.click(screen.getByRole('button', { name: /Run.*15/i }))
+
+    await waitFor(() => expect(startRun).toHaveBeenCalledWith('regression'))
+    expect(startRun).toHaveBeenCalledTimes(1)
+    expect(fetchMock).not.toHaveBeenCalled()
+    expect(screen.getByText('DEMO RUN · MOCK')).toBeTruthy()
+  })
+
   it('uses the isolated public client only when explicitly rendered in public mode', async () => {
     const { fetchMock, startRun } = renderPage('public')
 
