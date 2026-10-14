@@ -36,6 +36,7 @@ from src.backend.db.models import (
     AuthWorkflowDecision,
     AuthWorkflowEngineDecision,
     AuthWorkflowEvaluationRun,
+    AuthWorkflowEvent,
     AuthWorkflowNotification,
     AuthWorkflowPlan,
     AuthWorkflowRoundConfigurationSnapshot,
@@ -526,6 +527,131 @@ def test_postgres_retry_race_reuses_the_round_snapshot(postgres_workflow):
         assert round_snapshot.snapshot_hash == frozen_round_hash
         assert len(decisions) == 2
         assert sum(decision.outcome == "AUTO_APPROVED" for decision in decisions) <= 1
+
+
+@pytest.mark.parametrize(
+    ("stale_after_claim", "expected_disposition", "expected_status", "expected_stage"),
+    [
+        (False, "APPLIED", "PENDING_APPROVAL", "HUMAN_REVIEW_REQUIRED"),
+        (True, "STALE", "APPROVED", "COMPLETED"),
+    ],
+)
+def test_postgres_retry_evaluator_failure_audit_persists_disposition_and_round(
+    postgres_workflow,
+    monkeypatch,
+    stale_after_claim,
+    expected_disposition,
+    expected_status,
+    expected_stage,
+):
+    state = postgres_workflow
+    app = state["app"]
+    factory = state["factory"]
+    checker = state["checker"]
+    checker_client = state["checker_client"]
+    app.state.auth_workflow_provider = AuthenticatedMockVLMProvider("pass", model_version="mock-1")
+
+    class FailingMediaProvider(_SyntheticTaskProvider):
+        def evaluate(self, request):
+            raise ProviderError("private synthetic provider response")
+
+    app.state.auth_workflow_media_provider = FailingMediaProvider("MEDIA_COMPLIANCE")
+    app.state.auth_workflow_strategy_provider = _SyntheticTaskProvider("STRATEGY_EVALUATION")
+    plan = _create_plan(state["maker_client"], checker.id, "PostgreSQL retry failure audit")
+    submitted = _upload_and_submit(state["maker_client"], plan)
+    assert submitted["processing_stage"] == "HUMAN_REVIEW_REQUIRED"
+    assert submitted["ai_evaluations"][0]["failure_reason"] == "PROVIDER_ERROR"
+
+    plan_id = UUID(plan["id"])
+
+    def fail_retry_evaluator(_session, _plan_id, _run_id, _orchestrator, _correlation_id):
+        if stale_after_claim:
+            with factory.begin() as concurrent_session:
+                concurrent_plan = concurrent_session.scalar(
+                    select(AuthWorkflowPlan)
+                    .where(AuthWorkflowPlan.id == plan_id)
+                    .with_for_update()
+                )
+                assert concurrent_plan is not None
+                concurrent_plan.status = "APPROVED"
+                concurrent_plan.processing_stage = "COMPLETED"
+                concurrent_plan.revision += 1
+                concurrent_session.add(AuthWorkflowDecision(
+                    plan_id=plan_id,
+                    round_number=1,
+                    checker_id=checker.id,
+                    action="APPROVED",
+                    reason="Synthetic concurrent decision for stale-result coverage.",
+                ))
+        raise RuntimeError("private retry evaluator response")
+
+    monkeypatch.setattr(workflow, "evaluate_run_by_id", fail_retry_evaluator)
+    retry_key = f"pg-retry-failure-{uuid4().hex}"
+    response = checker_client.post(
+        f"/api/workflow/plans/{plan_id}/rounds/1/evaluation-retries",
+        json={
+            "expected_plan_version": submitted["current_version"],
+            "expected_round_revision": submitted["revision"],
+        },
+        headers={"Idempotency-Key": retry_key},
+    )
+    assert response.status_code == 200, response.text
+    assert response.json()["result_disposition"] == expected_disposition
+    assert response.json()["approval_round"] == 1
+    assert response.json()["run_status"] == "FAILED"
+
+    with factory() as session:
+        failed_run = session.scalar(
+            select(AuthWorkflowEvaluationRun)
+            .where(
+                AuthWorkflowEvaluationRun.plan_id == plan_id,
+                AuthWorkflowEvaluationRun.attempt_number == 2,
+            )
+        )
+        assert failed_run is not None
+        assert failed_run.status == "FAILED"
+        assert failed_run.result_disposition == expected_disposition
+        assert failed_run.version_number == 1
+        assert failed_run.round_number == 1
+
+        failure_events = session.scalars(
+            select(AuthWorkflowEvent)
+            .where(
+                AuthWorkflowEvent.plan_id == plan_id,
+                AuthWorkflowEvent.action == "AI_EVALUATION_RETRY_FAILED",
+            )
+        ).all()
+        assert len(failure_events) == 1
+        failure_event = failure_events[0]
+        assert failure_event.actor_type == "SYSTEM"
+        assert failure_event.actor_id is None
+        assert failure_event.status_before == failure_event.status_after == expected_status
+        assert failure_event.details["approval_round"] == 1
+        assert failure_event.details["version"] == 1
+        assert failure_event.details["attempt_number"] == 2
+        assert failure_event.details["failure_code"] == "RETRY_EVALUATOR_ERROR"
+        assert failure_event.details["result_disposition"] == expected_disposition
+        assert failure_event.details["processing_stage_before"] == expected_stage
+        assert failure_event.details["processing_stage_after"] == expected_stage
+        assert "private retry evaluator response" not in json.dumps(failure_event.details)
+
+    replay = checker_client.post(
+        f"/api/workflow/plans/{plan_id}/rounds/1/evaluation-retries",
+        json={
+            "expected_plan_version": submitted["current_version"],
+            "expected_round_revision": submitted["revision"],
+        },
+        headers={"Idempotency-Key": retry_key},
+    )
+    assert replay.status_code == 200, replay.text
+    assert replay.json() == response.json()
+    with factory() as session:
+        assert session.scalar(
+            select(func.count(AuthWorkflowEvent.id)).where(
+                AuthWorkflowEvent.plan_id == plan_id,
+                AuthWorkflowEvent.action == "AI_EVALUATION_RETRY_FAILED",
+            )
+        ) == 1
 
 
 def test_postgres_committed_submission_survives_provider_timeout(postgres_workflow):
