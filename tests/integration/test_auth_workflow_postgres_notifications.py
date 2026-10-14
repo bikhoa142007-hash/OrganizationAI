@@ -567,6 +567,29 @@ def test_postgres_retry_evaluator_failure_audit_persists_disposition_and_round(
     )
     app.state.auth_workflow_provider = AuthenticatedMockVLMProvider("pass", model_version="mock-1")
 
+    admin = _create_user(
+        factory, f"pg_admin_retry_failure_{uuid4().hex[:10]}", "ADMIN", os.environ["AUTH_SEED_PASSWORD"],
+    )
+    admin_client = TestClient(app, raise_server_exceptions=False)
+    _login(admin_client, admin.username, os.environ["AUTH_SEED_PASSWORD"])
+    try:
+        _create_configuration_revision(admin_client, "approval_policy", {
+            "enabled": False,
+            "media_confidence_threshold": 0.85,
+            "feasibility_score_threshold_exclusive": 70,
+            "feasibility_confidence_threshold": 0.8,
+        })
+        retry_rubric = {
+            "rubric_id": "SYNTHETIC-POSTGRES-STRATEGY",
+            "rubric_version": "retry-failure-r1",
+            "status": "ACTIVE",
+            "criteria": [{"criterion_id": key, "label": label, "weight": weight}
+                         for key, label, weight in STRATEGY_CRITERIA],
+        }
+        _create_configuration_revision(admin_client, "strategy_rubric", retry_rubric)
+    finally:
+        admin_client.close()
+
     class FailingMediaProvider(_SyntheticTaskProvider):
         def evaluate(self, request):
             raise ProviderError("private synthetic provider response")
@@ -579,6 +602,31 @@ def test_postgres_retry_evaluator_failure_audit_persists_disposition_and_round(
     assert submitted["ai_evaluations"][0]["failure_reason"] == "PROVIDER_ERROR"
 
     plan_id = UUID(plan["id"])
+    with factory() as session:
+        first_run = session.scalar(
+            select(AuthWorkflowEvaluationRun)
+            .where(
+                AuthWorkflowEvaluationRun.plan_id == plan_id,
+                AuthWorkflowEvaluationRun.attempt_number == 1,
+            )
+        )
+        assert first_run is not None
+        agent_errors = first_run.evaluation.get("agent_errors", []) if isinstance(first_run.evaluation, dict) else []
+        agent_error_codes = sorted({
+            item["code"]
+            for item in agent_errors
+            if isinstance(item, dict) and isinstance(item.get("code"), str)
+        })
+        retry_eligibility_diagnostic = {
+            "status": first_run.status,
+            "result_disposition": first_run.result_disposition,
+            "failure_reason": first_run.failure_reason,
+            "agent_error_codes": agent_error_codes,
+        }
+        assert first_run.status in {"FAILED", "TIMED_OUT"}, retry_eligibility_diagnostic
+        assert first_run.result_disposition == "APPLIED", retry_eligibility_diagnostic
+        assert first_run.failure_reason == "PROVIDER_ERROR", retry_eligibility_diagnostic
+        assert agent_error_codes == ["PROVIDER_ERROR"], retry_eligibility_diagnostic
 
     def fail_retry_evaluator(_session, _plan_id, _run_id, _orchestrator, _correlation_id):
         if stale_after_claim:
