@@ -111,7 +111,8 @@ def create_app(settings=None, *, auth_workflow_provider=None, auth_workflow_conf
     app.include_router(workflow_dashboard_router)
     app.include_router(internal_notes_router)
     app.include_router(workflow_retry_router)
-    app.include_router(public_judge_router)
+    if settings.app_env == 'demo':
+        app.include_router(public_judge_router)
     app.add_middleware(CORSMiddleware, allow_origins=list(settings.cors_origins), allow_credentials=True,
                        allow_methods=['GET', 'POST', 'PUT'],
                        allow_headers=['Content-Type', 'X-Demo-Actor', 'Idempotency-Key', 'X-Correlation-ID'])
@@ -120,7 +121,8 @@ def create_app(settings=None, *, auth_workflow_provider=None, auth_workflow_conf
     async def request_context(request, call_next):
         request.state.correlation_id = 'http-' + uuid4().hex
         is_public_judge_post = (
-            request.method == 'POST'
+            settings.app_env == 'demo'
+            and request.method == 'POST'
             and request.url.path.startswith('/api/public/judge/')
         )
         if is_public_judge_post:

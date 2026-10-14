@@ -39,7 +39,7 @@ export function AppRoutes() {
     <Route path="/login" element={<LoginPage />} />
     <Route path="/register" element={<RegisterPage />} />
     <Route path="/activate" element={<AccountHandoverPage />} />
-    <Route path="/challenge-a" element={<VerifyDashboardPage mode="public" />} />
+    <Route path="/challenge-a" element={isDemoEnabled() ? <VerifyDashboardPage mode="public" /> : <Navigate to="/" replace />} />
     <Route path="/account" element={<RequireAuth><AuthenticatedAccountPage /></RequireAuth>} />
     <Route path="/access-denied" element={<RequireAuth><AccessDeniedPage /></RequireAuth>} />
     <Route path="/workflow" element={<RequireAuth><AuthenticatedWorkflowShell /></RequireAuth>}>

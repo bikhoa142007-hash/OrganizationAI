@@ -9,11 +9,11 @@ from src.backend.api.dependencies import Settings
 app_module = import_module("src.backend.api.app")
 
 
-def _app():
+def _app(app_env="production"):
     base = app_module.app
     return app_module.create_app(
         settings=Settings(
-            app_env="production",
+            app_env=app_env,
             database="unused-public-judge-test.sqlite3",
             cors_origins=("https://judge.example",),
             mock_mode="pass",
@@ -42,7 +42,7 @@ def _input():
 def test_public_judge_is_mounted_without_auth_database_or_demo_workflow(monkeypatch):
     from src.verify import runner
 
-    app = _app()
+    app = _app(app_env="demo")
 
     def forbidden_database_access(*args, **kwargs):
         raise AssertionError("public Judge must not access Auth DB or demo workflow")
@@ -66,7 +66,7 @@ def test_public_judge_is_mounted_without_auth_database_or_demo_workflow(monkeypa
 def test_public_judge_keeps_existing_cors_allowlist_and_only_two_post_routes(monkeypatch):
     from src.verify import runner
 
-    app = _app()
+    app = _app(app_env="demo")
     monkeypatch.setattr(runner, "run_suite", lambda suite: [])
     judge_routes = {
         (path, tuple(sorted(method.upper() for method in methods)))
@@ -99,7 +99,7 @@ def test_public_judge_keeps_existing_cors_allowlist_and_only_two_post_routes(mon
 def test_public_judge_quota_is_bounded_and_does_not_affect_other_routes(monkeypatch):
     from src.verify import runner
 
-    app = _app()
+    app = _app(app_env="demo")
     app.state.public_judge_request_gate = app_module._PublicJudgeRequestGate(
         max_requests=1,
         window_seconds=60,
@@ -119,6 +119,16 @@ def test_public_judge_quota_is_bounded_and_does_not_affect_other_routes(monkeypa
     assert limited.headers["retry-after"] == "60"
     assert "Synthetic public Judge input" not in limited.text
     assert health.status_code == 200
+
+
+def test_public_judge_is_unavailable_in_production():
+    app = _app(app_env="production")
+    assert not any(path.startswith("/api/public/judge") for path in app.openapi()["paths"])
+
+    with TestClient(app) as client:
+        response = client.post("/api/public/judge/input-runs", json=_input())
+
+    assert response.status_code == 404
 
 
 def test_public_judge_concurrency_gate_rejects_without_blocking(monkeypatch):

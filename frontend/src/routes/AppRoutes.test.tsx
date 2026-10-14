@@ -39,13 +39,14 @@ function renderApplication(path = '/') {
   return render(<MemoryRouter initialEntries={[path]}><ServicesProvider services={createApiServices()}><SessionProvider><AuthProvider><AppRoutes /></AuthProvider></SessionProvider></ServicesProvider></MemoryRouter>)
 }
 
-afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals() })
+afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); vi.unstubAllEnvs() })
 beforeEach(() => {
   vi.spyOn(authService, 'getRegistrationConfig').mockResolvedValue({ registration_enabled: false })
 })
 
 describe('Auth-first route entry', () => {
-  it('exposes the public Challenge A Judge without Auth or Demo gating', async () => {
+  it('exposes the public Challenge A Judge without Auth when Demo is enabled', async () => {
+    vi.stubEnv('VITE_DEMO_ENABLED', 'true')
     const loadPrincipal = vi.spyOn(authService, 'me')
 
     renderApplication('/challenge-a')
@@ -53,6 +54,17 @@ describe('Auth-first route entry', () => {
     expect(await screen.findByRole('heading', { name: 'Verify workflow' })).toBeVisible()
     expect(screen.getByText('Judge công khai, không cần tạo tài khoản')).toBeVisible()
     expect(loadPrincipal).not.toHaveBeenCalled()
+  })
+
+  it('does not expose the public Challenge A route when Demo is disabled', async () => {
+    vi.stubEnv('DEV', false)
+    vi.stubEnv('VITE_DEMO_ENABLED', 'false')
+    vi.spyOn(authService, 'me').mockRejectedValue(new AuthApiError(401, 'Authentication is required.'))
+
+    renderApplication('/challenge-a')
+
+    expect(await screen.findByRole('heading', { name: 'Chào mừng trở lại' })).toBeVisible()
+    expect(screen.queryByText('Judge công khai, không cần tạo tài khoản')).not.toBeInTheDocument()
   })
 
   it('protects approval configuration with the Admin role', async () => {
