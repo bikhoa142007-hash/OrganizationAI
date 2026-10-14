@@ -391,6 +391,99 @@ def test_raw_client_cannot_bypass_transport_input_or_output_caps(override, expec
     assert snapshot["provider_calls"][-1]["error_code"] == expected_code
 
 
+def test_raw_client_rejects_duplicate_json_keys_before_inner_transport():
+    inner_calls = []
+    gate = RequestGate()
+    _, providers = build_harness_orchestrator(
+        gate,
+        inner_transport=httpx.MockTransport(
+            lambda request: inner_calls.append(request) or httpx.Response(200)
+        ),
+    )
+    body = (
+        f'{{"model":"{TASK_MODEL_ID}","messages":[],'
+        '"max_tokens":1,"max_tokens":2}'
+    )
+    try:
+        with pytest.raises(ProviderNonRetryableError) as error:
+            with gate.provider_call("MEDIA", timeout_seconds=20):
+                providers["client"].post(
+                    "http://127.0.0.1:11434/v1/chat/completions",
+                    content=body,
+                    headers={"Content-Type": "application/json"},
+                )
+    finally:
+        providers["client"].close()
+
+    snapshot = gate.snapshot()
+    assert error.value.code == "REQUEST_BODY_INVALID"
+    assert inner_calls == []
+    assert snapshot["request_count"] == 0
+    assert snapshot["blocked_requests"][-1]["reason"] == "REQUEST_BODY_INVALID"
+    assert snapshot["provider_calls"][-1]["status"] == "FAILED"
+
+
+def test_raw_client_rejects_encoded_request_before_inner_transport():
+    inner_calls = []
+    gate = RequestGate()
+    _, providers = build_harness_orchestrator(
+        gate,
+        inner_transport=httpx.MockTransport(
+            lambda request: inner_calls.append(request) or httpx.Response(200)
+        ),
+    )
+    try:
+        with pytest.raises(ProviderNonRetryableError) as error:
+            with gate.provider_call("MEDIA", timeout_seconds=20):
+                providers["client"].post(
+                    "http://127.0.0.1:11434/v1/chat/completions",
+                    json={"model": TASK_MODEL_ID, "messages": [], "max_tokens": 1},
+                    headers={"Content-Encoding": "gzip"},
+                )
+    finally:
+        providers["client"].close()
+
+    snapshot = gate.snapshot()
+    assert error.value.code == "REQUEST_ENCODING_NOT_ALLOWED"
+    assert inner_calls == []
+    assert snapshot["request_count"] == 0
+    assert snapshot["blocked_requests"][-1]["reason"] == "REQUEST_ENCODING_NOT_ALLOWED"
+    assert snapshot["provider_calls"][-1]["status"] == "FAILED"
+
+
+def test_raw_client_rejects_encoded_response_and_records_unknown_completion():
+    inner_calls = []
+    gate = RequestGate()
+    _, providers = build_harness_orchestrator(
+        gate,
+        inner_transport=httpx.MockTransport(
+            lambda request: inner_calls.append(request)
+            or httpx.Response(
+                200,
+                stream=httpx.ByteStream(b"synthetic compressed payload"),
+                headers={"Content-Encoding": "gzip"},
+            )
+        ),
+    )
+    try:
+        with pytest.raises(ProviderNonRetryableError) as error:
+            with gate.provider_call("MEDIA", timeout_seconds=20):
+                providers["client"].post(
+                    "http://127.0.0.1:11434/v1/chat/completions",
+                    json={"model": TASK_MODEL_ID, "messages": [], "max_tokens": 1},
+                )
+    finally:
+        providers["client"].close()
+
+    snapshot = gate.snapshot()
+    request = snapshot["sent_requests"][-1]
+    assert error.value.code == "RESPONSE_ENCODING_NOT_ALLOWED"
+    assert len(inner_calls) == 1
+    assert request["error_code"] == "RESPONSE_ENCODING_NOT_ALLOWED"
+    assert request["server_completion_known"] is False
+    assert snapshot["provider_calls"][-1]["status"] == "FAILED"
+
+
 @pytest.mark.parametrize(
     ("response_factory", "server_completion_known"),
     [
