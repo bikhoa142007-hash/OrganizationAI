@@ -41,7 +41,9 @@ def test_request_gate_caps_six_http_requests_and_three_inference_posts():
         for stage in ("VLM", "MEDIA", "STRATEGY"):
             with gate.provider_call(stage, timeout_seconds=1):
                 client.get("http://127.0.0.1:11434/api/tags")
-                client.post("http://127.0.0.1:11434/v1/chat/completions", json={})
+                client.post(
+                    "http://127.0.0.1:11434/v1/chat/completions", json={"max_tokens": 1}
+                )
 
         with pytest.raises(ProviderNonRetryableError) as error:
             with gate.provider_call("EXTRA", timeout_seconds=1):
@@ -72,7 +74,9 @@ def test_provider_timeout_latches_gate_and_suppresses_later_provider_requests():
         settings = type("Settings", (), {"timeout_seconds": 1})()
 
         def evaluate(self, _request):
-            client.post("http://127.0.0.1:11434/v1/chat/completions", json={})
+            client.post(
+                "http://127.0.0.1:11434/v1/chat/completions", json={"max_tokens": 1}
+            )
             raise ProviderTimeout()
 
     class LaterProvider:
@@ -125,7 +129,9 @@ def test_absolute_call_deadline_latches_gate_before_slow_provider_can_send():
 
         def evaluate(self, _request):
             time.sleep(0.08)
-            return client.post("http://127.0.0.1:11434/v1/chat/completions", json={})
+            return client.post(
+                "http://127.0.0.1:11434/v1/chat/completions", json={"max_tokens": 1}
+            )
 
     provider = GatedTaskProvider(SlowProvider(), gate, provider_name="MEDIA", timeout_seconds=0.04)
     try:
@@ -341,6 +347,96 @@ def test_raw_source_provider_call_cannot_bypass_the_gate_scope():
     assert gate.snapshot()["request_count"] == 0
 
 
+@pytest.mark.parametrize(
+    ("override", "expected_code"),
+    [
+        ("oversized_body", "REQUEST_BODY_TOO_LARGE"),
+        ("oversized_tokens", "OUTPUT_TOKEN_LIMIT_EXCEEDED"),
+    ],
+)
+def test_raw_client_cannot_bypass_transport_input_or_output_caps(override, expected_code):
+    inner_calls = []
+    gate = RequestGate()
+    _, providers = build_harness_orchestrator(
+        gate,
+        inner_transport=httpx.MockTransport(
+            lambda request: inner_calls.append(request) or httpx.Response(200)
+        ),
+    )
+    body = {
+        "model": TASK_MODEL_ID,
+        "messages": [],
+        "max_tokens": MAX_OUTPUT_TOKENS,
+    }
+    if override == "oversized_body":
+        body["padding"] = "x" * (MAX_INPUT_BYTES + 1)
+    else:
+        body["max_tokens"] = 999999
+
+    try:
+        with pytest.raises(ProviderNonRetryableError) as error:
+            with gate.provider_call("MEDIA", timeout_seconds=20):
+                providers["client"].post(
+                    "http://127.0.0.1:11434/v1/chat/completions", json=body,
+                )
+    finally:
+        providers["client"].close()
+
+    assert error.value.code == expected_code
+    assert inner_calls == []
+    snapshot = gate.snapshot()
+    assert snapshot["request_count"] == 0
+    assert snapshot["blocked_requests"][-1]["reason"] == expected_code
+    assert snapshot["provider_calls"][-1]["status"] == "FAILED"
+    assert snapshot["provider_calls"][-1]["error_code"] == expected_code
+
+
+@pytest.mark.parametrize(
+    ("response_factory", "server_completion_known"),
+    [
+        (
+            lambda: httpx.Response(200, content=b"x" * (MAX_RESPONSE_BYTES + 1)),
+            True,
+        ),
+        (
+            lambda: httpx.Response(
+                200, stream=httpx.ByteStream(b"x" * (MAX_RESPONSE_BYTES + 1))
+            ),
+            False,
+        ),
+    ],
+)
+def test_raw_client_cannot_receive_response_over_approved_limit(
+    response_factory, server_completion_known,
+):
+    inner_calls = []
+    gate = RequestGate()
+    _, providers = build_harness_orchestrator(
+        gate,
+        inner_transport=httpx.MockTransport(
+            lambda request: inner_calls.append(request)
+            or response_factory()
+        ),
+    )
+    try:
+        with pytest.raises(ProviderNonRetryableError) as error:
+            with gate.provider_call("MEDIA", timeout_seconds=20):
+                providers["client"].post(
+                    "http://127.0.0.1:11434/v1/chat/completions",
+                    json={"model": TASK_MODEL_ID, "messages": [], "max_tokens": 1},
+                )
+    finally:
+        providers["client"].close()
+
+    assert error.value.code == "RESOURCE_EXHAUSTED"
+    assert len(inner_calls) == 1
+    snapshot = gate.snapshot()
+    assert snapshot["closed"] is True
+    assert snapshot["sent_requests"][-1]["server_completion_known"] is server_completion_known
+    assert snapshot["sent_requests"][-1]["error_code"] == "RESOURCE_EXHAUSTED"
+    assert snapshot["provider_calls"][-1]["status"] == "FAILED"
+
+
 def test_fourth_inference_post_is_blocked_while_total_request_budget_remains():
     wire_requests = []
     gate = RequestGate()
@@ -354,7 +450,9 @@ def test_fourth_inference_post_is_blocked_while_total_request_budget_remains():
     with httpx.Client(transport=transport) as client:
         for provider in ("VLM", "MEDIA", "STRATEGY"):
             with gate.provider_call(provider, timeout_seconds=1):
-                client.post("http://127.0.0.1:11434/v1/chat/completions", json={})
+                client.post(
+                    "http://127.0.0.1:11434/v1/chat/completions", json={"max_tokens": 1}
+                )
         with pytest.raises(ProviderNonRetryableError) as error:
             with gate.provider_call("EXTRA", timeout_seconds=1):
                 client.post("http://127.0.0.1:11434/v1/chat/completions", json={})

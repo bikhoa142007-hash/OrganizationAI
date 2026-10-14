@@ -6,6 +6,7 @@ existing providers and their HTTPX transport only in the one-case harness.
 
 from contextlib import contextmanager
 from datetime import datetime, timezone
+import json
 import threading
 import time
 
@@ -86,8 +87,8 @@ class RequestGate:
             yield call_id
             with self._lock:
                 self._expire_active_call_locked()
-                if self._closed and self._timed_out_provider == provider_name:
-                    raise ProviderTimeout()
+                if self._closed:
+                    self._raise_closed_locked(provider_name)
         except ProviderTimeout:
             self.latch_timeout(provider_name, "PROVIDER_TIMEOUT", call_id=call_id)
             with self._lock:
@@ -163,11 +164,16 @@ class RequestGate:
         self._closed = True
         self._close_reason = reason
         self._timed_out_provider = provider_name
-        for request in reversed(self._sent):
-            if request["provider"] == provider_name and request["response_completed_at"] is None:
-                request["error_code"] = "PROVIDER_TIMEOUT"
-                request["server_completion_known"] = False
-                break
+        if reason in {"PROVIDER_TIMEOUT", "CALL_DEADLINE_EXCEEDED", "RESOURCE_EXHAUSTED"}:
+            for request in reversed(self._sent):
+                if request["provider"] == provider_name and request["response_completed_at"] is None:
+                    request["error_code"] = (
+                        "PROVIDER_TIMEOUT"
+                        if reason in {"PROVIDER_TIMEOUT", "CALL_DEADLINE_EXCEEDED"}
+                        else reason
+                    )
+                    request["server_completion_known"] = False
+                    break
 
     def _record_blocked_call(self, provider_name, reason):
         self._blocked.append({
@@ -223,6 +229,10 @@ class RequestGate:
             elif request.method.upper() == "POST" and self._post_count_locked() >= self.max_inference_posts:
                 reason = "INFERENCE_BUDGET_EXHAUSTED"
                 self._latch_locked(reason, provider_name)
+            elif request.method.upper() == "POST":
+                reason = _validate_inference_request(request)
+                if reason is not None:
+                    self._latch_locked(reason, provider_name)
 
             if reason is not None:
                 self._blocked.append({
@@ -277,6 +287,12 @@ class RequestGate:
             record = self._request_record(request_id)
             record["error_code"] = error_code
 
+    def fail_request(self, request_id, error_code):
+        with self._lock:
+            record = self._request_record(request_id)
+            record["error_code"] = error_code
+            self._latch_locked(error_code, record["provider"])
+
     def _request_record(self, request_id):
         return next(item for item in self._sent if item["request_id"] == request_id)
 
@@ -301,16 +317,28 @@ class RequestGate:
 
 
 class _ObservedResponseStream(httpx.SyncByteStream):
-    def __init__(self, inner, gate, request_id):
+    def __init__(self, inner, gate, request_id, max_response_bytes):
         self._inner = inner
         self._gate = gate
         self._request_id = request_id
+        self._max_response_bytes = max_response_bytes
+        self._observed_bytes = 0
 
     def __iter__(self):
         try:
-            yield from self._inner
+            for chunk in self._inner:
+                if self._observed_bytes + len(chunk) > self._max_response_bytes:
+                    raise ProviderNonRetryableError(
+                        "Provider response exceeded the configured limit.",
+                        code="RESOURCE_EXHAUSTED",
+                    )
+                self._observed_bytes += len(chunk)
+                yield chunk
+        except ProviderNonRetryableError as exc:
+            self._gate.fail_request(self._request_id, exc.code)
+            raise
         except httpx.TimeoutException:
-            self._gate.note_request_error(self._request_id, "PROVIDER_TIMEOUT")
+            self._gate.fail_request(self._request_id, "PROVIDER_TIMEOUT")
             raise
         except Exception:
             self._gate.note_request_error(self._request_id, "PROVIDER_ERROR")
@@ -341,10 +369,34 @@ class RequestBudgetTransport(httpx.BaseTransport):
             raise
 
         self.gate.note_response_headers(request_id, response.status_code)
+        content_encoding = response.headers.get("content-encoding", "identity").strip().lower()
+        if content_encoding not in {"", "identity"}:
+            response.close()
+            self.gate.fail_request(request_id, "RESPONSE_ENCODING_NOT_ALLOWED")
+            raise ProviderNonRetryableError(
+                "Encoded provider responses are not allowed by the synthetic harness.",
+                code="RESPONSE_ENCODING_NOT_ALLOWED",
+            )
         if response.is_stream_consumed:
             self.gate.note_response_complete(request_id)
+            if len(response.content) > MAX_RESPONSE_BYTES:
+                self.gate.fail_request(request_id, "RESOURCE_EXHAUSTED")
+                raise ProviderNonRetryableError(
+                    "Provider response exceeded the configured limit.",
+                    code="RESOURCE_EXHAUSTED",
+                )
         else:
-            response.stream = _ObservedResponseStream(response.stream, self.gate, request_id)
+            content_length = _content_length(response.headers)
+            if content_length is not None and content_length > MAX_RESPONSE_BYTES:
+                response.close()
+                self.gate.fail_request(request_id, "RESOURCE_EXHAUSTED")
+                raise ProviderNonRetryableError(
+                    "Provider response exceeded the configured limit.",
+                    code="RESOURCE_EXHAUSTED",
+                )
+            response.stream = _ObservedResponseStream(
+                response.stream, self.gate, request_id, MAX_RESPONSE_BYTES
+            )
         return response
 
     def close(self):
@@ -415,6 +467,57 @@ VLM_HTTP_TIMEOUT_SECONDS = 18
 MAX_OUTPUT_TOKENS = 1536
 MAX_RESPONSE_BYTES = 262_144
 MAX_INPUT_BYTES = 1_048_576
+
+
+def _content_length(headers):
+    value = headers.get("content-length")
+    if value is None:
+        return None
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        return None
+    return parsed if parsed >= 0 else None
+
+
+def _reject_duplicate_json_keys(pairs):
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError("duplicate JSON key")
+        result[key] = value
+    return result
+
+
+def _validate_inference_request(request):
+    """Enforce the approved JSON/body/token limits on every POST transport path."""
+    if request.headers.get("content-encoding", "identity").strip().lower() not in {"", "identity"}:
+        return "REQUEST_ENCODING_NOT_ALLOWED"
+
+    declared_length = _content_length(request.headers)
+    if declared_length is not None and declared_length > MAX_INPUT_BYTES:
+        return "REQUEST_BODY_TOO_LARGE"
+
+    body = bytearray()
+    try:
+        for chunk in request.stream:
+            if len(body) + len(chunk) > MAX_INPUT_BYTES:
+                return "REQUEST_BODY_TOO_LARGE"
+            body.extend(chunk)
+        payload = json.loads(bytes(body), object_pairs_hook=_reject_duplicate_json_keys)
+    except (TypeError, ValueError, UnicodeDecodeError):
+        return "REQUEST_BODY_INVALID"
+
+    if not isinstance(payload, dict):
+        return "REQUEST_BODY_INVALID"
+    max_tokens = payload.get("max_tokens")
+    if type(max_tokens) is not int or max_tokens < 1:
+        return "OUTPUT_TOKEN_LIMIT_INVALID"
+    if max_tokens > MAX_OUTPUT_TOKENS:
+        return "OUTPUT_TOKEN_LIMIT_EXCEEDED"
+
+    request.stream = httpx.ByteStream(bytes(body))
+    return None
 
 
 def build_harness_orchestrator(gate, *, inner_transport=None):
