@@ -131,6 +131,13 @@ def _round_test_configuration(session, admin, checker):
                 "weight": weight,
             } for criterion_id, label, weight in STRATEGY_CRITERIA],
         },
+        "checker_assignment": {
+            "maker_may_select_other": False,
+            "defaults": [{
+                "department": "marketing",
+                "checker_id": str(checker.id),
+            }],
+        },
         "authority": {
             "currency": "VND",
             "auto_limit_minor_units": "100000000",
@@ -329,6 +336,10 @@ def test_real_source_providers_use_gate_and_application_service_persists_review(
         assert plan.processing_stage == "HUMAN_REVIEW_REQUIRED"
         assert version.version_number == 1 and version.snapshot_hash == run.input_hash
         assert round_snapshot.snapshot_hash
+        assert round_snapshot.checker_assignment["status"] == "CONFIGURED"
+        assert round_snapshot.checker_assignment["source"] == "DEFAULT"
+        assert round_snapshot.checker_assignment["checker_id"] == str(actors["CHECKER"].id)
+        assert round_snapshot.checker_assignment["configuration_revision_id"]
         assert run.status == "SUCCEEDED" and run.retried is False
         assert run.visual_extraction["model_revision"] == VLM_MODEL_VERSION
         assert run.media_evaluation["model_revision"] == TASK_MODEL_VERSION
