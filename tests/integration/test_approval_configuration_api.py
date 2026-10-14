@@ -15,14 +15,14 @@ from sqlalchemy.orm import sessionmaker
 
 from src.backend.api import approval_configuration as configuration_api
 from src.backend.api.auth import AuthenticatedPrincipal, get_auth_db, get_current_principal
-from src.backend.application import approval_configuration, role_admin
+from src.backend.application import approval_configuration, employee_admin, role_admin
 from scripts.postgres_test_target import verify_runner_provisioned_database
 from src.backend.application.workflow import ApplicationError
 from src.backend.db.base import Base
 from src.backend.db.models.approval_configuration import AuthWorkflowRoundConfigurationSnapshot
 from src.backend.db.models.auth_workflow import AuthWorkflowPlan, AuthWorkflowVersion
 from src.backend.db.models.employee import EmployeeProfile
-from src.backend.db.models import AdminAuditEvent, Role, RolePermission, User, UserRole
+from src.backend.db.models import AdminAuditEvent, AuthWorkflowEvent, Role, RolePermission, User, UserRole
 
 
 @pytest.fixture
@@ -500,3 +500,79 @@ def test_postgres_role_admin_keeps_admin_grants_self_assignment_and_builtins_loc
                 "synthetic-role-test",
                 [legacy_role_code],
             )
+
+
+def test_postgres_checker_reassignment_audit_records_version_round_and_result(configuration_postgres):
+    _engine, factory = configuration_postgres
+    admin = _admin(factory)
+    principal = _principal(admin, ("ADMIN",))
+    departing_profile_id, departing_id = _linked_employee(factory, "GOV-DEPARTING")
+    _replacement_profile_id, replacement_id = _linked_employee(factory, "GOV-REPLACEMENT")
+    _maker_profile_id, maker_id = _linked_employee(factory, "GOV-MAKER")
+
+    with factory.begin() as session:
+        checker_role = session.scalar(select(Role).where(Role.code == "CHECKER"))
+        if checker_role is None:
+            checker_role = Role(code="CHECKER", name="Checker", is_builtin=True)
+            session.add(checker_role)
+            session.flush()
+        maker_role = session.scalar(select(Role).where(Role.code == "MAKER"))
+        session.add_all([
+            UserRole(user_id=departing_id, role_id=checker_role.id),
+            UserRole(user_id=replacement_id, role_id=checker_role.id),
+            UserRole(user_id=maker_id, role_id=maker_role.id),
+        ])
+
+    effective_at = datetime.now(timezone.utc) - timedelta(minutes=1)
+    with factory() as session:
+        approval_configuration.create_configuration_revision(
+            session,
+            principal,
+            "synthetic-checker-reassignment-audit",
+            kind="checker_assignment",
+            expected_revision=None,
+            effective_at=effective_at,
+            change_reason="Synthetic PostgreSQL reassignment audit fixture.",
+            value={
+                "maker_may_select_other": False,
+                "defaults": [{"department": "Synthetic", "checker_id": str(replacement_id)}],
+            },
+        )
+
+    with factory.begin() as session:
+        plan = AuthWorkflowPlan(
+            code=f"GOV-REASSIGN-{uuid4().hex[:12]}",
+            maker_id=maker_id,
+            checker_id=departing_id,
+            payload={"department": "Synthetic"},
+            status="PENDING_APPROVAL",
+            processing_stage="HUMAN_REVIEW_REQUIRED",
+            current_version=4,
+            current_round=3,
+        )
+        session.add(plan)
+        session.flush()
+        plan_id = plan.id
+
+    with factory() as session:
+        employee_admin.deactivate_employee(
+            session, principal, departing_profile_id, "synthetic-reassignment", {},
+        )
+
+    with factory() as session:
+        plan = session.get(AuthWorkflowPlan, plan_id)
+        event = session.scalar(select(AuthWorkflowEvent).where(
+            AuthWorkflowEvent.plan_id == plan_id,
+            AuthWorkflowEvent.action == "CHECKER_REASSIGNED",
+        ))
+        assert plan is not None and plan.checker_id == replacement_id
+        assert event is not None
+        assert event.status_before == event.status_after == "PENDING_APPROVAL"
+        assert event.details["version"] == 4
+        assert event.details["round"] == 3
+        assert event.details["result"] == "SUCCESS"
+        assert event.details["previous_checker_id"] == str(departing_id)
+        assert event.details["new_checker_id"] == str(replacement_id)
+        assert session.scalar(select(AdminAuditEvent.id).where(
+            AdminAuditEvent.action == "EMPLOYEE_DEACTIVATED",
+        )) is not None

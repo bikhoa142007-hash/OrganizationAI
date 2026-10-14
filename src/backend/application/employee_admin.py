@@ -306,6 +306,9 @@ def deactivate_employee(session: Session, principal: AuthenticatedPrincipal, emp
                 details={
                     "previous_checker_id": str(previous_id),
                     "new_checker_id": str(replacement_id),
+                    "version": plan.current_version,
+                    "round": plan.current_round,
+                    "result": "SUCCESS",
                     "reason": "Employee deactivation using the active department default",
                     "assignment_configuration_revision_id": assignment.configuration_revision_id,
                     "assignment_configuration_revision": assignment.configuration_revision,

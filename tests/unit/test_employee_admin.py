@@ -277,6 +277,9 @@ def test_checker_deactivation_uses_configured_default_and_preserves_event_histor
         assert event.action == "CHECKER_REASSIGNED"
         assert event.details["previous_checker_id"] == str(departing_user_id)
         assert event.details["new_checker_id"] == str(replacement_id)
+        assert event.details["version"] == 1
+        assert event.details["round"] == 1
+        assert event.details["result"] == "SUCCESS"
         assert event.details["assignment_configuration_revision"] == 1
         assert event.details["assignment_configuration_hash"]
         sla = session.scalar(select(AuthWorkflowSlaRound).where(AuthWorkflowSlaRound.plan_id == plan_id))

@@ -111,11 +111,11 @@ def resolve_checker_assignment(
     lock_eligible_checker: bool = False,
     lock_configuration: bool = False,
 ) -> CheckerAssignmentResult:
-    """Resolve the configured default or preserve the explicit pre-config selection.
+    """Resolve the configured default or an explicitly permitted department choice.
 
-    This function never infers a substitute Checker from the employee catalog. If a
-    revision is absent, an explicitly selected, currently eligible Checker remains
-    compatible with the existing workflow while the result stays UNCONFIGURED.
+    This function never infers a substitute Checker from the employee catalog. An
+    absent revision or department default fails closed, including for an explicit
+    Checker selection.
     """
     if lock_configuration:
         lock_configuration_registry(session)
