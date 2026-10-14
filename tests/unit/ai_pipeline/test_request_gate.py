@@ -289,10 +289,56 @@ def test_builder_owns_a_client_with_the_same_hard_gate():
         assert orchestrator is not None
         assert isinstance(client._transport, RequestBudgetTransport)
         assert client._transport.gate is gate
+        assert {"source_visual", "source_media", "source_strategy"}.isdisjoint(providers)
         with pytest.raises(TypeError):
             build_harness_orchestrator(gate, object())
     finally:
         client.close()
+
+
+def test_builder_client_rejects_an_allowed_request_outside_provider_call_scope():
+    inner_calls = []
+    gate = RequestGate()
+    orchestrator, providers = build_harness_orchestrator(
+        gate,
+        inner_transport=httpx.MockTransport(
+            lambda request: inner_calls.append(request) or httpx.Response(200)
+        ),
+    )
+    client = providers["client"]
+    try:
+        assert orchestrator is not None
+        with pytest.raises(ProviderNonRetryableError) as error:
+            client.post("http://127.0.0.1:11434/v1/chat/completions", json={})
+    finally:
+        client.close()
+
+    assert error.value.code == "REQUEST_OUTSIDE_PROVIDER_CALL"
+    assert inner_calls == []
+    assert gate.snapshot()["request_count"] == 0
+    assert gate.snapshot()["close_reason"] == "REQUEST_OUTSIDE_PROVIDER_CALL"
+
+
+def test_raw_source_provider_call_cannot_bypass_the_gate_scope():
+    inner_calls = []
+    gate = RequestGate()
+    orchestrator, providers = build_harness_orchestrator(
+        gate,
+        inner_transport=httpx.MockTransport(
+            lambda request: inner_calls.append(request) or _identity_response()
+        ),
+    )
+    client = providers["client"]
+    try:
+        assert orchestrator is not None
+        with pytest.raises(ProviderNonRetryableError) as error:
+            providers["visual"].delegate.analyze_image(_source_visual_request())
+    finally:
+        client.close()
+
+    assert error.value.code == "REQUEST_OUTSIDE_PROVIDER_CALL"
+    assert inner_calls == []
+    assert gate.snapshot()["request_count"] == 0
 
 
 def test_fourth_inference_post_is_blocked_while_total_request_budget_remains():
@@ -436,7 +482,8 @@ def test_disallowed_method_path_or_origin_is_rejected_before_inner_transport(
     )
     with httpx.Client(transport=transport) as client:
         with pytest.raises(ProviderNonRetryableError) as error:
-            client.request(method, url)
+            with gate.provider_call("VLM", timeout_seconds=1):
+                client.request(method, url)
 
     assert error.value.code == expected_code
     assert inner_calls == []

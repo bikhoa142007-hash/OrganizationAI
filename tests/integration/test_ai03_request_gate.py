@@ -248,9 +248,9 @@ def test_real_source_providers_use_gate_and_application_service_persists_review(
     )
     with providers["client"] as client:
         assert isinstance(orchestrator, AuthenticatedEvaluationOrchestrator)
-        assert providers["source_visual"]._client is client
-        assert providers["source_media"]._client is client
-        assert providers["source_strategy"]._client is client
+        assert providers["visual"].delegate._client is client
+        assert providers["media"].delegate._client is client
+        assert providers["strategy"].delegate._client is client
         assert providers["media_settings"].max_retries == 0
         assert providers["strategy_settings"].max_retries == 0
         assert providers["media_settings"].max_output_tokens == MAX_OUTPUT_TOKENS
@@ -268,7 +268,7 @@ def test_real_source_providers_use_gate_and_application_service_persists_review(
                 strategy_rubric=strategy_rubric,
                 media_model_snapshot=providers["media_settings"].public_snapshot(),
                 strategy_model_snapshot=providers["strategy_settings"].public_snapshot(),
-                visual_model_snapshot=providers["source_visual"].get_model_metadata(),
+                visual_model_snapshot=providers["visual"].get_model_metadata(),
             )
             payload = {
                 "title": "Synthetic campaign pipeline",

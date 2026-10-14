@@ -204,6 +204,9 @@ class RequestGate:
             reason = None
             if self._closed:
                 reason = self._suppression_code_locked(provider_name)
+            elif self._active_call is None:
+                reason = "REQUEST_OUTSIDE_PROVIDER_CALL"
+                self._latch_locked(reason, provider_name)
             elif (request.url.scheme != "http"
                   or request.url.host != "127.0.0.1"
                   or request.url.port != 11434
@@ -517,8 +520,5 @@ def build_harness_orchestrator(gate, *, inner_transport=None):
         "strategy": strategy,
         "media_settings": media_settings,
         "strategy_settings": strategy_settings,
-        "source_visual": visual_source,
-        "source_media": media_source,
-        "source_strategy": strategy_source,
         "client": client,
     }
