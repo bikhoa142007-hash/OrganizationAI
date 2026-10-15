@@ -34,6 +34,6 @@ The backend rejects `approval_policy.enabled=true` before PO sign-off, and the d
 
 ## Verification and fallback
 
-The existing decision-engine tests cover the strict score boundary (71 passes, 70 does not), budget equality and over-limit behavior, low confidence, hard violations, invalid output and error fallback. A previous targeted local run passed 59 tests. The latest rerun could not start because the available bundled Python has no `pytest` and the repository virtual-environment executable could not be launched in this worktree.
+The existing decision-engine tests cover the strict score boundary (71 passes, 70 does not), budget equality and over-limit behavior, low confidence, hard violations, invalid output and error fallback. Targeted verification on 2026-10-15 passed 59 tests and 66 subtests.
 
 The backend requires Media PASS, Media confidence ≥0.85, Strategy score >70, Strategy confidence ≥0.80, an active matching VND budget, an active authority at or below its cap, a configured eligible distinct Checker, no hard violation/conflict/error, and enabled approval policy. Missing configuration, scope mismatch, budget/authority excess, invalid or failed AI output, or any threshold miss must remain on the human-review/Checker path. Equality at the budget ceiling passes; one unit over it does not.
