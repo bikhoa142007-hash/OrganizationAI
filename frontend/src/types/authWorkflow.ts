@@ -214,7 +214,7 @@ export interface WorkflowEngineDecision {
   version_number: number
   round_number: number
   decision_id: string
-  outcome: 'AUTO_APPROVED' | 'HUMAN_REVIEW_REQUIRED'
+  outcome: 'AUTO_APPROVED' | 'HUMAN_REVIEW_REQUIRED' | 'AUTO_REJECTED'
   decision: {
     reason: string
     applied_rule_ids: string[]
@@ -313,7 +313,7 @@ export interface WorkflowAuditPage {
 
 export interface WorkflowNotification {
   id: string
-  event_type: 'PLAN_SUBMITTED' | 'PLAN_APPROVED' | 'PLAN_AUTO_APPROVED' | 'PLAN_REJECTED' | 'SLA_WARNING' | 'SLA_OVERDUE'
+  event_type: 'PLAN_SUBMITTED' | 'PLAN_APPROVED' | 'PLAN_AUTO_APPROVED' | 'PLAN_REJECTED' | 'PLAN_AUTO_REJECTED' | 'SLA_WARNING' | 'SLA_OVERDUE'
   plan_id: string
   plan_code: string
   title: string

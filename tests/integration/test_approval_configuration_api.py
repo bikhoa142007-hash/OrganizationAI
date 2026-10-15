@@ -22,7 +22,8 @@ from scripts.postgres_test_target import verify_runner_provisioned_database
 from src.backend.application.workflow import ApplicationError
 from src.backend.db.base import Base
 from src.backend.db.models.approval_configuration import (
-    AuthWorkflowApprovalPolicySignoff, AuthWorkflowRoundConfigurationSnapshot,
+    AuthWorkflowApprovalPolicySignoff, AuthWorkflowAutoRejectPolicySignoff,
+    AuthWorkflowRoundConfigurationSnapshot,
 )
 from src.backend.db.models.auth_workflow import AuthWorkflowPlan, AuthWorkflowVersion
 from src.backend.db.models.employee import EmployeeProfile
@@ -277,6 +278,19 @@ def test_policy_owner_signoff_is_bound_to_exact_revisions_and_audited(configurat
             "feasibility_score_threshold_exclusive": 70,
             "feasibility_confidence_threshold": 0.80,
         },
+        "auto_reject_policy": {
+            "configuration_id": "SYNTHETIC-UNAPPROVED-AUTO-REJECT-CANDIDATE",
+            "policy_version": "TEST-ONLY-1", "revision": 1, "enabled": False,
+            "environment": "PRODUCTION", "scope_departments": ["Marketing"],
+            "scope_channels": ["social"], "rules": [{
+                "rule_id": "TEST-ONLY-UNAPPROVED-RULE", "evidence_kind": "OCR_TEXT",
+                "forbidden_literals": ["SYNTHETIC-UNAPPROVED-LITERAL"],
+                "evidence_confidence_threshold": 0.85,
+                "media_confidence_threshold": 0.85,
+                "feasibility_confidence_threshold": 0.80,
+                "reason_code": "TEST_ONLY_UNAPPROVED_RULE", "exceptions": [],
+            }],
+        },
     }
     current = {}
     for kind in approval_configuration.CONFIGURATION_KINDS:
@@ -312,17 +326,55 @@ def test_policy_owner_signoff_is_bound_to_exact_revisions_and_audited(configurat
     )
     assert repeated.status_code == 200
     assert repeated.json()["replayed"] is True
+
+    with factory() as session:
+        live = approval_configuration.current_configuration(session, owner_principal, "auto-reject-signoff-current")
+    expected_auto_reject = {
+        item["kind"]: {
+            "revision_id": item["current_revision"]["revision_id"],
+            "configuration_hash": item["current_revision"]["configuration_hash"],
+        }
+        for item in live["items"] if item["current_revision"] is not None
+    }
+    auto_reject_response = client.post(
+        "/api/workflow/configuration/auto-reject-policy/signoff",
+        json={"expected_revisions": expected_auto_reject}, headers={"Origin": "http://localhost"},
+    )
+    assert auto_reject_response.status_code == 200, auto_reject_response.text
+    auto_reject_result = auto_reject_response.json()
+    assert auto_reject_result["replayed"] is False
+    assert auto_reject_result["revision"]["kind"] == "auto_reject_policy"
+    assert auto_reject_result["revision"]["value"]["enabled"] is True
+    assert auto_reject_result["revision"]["signoff"]["candidate_revision_id"] == current["auto_reject_policy"]["revision_id"]
+    assert auto_reject_result["revision"]["signoff"]["policy_owner_id"] == str(owner.id)
+    assert auto_reject_result["revision"]["signoff"]["approved_configuration_hash"] == auto_reject_result["revision"]["configuration_hash"]
+    auto_reject_replay = client.post(
+        "/api/workflow/configuration/auto-reject-policy/signoff",
+        json={"expected_revisions": expected_auto_reject}, headers={"Origin": "http://localhost"},
+    )
+    assert auto_reject_replay.status_code == 200
+    assert auto_reject_replay.json()["replayed"] is True
+
     with factory() as session:
         signoffs = session.scalars(select(AuthWorkflowApprovalPolicySignoff)).all()
+        auto_reject_signoffs = session.scalars(select(AuthWorkflowAutoRejectPolicySignoff)).all()
         audits = session.scalars(select(AdminAuditEvent).where(
             AdminAuditEvent.action == "WORKFLOW_AUTO_APPROVAL_SIGNOFF",
         )).all()
+        auto_reject_audits = session.scalars(select(AdminAuditEvent).where(
+            AdminAuditEvent.action == "WORKFLOW_AUTO_REJECT_SIGNOFF",
+        )).all()
         assert len(signoffs) == 1
+        assert len(auto_reject_signoffs) == 1
         assert len(audits) == 1
+        assert len(auto_reject_audits) == 1
         assert audits[0].actor_id == owner.id
+        assert auto_reject_audits[0].actor_id == owner.id
         assert audits[0].after_state["approval_policy_revision_id"] == result["revision"]["revision_id"]
         assert audits[0].after_state["signed_at"] == result["revision"]["signoff"]["signed_at"]
         assert audits[0].after_state["configuration_revisions"] == result["revision"]["signoff"]["configuration_revisions"]
+        assert auto_reject_audits[0].after_state["auto_reject_policy_revision_id"] == auto_reject_result["revision"]["revision_id"]
+        assert auto_reject_audits[0].after_state["configuration_revisions"] == auto_reject_result["revision"]["signoff"]["configuration_revisions"]
 
     with factory() as session:
         snapshot = approval_configuration.resolve_round_configuration(
@@ -333,6 +385,10 @@ def test_policy_owner_signoff_is_bound_to_exact_revisions_and_audited(configurat
     from src.backend.demo import configuration as demo_configuration
     applied = approval_configuration.apply_round_configuration_snapshot(demo_configuration(), snapshot)
     assert applied.policy.auto_approval_policy_enabled is True
+    assert applied.auto_reject_policy is not None
+    assert applied.auto_reject_policy.enabled is True
+    assert applied.auto_reject_policy.signoff_source == "AUTHENTICATED_POLICY_OWNER"
+    assert applied.auto_reject_policy.signed_by == str(owner.id)
 
     changed_effective_at = datetime.now(timezone.utc) + timedelta(seconds=2)
     with factory() as session:
@@ -357,6 +413,7 @@ def test_policy_owner_signoff_is_bound_to_exact_revisions_and_audited(configurat
         demo_configuration(), changed_snapshot,
     )
     assert changed_applied.policy.auto_approval_policy_enabled is False
+    assert changed_applied.auto_reject_policy is None
     assert next(item for item in current["items"] if item["kind"] == "approval_policy")["status"] == "DISABLED"
 
     other_user = _admin(factory)

@@ -1,10 +1,12 @@
 from dataclasses import replace
+from uuid import uuid4
 import pytest
 
 from fixtures import NOW, config, evaluation, plan, recommend_review
 from src.backend.domain.models import DecisionResult
 from src.backend.domain.policy import (
     AutoRejectPolicy, AutoRejectRule, auto_reject_configuration_hash,
+    auto_reject_configuration_value,
 )
 from src.backend.rules.decision import DecisionContext, decide
 from src.shared.validation import ValidationError, canonical_hash
@@ -94,6 +96,31 @@ def test_only_approved_scoped_rule_with_hash_bound_ocr_can_auto_reject():
         DecisionResult.from_dict(tampered_trace)
 
 
+def test_authenticated_production_signoff_allows_explicit_rule_to_win_over_auto_approve():
+    p = plan()
+    raw = evaluation(p)
+    raw["evidence"] = _ocr_evidence(p)
+    fixture_rule = _fixture_policy().rules[0]
+    unsigned = AutoRejectPolicy(
+        "PRODUCTION-MARKETING-SOCIAL", "POLICY-REV-1", 1, False,
+        ("synthetic-marketing",), ("social",), (fixture_rule,),
+        None, None, None, None, "PRODUCTION",
+    )
+    signed_hash = canonical_hash(auto_reject_configuration_value(unsigned, enabled=True))
+    signed = AutoRejectPolicy(
+        unsigned.configuration_id, unsigned.policy_version, unsigned.revision, True,
+        unsigned.scope_departments, unsigned.scope_channels, unsigned.rules,
+        signed_hash, "AUTHENTICATED_POLICY_OWNER", str(uuid4()), "2026-10-16T00:00:00Z",
+        "PRODUCTION",
+    )
+
+    decision = _evaluate(policy=signed, raw=raw, p=p).decision
+
+    assert decision.outcome == "AUTO_REJECTED"
+    assert decision.auto_reject_rule_id == fixture_rule.rule_id
+    assert decision.reason_code == fixture_rule.reason_code
+
+
 def test_confidence_floor_is_inclusive_at_each_approved_threshold():
     p = plan()
     raw = evaluation(p)
@@ -128,15 +155,14 @@ def test_budget_mandate_and_plan_cap_boundaries_still_override_fixture_reject():
     assert decide_at("10000001").outcome == "HUMAN_REVIEW_REQUIRED"
 
 
-def test_production_auto_reject_cannot_be_enabled_without_implemented_signoff_registry():
+def test_production_auto_reject_requires_authenticated_policy_owner_signoff():
     rule = _fixture_policy().rules[0]
     unsigned = AutoRejectPolicy(
         "PRODUCTION-AUTO-REJECT", "PRODUCTION-1", 1, False, ("Marketing",), ("social",),
         (rule,), None, None, None, None, "PRODUCTION",
     )
-    from src.backend.domain.policy import auto_reject_configuration_value
     signed_value = auto_reject_configuration_value(unsigned, enabled=True)
-    with pytest.raises(ValidationError, match="disabled in production"):
+    with pytest.raises(ValidationError, match="Synthetic auto-reject sign-off is valid only"):
         AutoRejectPolicy(
             "PRODUCTION-AUTO-REJECT", "PRODUCTION-1", 1, True, ("Marketing",), ("social",),
             (rule,), canonical_hash(signed_value), "SYNTHETIC_FIXTURE", "VERIFY_FIXTURE",

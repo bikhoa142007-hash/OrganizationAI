@@ -15,6 +15,7 @@ const kindLabels: Record<ConfigurationKind, string> = {
   strategy_rubric: 'Rubric chiến lược',
   authority: 'Authority',
   checker_assignment: 'Checker mặc định',
+  auto_reject_policy: 'Policy auto-reject',
 }
 
 const stateLabels: Record<string, string> = {
@@ -167,7 +168,7 @@ export function AuthenticatedApprovalConfigurationPage() {
       },
     ]))
     if (configurationKinds.some(configurationKind => !expectedRevisions[configurationKind])) {
-      setError('Chưa đủ revision hiệu lực để ký. Cần cấu hình đầy đủ cả sáu loại trước.')
+      setError('Chưa đủ revision hiệu lực để ký. Cần cấu hình đầy đủ cả bảy loại trước.')
       return
     }
     setSaving(true)
@@ -178,6 +179,36 @@ export function AuthenticatedApprovalConfigurationPage() {
       const signedAt = result.revision.signoff?.signed_at
       setMessage(`Đã ghi sign-off của Policy Owner cho revision ${result.revision.revision}${signedAt ? ` lúc ${formatDate(signedAt)}` : ''}.${result.replayed ? ' Đây là phản hồi lặp lại của cùng sign-off.' : ''}`)
       await load('approval_policy')
+    } catch (failure) {
+      setError(failure instanceof Error ? failure.message : String(failure))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function signOffAutoRejectPolicy() {
+    setError('')
+    setMessage('')
+    if (!current || kind !== 'auto_reject_policy') return
+    const expectedRevisions = Object.fromEntries(current.items.map(item => [
+      item.kind,
+      item.current_revision && {
+        revision_id: item.current_revision.revision_id,
+        configuration_hash: item.current_revision.configuration_hash,
+      },
+    ]))
+    if (configurationKinds.some(configurationKind => !expectedRevisions[configurationKind])) {
+      setError('Chưa đủ revision hiệu lực để ký. Cần cấu hình đầy đủ cả bảy loại trước.')
+      return
+    }
+    setSaving(true)
+    try {
+      const result = await approvalConfigurationService.signOffAutoRejectPolicy(
+        expectedRevisions as Record<ConfigurationKind, { revision_id: string; configuration_hash: string }>,
+      )
+      const signedAt = result.revision.signoff?.signed_at
+      setMessage(`Đã ghi sign-off của Policy Owner cho auto-reject revision ${result.revision.revision}${signedAt ? ` lúc ${formatDate(signedAt)}` : ''}.${result.replayed ? ' Đây là phản hồi lặp lại của cùng sign-off.' : ''}`)
+      await load('auto_reject_policy')
     } catch (failure) {
       setError(failure instanceof Error ? failure.message : String(failure))
     } finally {
@@ -228,7 +259,7 @@ export function AuthenticatedApprovalConfigurationPage() {
 
     {!loading && kind === 'approval_policy' && currentItem?.current_revision?.value.enabled === false && <section className="auth-workflow-state" aria-label="Policy Owner sign-off">
       <h2>Policy Owner sign-off</h2>
-      <p>Thao tác này ký revision Policy phê duyệt đang hiển thị và tạo revision kế tiếp bật auto-approve. Backend chỉ chấp nhận phiên đăng nhập của bkhoa, xác minh cả sáu revision hiện hành, danh tính và trạng thái tài khoản, scope Marketing/social, ngân sách, authority và hạn mức đã duyệt.</p>
+      <p>Thao tác này ký revision Policy phê duyệt đang hiển thị và tạo revision kế tiếp bật auto-approve. Backend chỉ chấp nhận phiên đăng nhập của bkhoa, xác minh cả bảy revision hiện hành, danh tính và trạng thái tài khoản, scope Marketing/social, ngân sách, authority và hạn mức đã duyệt.</p>
       <p>Người ký cần kiểm tra các revision cụ thể và hash bên dưới. Sign-off được ghi bất biến cùng actor, thời điểm và authority snapshot.</p>
       <div aria-label="Các revision sẽ được sign-off">
         {current?.items.map(item => item.current_revision
@@ -240,6 +271,23 @@ export function AuthenticatedApprovalConfigurationPage() {
       </p>}
       <button className="button button-primary" type="button" disabled={saving || loading} onClick={() => void signOffPolicy()}>
         {saving ? 'Đang xác minh và ghi sign-off…' : 'Policy Owner ký và bật auto-approve'}
+      </button>
+    </section>}
+
+    {!loading && kind === 'auto_reject_policy' && currentItem?.current_revision?.value.enabled === false && <section className="auth-workflow-state" aria-label="Policy Owner auto-reject sign-off">
+      <h2>Policy Owner sign-off · auto-reject</h2>
+      <p>Ký sẽ kích hoạt đúng rule, scope và hash đang hiển thị. Chỉ ký sau khi đã duyệt nội dung literal, ngoại lệ, reason code và bằng chứng bắt buộc. Backend yêu cầu tài khoản ADMIN bkhoa đang hoạt động, Media/Strategy Marketing/social, Checker lekhoi và các revision hiện hành.</p>
+      <p>Rule không có sign-off luôn tắt. Sau khi ký, mọi lần đổi revision hỗ trợ làm policy cũ fail-closed; hồ sơ đã gửi giữ snapshot cũ của mình.</p>
+      <div aria-label="Các revision sẽ được sign-off">
+        {current?.items.map(item => item.current_revision
+          ? <RevisionSummary key={item.kind} revision={item.current_revision} />
+          : <p key={item.kind}>{kindLabels[item.kind]}: chưa cấu hình hiệu lực.</p>)}
+      </div>
+      {currentItem.current_revision.signoff && <p role="status">
+        Đã ký bởi {currentItem.current_revision.signoff.policy_owner_id} lúc {formatDate(currentItem.current_revision.signoff.signed_at)} · hash {currentItem.current_revision.signoff.approved_configuration_hash}
+      </p>}
+      <button className="button button-primary" type="button" disabled={saving || loading} onClick={() => void signOffAutoRejectPolicy()}>
+        {saving ? 'Đang xác minh và ghi sign-off…' : 'Policy Owner ký và bật auto-reject'}
       </button>
     </section>}
 

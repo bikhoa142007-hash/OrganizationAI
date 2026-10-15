@@ -135,6 +135,33 @@ def test_auto_approval_configuration_cannot_be_enabled_by_admin_revision():
         validate_configuration_value("approval_policy", value)
 
 
+def test_production_auto_reject_revision_must_stay_disabled_until_policy_owner_signoff():
+    candidate = {
+        "configuration_id": "SYNTHETIC-TEST-AUTO-REJECT",
+        "policy_version": "TEST-ONLY-1",
+        "revision": 1,
+        "enabled": False,
+        "environment": "PRODUCTION",
+        "scope_departments": ["Marketing"],
+        "scope_channels": ["social"],
+        "rules": [{
+            "rule_id": "TEST-ONLY-LITERAL",
+            "evidence_kind": "OCR_TEXT",
+            "forbidden_literals": ["SYNTHETIC_TEST_LITERAL"],
+            "evidence_confidence_threshold": 0.85,
+            "media_confidence_threshold": 0.85,
+            "feasibility_confidence_threshold": 0.80,
+            "reason_code": "TEST_ONLY_LITERAL",
+            "exceptions": [],
+        }],
+    }
+
+    normalized = validate_configuration_value("auto_reject_policy", candidate)
+    assert normalized["enabled"] is False
+    with pytest.raises(ConfigurationValidationError, match="sign-off"):
+        validate_configuration_value("auto_reject_policy", {**candidate, "enabled": True})
+
+
 def test_active_authority_requires_checker_policy_owner_and_budget_authority():
     with pytest.raises(ValueError, match="Checker, Policy Owner and Budget Authority"):
         validate_authority_value(None, {

@@ -11,6 +11,22 @@ describe('workflow configuration draft validation', () => {
     })).toContain('PO phê duyệt')
   })
 
+  it('accepts only disabled, explicit production auto-reject candidates', () => {
+    const candidate = {
+      configuration_id: 'MARKETING-SOCIAL-AUTO-REJECT',
+      policy_version: 'draft-1', revision: 1, enabled: false,
+      environment: 'PRODUCTION', scope_departments: ['Marketing'], scope_channels: ['social'],
+      rules: [{
+        rule_id: 'REJECT-EXPLICIT-TEXT', evidence_kind: 'OCR_TEXT',
+        forbidden_literals: ['EXPLICIT_TEST_LITERAL'], evidence_confidence_threshold: 0.9,
+        media_confidence_threshold: 0.85, feasibility_confidence_threshold: 0.8,
+        reason_code: 'EXPLICIT_POLICY_RULE', exceptions: [],
+      }],
+    }
+    expect(validateConfigurationValue('auto_reject_policy', candidate)).toBeNull()
+    expect(validateConfigurationValue('auto_reject_policy', { ...candidate, enabled: true })).toContain('đang tắt')
+  })
+
   it('rejects overlapping budget limits for one department', () => {
     expect(validateConfigurationValue('budget', {
       currency: 'VND',

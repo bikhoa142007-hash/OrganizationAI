@@ -4,6 +4,7 @@ import re
 from dataclasses import dataclass
 from collections.abc import Mapping
 from typing import Any, Literal
+from uuid import UUID
 from datetime import datetime, timezone
 from src.shared.validation import Contract, Positive, Nonnegative, MinorUnits, Timestamp, require, distinct, canonical_hash
 
@@ -158,7 +159,7 @@ class AutoRejectPolicy(Contract):
     scope_channels: tuple[str, ...]
     rules: tuple[AutoRejectRule, ...]
     configuration_hash: str | None
-    signoff_source: Literal["SYNTHETIC_FIXTURE"] | None
+    signoff_source: Literal["SYNTHETIC_FIXTURE", "AUTHENTICATED_POLICY_OWNER"] | None
     signed_by: str | None
     signed_at: Timestamp | None
     environment: Literal["PRODUCTION", "SYNTHETIC_TEST"] = "PRODUCTION"
@@ -177,12 +178,24 @@ class AutoRejectPolicy(Contract):
                     "Enabled auto-reject policy is not bound to its exact configuration hash.")
             require(self.signoff_source is not None and self.signed_by is not None and self.signed_at is not None,
                     "Enabled auto-reject policy needs a revision-specific sign-off.")
-            require(self.signoff_source == "SYNTHETIC_FIXTURE"
-                    and self.environment == "SYNTHETIC_TEST"
-                    and self.signed_by == "VERIFY_FIXTURE"
-                    and self.configuration_id.startswith("VERIFY-"),
-                    "Auto-reject is disabled in production until an approved rule has authenticated Policy Owner sign-off.")
+            if self.signoff_source == "SYNTHETIC_FIXTURE":
+                require(self.environment == "SYNTHETIC_TEST"
+                        and self.signed_by == "VERIFY_FIXTURE"
+                        and self.configuration_id.startswith("VERIFY-"),
+                        "Synthetic auto-reject sign-off is valid only for an unmistakable test fixture.")
+            elif self.signoff_source == "AUTHENTICATED_POLICY_OWNER":
+                require(self.environment == "PRODUCTION"
+                        and not self.configuration_id.startswith("VERIFY-"),
+                        "Authenticated Policy Owner sign-off is valid only for a production policy.")
+                try:
+                    UUID(self.signed_by)
+                except (TypeError, ValueError, AttributeError) as exc:
+                    raise ValueError("Authenticated Policy Owner sign-off must identify a user UUID.") from exc
+            else:
+                raise ValueError("Enabled auto-reject policy has an unsupported sign-off source.")
         else:
+            require(self.configuration_hash is None,
+                    "Disabled auto-reject policy must not carry an activation hash.")
             require(self.signoff_source is None and self.signed_by is None and self.signed_at is None,
                     "Disabled auto-reject policy must not carry an activation sign-off.")
 

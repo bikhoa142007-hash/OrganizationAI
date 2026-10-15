@@ -7,7 +7,7 @@ Verify is an Admin-only synthetic acceptance harness at `/workflow/verify`. It r
 - **Environment:** `SYNTHETIC_TEST`.
 - **AI provider:** `MockVLMProvider`; the suite makes no external AI or market-data calls.
 - **Persistence:** synthetic workflow records live in per-case in-memory SQLite. Run progress/report data live in the API process and are scoped to the starting Admin. Reloading the page restores that Admin’s latest run. Restarting the API process clears this transient run history.
-- **Policy:** the Verify fixture uses a test-only 10,000,000 VND budget ceiling and 5,000,000 VND auto-approval authority. TC03 uses an explicitly synthetic, fixture-signed `VERIFY-FORBIDDEN-LITERAL` rule bound to an OCR result, its attachment digest and a versioned policy hash. The rule cannot be instantiated as an enabled production policy. It does not change Auth or production policy.
+- **Policy:** the Verify fixture uses a test-only 10,000,000 VND budget ceiling and 5,000,000 VND auto-approval authority. TC03 uses an explicitly synthetic, fixture-signed `VERIFY-FORBIDDEN-LITERAL` rule bound to an OCR result, its attachment digest and a versioned policy hash. A synthetic signature or `SYNTHETIC_TEST` environment cannot activate a production rule. It does not change Auth or production policy.
 
 ## The four cases
 
@@ -20,7 +20,15 @@ Verify is an Admin-only synthetic acceptance harness at `/workflow/verify`. It r
 
 Every case reports the expected result beside the actual persisted plan, AI evaluation, engine decision, audit events, and individual assertions. `PASS` is computed from those actual workflow records. A timeout or failed assertion is shown as `FAIL`; the UI does not turn a failed result into a pass.
 
-Missing media evidence remains an independent regression test and must route to Checker. The fixture reject takes precedence over auto-approval only if all ordinary approval gates pass; any failing gate, including score 70, budget/authority overflow or scope mismatch, leaves the plan with Checker. A warning alone, a near-match OCR token, missing/conflicting evidence, low confidence, provider failure, unknown model or incorrect attachment hash must never trigger the fixture rejection. Production auto-reject remains unavailable until a specific business rule is approved and an authenticated Policy Owner sign-off flow binds it to exact scope, revision and hash. This mock suite proves deterministic rule behavior and does not prove a production VLM connection.
+Missing media evidence remains an independent regression test and must route to Checker. The fixture reject takes precedence over auto-approval only if all ordinary approval gates pass; any failing gate, including score 70, budget/authority overflow or scope mismatch, leaves the plan with Checker. A warning alone, a near-match OCR token, missing/conflicting evidence, low confidence, provider failure, unknown model or incorrect attachment hash must never trigger rejection. Auth can accept a production outcome only after an explicit rule is reviewed, saved as a disabled revision, and signed by the authenticated Policy Owner against the exact revision/hash and supporting configuration revisions. This mock suite proves deterministic rule behavior and does not prove a production VLM connection.
+
+## Production auto-reject state
+
+- Migration creates the `auto_reject_policy` registry head and sign-off ledger with no candidate rule and no enabled revision.
+- Policy Owner sign-off is a deliberate authenticated action. The backend resolves the actor to active `bkhoa` with the current ADMIN role, verifies Marketing/social scope, the two Media WARNING rules, active Strategy rubric, 10,000,000 VND Marketing budget, default `lekhoi` Checker assignment, confidence floors and exact captured revisions.
+- Production activation remains off until a concrete forbidden-evidence rule, exact exceptions, reason code and required evidence are approved. Nothing in this synthetic runbook supplies or approves that production rule.
+- An activated round records `AUTO_REJECTED`, `AI_AUTO_REJECTED`, SYSTEM audit details, matched rule/reason/evidence references, a closed round and a separate `PLAN_AUTO_REJECTED` Maker notification. The plan remains resubmittable through the ordinary rejected-plan flow.
+- A final partial unique index covers both automatic outcomes so a round cannot commit both auto-approve and auto-reject. Checker and evaluator paths continue to use the locked plan/round transaction.
 
 ## Run from a clean clone
 

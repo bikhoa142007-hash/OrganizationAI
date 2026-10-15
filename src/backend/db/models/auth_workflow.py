@@ -149,7 +149,7 @@ class AuthWorkflowNotification(Base):
     __tablename__ = "auth_workflow_notifications"
     __table_args__ = (
         CheckConstraint(
-            "event_type IN ('PLAN_SUBMITTED', 'PLAN_APPROVED', 'PLAN_AUTO_APPROVED', 'PLAN_REJECTED', 'SLA_WARNING', 'SLA_OVERDUE')",
+            "event_type IN ('PLAN_SUBMITTED', 'PLAN_APPROVED', 'PLAN_AUTO_APPROVED', 'PLAN_REJECTED', 'PLAN_AUTO_REJECTED', 'SLA_WARNING', 'SLA_OVERDUE')",
             name="ck_auth_workflow_notifications_event_type",
         ),
         UniqueConstraint("event_key", name="uq_auth_workflow_notifications_event_key"),
@@ -289,15 +289,15 @@ class AuthWorkflowEngineDecision(Base):
     __table_args__ = (
         UniqueConstraint("decision_id", name="uq_auth_workflow_engine_decisions_id"),
         Index(
-            "uq_auth_workflow_engine_auto_approved_plan_round",
+            "uq_auth_workflow_engine_auto_final_plan_round",
             "plan_id",
             "round_number",
             unique=True,
-            postgresql_where=text("outcome = 'AUTO_APPROVED'"),
-            sqlite_where=text("outcome = 'AUTO_APPROVED'"),
+            postgresql_where=text("outcome IN ('AUTO_APPROVED', 'AUTO_REJECTED')"),
+            sqlite_where=text("outcome IN ('AUTO_APPROVED', 'AUTO_REJECTED')"),
         ),
         CheckConstraint(
-            "outcome IN ('AUTO_APPROVED', 'HUMAN_REVIEW_REQUIRED')",
+            "outcome IN ('AUTO_APPROVED', 'HUMAN_REVIEW_REQUIRED', 'AUTO_REJECTED')",
             name="ck_auth_workflow_engine_decisions_outcome",
         ),
     )

@@ -101,9 +101,19 @@ def test_auth_migrations_create_registration_ready_identity_tables(tmp_path, mon
     assert not any(item["column_names"] == ["plan_id", "round_number"] for item in engine_decision_uniques)
     engine_decision_indexes = inspector.get_indexes("auth_workflow_engine_decisions")
     assert any(
-        item["name"] == "uq_auth_workflow_engine_auto_approved_plan_round" and item["unique"]
+        item["name"] == "uq_auth_workflow_engine_auto_final_plan_round" and item["unique"]
         for item in engine_decision_indexes
     )
+    outcome_check = next(
+        item["sqltext"] for item in inspector.get_check_constraints("auth_workflow_engine_decisions")
+        if item["name"] == "ck_auth_workflow_engine_decisions_outcome"
+    )
+    assert "AUTO_REJECTED" in outcome_check
+    notification_check = next(
+        item["sqltext"] for item in inspector.get_check_constraints("auth_workflow_notifications")
+        if item["name"] == "ck_auth_workflow_notifications_event_type"
+    )
+    assert "PLAN_AUTO_REJECTED" in notification_check
     decision_uniques = inspector.get_unique_constraints("auth_workflow_decisions")
     assert any(item["column_names"] == ["plan_id", "round_number"] for item in decision_uniques)
     event_uniques = inspector.get_unique_constraints("auth_workflow_events")

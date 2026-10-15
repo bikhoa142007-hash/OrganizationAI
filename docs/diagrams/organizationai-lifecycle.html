@@ -5170,7 +5170,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
         <!-- Transition paths -->
         <path data-edge-from="draft" data-edge-to="pending" data-edge-label="valid submit" data-edge-key="0" data-edge-id="draft-submit" data-composition-points="298,157;332,157" d="M 298 157 L 332 157" class="a-emphasis" stroke-width="2" marker-end="url(#arrowhead-emphasis)"/>
         <path data-edge-from="pending" data-edge-to="approved" data-edge-key="1" data-edge-id="pending-approve" data-composition-points="472,157;660,157" d="M 472 157 L 660 157" class="a-emphasis" stroke-width="2" marker-end="url(#arrowhead-emphasis)"/>
-        <path data-edge-from="pending" data-edge-to="rejected" data-edge-key="2" data-edge-id="pending-reject" data-composition-points="402,126;402,80;556,80;556,256" d="M 402 126 L 402 90 Q 402 80 412 80 L 546 80 Q 556 80 556 90 L 556 256" class="a-security" stroke-width="1.1" marker-end="url(#arrowhead-security)"/>
+        <path data-edge-from="pending" data-edge-to="rejected" data-edge-label="Checker decision / exact signed rule" data-edge-key="2" data-edge-id="pending-reject" data-composition-points="402,126;402,80;556,80;556,256" d="M 402 126 L 402 90 Q 402 80 412 80 L 546 80 Q 556 80 556 90 L 556 256" class="a-security" stroke-width="1.1" marker-end="url(#arrowhead-security)"/>
         <path data-edge-from="rejected" data-edge-to="pending" data-edge-label="Resubmit next V / R" data-edge-key="3" data-edge-id="rejected-resubmit" data-composition-points="556,318;556,360;402,360;402,188" d="M 556 318 L 556 350 Q 556 360 546 360 L 412 360 Q 402 360 402 350 L 402 188" class="a-dashed" stroke-width="1.1" marker-end="url(#arrowhead-dashed)"/>
 
         <!-- States -->
@@ -5212,8 +5212,8 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
         <text data-detail="fine" x="710" y="177" class="t-database" font-size="7" text-anchor="middle">Final</text>
         </g>
 
-        <g id="node-rejected" data-node-id="rejected" data-node-label="REJECTED" tabindex="0" role="button" aria-label="Focus REJECTED, reason required, Plan status" aria-pressed="false" data-node-kind="failure" data-node-sublabel="reason required" data-node-tag="Round closed" data-node-context="Plan status">
-          <title>REJECTED · reason required · Plan status · Round closed</title>
+        <g id="node-rejected" data-node-id="rejected" data-node-label="REJECTED" tabindex="0" role="button" aria-label="Focus REJECTED, Checker or signed rule, Plan status" aria-pressed="false" data-node-kind="failure" data-node-sublabel="Checker or signed rule" data-node-tag="Round closed" data-node-context="Plan status">
+          <title>REJECTED · Checker or signed rule · Plan status · Round closed</title>
           <rect x="481" y="256" width="150" height="62" rx="7" class="c-mask"/>
           <rect x="481" y="256" width="150" height="62" rx="7" class="c-security" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="failure" class="semantic-sigil s-security" transform="translate(614 262) scale(0.6875)">
@@ -5221,7 +5221,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
             <path d="m5.7 5.7 4.6 4.6m0-4.6-4.6 4.6"/>
           </g>
           <text data-node-label="" data-detail-anchor="" x="556" y="277" class="t-primary" font-size="10" font-weight="600" text-anchor="middle">REJECTED</text>
-          <text data-detail="context" x="556" y="293" class="t-muted" font-size="7" text-anchor="middle">reason required</text>
+          <text data-detail="context" x="556" y="293" class="t-muted" font-size="7" text-anchor="middle">Checker or signed rule</text>
         <text data-detail="fine" x="556" y="307" class="t-security" font-size="7" text-anchor="middle">Round closed</text>
         </g>
 
@@ -5231,7 +5231,10 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
           <text x="315" y="119" class="t-backend" font-size="8" text-anchor="middle">valid submit</text>
         </g>
 
-
+        <g data-detail="context" data-edge-from="pending" data-edge-to="rejected" data-edge-label="Checker decision / exact signed rule" data-edge-key="2" data-edge-id="pending-reject">
+          <rect x="384.8" y="59" width="188.4" height="16" rx="4" class="c-mask"/>
+          <text x="479" y="70" class="t-security" font-size="8" text-anchor="middle">Checker decision / exact signed rule</text>
+        </g>
         <g data-detail="context" data-edge-from="rejected" data-edge-to="pending" data-edge-label="Resubmit next V / R" data-edge-key="3" data-edge-id="rejected-resubmit">
           <rect x="426.45" y="331" width="105.10000000000001" height="16" rx="4" class="c-mask"/>
           <text x="479" y="342" class="t-messagebus" font-size="8" text-anchor="middle">Resubmit next V / R</text>
