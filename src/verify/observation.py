@@ -1,5 +1,6 @@
 """Validate persisted cross-record integrity without recomputing decision rules."""
 from src.backend.domain.models import AuditEvent, DecisionResult, EvaluationResult, Escalation, MarketingPlan
+from src.backend.domain.policy import AutoRejectPolicy
 from src.shared.validation import require
 
 
@@ -23,8 +24,40 @@ def validate_observation(actual):
         require(any(q.category == decision.escalation_category for q in questions), 'Primary category question missing')
     events = [AuditEvent.from_dict(e) for e in actual['audit']]
     require(any(e.decision_id == decision.decision_id and e.input_hash == version.input_hash
-                and e.action in ('AUTO_APPROVED', 'ENGINE_ROUTED') for e in events), 'Decision audit missing')
+                and e.action in ('AUTO_APPROVED', 'AUTO_REJECTED', 'ENGINE_ROUTED') for e in events),
+            'Decision audit missing')
     require(any(e.action == 'PLAN_SUBMITTED' and e.input_hash == version.input_hash for e in events), 'Submission audit missing')
+    if decision.outcome == 'AUTO_REJECTED':
+        require(actual['plan']['state'] == {
+            'plan_status': 'REJECTED', 'processing_stage': 'AI_AUTO_REJECTED',
+            'approval_round_status': 'CLOSED',
+        }, 'System rejection state is incomplete.')
+        require(actual['round']['status'] == 'CLOSED'
+                and actual['round']['final_id'] == decision.decision_id,
+                'System rejection did not close exactly this approval round.')
+        event = next((item for item in events if item.action == 'AUTO_REJECTED'), None)
+        require(event is not None and event.actor_type == 'SYSTEM'
+                and event.auto_reject_rule_id == decision.auto_reject_rule_id
+                and event.reason_code == decision.reason_code
+                and event.input_hash == version.input_hash,
+                'System rejection audit does not match the signed decision.')
+        policy = AutoRejectPolicy.from_dict(actual['round']['configuration']['auto_reject_policy'])
+        require(policy.environment == 'SYNTHETIC_TEST' and policy.enabled
+                and policy.configuration_hash is not None
+                and policy.revision == 1
+                and policy.signed_by == 'VERIFY_FIXTURE',
+                'Synthetic rejection policy sign-off snapshot is missing.')
+        policy_evidence = [item for item in decision.evidence if item.source_type == 'POLICY']
+        require(any(item.content_hash == policy.configuration_hash
+                    and item.source_ref == policy.configuration_id
+                    and str(policy.revision) in item.observation
+                    for item in policy_evidence),
+                'System rejection audit lacks its exact policy revision/hash evidence.')
+        ocr_ids = {item.evidence_id for item in evaluation.evidence
+                   if item.evidence_kind == 'OCR_TEXT' and item.content_hash in
+                   {attachment.content_hash for attachment in version.attachments}}
+        require(bool(ocr_ids & set(event.evidence_reference)),
+                'System rejection audit lacks hash-bound OCR evidence.')
 
 
 def contract_result(row):

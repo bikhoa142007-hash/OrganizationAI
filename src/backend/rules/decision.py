@@ -166,6 +166,61 @@ def _input_valid(plan, config, ctx, evaluation):
     return True
 
 
+def _auto_reject_match(policy, plan, evaluation, ctx, config):
+    """Match explicit revisioned literals only against complete, hash-bound OCR evidence."""
+    if policy is None or not policy.enabled or not policy.applies_to(plan.payload):
+        return "NOT_APPLICABLE", None, (), None
+    # Automatic rejection is currently permitted only for the isolated Verify
+    # fixture. Production activation requires an approved rule and authenticated
+    # Policy Owner sign-off path.
+    if policy.environment != "SYNTHETIC_TEST":
+        return "UNKNOWN", None, (), None
+    if not (
+        config.media_policy and config.media_policy.status == "ACTIVE"
+        and config.media_policy.applies_to(plan.payload)
+        and config.strategy_rubric and config.strategy_rubric.status == "ACTIVE"
+    ):
+        return "UNKNOWN", None, (), None
+    if (evaluation.status != "SUCCEEDED" or evaluation.agent_errors or evaluation.missing_facts
+            or evaluation.evidence_conflicts or evaluation.media_confidence is None
+            or evaluation.feasibility_confidence is None):
+        return "UNKNOWN", None, (), None
+
+    verified = dict(ctx.verified_attachment_hashes)
+    attachments = {item.attachment_id: item.content_hash for item in plan.attachments}
+    if not attachments or set(verified) != set(attachments):
+        return "UNKNOWN", None, (), None
+
+    candidates = [
+        item for item in evaluation.evidence
+        if item.source_type == "ATTACHMENT" and item.evidence_kind == "OCR_TEXT"
+    ]
+    by_attachment: dict[str, list] = {attachment_id: [] for attachment_id in attachments}
+    for item in candidates:
+        if (item.source_ref not in attachments or verified.get(item.source_ref) != item.content_hash
+                or attachments[item.source_ref] != item.content_hash or item.confidence is None):
+            return "UNKNOWN", None, (), None
+        by_attachment[item.source_ref].append(item)
+    if any(not values for values in by_attachment.values()):
+        return "UNKNOWN", None, (), None
+
+    for rule in policy.rules:
+        if (evaluation.media_confidence < rule.media_confidence_threshold
+                or evaluation.feasibility_confidence < rule.feasibility_confidence_threshold):
+            return "UNKNOWN", None, (), None
+        evidence = tuple(item for values in by_attachment.values() for item in values)
+        if any(item.confidence < rule.evidence_confidence_threshold for item in evidence):
+            return "UNKNOWN", None, tuple(item.evidence_id for item in evidence), None
+        texts = tuple(item.observation for item in evidence)
+        if any(exception in text for exception in rule.exceptions for text in texts):
+            continue
+        matched_literal = next((literal for literal in rule.forbidden_literals
+                                if any(literal in text for text in texts)), None)
+        if matched_literal is not None:
+            return "MATCH", rule, tuple(item.evidence_id for item in evidence), matched_literal
+    return "NO_MATCH", None, tuple(item.evidence_id for item in candidates), None
+
+
 def decide(plan: MarketingPlan, config: ApprovalConfiguration, raw_evaluation,
            ctx: DecisionContext) -> DecisionBundle:
     """Compute a proposal bundle; persistence must atomically recheck state before commit."""
@@ -262,9 +317,70 @@ def decide(plan: MarketingPlan, config: ApprovalConfiguration, raw_evaluation,
           'auto_approval_policy_enabled = true', 'POLICY_OUT_OF_SCOPE')
     check('PLAN_PENDING', True, ctx.plan_status, 'plan_status = PENDING_APPROVAL', 'FACT_UNCERTAIN')
     check('ROUND_ACTIVE', True, ctx.approval_round_status, 'approval_round_status = ACTIVE', 'FACT_UNCERTAIN')
-    require(tuple(c.rule_id for c in checks) == RULE_IDS, 'Incomplete engine checks')
+    reject_status, reject_rule, reject_evidence_refs, matched_literal = _auto_reject_match(
+        config.auto_reject_policy, plan, ev, ctx, config,
+    )
+    if reject_status != "NOT_APPLICABLE":
+        reject_scope_pass = bool(
+            config.auto_reject_policy and config.auto_reject_policy.applies_to(plan.payload)
+            and config.media_policy and config.media_policy.status == "ACTIVE"
+            and config.media_policy.applies_to(plan.payload)
+            and config.strategy_rubric and config.strategy_rubric.status == "ACTIVE"
+        )
+        scope_check = RuleCheck(
+            "AUTO_REJECT_SCOPE", "PASS" if reject_scope_pass else "UNKNOWN",
+            {"department": plan.payload.get("department"), "channels": plan.payload.get("channels")},
+            "The signed auto-reject, Media and Strategy policies cover the submitted department and every channel.",
+            (),
+        )
+        checks.append(scope_check)
+        if not reject_scope_pass:
+            triggered.setdefault("FACT_UNCERTAIN", []).append(scope_check)
+        result = {"MATCH": "FAIL", "NO_MATCH": "PASS", "UNKNOWN": "UNKNOWN"}[reject_status]
+        reject_check = RuleCheck(
+            "AUTO_REJECT_MATCH", result,
+            {"policy_id": config.auto_reject_policy.configuration_id,
+             "policy_version": config.auto_reject_policy.policy_version,
+             "rule_id": reject_rule.rule_id if reject_rule else None,
+             "reason_code": reject_rule.reason_code if reject_rule else None,
+             "literal_matched": bool(matched_literal)},
+            "A signed, in-scope auto-reject rule matches complete OCR evidence above all configured confidence floors.",
+            reject_evidence_refs,
+        )
+        checks.append(reject_check)
+        if reject_status == "UNKNOWN":
+            triggered.setdefault("FACT_UNCERTAIN", []).append(reject_check)
+        elif reject_status == "MATCH":
+            policy_evidence_id = 'engine-auto-reject-policy-' + canonical_hash({
+                'configuration_id': config.auto_reject_policy.configuration_id,
+                'revision': config.auto_reject_policy.revision,
+                'configuration_hash': config.auto_reject_policy.configuration_hash,
+                'rule_id': reject_rule.rule_id,
+            })
+            engine_evidence.append(Evidence(
+                policy_evidence_id, 'POLICY', config.auto_reject_policy.configuration_id,
+                f"{config.auto_reject_policy.policy_version} revision {config.auto_reject_policy.revision}; "
+                f"rule {reject_rule.rule_id}; sign-off {config.auto_reject_policy.signoff_source} "
+                f"by {config.auto_reject_policy.signed_by} at {config.auto_reject_policy.signed_at}.",
+                config.auto_reject_policy.configuration_hash,
+            ))
+            engine_evidence.extend(item for item in ev.evidence
+                                   if item.evidence_id in set(reject_evidence_refs))
+    require(tuple(c.rule_id for c in checks[:len(RULE_IDS)]) == RULE_IDS,
+            'Incomplete engine checks')
+    require(len({item.rule_id for item in checks}) == len(checks), 'Duplicate engine rule check')
     categories = [c for c in ('AUTHORITY_EXCEEDED', 'POLICY_OUT_OF_SCOPE', 'FACT_UNCERTAIN') if c in triggered]
-    outcome = 'HUMAN_REVIEW_REQUIRED' if categories else 'AUTO_APPROVED'
+    auto_reject = (
+        reject_status == "MATCH"
+        and reject_rule is not None
+        and all(check.result == "PASS" for check in checks
+                if check.rule_id != "AUTO_REJECT_MATCH")
+    )
+    outcome = ('AUTO_REJECTED' if auto_reject else
+               'HUMAN_REVIEW_REQUIRED' if categories else 'AUTO_APPROVED')
+    if auto_reject:
+        # Explicit rejection policy has precedence over an otherwise eligible approval.
+        categories = []
     evaluation_identity = ev.to_dict()
     context_identity = ctx.to_dict()
     for field in ('created_at', 'started_at', 'completed_at', 'latency_ms', 'correlation_id'):
@@ -299,31 +415,42 @@ def decide(plan: MarketingPlan, config: ApprovalConfiguration, raw_evaluation,
             plan.plan_version, plan.approval_round, ev.evaluation_id, decision_id,
             plan.input_hash, policy.policy_version, codes, reason,
         ))
-    reason = ('All mandatory auto-approval gates passed.' if not categories else
-              'Human Review required: ' + ', '.join(c.rule_id for c in checks if c.result != 'PASS') + '.')
+    reason = (
+        f"System rejection rule {reject_rule.rule_id} matched verified evidence."
+        if auto_reject else
+        'All mandatory auto-approval gates passed.' if not categories else
+        'Human Review required: ' + ', '.join(c.rule_id for c in checks if c.result != 'PASS') + '.'
+    )
+    applied_rule_ids = tuple(c.rule_id for c in checks)
     decision = DecisionResult(
         decision_id, plan.plan_id, plan.plan_version, plan.approval_round, outcome,
-        categories[0] if categories else None, reason, RULE_IDS, plan.input_hash,
+        categories[0] if categories else None, reason, applied_rule_ids, plan.input_hash,
         policy.policy_version, ev.evaluation_id, Actor('SYSTEM', 'decision-engine'),
         ctx.decided_at, 1, tuple(checks), tuple(engine_evidence),
         tuple(q.escalation_id for q in questions), policy.snapshot_id, canonical_hash(policy),
         budget, authority.snapshot_id if authority else None,
         canonical_hash(authority) if authority else None, ctx.idempotency_key,
         ctx.correlation_id, ctx.round_revision,
+        reject_rule.rule_id if auto_reject else None,
+        reject_rule.reason_code if auto_reject else None,
     )
     auto = outcome == 'AUTO_APPROVED'
+    rejected = outcome == 'AUTO_REJECTED'
     audit = AuditEvent(
         'audit-' + decision_id, 'SYSTEM', 'decision-engine',
-        'AUTO_APPROVED' if auto else 'ENGINE_ROUTED', plan.plan_id, ctx.round_revision,
+        'AUTO_APPROVED' if auto else 'AUTO_REJECTED' if rejected else 'ENGINE_ROUTED',
+        plan.plan_id, ctx.round_revision,
         plan.input_hash, policy.policy_version, ev.model_version, reason,
         State('PENDING_APPROVAL', 'AI_PROCESSING', 'ACTIVE'),
         State('APPROVED', 'AI_AUTO_APPROVED', 'CLOSED') if auto else
+        State('REJECTED', 'AI_AUTO_REJECTED', 'CLOSED') if rejected else
         State('PENDING_APPROVAL', 'HUMAN_REVIEW_REQUIRED', 'ACTIVE'),
         ctx.decided_at, 1, plan.plan_id, plan.plan_version, plan.approval_round,
         ev.run_id, ev.evaluation_id, decision_id, None, ctx.correlation_id,
-        ctx.idempotency_key, RULE_IDS, tuple(e.evidence_id for e in engine_evidence),
+        ctx.idempotency_key, applied_rule_ids, tuple(e.evidence_id for e in engine_evidence),
         policy.snapshot_id, canonical_hash(policy), budget.configuration_id, budget.configuration_hash,
         decision.authority_snapshot_id, decision.authority_snapshot_hash,
-        outcome, None, None,
+        outcome, None, None, reject_rule.reason_code if rejected else None,
+        reject_rule.rule_id if rejected else None,
     )
     return DecisionBundle(ev, decision, tuple(questions), audit)

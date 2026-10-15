@@ -10,7 +10,8 @@ from src.backend.application.workflow import ApprovalWorkflow, ApplicationError
 from src.backend.repositories.approval import ApprovalRepository
 from src.backend.domain.policy import (
     ApprovalConfiguration, PolicySnapshot, BudgetConfiguration, AuthoritySnapshot, Criterion,
-    MediaCompliancePolicy, MediaPolicyRule, StrategyCriterion, StrategyRubric,
+    AutoRejectPolicy, AutoRejectRule, MediaCompliancePolicy, MediaPolicyRule,
+    StrategyCriterion, StrategyRubric,
 )
 
 
@@ -180,6 +181,59 @@ def test_rejection_resubmission_preserves_history(app):
     assert after['records'] == before['records']
     assert after['audit'][:len(before['audit'])] == before['audit']
     assert [r['status'] for r in after['rounds']] == ['CLOSED', 'ACTIVE']
+
+
+def test_fixture_auto_reject_is_atomic_idempotent_audited_and_resubmittable(app):
+    rule = AutoRejectRule(
+        rule_id='VERIFY-FORBIDDEN-LITERAL', evidence_kind='OCR_TEXT',
+        forbidden_literals=('DEMO-CONTENT-V2',), evidence_confidence_threshold=.85,
+        media_confidence_threshold=.85, feasibility_confidence_threshold=.80,
+        reason_code='SYNTHETIC_FORBIDDEN_LITERAL', exceptions=(),
+    )
+    app.configuration = replace(
+        app.configuration,
+        auto_reject_policy=AutoRejectPolicy.synthetic_fixture(
+            configuration_id='VERIFY-AUTO-REJECT', revision=1, enabled=True,
+            scope_departments=('marketing',), scope_channels=('social',), rules=(rule,),
+        ),
+    )
+    first = submitted(app)
+    raw = evaluation(first)
+    raw['evidence'][0].update(
+        observation='Synthetic fixture OCR: DEMO-CONTENT-V2',
+        evidence_kind='OCR_TEXT', confidence=.95,
+    )
+
+    result = evaluate(app, first, raw, key='fixture-auto-reject')
+    replay = evaluate(app, first, raw, key='fixture-auto-reject')
+    assert replay == result
+    assert result['decision']['outcome'] == 'AUTO_REJECTED'
+    assert result['decision']['auto_reject_rule_id'] == 'VERIFY-FORBIDDEN-LITERAL'
+    assert result['decision']['reason_code'] == 'SYNTHETIC_FORBIDDEN_LITERAL'
+    assert result['decision']['escalation_ids'] == []
+    assert_error('CONFLICT', lambda: human(app))
+
+    before = app.get_plan(MAKER, 'plan')
+    event = next(item for item in before['audit'] if item['action'] == 'AUTO_REJECTED')
+    assert event['actor_type'] == 'SYSTEM'
+    assert event['auto_reject_rule_id'] == 'VERIFY-FORBIDDEN-LITERAL'
+    assert event['reason_code'] == 'SYNTHETIC_FORBIDDEN_LITERAL'
+    assert event['input_hash'] == first['input_hash']
+    assert event['evidence_reference']
+    assert before['rounds'][0]['status'] == 'CLOSED'
+    assert before['rounds'][0]['final_id'] == result['decision']['decision_id']
+
+    edited = save(app, {**payload(), 'title': 'Revised synthetic campaign'},
+                  revision=before['plan']['revision'], key='revise-after-auto-reject')
+    second = app.submit_plan(MAKER, 'plan', expected_revision=edited['revision'],
+                             expected_policy_version='POLICY-1',
+                             idempotency_key='resubmit-after-auto-reject', correlation_id='round-2')
+    after = app.get_plan(MAKER, 'plan')
+    assert second['snapshot']['plan_version'] == second['snapshot']['approval_round'] == 2
+    assert after['rounds'][0] == before['rounds'][0]
+    assert after['records'][:len(before['records'])] == before['records']
+    assert after['audit'][:len(before['audit'])] == before['audit']
+    assert [row['status'] for row in after['rounds']] == ['CLOSED', 'ACTIVE']
 
 
 def test_checker_authorization_override_and_final_replay(app):

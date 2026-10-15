@@ -18,11 +18,12 @@ function makeRun(status: VerifyRun['status'] = 'COMPLETED'): VerifyRun {
       case_name: `Synthetic case ${caseId}`,
       input: { plan: { budget_minor_units: String((index + 3) * 1_000_000) } },
       status: 'PASS',
-      expected: { outcome: index === 0 ? 'AUTO_APPROVED' : 'HUMAN_REVIEW_REQUIRED' },
+      expected: { outcome: index === 0 ? 'AUTO_APPROVED' : index === 2 ? 'AUTO_REJECTED' : 'HUMAN_REVIEW_REQUIRED' },
       actual: {
-        decision: { outcome: index === 0 ? 'AUTO_APPROVED' : 'HUMAN_REVIEW_REQUIRED' },
+        decision: { outcome: index === 0 ? 'AUTO_APPROVED' : index === 2 ? 'AUTO_REJECTED' : 'HUMAN_REVIEW_REQUIRED' },
+        decision_source: index === 2 ? 'SYSTEM_AUTO_REJECT' : undefined,
         evaluation: { status: 'SUCCEEDED' },
-        audit: [{ action: index === 0 ? 'AUTO_APPROVED' : 'ENGINE_ROUTED' }],
+        audit: [{ action: index === 0 ? 'AUTO_APPROVED' : index === 2 ? 'AUTO_REJECTED' : 'ENGINE_ROUTED' }],
       },
       assertions: [{ name: 'audit_actions', expected: ['PLAN_SUBMITTED'], actual: ['PLAN_SUBMITTED'], passed: true }],
       reason: null,
@@ -49,6 +50,8 @@ describe('AuthenticatedVerifyPage', () => {
     expect(screen.getByText('Chỉ dữ liệu tổng hợp')).toBeTruthy()
     expect(screen.getByText(/Mock VLM · không gọi dịch vụ AI ngoài/)).toBeTruthy()
     for (const caseId of ['TC01', 'TC02', 'TC03', 'TC04']) expect(screen.getByText(caseId)).toBeTruthy()
+    expect(screen.getByText(/AUTO_REJECTED · Hệ thống tự từ chối \(fixture Verify\)/)).toBeTruthy()
+    expect(screen.getByText('Nguồn quyết định: SYSTEM_AUTO_REJECT')).toBeTruthy()
     expect(screen.getByText('4 / 4 PASS · 0 FAIL')).toBeTruthy()
     expect(screen.getByRole('link', { name: 'mở Verify runbook' })).toBeTruthy()
   })

@@ -21,7 +21,15 @@ function formatVerifyTime(value: string | null | undefined, timezone: string) {
 
 function actualDecision(row: VerifyRunRow) {
   const decision = row.actual?.decision as Record<string, unknown> | undefined
-  return typeof decision?.outcome === 'string' ? decision.outcome : 'Chưa có kết quả'
+  if (decision?.outcome === 'AUTO_APPROVED') return 'AUTO_APPROVED · Hệ thống tự duyệt'
+  if (decision?.outcome === 'AUTO_REJECTED') return 'AUTO_REJECTED · Hệ thống tự từ chối (fixture Verify)'
+  if (decision?.outcome === 'HUMAN_REVIEW_REQUIRED') return 'HUMAN_REVIEW_REQUIRED · Chuyển Checker'
+  return 'Chưa có kết quả'
+}
+
+function actualSource(row: VerifyRunRow) {
+  const source = row.actual?.decision_source
+  return typeof source === 'string' ? source : null
 }
 
 function caseBudget(row: VerifyRunRow) {
@@ -131,7 +139,7 @@ export function AuthenticatedVerifyPage() {
     {error && <div className="verify-run-alert" role="alert"><AlertCircle aria-hidden="true" />{error}</div>}
     {syncError && <div className="verify-run-alert" role="status"><AlertCircle aria-hidden="true" />{syncError}</div>}
 
-    {!run ? <StatePanel kind="empty" title="Chưa có lượt Verify" description="Chạy bốn tình huống cố định để kiểm tra tự duyệt, giới hạn quyền, thiếu bằng chứng và timeout." /> : <>
+    {!run ? <StatePanel kind="empty" title="Chưa có lượt Verify" description="Chạy bốn tình huống cố định để kiểm tra tự duyệt, giới hạn quyền, rule từ chối chỉ dành cho fixture và timeout. Thiếu bằng chứng được kiểm tra bằng regression riêng." /> : <>
       <section className="verify-run-summary" aria-label="Tóm tắt lượt Verify" aria-live="polite">
         <div className="verify-run-heading">
           <div><p className="page-eyebrow">{run.run_id}</p><h3>{running ? `Đang chạy ${run.current_case_id ?? 'TC01'} / TC04` : 'Kết quả lượt chạy'}</h3></div>
@@ -159,7 +167,7 @@ export function AuthenticatedVerifyPage() {
           return <article className="verify-case-card" key={row.case_id}>
             <div className="verify-case-main">
               <div className="verify-case-title"><strong>{row.case_id}</strong><div><h3>{row.case_name}</h3><small>Ngân sách: {caseBudget(row)}</small></div></div>
-              <div className="verify-case-outcomes"><span><small>Kỳ vọng</small><strong>{String(row.expected.outcome ?? '—')}</strong></span><span><small>Thực tế</small><strong>{actualDecision(row)}</strong></span><StatusBadge value={row.status} /></div>
+              <div className="verify-case-outcomes"><span><small>Kỳ vọng</small><strong>{String(row.expected.outcome ?? '—')}</strong></span><span><small>Thực tế</small><strong>{actualDecision(row)}</strong>{actualSource(row) && <small>Nguồn quyết định: {actualSource(row)}</small>}</span><StatusBadge value={row.status} /></div>
             </div>
             {(row.reason || row.actual) && <p className="verify-case-reason">{row.reason ?? String((row.actual?.evaluation as Record<string, unknown> | undefined)?.reason ?? 'Workflow đã trả kết quả.')}</p>}
             <div className="verify-case-meta"><span>Bắt đầu: {formatVerifyTime(row.started_at, run.timezone)}</span><span>Kết thúc: {formatVerifyTime(row.completed_at, run.timezone)}</span><span>{(row.duration_ms / 1000).toFixed(2)} giây</span></div>

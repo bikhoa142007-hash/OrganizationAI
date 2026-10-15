@@ -7,7 +7,7 @@ Verify is an Admin-only synthetic acceptance harness at `/workflow/verify`. It r
 - **Environment:** `SYNTHETIC_TEST`.
 - **AI provider:** `MockVLMProvider`; the suite makes no external AI or market-data calls.
 - **Persistence:** synthetic workflow records live in per-case in-memory SQLite. Run progress/report data live in the API process and are scoped to the starting Admin. Reloading the page restores that Admin’s latest run. Restarting the API process clears this transient run history.
-- **Policy:** the Verify fixture uses a test-only 10,000,000 VND budget ceiling and 5,000,000 VND auto-approval authority. It does not change Auth or production policy.
+- **Policy:** the Verify fixture uses a test-only 10,000,000 VND budget ceiling and 5,000,000 VND auto-approval authority. TC03 uses an explicitly synthetic, fixture-signed `VERIFY-FORBIDDEN-LITERAL` rule bound to an OCR result, its attachment digest and a versioned policy hash. The rule cannot be instantiated as an enabled production policy. It does not change Auth or production policy.
 
 ## The four cases
 
@@ -15,10 +15,12 @@ Verify is an Admin-only synthetic acceptance harness at `/workflow/verify`. It r
 | --- | --- | --- |
 | TC01 | Marketing/social plan, 3,000,000 VND, valid attachment, passing mock | `AUTO_APPROVED`; plan becomes `APPROVED` |
 | TC02 | Same campaign with 6,000,000 VND, below the 10,000,000 budget ceiling but above 5,000,000 authority | `HUMAN_REVIEW_REQUIRED`; Checker remains the final decision maker |
-| TC03 | Accepted submission with an attachment; mock returns no media evidence | Provider schema validation fails closed; submission remains pending and is routed to Checker |
+| TC03 | Watermarked synthetic image contains `DEMO-CONTENT-V2`; mock returns OCR evidence bound to the attachment hash and the isolated fixture policy | `AUTO_REJECTED`; system actor and stable reason/rule codes are audited, the round closes, and the plan is `REJECTED` |
 | TC04 | Accepted submission; controlled mock provider timeout | Submission and audit remain; decision routes to Checker |
 
 Every case reports the expected result beside the actual persisted plan, AI evaluation, engine decision, audit events, and individual assertions. `PASS` is computed from those actual workflow records. A timeout or failed assertion is shown as `FAIL`; the UI does not turn a failed result into a pass.
+
+Missing media evidence remains an independent regression test and must route to Checker. The fixture reject takes precedence over auto-approval only if all ordinary approval gates pass; any failing gate, including score 70, budget/authority overflow or scope mismatch, leaves the plan with Checker. A warning alone, a near-match OCR token, missing/conflicting evidence, low confidence, provider failure, unknown model or incorrect attachment hash must never trigger the fixture rejection. Production auto-reject remains unavailable until a specific business rule is approved and an authenticated Policy Owner sign-off flow binds it to exact scope, revision and hash. This mock suite proves deterministic rule behavior and does not prove a production VLM connection.
 
 ## Run from a clean clone
 
@@ -71,5 +73,5 @@ npm run build
 - **Verify is missing:** sign in as a user with the `ADMIN` role. Both the route and API enforce authorization.
 - **A run is already active:** the UI restores the current run; let it finish before starting another.
 - **Latest run not found after API restart:** run reports are intentionally process-local synthetic data; start a new suite.
-- **TC03 is not PASS:** it is expected to route to Checker because the mock supplies no media evidence and the provider schema fails closed.
+- **TC03 is not PASS:** inspect the report for a `SUCCEEDED` evaluation, `OCR_TEXT` evidence bound to the synthetic attachment hash, `VERIFY-FORBIDDEN-LITERAL`, a `SYSTEM` audit actor, a closed round and `AI_AUTO_REJECTED`. The independent missing-evidence regression should still route to Checker.
 - **TC04 is not PASS:** verify the report shows `PROVIDER_TIMEOUT`, a pending plan, and submission/engine-routing audit actions. The expected case result itself is still PASS when these actual records match the assertions.

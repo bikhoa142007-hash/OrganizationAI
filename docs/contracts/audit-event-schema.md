@@ -40,14 +40,16 @@ Uses [common types](decision-contract.md). Events are append-only and record sig
 | outcome | RuntimeOutcome or null for non-engine actions |
 | human_action | APPROVED, REJECTED or null; separate from outcome |
 | override_reason | nonblank string when override occurred, otherwise null |
+| reason_code | stable reason code for synthetic Verify AUTO_REJECTED; null for ordinary production events |
+| auto_reject_rule_id | exact fixture rule ID for synthetic Verify AUTO_REJECTED; null otherwise |
 
-State object = { plan_status: DRAFT | PENDING_APPROVAL | APPROVED | REJECTED, processing_stage: AI_PENDING | AI_PROCESSING | HUMAN_REVIEW_REQUIRED | AI_AUTO_APPROVED | AI_PROCESSING_FAILED | null, approval_round_status: ACTIVE | CLOSED | null }. A transient AI_PROCESSING_FAILED observation must still lead to Human Review; it is never rejection.
+State object = { plan_status: DRAFT | PENDING_APPROVAL | APPROVED | REJECTED, processing_stage: AI_PENDING | AI_PROCESSING | HUMAN_REVIEW_REQUIRED | AI_AUTO_APPROVED | AI_PROCESSING_FAILED | null, approval_round_status: ACTIVE | CLOSED | null }. `AI_AUTO_REJECTED` exists only in the synthetic Verify observation, never on production Auth plans. A transient AI_PROCESSING_FAILED observation must still lead to Human Review; it is never rejection.
 
-Action enum: DRAFT_SAVED, ATTACHMENT_UPLOADED, PLAN_SUBMITTED, EVALUATION_STARTED, EVALUATION_COMPLETED, EVALUATION_FAILED, ENGINE_ROUTED, AUTO_APPROVED, HUMAN_APPROVED, HUMAN_REJECTED, ESCALATION_ANSWERED, PLAN_RESUBMITTED, ACCESS_DENIED, RETRY_REQUESTED. No automatic-rejection action exists in Sprint 1.
+Action enum: DRAFT_SAVED, ATTACHMENT_UPLOADED, PLAN_SUBMITTED, EVALUATION_STARTED, EVALUATION_COMPLETED, EVALUATION_FAILED, ENGINE_ROUTED, AUTO_APPROVED, AUTO_REJECTED (synthetic Verify only), HUMAN_APPROVED, HUMAN_REJECTED, ESCALATION_ANSWERED, PLAN_RESUBMITTED, ACCESS_DENIED, RETRY_REQUESTED. A Verify AUTO_REJECTED event uses actor type SYSTEM, carries the fixture rule/reason code, policy revision/hash and evidence references, and closes only its isolated synthetic round. No automatic-rejection action exists in production Sprint 1.
 
 ## Integrity and privacy
 
-Engine events require plan_id, plan_version, approval_round, input_hash, policy_version, policy snapshot ID/hash, evaluation_id, decision_id, outcome, rule IDs and matching actor. AUTO_APPROVED additionally requires the applied budget/authority snapshots; missing configuration can only appear on Human Review with an explanatory rule check. The reserved outcome is forbidden in the outcome field and any state transition.
+Engine events require plan_id, plan_version, approval_round, input_hash, policy_version, policy snapshot ID/hash, evaluation_id, decision_id, outcome, rule IDs and matching actor. AUTO_APPROVED additionally requires the applied budget/authority snapshots; missing configuration can only appear on Human Review with an explanatory rule check. A synthetic Verify AUTO_REJECTED event additionally requires the exact fixture rule ID, reason code, policy revision/hash evidence, OCR evidence tied to the submitted attachment hash, and the SYSTEM actor. The reserved production outcome remains forbidden in production state transitions.
 
 Human events require human_decision_id, human_action, authenticated HUMAN actor, round/version and input/configuration trace. They reference the preceding routing decision; a rejected plan is attributable to HUMAN_REJECTED, never an engine outcome. Rejection and override reason constraints are the same as HumanDecision. Answers record their answer_id/escalation_id as entity_id/evidence correlation via the application record, without embedding the answer's sensitive contents.
 

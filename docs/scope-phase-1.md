@@ -204,7 +204,9 @@ Các giá trị dưới đây mô tả trạng thái xử lý mục tiêu trong 
 | AI_AUTO_APPROVED | Đã đạt toàn bộ điều kiện tự động duyệt | Chuyển trạng thái nghiệp vụ sang Đã duyệt |
 | AI_PROCESSING_FAILED | Pipeline lỗi, timeout hoặc thiếu kết quả | Chuyển Checker, không tự động từ chối |
 
-Trong code tại commit được rà soát, `processing_stage` hiện gồm `DRAFT`, `AI_PENDING`, `AI_PROCESSING`, `HUMAN_REVIEW_REQUIRED`, `AI_AUTO_APPROVED` và `COMPLETED`. Pipeline failure chuyển trực tiếp sang `HUMAN_REVIEW_REQUIRED`; chưa có stage `AI_PROCESSING_FAILED`. Xem [lifecycle as-built](diagrams/organizationai-lifecycle.html) để biết trạng thái code hiện tại.
+`AI_AUTO_REJECTED` chỉ xuất hiện trong harness Verify với dữ liệu tổng hợp và rule fixture được ký giả lập. Nó không phải trạng thái được phép cho kế hoạch Auth/production; policy auto-reject production chưa được duyệt.
+
+Trong luồng kế hoạch Auth/production, `processing_stage` hiện gồm `DRAFT`, `AI_PENDING`, `AI_PROCESSING`, `HUMAN_REVIEW_REQUIRED`, `AI_AUTO_APPROVED` và `COMPLETED`. Pipeline failure chuyển trực tiếp sang `HUMAN_REVIEW_REQUIRED`; chưa có stage `AI_PROCESSING_FAILED`. `AI_AUTO_REJECTED` chỉ là kết quả cô lập của Verify fixture. Xem [lifecycle as-built](diagrams/organizationai-lifecycle.html) để biết trạng thái code hiện tại.
 
 ### 6.2. Sơ đồ trạng thái
 
