@@ -20,6 +20,8 @@ from src.backend.application.workflow import ApprovalWorkflow
 from src.backend.domain.policy import (
     ApprovalConfiguration,
     AuthoritySnapshot,
+    AutoRejectPolicy,
+    AutoRejectRule,
     BudgetConfiguration,
     Criterion,
     MANDATORY_FIELDS,
@@ -56,18 +58,26 @@ def _load_cases() -> tuple[dict[str, Any], list[dict[str, Any]]]:
     require(document.get("suite_version") == "VERIFY-1.0", "Unknown Verify fixture version")
     configuration = document.get("configuration")
     require(isinstance(configuration, dict), "Verify configuration is missing")
+    fixture_policy = configuration.get("synthetic_auto_reject_fixture_policy")
+    require(isinstance(fixture_policy, dict)
+            and fixture_policy.get("environment") == "SYNTHETIC_TEST",
+            "Verify requires its explicitly synthetic auto-reject fixture policy.")
     cases = document.get("cases")
     require(isinstance(cases, list) and len(cases) == 4, "Verify must define exactly four cases")
     case_ids = [case.get("id") for case in cases]
     require(case_ids == ["TC01", "TC02", "TC03", "TC04"], "Verify cases are not in the required order")
     for case in cases:
         require(set(case) == {"id", "name", "input", "expected"}, "Invalid Verify case shape")
-        require(case["input"]["provider_scenario"] in {"pass", "missing_evidence", "timeout"},
+        require(case["input"]["provider_scenario"] in {
+            "pass", "missing_evidence", "timeout", "fixture_forbidden_literal",
+        },
                 "Unsupported Verify provider scenario")
     return configuration, cases
 
 
-def _approval_configuration(fixture: dict[str, Any]) -> ApprovalConfiguration:
+def _approval_configuration(
+    fixture: dict[str, Any], *, enable_fixture_auto_reject: bool = False,
+) -> ApprovalConfiguration:
     strategy_criteria = tuple(
         Criterion(criterion_id, weight)
         for criterion_id, _label, weight in STRATEGY_CRITERIA
@@ -95,6 +105,28 @@ def _approval_configuration(fixture: dict[str, Any]) -> ApprovalConfiguration:
         "VERIFY-BUDGET-AUTHORITY",
         True,
     )
+    fixture_policy = fixture["synthetic_auto_reject_fixture_policy"]
+    fixture_rule = fixture_policy["rule"]
+    auto_reject_policy = None
+    if enable_fixture_auto_reject:
+        rule = AutoRejectRule(
+            rule_id=fixture_rule["rule_id"],
+            evidence_kind=fixture_rule["evidence_kind"],
+            forbidden_literals=tuple(fixture_rule["forbidden_literals"]),
+            evidence_confidence_threshold=fixture_rule["evidence_confidence_threshold"],
+            media_confidence_threshold=fixture_rule["media_confidence_threshold"],
+            feasibility_confidence_threshold=fixture_rule["feasibility_confidence_threshold"],
+            reason_code=fixture_rule["reason_code"],
+            exceptions=tuple(fixture_rule["exceptions"]),
+        )
+        auto_reject_policy = AutoRejectPolicy.synthetic_fixture(
+            configuration_id=fixture_policy["configuration_id"],
+            revision=fixture_policy["revision"],
+            enabled=True,
+            scope_departments=tuple(fixture_policy["scope_departments"]),
+            scope_channels=tuple(fixture_policy["scope_channels"]),
+            rules=(rule,),
+        )
     return ApprovalConfiguration(
         policy,
         (budget,),
@@ -121,6 +153,7 @@ def _approval_configuration(fixture: dict[str, Any]) -> ApprovalConfiguration:
                 for criterion_id, label, weight in STRATEGY_CRITERIA
             ),
         ),
+        auto_reject_policy=auto_reject_policy,
     )
 
 
@@ -144,9 +177,31 @@ class _MissingEvidenceMockProvider(MockVLMProvider):
         return result
 
 
+class _FixtureForbiddenLiteralMockProvider(MockVLMProvider):
+    """Bind a visible fixture-only OCR token to the uploaded image digest."""
+
+    def __init__(self, forbidden_literal: str):
+        super().__init__("pass")
+        self.forbidden_literal = forbidden_literal
+
+    def analyze_image(self, request):
+        result = super().analyze_image(request)
+        for evidence in result["evidence"]:
+            evidence.update(
+                observation=f"Synthetic fixture OCR text: {self.forbidden_literal}",
+                evidence_kind="OCR_TEXT",
+                confidence=0.95,
+            )
+        return result
+
+
 def _provider_for(scenario: str) -> MockVLMProvider:
     if scenario == "missing_evidence":
         return _MissingEvidenceMockProvider()
+    if scenario == "fixture_forbidden_literal":
+        fixture_policy = _load_cases()[0]["synthetic_auto_reject_fixture_policy"]
+        literal = fixture_policy["rule"]["forbidden_literals"][0]
+        return _FixtureForbiddenLiteralMockProvider(literal)
     return MockVLMProvider(scenario)
 
 
@@ -159,7 +214,10 @@ def _execute_case(case: dict[str, Any], configuration: dict[str, Any], run_id: s
     payload.update({"maker_id": MAKER, "checker_id": CHECKER})
     repository = ApprovalRepository(":memory:")
     try:
-        approval_configuration = _approval_configuration(configuration)
+        scenario = case["input"]["provider_scenario"]
+        approval_configuration = _approval_configuration(
+            configuration, enable_fixture_auto_reject=(scenario == "fixture_forbidden_literal"),
+        )
         workflow = ApprovalWorkflow(
             repository,
             approval_configuration,
@@ -195,7 +253,7 @@ def _execute_case(case: dict[str, Any], configuration: dict[str, Any], run_id: s
             idempotency_key=f"{correlation_id}:submit",
             correlation_id=correlation_id,
         )
-        provider = _provider_for(case["input"]["provider_scenario"])
+        provider = _provider_for(scenario)
         pipeline = ApprovalPipelineAdapter(
             workflow,
             EvaluationOrchestrator(provider, timeout_seconds=8, max_retries=0),
@@ -218,6 +276,7 @@ def _execute_case(case: dict[str, Any], configuration: dict[str, Any], run_id: s
             "decision": decision,
             "evaluation": evaluation,
             "versions": observation["versions"],
+        "round": repository.round(plan_id, 1),
             "audit": observation["audit"],
             "questions": questions,
         }
@@ -226,8 +285,14 @@ def _execute_case(case: dict[str, Any], configuration: dict[str, Any], run_id: s
             "SELECT kind FROM wp3_finals WHERE plan_id=?", (plan_id,)
         ).fetchone()
         actual.update({
-            "final_decision": "APPROVED" if final and final["kind"] == "engine_decision" else None,
-            "decision_source": "AI_AUTO_APPROVAL" if final else None,
+            "final_decision": (
+                "APPROVED" if decision["outcome"] == "AUTO_APPROVED" else
+                "REJECTED" if decision["outcome"] == "AUTO_REJECTED" else None
+            ) if final and final["kind"] == "engine_decision" else None,
+            "decision_source": (
+                "AI_AUTO_APPROVAL" if decision["outcome"] == "AUTO_APPROVED" else
+                "SYSTEM_AUTO_REJECT" if decision["outcome"] == "AUTO_REJECTED" else None
+            ) if final else None,
         })
         return actual
     finally:
@@ -290,6 +355,56 @@ def _compare(case: dict[str, Any], actual: dict[str, Any] | None) -> list[dict[s
             "expected": expected["agent_error_codes"],
             "actual": sorted(error_codes),
             "passed": set(expected["agent_error_codes"]) <= error_codes,
+        })
+    if "approval_round_status" in expected:
+        assertions.append({
+            "name": "approval_round_status",
+            "expected": expected["approval_round_status"],
+            "actual": actual["round"]["status"],
+            "passed": expected["approval_round_status"] == actual["round"]["status"],
+        })
+    for name, actual_value in (
+        ("auto_reject_rule_id", actual["decision"].get("auto_reject_rule_id")),
+        ("reason_code", actual["decision"].get("reason_code")),
+    ):
+        if name in expected:
+            assertions.append({
+                "name": name,
+                "expected": expected[name],
+                "actual": actual_value,
+                "passed": expected[name] == actual_value,
+            })
+    if "evidence_kind" in expected:
+        kinds = {item.get("evidence_kind") for item in actual["evaluation"]["evidence"]}
+        assertions.append({
+            "name": "evidence_kind",
+            "expected": expected["evidence_kind"],
+            "actual": sorted(kind for kind in kinds if kind is not None),
+            "passed": expected["evidence_kind"] in kinds,
+        })
+        auto_reject_events = [event for event in actual["audit"] if event["action"] == "AUTO_REJECTED"]
+        assertions.append({
+            "name": "system_actor_and_evidence_audit",
+            "expected": "SYSTEM actor and bound evidence reference",
+            "actual": [{
+                "actor_type": event["actor_type"],
+                "reason_code": event.get("reason_code"),
+                "auto_reject_rule_id": event.get("auto_reject_rule_id"),
+                "evidence_reference": event["evidence_reference"],
+                "input_hash": event["input_hash"],
+                "plan_version": event["plan_version"],
+                "approval_round": event["approval_round"],
+            } for event in auto_reject_events],
+            "passed": bool(auto_reject_events) and all(
+                event["actor_type"] == "SYSTEM"
+                and event.get("reason_code") == expected.get("reason_code")
+                and event.get("auto_reject_rule_id") == expected.get("auto_reject_rule_id")
+                and bool(event["evidence_reference"])
+                and event["input_hash"] == actual["decision"]["input_hash"]
+                and event["plan_version"] == actual["decision"]["plan_version"]
+                and event["approval_round"] == actual["decision"]["approval_round"]
+                for event in auto_reject_events
+            ),
         })
     return assertions
 

@@ -12,7 +12,7 @@ def test_competition_suite_executes_four_required_cases_through_workflow():
     assert [row["actual"]["decision"]["outcome"] for row in run["rows"]] == [
         "AUTO_APPROVED",
         "HUMAN_REVIEW_REQUIRED",
-        "HUMAN_REVIEW_REQUIRED",
+        "AUTO_REJECTED",
         "HUMAN_REVIEW_REQUIRED",
     ]
 
@@ -33,18 +33,39 @@ def test_budget_case_keeps_plan_within_maximum_but_routes_over_auto_limit():
     )
 
 
-def test_missing_media_evidence_is_not_inferred_as_pass():
+def test_missing_media_evidence_is_a_checker_regression_outside_the_four_primary_cases():
+    from copy import deepcopy
+    from src.verify.competition import _execute_case, _load_cases
+
+    configuration, cases = _load_cases()
+    case = deepcopy(cases[0])
+    case["id"] = "REGRESSION-MISSING-MEDIA"
+    case["input"]["provider_scenario"] = "missing_evidence"
+    row = _execute_case(case, configuration, "VERIFY-REGRESSION-MISSING-MEDIA")
+
+    assert row["plan"]["attachments"]
+    assert row["evaluation"]["status"] == "FAILED"
+    assert row["evaluation"]["media_result"] is None
+    assert row["evaluation"]["evidence"] == []
+    assert "INVALID_SCHEMA" in {item["code"] for item in row["evaluation"]["agent_errors"]}
+    assert row["decision"]["outcome"] == "HUMAN_REVIEW_REQUIRED"
+    assert row["plan"]["state"]["plan_status"] == "PENDING_APPROVAL"
+
+
+def test_fixture_reject_is_tied_to_the_exact_rule_and_bound_ocr_evidence():
     run = run_competition_suite()
     row = next(item for item in run["rows"] if item["case_id"] == "TC03")
 
-    assert row["input"]["plan"]["attachments"]
-    assert row["actual"]["evaluation"]["status"] == "FAILED"
-    assert row["actual"]["evaluation"]["media_result"] is None
-    assert row["actual"]["evaluation"]["evidence"] == []
-    assert "INVALID_SCHEMA" in {
-        item["code"] for item in row["actual"]["evaluation"]["agent_errors"]
+    assert row["actual"]["decision"]["outcome"] == "AUTO_REJECTED"
+    assert row["actual"]["decision"]["reason_code"] == "SYNTHETIC_FORBIDDEN_LITERAL"
+    assert row["actual"]["decision"]["auto_reject_rule_id"] == "VERIFY-FORBIDDEN-LITERAL"
+    assert row["actual"]["plan"]["state"] == {
+        "plan_status": "REJECTED", "processing_stage": "AI_AUTO_REJECTED",
+        "approval_round_status": "CLOSED",
     }
-    assert row["actual"]["decision"]["outcome"] == "HUMAN_REVIEW_REQUIRED"
+    assert row["actual"]["final_decision"] == "REJECTED"
+    assert row["actual"]["decision_source"] == "SYSTEM_AUTO_REJECT"
+    assert any(event["action"] == "AUTO_REJECTED" for event in row["actual"]["audit"])
 
 
 def test_controlled_provider_timeout_preserves_submission_and_audit():

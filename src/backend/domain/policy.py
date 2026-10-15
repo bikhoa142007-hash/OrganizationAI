@@ -1,9 +1,11 @@
 """Internal configuration, not additions to WP1 wire schemas."""
 import math
+import re
 from dataclasses import dataclass
 from collections.abc import Mapping
 from typing import Any, Literal
-from src.shared.validation import Contract, Positive, Nonnegative, MinorUnits, require, distinct
+from datetime import datetime, timezone
+from src.shared.validation import Contract, Positive, Nonnegative, MinorUnits, Timestamp, require, distinct, canonical_hash
 
 MANDATORY_FIELDS = ('title', 'maker_id', 'checker_id', 'department', 'objective',
                     'summary', 'start_date', 'end_date', 'budget_minor_units', 'currency')
@@ -27,6 +29,8 @@ RULE_IDS = (
     'FEASIBILITY_SCORE', 'FEASIBILITY_CONFIDENCE', 'BUDGET_LIMIT', 'AUTHORITY_LIMIT',
     'NO_HARD_VIOLATION', 'NO_EVIDENCE_CONFLICT', 'POLICY_ENABLED', 'PLAN_PENDING', 'ROUND_ACTIVE',
 )
+
+AUTO_REJECT_REASON_PATTERN = re.compile(r"[A-Z][A-Z0-9_]{2,79}\Z")
 
 
 @dataclass(frozen=True)
@@ -116,6 +120,118 @@ class StrategyRubric(Contract):
 
 
 @dataclass(frozen=True)
+class AutoRejectRule(Contract):
+    """A deterministic evidence match. It never changes Media rule severity."""
+
+    rule_id: str
+    evidence_kind: Literal["OCR_TEXT"]
+    forbidden_literals: tuple[str, ...]
+    evidence_confidence_threshold: float
+    media_confidence_threshold: float
+    feasibility_confidence_threshold: float
+    reason_code: str
+    exceptions: tuple[str, ...]
+
+    def validate(self):
+        require(bool(self.forbidden_literals), "Auto-reject rules require an explicit forbidden literal.")
+        distinct(self.forbidden_literals)
+        distinct(self.exceptions)
+        require(all(isinstance(value, str) and value.strip() for value in (*self.forbidden_literals, *self.exceptions)),
+                "Auto-reject literals and exceptions must be non-blank strings.")
+        for value in (self.evidence_confidence_threshold, self.media_confidence_threshold,
+                      self.feasibility_confidence_threshold):
+            require(type(value) in (int, float) and math.isfinite(value) and 0 <= value <= 1,
+                    "Auto-reject confidence thresholds must be in [0, 1].")
+        require(bool(AUTO_REJECT_REASON_PATTERN.fullmatch(self.reason_code)),
+                "Auto-reject reason code must be a stable uppercase identifier.")
+
+
+@dataclass(frozen=True)
+class AutoRejectPolicy(Contract):
+    """Revisioned auto-reject authority captured into a submitted round."""
+
+    configuration_id: str
+    policy_version: str
+    revision: Positive
+    enabled: bool
+    scope_departments: tuple[str, ...]
+    scope_channels: tuple[str, ...]
+    rules: tuple[AutoRejectRule, ...]
+    configuration_hash: str | None
+    signoff_source: Literal["SYNTHETIC_FIXTURE"] | None
+    signed_by: str | None
+    signed_at: Timestamp | None
+    environment: Literal["PRODUCTION", "SYNTHETIC_TEST"] = "PRODUCTION"
+
+    def validate(self):
+        require(bool(self.scope_departments) and bool(self.scope_channels),
+                "Auto-reject policy requires explicit department and channel scope.")
+        require(bool(self.rules), "Auto-reject policy requires at least one explicit rule.")
+        distinct(self.scope_departments)
+        distinct(self.scope_channels)
+        distinct([rule.rule_id for rule in self.rules])
+        require(all(value.strip() for value in (*self.scope_departments, *self.scope_channels)),
+                "Auto-reject scope values must not be blank.")
+        if self.enabled:
+            require(self.configuration_hash == auto_reject_configuration_hash(self),
+                    "Enabled auto-reject policy is not bound to its exact configuration hash.")
+            require(self.signoff_source is not None and self.signed_by is not None and self.signed_at is not None,
+                    "Enabled auto-reject policy needs a revision-specific sign-off.")
+            require(self.signoff_source == "SYNTHETIC_FIXTURE"
+                    and self.environment == "SYNTHETIC_TEST"
+                    and self.signed_by == "VERIFY_FIXTURE"
+                    and self.configuration_id.startswith("VERIFY-"),
+                    "Auto-reject is disabled in production until an approved rule has authenticated Policy Owner sign-off.")
+        else:
+            require(self.signoff_source is None and self.signed_by is None and self.signed_at is None,
+                    "Disabled auto-reject policy must not carry an activation sign-off.")
+
+    def applies_to(self, payload: Mapping[str, Any]) -> bool:
+        channels = payload.get("channels")
+        return (
+            self.enabled
+            and payload.get("department") in self.scope_departments
+            and isinstance(channels, (tuple, list)) and bool(channels)
+            and set(channels) <= set(self.scope_channels)
+        )
+
+    @classmethod
+    def synthetic_fixture(cls, *, configuration_id, revision, enabled, scope_departments,
+                          scope_channels, rules):
+        """Create unmistakably test-only policy evidence; not a production sign-off."""
+        signed_at = "2026-10-15T00:00:00Z"
+        if not enabled:
+            return cls(configuration_id, "VERIFY-AUTO-REJECT-1", revision, False,
+                       tuple(scope_departments), tuple(scope_channels), tuple(rules), None,
+                       None, None, None, "SYNTHETIC_TEST")
+        unsigned = cls(configuration_id, "VERIFY-AUTO-REJECT-1", revision, False,
+                       tuple(scope_departments), tuple(scope_channels), tuple(rules), None,
+                       None, None, None, "SYNTHETIC_TEST")
+        active_value = auto_reject_configuration_value(unsigned, enabled=True)
+        digest = canonical_hash(active_value)
+        return cls(configuration_id, "VERIFY-AUTO-REJECT-1", revision, True,
+                   tuple(scope_departments), tuple(scope_channels), tuple(rules), digest,
+                   "SYNTHETIC_FIXTURE", "VERIFY_FIXTURE", signed_at, "SYNTHETIC_TEST")
+
+
+def auto_reject_configuration_value(policy: AutoRejectPolicy, *, enabled: bool | None = None) -> dict[str, Any]:
+    return {
+        "configuration_id": policy.configuration_id,
+        "policy_version": policy.policy_version,
+        "revision": policy.revision,
+        "environment": policy.environment,
+        "enabled": policy.enabled if enabled is None else enabled,
+        "scope_departments": list(policy.scope_departments),
+        "scope_channels": list(policy.scope_channels),
+        "rules": [rule.to_dict() for rule in policy.rules],
+    }
+
+
+def auto_reject_configuration_hash(policy: AutoRejectPolicy) -> str:
+    return canonical_hash(auto_reject_configuration_value(policy))
+
+
+@dataclass(frozen=True)
 class PolicySnapshot(Contract):
     snapshot_id: str
     policy_version: str
@@ -180,6 +296,7 @@ class ApprovalConfiguration(Contract):
     authority: AuthoritySnapshot | None
     media_policy: MediaCompliancePolicy | None = None
     strategy_rubric: StrategyRubric | None = None
+    auto_reject_policy: AutoRejectPolicy | None = None
     media_model_snapshot: Any = None
     strategy_model_snapshot: Any = None
     visual_model_snapshot: Any = None
@@ -201,6 +318,7 @@ class ApprovalConfiguration(Contract):
             defaults = {
                 "media_policy": None,
                 "strategy_rubric": None,
+                "auto_reject_policy": None,
                 "media_model_snapshot": None,
                 "strategy_model_snapshot": None,
                 "visual_model_snapshot": None,

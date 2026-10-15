@@ -3,7 +3,24 @@
   "configuration": {
     "budget_limit_minor_units": "10000000",
     "auto_approval_limit_minor_units": "5000000",
-    "auto_approval_enabled": true
+    "auto_approval_enabled": true,
+    "synthetic_auto_reject_fixture_policy": {
+      "environment": "SYNTHETIC_TEST",
+      "configuration_id": "VERIFY-AUTO-REJECT",
+      "revision": 1,
+      "scope_departments": ["marketing"],
+      "scope_channels": ["social"],
+      "rule": {
+        "rule_id": "VERIFY-FORBIDDEN-LITERAL",
+        "evidence_kind": "OCR_TEXT",
+        "forbidden_literals": ["DEMO-CONTENT-V2"],
+        "evidence_confidence_threshold": 0.85,
+        "media_confidence_threshold": 0.85,
+        "feasibility_confidence_threshold": 0.8,
+        "reason_code": "SYNTHETIC_FORBIDDEN_LITERAL",
+        "exceptions": []
+      }
+    }
   },
   "cases": [
     {
@@ -69,34 +86,36 @@
     },
     {
       "id": "TC03",
-      "name": "Thiếu bằng chứng media, chuyển Checker",
+      "name": "Rule fixture có bằng chứng OCR hợp lệ, hệ thống tự từ chối",
       "input": {
         "plan": {
-          "title": "TC03 - Ảnh đã nhận nhưng không có bằng chứng media",
+          "title": "TC03 - Fixture tổng hợp khớp rule cấm đã ký",
           "department": "marketing",
           "objective": "Tăng lượt đăng ký từ khách hàng mục tiêu",
-          "summary": "Hồ sơ hợp lệ khi tiếp nhận, nhưng VLM không trả bằng chứng ảnh.",
+          "summary": "Fixture watermark nêu rõ token DEMO-CONTENT-V2 chỉ phục vụ Verify.",
           "channels": ["social"],
           "start_date": "2026-10-15",
           "end_date": "2026-10-31",
           "budget_minor_units": "3000000",
           "currency": "VND",
           "attachments": [
-            {"path": "ba/v2.1/images/creative-pass.png", "media_type": "image/png"}
+            {"path": "ba/v2.1/images/hard-claim-demo.png", "media_type": "image/png"}
           ]
         },
-        "provider_scenario": "missing_evidence"
+        "provider_scenario": "fixture_forbidden_literal"
       },
       "expected": {
-        "outcome": "HUMAN_REVIEW_REQUIRED",
-        "plan_status": "PENDING_APPROVAL",
-        "evaluation_status": "FAILED",
-        "media_result": null,
-        "escalation_category": "FACT_UNCERTAIN",
-        "decision_source": null,
-        "media_evidence_count": 0,
-        "agent_error_codes": ["INVALID_SCHEMA"],
-        "audit_actions": ["PLAN_SUBMITTED", "ENGINE_ROUTED"]
+        "outcome": "AUTO_REJECTED",
+        "plan_status": "REJECTED",
+        "approval_round_status": "CLOSED",
+        "evaluation_status": "SUCCEEDED",
+        "media_result": "PASS",
+        "escalation_category": null,
+        "decision_source": "SYSTEM_AUTO_REJECT",
+        "auto_reject_rule_id": "VERIFY-FORBIDDEN-LITERAL",
+        "reason_code": "SYNTHETIC_FORBIDDEN_LITERAL",
+        "evidence_kind": "OCR_TEXT",
+        "audit_actions": ["PLAN_SUBMITTED", "AUTO_REJECTED"]
       }
     },
     {

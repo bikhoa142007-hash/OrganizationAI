@@ -1,6 +1,6 @@
 # Decision contract — WP1 / schema version 1
 
-Status: frozen proposal for user approval. AGENTS.md and the approved WP1 clarification govern this contract. AI/VLM provides evidence and evaluation only. The deterministic Decision Policy Engine alone evaluates the auto-approval gates; only an authorized human can reject.
+Status: frozen proposal for user approval. AGENTS.md and the approved WP1 clarification govern this contract. AI/VLM provides evidence and evaluation only. The deterministic Decision Policy Engine alone evaluates the auto-approval gates; only an authorized human can reject a production plan. The separately labelled Verify fixture exception below is synthetic test data only.
 
 ## Outcome catalog and runtime boundary
 
@@ -11,7 +11,7 @@ Status: frozen proposal for user approval. AGENTS.md and the approved WP1 clarif
 | REJECTED_BY_DETERMINISTIC_POLICY | RESERVED | false | false | future policy-controlled release only |
 
 RuntimeOutcome = `AUTO_APPROVED | HUMAN_REVIEW_REQUIRED`.
-The reserved outcome is documentation/catalog metadata only. Sprint-1 runtime request, response, event, persisted engine-decision and Verify schemas MUST reject it, even if a provider proposes it. No AI or Rules Engine auto-reject exists. A future release requires explicit policy approval and contract migration; merely enabling a configuration flag in Sprint 1 is forbidden.
+The reserved production outcome is documentation/catalog metadata only. Production Auth workflow, configuration registry and routes continue to accept only `AUTO_APPROVED` or `HUMAN_REVIEW_REQUIRED`; no production AI or Rules Engine auto-reject is enabled. The Admin-only Verify suite has a separately labelled, test-only `AUTO_REJECTED` result for a synthetic image, a fixture-signed exact OCR token rule, valid hash-bound evidence, and a temporary in-memory SQLite workflow. The fixture match can override AUTO_APPROVED only after every ordinary auto-approval gate passes; if any ordinary gate would route the plan to Checker, Checker routing takes precedence. That fixture rule cannot be loaded as an enabled production policy. Missing/invalid evidence, conflicts, low confidence, timeouts, unknown models, input-integrity failures and out-of-scope inputs still route to Checker. A production rule would require an approved rule, immutable revision/hash scope, authenticated Policy Owner sign-off and a contract/migration review before implementation or activation.
 
 ## Common types and identity
 

@@ -334,8 +334,8 @@ class ApprovalWorkflow:
                 *(('escalation', q.escalation_id, q) for q in bundle.escalations),
             ):
                 self.repository.append(kind, record_id, plan_id, number, record)
-            auto = decision.outcome == 'AUTO_APPROVED'
-            if auto:
+            final_engine_decision = decision.outcome in ('AUTO_APPROVED', 'AUTO_REJECTED')
+            if final_engine_decision:
                 self.repository.finalize(plan_id, number, 'engine_decision', decision.decision_id)
             previous = State.from_dict(plan['state'])
             processing = State('PENDING_APPROVAL', 'AI_PROCESSING', 'ACTIVE')
@@ -346,6 +346,7 @@ class ApprovalWorkflow:
                 actor_id=self.evaluator_id, entity_version=plan['revision'],
                 previous_state=previous, new_state=processing, model_version=None,
                 decision_id=None, outcome=None, applied_rule_ids=(), evidence_reference=(),
+                reason_code=None, auto_reject_rule_id=None,
                 reason='Structured pipeline output received for evaluation.',
             )
             self.repository.audit(started)
@@ -360,9 +361,9 @@ class ApprovalWorkflow:
             plan['state'] = bundle.audit.new_state.to_dict()
             plan['revision'] += 1
             self.repository.save_plan(plan)
-            self.repository.update_round(plan_id, number, status='CLOSED' if auto else 'ACTIVE',
+            self.repository.update_round(plan_id, number, status='CLOSED' if final_engine_decision else 'ACTIVE',
                                          decision_id=decision.decision_id,
-                                         final_id=decision.decision_id if auto else None)
+                                         final_id=decision.decision_id if final_engine_decision else None)
             self.repository.audit(replace(bundle.audit, previous_state=processing,
                                           entity_version=plan['revision']))
             return dict(evaluation=bundle.evaluation, decision=decision, questions=bundle.escalations)

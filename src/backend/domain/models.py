@@ -11,12 +11,12 @@ from src.shared.validation import (
     require, distinct, paired, canonical_hash,
 )
 
-Outcome = Literal['AUTO_APPROVED', 'HUMAN_REVIEW_REQUIRED']
+Outcome = Literal['AUTO_APPROVED', 'HUMAN_REVIEW_REQUIRED', 'AUTO_REJECTED']
 Category = Literal['FACT_UNCERTAIN', 'POLICY_OUT_OF_SCOPE', 'AUTHORITY_EXCEEDED']
 CheckResult = Literal['PASS', 'FAIL', 'UNKNOWN']
 PlanStatus = Literal['DRAFT', 'PENDING_APPROVAL', 'APPROVED', 'REJECTED']
 Stage = Literal['AI_PENDING', 'AI_PROCESSING', 'HUMAN_REVIEW_REQUIRED',
-                'AI_AUTO_APPROVED', 'AI_PROCESSING_FAILED']
+                'AI_AUTO_APPROVED', 'AI_AUTO_REJECTED', 'AI_PROCESSING_FAILED']
 
 
 @dataclass(frozen=True)
@@ -63,11 +63,27 @@ class Evidence(Contract):
     source_ref: str
     observation: str
     content_hash: Hash | None
+    evidence_kind: Literal['OCR_TEXT', 'OBSERVATION', 'OBJECT_DETECTION',
+                           'VISUAL_QUALITY', 'VISUAL_INSPECTION'] | None = None
+    confidence: float | None = None
+
+    @classmethod
+    def from_dict(cls, value):
+        # Evidence saved before typed visual provenance remains readable.
+        if isinstance(value, Mapping):
+            value = {"evidence_kind": None, "confidence": None, **value}
+        return Contract.from_dict.__func__(cls, value)
 
     def validate(self):
         require('://' not in self.source_ref, 'Evidence must use internal references')
         if self.source_type == 'ATTACHMENT':
             require(self.content_hash is not None, 'Attachment evidence needs hash')
+        if self.evidence_kind == 'OCR_TEXT':
+            require(self.source_type == 'ATTACHMENT' and self.confidence is not None,
+                    'OCR evidence needs an attachment source and confidence.')
+        require(self.confidence is None or
+                (type(self.confidence) in (int, float) and 0 <= self.confidence <= 1),
+                'Evidence confidence must be in [0, 1].')
 
 
 @dataclass(frozen=True)
@@ -229,6 +245,15 @@ class DecisionResult(Contract):
     idempotency_key: str
     correlation_id: str
     round_revision: Nonnegative
+    auto_reject_rule_id: str | None = None
+    reason_code: str | None = None
+
+    @classmethod
+    def from_dict(cls, value):
+        # Old immutable engine decisions use only the two original outcomes.
+        if isinstance(value, Mapping):
+            value = {"auto_reject_rule_id": None, "reason_code": None, **value}
+        return Contract.from_dict.__func__(cls, value)
 
     def validate(self):
         distinct(self.applied_rule_ids)
@@ -238,13 +263,34 @@ class DecisionResult(Contract):
                 tuple(c.rule_id for c in self.rule_checks), 'Rule trace mismatch')
         require(self.decided_by.actor_type == 'SYSTEM', 'Engine actor must be SYSTEM')
         paired(self.authority_snapshot_id, self.authority_snapshot_hash)
-        auto = self.outcome == 'AUTO_APPROVED'
-        require((self.escalation_category is None) == auto and
-                bool(self.escalation_ids) != auto, 'Invalid escalation routing')
-        if auto:
+        final_engine_decision = self.outcome in ('AUTO_APPROVED', 'AUTO_REJECTED')
+        require((self.escalation_category is None) == final_engine_decision and
+                bool(self.escalation_ids) != final_engine_decision, 'Invalid escalation routing')
+        if self.outcome == 'AUTO_APPROVED':
             require(all(c.result == 'PASS' for c in self.rule_checks) and
                     self.budget_validation.result == 'PASS' and
                     self.authority_snapshot_id is not None, 'Auto approval gates not satisfied')
+            require(self.auto_reject_rule_id is None and self.reason_code is None,
+                    'Auto approval cannot contain auto-reject metadata.')
+        if self.outcome == 'AUTO_REJECTED':
+            require(self.auto_reject_rule_id is not None and self.reason_code is not None,
+                    'Auto rejection requires a configured rule and stable reason code.')
+            matched_rules = [check for check in self.rule_checks
+                             if check.rule_id == 'AUTO_REJECT_MATCH' and check.result == 'FAIL'
+                             and bool(check.evidence_refs)]
+            matched_observation = (
+                matched_rules[0].observed_value if len(matched_rules) == 1 else None
+            )
+            require(isinstance(matched_observation, Mapping)
+                    and matched_observation.get('rule_id') == self.auto_reject_rule_id
+                    and matched_observation.get('reason_code') == self.reason_code
+                    and matched_observation.get('literal_matched') is True,
+                    'Auto rejection requires a matched rule check with evidence.')
+            require(all(check.result == 'PASS' for check in self.rule_checks
+                        if check.rule_id != 'AUTO_REJECT_MATCH')
+                    and any(check.rule_id == 'AUTO_REJECT_SCOPE' and check.result == 'PASS'
+                            for check in self.rule_checks),
+                    'Auto rejection requires all ordinary auto-approval gates and explicit scope to pass.')
 
     @property
     def reason_codes(self):
@@ -336,7 +382,7 @@ class AuditEvent(Contract):
     actor_id: str
     action: Literal['DRAFT_SAVED', 'ATTACHMENT_UPLOADED', 'PLAN_SUBMITTED',
                     'EVALUATION_STARTED', 'EVALUATION_COMPLETED', 'EVALUATION_FAILED',
-                    'ENGINE_ROUTED', 'AUTO_APPROVED', 'HUMAN_APPROVED', 'HUMAN_REJECTED',
+                    'ENGINE_ROUTED', 'AUTO_APPROVED', 'AUTO_REJECTED', 'HUMAN_APPROVED', 'HUMAN_REJECTED',
                     'ESCALATION_ANSWERED', 'PLAN_RESUBMITTED', 'ACCESS_DENIED', 'RETRY_REQUESTED']
     entity_id: str
     entity_version: Nonnegative
@@ -368,17 +414,26 @@ class AuditEvent(Contract):
     outcome: Outcome | None
     human_action: Literal['APPROVED', 'REJECTED'] | None
     override_reason: str | None
+    reason_code: str | None = None
+    auto_reject_rule_id: str | None = None
+
+    @classmethod
+    def from_dict(cls, value):
+        # Keep audit rows written before reason-code provenance readable.
+        if isinstance(value, Mapping):
+            value = {"reason_code": None, "auto_reject_rule_id": None, **value}
+        return Contract.from_dict.__func__(cls, value)
 
     def validate(self):
         for prefix in ('policy', 'budget', 'authority'):
             paired(getattr(self, prefix + '_snapshot_id'), getattr(self, prefix + '_snapshot_hash'))
         distinct(self.applied_rule_ids)
-        if self.action in ('ENGINE_ROUTED', 'AUTO_APPROVED', 'HUMAN_APPROVED', 'HUMAN_REJECTED'):
+        if self.action in ('ENGINE_ROUTED', 'AUTO_APPROVED', 'AUTO_REJECTED', 'HUMAN_APPROVED', 'HUMAN_REJECTED'):
             require(all(x is not None for x in (self.plan_id, self.plan_version,
                     self.approval_round, self.input_hash, self.policy_version,
                     self.policy_snapshot_id, self.evaluation_id, self.decision_id,
                     self.idempotency_key)), 'Incomplete decision audit')
-        if self.action in ('ENGINE_ROUTED', 'AUTO_APPROVED', 'HUMAN_APPROVED', 'HUMAN_REJECTED'):
+        if self.action in ('ENGINE_ROUTED', 'AUTO_APPROVED', 'AUTO_REJECTED', 'HUMAN_APPROVED', 'HUMAN_REJECTED'):
             require(self.previous_state is not None and self.new_state is not None,
                     'Decision audit needs before/after states')
             require(self.previous_state.plan_status == 'PENDING_APPROVAL' and
@@ -389,16 +444,28 @@ class AuditEvent(Contract):
             elif self.action == 'AUTO_APPROVED':
                 require(self.new_state == State('APPROVED', 'AI_AUTO_APPROVED', 'CLOSED'),
                         'Invalid auto approval state')
+            elif self.action == 'AUTO_REJECTED':
+                require(self.new_state == State('REJECTED', 'AI_AUTO_REJECTED', 'CLOSED'),
+                        'Invalid auto rejection state')
             else:
                 require(self.new_state.plan_status == self.action.removeprefix('HUMAN_') and
                         self.new_state.approval_round_status == 'CLOSED', 'Invalid human final state')
-        if self.action in ('ENGINE_ROUTED', 'AUTO_APPROVED'):
-            expected = 'AUTO_APPROVED' if self.action == 'AUTO_APPROVED' else 'HUMAN_REVIEW_REQUIRED'
+        if self.action in ('ENGINE_ROUTED', 'AUTO_APPROVED', 'AUTO_REJECTED'):
+            expected = ('AUTO_APPROVED' if self.action == 'AUTO_APPROVED' else
+                        'AUTO_REJECTED' if self.action == 'AUTO_REJECTED' else
+                        'HUMAN_REVIEW_REQUIRED')
             require(self.actor_type == 'SYSTEM' and self.outcome == expected
                     and bool(self.applied_rule_ids), 'Invalid engine audit')
         if self.action == 'AUTO_APPROVED':
             require(self.budget_snapshot_id is not None and
                     self.authority_snapshot_id is not None, 'Missing auto approval configuration')
+        if self.action == 'AUTO_REJECTED':
+            require(self.reason_code is not None and self.auto_reject_rule_id is not None
+                    and bool(self.evidence_reference),
+                    'Auto rejection audit needs its rule, reason code and evidence references.')
+        else:
+            require(self.auto_reject_rule_id is None,
+                    'Only a system auto rejection records an auto-reject rule.')
         if self.action in ('HUMAN_APPROVED', 'HUMAN_REJECTED'):
             require(self.actor_type == 'HUMAN' and self.human_decision_id is not None
                     and self.human_action == self.action.removeprefix('HUMAN_')
