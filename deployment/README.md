@@ -204,3 +204,38 @@ DRAFT, APPROVED and REJECTED cases supplement the original five scenarios.
 See [canonical permissions](../docs/role1/v2.1/03-authority-matrix.md) and the
 [manual verification checklist](../docs/integration/rbac-workflow-validation-audit.md).
 No deployment URL, HTTPS CORS validation, free plan or ephemeral storage setting changed.
+
+## Challenge A public Judge-only deployment
+
+`render.challenge-a.yaml` is a separate Blueprint for a synthetic Challenge A
+Judge. It declares two new service names only (`organizationai-challenge-a-api`
+and `organizationai-challenge-a-web`), targets `main`, uses the Free web plan,
+and turns automatic deploys off. It declares no database, `DATABASE_URL`, account,
+credential, real model host, or production Auth service. `PUBLIC_JUDGE_ONLY=true`
+mounts only `/api/health` and the public Judge endpoints; Auth and shared demo
+workflow routes return 404. The frontend build restricts navigation to
+`/challenge-a` and skips Auth/session initialization.
+
+The action endpoint records one synthetic human action per completed case in a
+bounded in-process store (3,000 cases, 15-minute expiry). The response exposes the
+input hash, action, timestamp and reason. This is visible run-level audit for the
+Judge exercise; it is not durable history, identity proof, or a production
+Checker decision. `STOP` prevents the synthetic case from continuing after its
+completed recommendation. It cannot cancel in-flight inference or undo side
+effects. Mock fixed suites and deterministic new-input rules are not real-AI
+quality evidence. Production auto-approval remains off.
+
+To prepare the Blueprint in Render, select exactly `deployment/render.challenge-a.yaml`
+from the reviewed `main` commit. Inspect the proposed plan before applying it; stop
+if it proposes changing any existing Auth, frontend, or database resource, or if
+either new service is not Free. Keep both services on manual deploy. Record the
+actual assigned URLs and SHA after deployment. Confirm the API health profile is
+`public-judge-only`, the Auth/config/workflow paths are absent, and CORS allows
+only the assigned frontend origin. Verify one instance and one Uvicorn worker.
+The 30-requests-per-60-seconds quota and one concurrent POST are per process;
+an edge/proxy body limit and aggregate quota have not been verified and must stay
+listed as deployment limitations until measured.
+
+This Blueprint has not been applied and no public Judge URL is claimed by this
+document. The current live `/challenge-a` check returned not found; public
+acceptance must be rerun against the deployed SHA and actual assigned URLs.

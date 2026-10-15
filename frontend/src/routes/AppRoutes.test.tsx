@@ -14,6 +14,7 @@ import {
 import { SessionProvider } from '../services/SessionProvider'
 import { ServicesProvider } from '../services/ServiceProvider'
 import { createApiServices } from '../services/api'
+import { isPublicJudgeOnly } from '../services/apiBaseUrl'
 import type { WorkflowPayload, WorkflowPlan } from '../types/authWorkflow'
 import { AppRoutes } from './AppRoutes'
 
@@ -36,7 +37,10 @@ const admin = {
 const adminMaker = { ...admin, id: 'admin-maker-id', username: 'admin.maker', roles: ['ADMIN', 'MAKER'] }
 
 function renderApplication(path = '/') {
-  return render(<MemoryRouter initialEntries={[path]}><ServicesProvider services={createApiServices()}><SessionProvider><AuthProvider><AppRoutes /></AuthProvider></SessionProvider></ServicesProvider></MemoryRouter>)
+  const routes = isPublicJudgeOnly()
+    ? <AppRoutes />
+    : <SessionProvider><AuthProvider><AppRoutes /></AuthProvider></SessionProvider>
+  return render(<MemoryRouter initialEntries={[path]}><ServicesProvider services={createApiServices()}>{routes}</ServicesProvider></MemoryRouter>)
 }
 
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); vi.unstubAllEnvs() })
@@ -45,6 +49,19 @@ beforeEach(() => {
 })
 
 describe('Auth-first route entry', () => {
+  it('limits a Public Judge-only build to Judge routes without loading Auth', async () => {
+    vi.stubEnv('VITE_PUBLIC_JUDGE_ONLY', 'true')
+    vi.stubEnv('VITE_DEMO_ENABLED', 'true')
+    const loadPrincipal = vi.spyOn(authService, 'me')
+
+    renderApplication('/workflow/plans/new')
+
+    expect(await screen.findByRole('heading', { name: 'Verify workflow' })).toBeVisible()
+    expect(screen.getByText('Judge công khai, không cần tạo tài khoản')).toBeVisible()
+    expect(screen.queryByRole('heading', { name: 'Đăng nhập' })).not.toBeInTheDocument()
+    expect(loadPrincipal).not.toHaveBeenCalled()
+  })
+
   it('exposes the public Challenge A Judge without Auth when Demo is enabled', async () => {
     vi.stubEnv('VITE_DEMO_ENABLED', 'true')
     const loadPrincipal = vi.spyOn(authService, 'me')

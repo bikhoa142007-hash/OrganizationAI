@@ -31,9 +31,17 @@ import { VerifyDashboardPage } from '../pages/VerifyDashboardPage'
 import { useSession } from '../services/SessionProvider'
 import { useAuth } from '../context/AuthContext'
 import { homeForRoles } from '../services/authNavigation'
-import { isDemoEnabled } from '../services/apiBaseUrl'
+import { isDemoEnabled, isPublicJudgeOnly } from '../services/apiBaseUrl'
 
 export function AppRoutes() {
+  if (isPublicJudgeOnly()) {
+    return <Routes>
+      <Route path="/" element={<Navigate to="/challenge-a" replace />} />
+      <Route path="/challenge-a" element={isDemoEnabled() ? <VerifyDashboardPage mode="public" /> : <StatePanel kind="error" title="Judge chưa sẵn sàng" description="Trang kiểm thử công khai chưa được bật trong môi trường này." />} />
+      <Route path="*" element={<Navigate to="/challenge-a" replace />} />
+    </Routes>
+  }
+
   return <Routes>
     <Route path="/" element={<AuthEntryPage />} />
     <Route path="/login" element={<LoginPage />} />

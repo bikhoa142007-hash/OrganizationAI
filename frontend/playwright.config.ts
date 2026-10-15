@@ -7,18 +7,29 @@ const pythonPath = configuredPython
   ? resolve(root, configuredPython)
   : process.platform === 'win32' ? '.venv\\Scripts\\python.exe' : '.venv/bin/python'
 const python = configuredPython ? `"${pythonPath}"` : pythonPath
+const publicJudgeOnly = process.env.PUBLIC_JUDGE_ONLY === 'true'
 const database = process.env.ORGANIZATIONAI_DEMO_E2E_DATABASE
   ?? `runtime/demo-e2e-${Date.now()}.sqlite3`
+const apiCommand = publicJudgeOnly
+  ? `${python} -m uvicorn src.backend.api.app:app --host 127.0.0.1 --port 8008`
+  : `${python} -m src.backend.seed_demo && ${python} -m uvicorn src.backend.api.app:app --host 127.0.0.1 --port 8008`
 export default defineConfig({
   testDir: './e2e', workers: 1, timeout: 45000, retries: 0,
   use: { baseURL: 'http://127.0.0.1:5178', trace: 'retain-on-failure', screenshot: 'only-on-failure' },
   webServer: [
-    { command: `${python} -m src.backend.seed_demo && ${python} -m uvicorn src.backend.api.app:app --host 127.0.0.1 --port 8008`, cwd: root,
+    { command: apiCommand, cwd: root,
       env: {
-        APP_ENV: 'demo', DEMO_DATABASE: database, CORS_ORIGINS: 'http://127.0.0.1:5178',
+        APP_ENV: 'demo',
+        ...(publicJudgeOnly ? { PUBLIC_JUDGE_ONLY: 'true' } : { DEMO_DATABASE: database }),
+        DATABASE_URL: '',
+        CORS_ORIGINS: 'http://127.0.0.1:5178',
         AUTH_WORKFLOW_AI_PROVIDER: 'MOCK_VLM', AUTH_WORKFLOW_MOCK_SCENARIO: 'review',
       }, url: 'http://127.0.0.1:8008/api/health', reuseExistingServer: false },
     { command: 'npm run dev -- --host 127.0.0.1 --port 5178 --strictPort',
-      env: { VITE_API_BASE_URL: 'http://127.0.0.1:8008/api', VITE_DEMO_ENABLED: 'true' }, url: 'http://127.0.0.1:5178', reuseExistingServer: false },
+      env: {
+        VITE_API_BASE_URL: process.env.VITE_API_BASE_URL ?? 'http://127.0.0.1:8008/api',
+        VITE_DEMO_ENABLED: process.env.VITE_DEMO_ENABLED ?? 'true',
+        ...(publicJudgeOnly ? { VITE_PUBLIC_JUDGE_ONLY: 'true' } : {}),
+      }, url: 'http://127.0.0.1:5178', reuseExistingServer: false },
   ],
 })

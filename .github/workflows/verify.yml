@@ -98,6 +98,15 @@ jobs:
         run: npm run test:e2e -- --config playwright.config.ts workflow.spec.ts
         env:
           ORGANIZATIONAI_TEST_PYTHON: .venv/bin/python
+      - name: Run isolated Public Judge-only acceptance, actions, and responsive layout
+        run: npm run test:e2e -- --config playwright.config.ts public-judge.spec.ts public-judge-layout.spec.ts public-judge-actions.spec.ts
+        env:
+          APP_ENV: demo
+          PUBLIC_JUDGE_ONLY: 'true'
+          VITE_DEMO_ENABLED: 'true'
+          VITE_PUBLIC_JUDGE_ONLY: 'true'
+          VITE_API_BASE_URL: http://127.0.0.1:8008/api
+          ORGANIZATIONAI_TEST_PYTHON: .venv/bin/python
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
