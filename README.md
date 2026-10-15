@@ -47,7 +47,7 @@ Backend Render lưu SQLite tại `/tmp/organizationai/demo-organization.sqlite3`
 | `Implemented` | Human Review | Queue cho Checker được gán; hỗ trợ `APPROVED`/`REJECTED`, reason, override reason và stale-revision handling |
 | `Implemented` | Audit và truy vết | Timeline actor, trạng thái trước/sau, policy/model/version/round, decision và correlation metadata |
 | `Implemented` | Cấu hình policy | Judge Demo `/api/config` là read-only; Auth có revision API/UI cho Admin nhưng validator vẫn chặn bật auto-approval trước PO sign-off, và repo chưa có sign-off workflow |
-| `Implemented (local)` | Verify dashboard | General 4 ca, Escalation 5 ca và bộ hồi quy tổng hợp 15 ca; mỗi lần chạy dùng workflow in-memory mới. Provider là Mock có nhãn, không phải bằng chứng inference thật |
+| `Implemented (local)` | Verify | Admin-only tại `/workflow/verify`; chạy bốn tình huống TC01–TC04 tuần tự qua workflow tổng hợp, khôi phục lượt gần nhất sau reload, lưu kết quả actual PASS/FAIL và tải JSON report. Mock VLM được gắn nhãn rõ ràng, không phải bằng chứng inference thật |
 | `Implemented` | Demo seed | Tám scenario tổng hợp, seed idempotent và không xóa database hiện có |
 | `Demo/Mock` | Actor identity | Chọn shared demo actor, gửi qua header `X-Demo-Actor`; server vẫn kiểm tra role và ownership |
 | `Demo/Mock` | AI evaluation | FastAPI đang nối `MockVLMProvider`; timeout/error/malformed evidence đều fail closed sang Human Review |
@@ -131,6 +131,8 @@ Repository hiện không có thư mục `data/` được Git theo dõi. Fixture 
 ---
 
 ## 🚀 Cài Đặt Và Chạy Local
+
+Verify có trang vận hành Admin-only và hướng dẫn kiểm thử 90 giây. Dùng [Verify runbook](docs/verify-runbook.md) để xem bốn case cố định, ranh giới dữ liệu, cách chạy UI/CLI và các lệnh kiểm tra.
 
 ### 1. Yêu cầu hệ thống
 

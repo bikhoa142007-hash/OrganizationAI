@@ -28,6 +28,7 @@ import { RegisterPage } from '../pages/RegisterPage'
 import { ResultPage } from '../pages/ResultPage'
 import { ReviewQueuePage } from '../pages/ReviewQueuePage'
 import { VerifyDashboardPage } from '../pages/VerifyDashboardPage'
+import { AuthenticatedVerifyPage } from '../pages/AuthenticatedVerifyPage'
 import { useSession } from '../services/SessionProvider'
 import { useAuth } from '../context/AuthContext'
 import { homeForRoles } from '../services/authNavigation'
@@ -53,6 +54,7 @@ export function AppRoutes() {
     <Route path="/workflow" element={<RequireAuth><AuthenticatedWorkflowShell /></RequireAuth>}>
       <Route index element={<RoleHomePage />} />
       <Route path="dashboard" element={<AuthWorkflowRoleGuard roles={['MAKER', 'CHECKER', 'ADMIN']}><AuthenticatedDashboardPage /></AuthWorkflowRoleGuard>} />
+      <Route path="verify" element={<AuthWorkflowRoleGuard roles={['ADMIN']}><AuthenticatedVerifyPage /></AuthWorkflowRoleGuard>} />
       <Route path="notifications" element={<AuthenticatedNotificationsPage />} />
       <Route path="plans" element={<AuthWorkflowRoleGuard roles={['MAKER', 'ADMIN']}><AuthenticatedPlansPage /></AuthWorkflowRoleGuard>} />
       <Route path="plans/new" element={<AuthWorkflowRoleGuard roles={['MAKER']}><AuthenticatedWorkflowFormPage /></AuthWorkflowRoleGuard>} />

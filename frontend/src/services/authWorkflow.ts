@@ -2,6 +2,77 @@ import { AuthApiError } from './auth'
 import type { AdminRoleCatalog, AdminRole, EmployeePendingPlanPage, SlaConfiguration, SlaConfigurationHistory, WorkflowAuditPage, WorkflowChecker, WorkflowEmployee, WorkflowEmployeePage, WorkflowNotification, WorkflowNotificationPage, WorkflowPayload, WorkflowPlan } from '../types/authWorkflow'
 import { resolveApiBaseUrl } from './apiBaseUrl'
 
+export interface VerifyRunRow {
+  case_id: string
+  case_name: string
+  input: Record<string, unknown>
+  status: 'WAITING' | 'RUNNING' | 'PASS' | 'FAIL'
+  expected: Record<string, unknown>
+  actual: Record<string, unknown> | null
+  assertions: Array<{ name: string; expected?: unknown; actual?: unknown; passed: boolean }>
+  reason: string | null
+  started_at: string | null
+  completed_at: string | null
+  duration_ms: number
+}
+
+export interface VerifyRun {
+  run_id: string
+  suite: string
+  suite_version: string
+  status: 'RUNNING' | 'COMPLETED' | 'TIMED_OUT' | 'ERROR'
+  environment: string
+  provider_mode: string
+  timezone: string
+  started_at: string
+  completed_at: string | null
+  duration_ms: number
+  commit_sha: string | null
+  configuration: Record<string, unknown>
+  current_case_id: string | null
+  completed_cases: number
+  passed_cases: number
+  failed_cases: number
+  rows: VerifyRunRow[]
+  error?: string
+  idempotent_replay?: boolean
+}
+
+function parseVerifyRun(value: unknown): VerifyRun {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new AuthApiError(200, 'Verify returned an invalid run report.', 'INVALID_RESPONSE')
+  }
+  const run = value as Record<string, unknown>
+  const statuses = ['RUNNING', 'COMPLETED', 'TIMED_OUT', 'ERROR']
+  const caseIds = ['TC01', 'TC02', 'TC03', 'TC04']
+  const isRecord = (item: unknown): item is Record<string, unknown> =>
+    Boolean(item) && typeof item === 'object' && !Array.isArray(item)
+  const rowsValid = Array.isArray(run.rows) && run.rows.length === 4 && run.rows.every((value, index) => {
+    if (!isRecord(value)) return false
+    return value.case_id === caseIds[index]
+      && typeof value.case_name === 'string'
+      && isRecord(value.input)
+      && isRecord(value.expected)
+      && (value.actual === null || isRecord(value.actual))
+      && Array.isArray(value.assertions)
+      && ['WAITING', 'RUNNING', 'PASS', 'FAIL'].includes(String(value.status))
+      && (value.reason === null || typeof value.reason === 'string')
+      && (value.started_at === null || typeof value.started_at === 'string')
+      && (value.completed_at === null || typeof value.completed_at === 'string')
+      && Number.isInteger(value.duration_ms)
+  })
+  if (typeof run.run_id !== 'string' || !statuses.includes(String(run.status))
+    || typeof run.environment !== 'string' || typeof run.provider_mode !== 'string'
+    || run.timezone !== 'Asia/Ho_Chi_Minh'
+    || !isRecord(run.configuration)
+    || !rowsValid
+    || !Number.isInteger(run.completed_cases) || !Number.isInteger(run.passed_cases)
+    || !Number.isInteger(run.failed_cases)) {
+    throw new AuthApiError(200, 'Verify returned an invalid run report.', 'INVALID_RESPONSE')
+  }
+  return value as VerifyRun
+}
+
 function planListQuery(offset: number, limit: number) {
   return new URLSearchParams({ offset: String(offset), limit: String(limit) })
 }
@@ -162,6 +233,35 @@ function creationIntentKey(intentId: string) {
 }
 
 export const authWorkflowService = {
+  startVerifyRun(idempotencyKey: string): Promise<VerifyRun> {
+    return request<unknown>('/workflow/verify/runs', 'POST', undefined, idempotencyKey).then(parseVerifyRun)
+  },
+
+  getLatestVerifyRun(): Promise<VerifyRun> {
+    return request<unknown>('/workflow/verify/runs/latest', 'GET').then(parseVerifyRun)
+  },
+
+  getVerifyRun(runId: string): Promise<VerifyRun> {
+    return request<unknown>(`/workflow/verify/runs/${encoded(runId)}`, 'GET').then(parseVerifyRun)
+  },
+
+  async downloadVerifyReport(runId: string): Promise<Blob> {
+    let response: Response
+    try {
+      response = await fetch(`${resolveApiBaseUrl()}/workflow/verify/runs/${encoded(runId)}/report`, {
+        credentials: 'include',
+      })
+    } catch {
+      throw new AuthApiError(0, 'Could not connect to the authenticated Verify service.', 'NETWORK_ERROR')
+    }
+    if (!response.ok) {
+      announceAuthFailure(response.status)
+      const data: unknown = await response.json().catch(() => null)
+      throw workflowApiError(response, data)
+    }
+    return response.blob()
+  },
+
   listNotifications(offset = 0, limit = 50): Promise<WorkflowNotificationPage> {
     return request<unknown>(`/workflow/notifications?offset=${offset}&limit=${limit}`, 'GET')
       .then(parseNotificationPage)
