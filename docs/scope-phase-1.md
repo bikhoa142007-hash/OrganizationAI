@@ -192,9 +192,9 @@ Không sử dụng các trạng thái:
 - Chờ ngân hàng duyệt.
 - Hoàn tất theo nghĩa onboarding.
 
-### 6.1.1. Trạng thái xử lý AI nội bộ
+### 6.1.1. Trạng thái xử lý AI nội bộ (scope target)
 
-Các giá trị sau không thay thế trạng thái nghiệp vụ của kế hoạch mà mô tả tiến trình xử lý khi kế hoạch đang `PENDING_APPROVAL`:
+Các giá trị dưới đây mô tả trạng thái xử lý mục tiêu trong scope Phase 1; đây không phải danh sách enum đã xác minh trong code. Chúng không thay thế trạng thái nghiệp vụ của kế hoạch:
 
 | Mã | Ý nghĩa | Xử lý tiếp theo |
 |---|---|---|
@@ -204,22 +204,11 @@ Các giá trị sau không thay thế trạng thái nghiệp vụ của kế ho�
 | AI_AUTO_APPROVED | Đã đạt toàn bộ điều kiện tự động duyệt | Chuyển trạng thái nghiệp vụ sang Đã duyệt |
 | AI_PROCESSING_FAILED | Pipeline lỗi, timeout hoặc thiếu kết quả | Chuyển Checker, không tự động từ chối |
 
-Người dùng cuối ưu tiên nhìn thấy nhãn dễ hiểu như `AI đang đánh giá`, `Cần người phê duyệt xem xét` hoặc `AI xử lý thất bại`; mã kỹ thuật chỉ dùng trong API và audit log.
+Trong code tại commit được rà soát, `processing_stage` hiện gồm `DRAFT`, `AI_PENDING`, `AI_PROCESSING`, `HUMAN_REVIEW_REQUIRED`, `AI_AUTO_APPROVED` và `COMPLETED`. Pipeline failure chuyển trực tiếp sang `HUMAN_REVIEW_REQUIRED`; chưa có stage `AI_PROCESSING_FAILED`. Xem [lifecycle as-built](diagrams/organizationai-lifecycle.html) để biết trạng thái code hiện tại.
 
 ### 6.2. Sơ đồ trạng thái
 
-```mermaid
-stateDiagram-v2
-    [*] --> Nhap: Tạo kế hoạch
-    Nhap --> Cho_duyet: Gửi phê duyệt và tạo vòng duyệt
-    Cho_duyet --> AI_danh_gia: Khởi chạy pipeline AI
-    AI_danh_gia --> Da_duyet: Đủ điều kiện tự động duyệt
-    AI_danh_gia --> Cho_duyet_thu_cong: Không chắc chắn hoặc lỗi
-    Cho_duyet_thu_cong --> Da_duyet: Checker phê duyệt
-    Cho_duyet_thu_cong --> Da_tu_choi: Checker từ chối
-    Da_tu_choi --> Cho_duyet: Chỉnh sửa và gửi lại
-    Da_duyet --> [*]
-```
+Sơ đồ trạng thái as-built của Auth workflow: [organizationai-lifecycle.html](diagrams/organizationai-lifecycle.html). Sơ đồ tách status nghiệp vụ khỏi processing_stage; bảng dưới đây đã được đối chiếu với model hiện hành.
 
 ### 6.3. Ma trận hành động theo trạng thái
 

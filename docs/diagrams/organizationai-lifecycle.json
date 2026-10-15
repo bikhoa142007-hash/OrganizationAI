@@ -1,0 +1,137 @@
+{
+  "schema_version": 1,
+  "diagram_type": "lifecycle",
+  "meta": {
+    "title": "Auth plan status lifecycle",
+    "output": "docs/diagrams/organizationai-lifecycle.html",
+    "viewBox": [
+      1080,
+      566
+    ],
+    "quality_profile": "showcase",
+    "animation": "none",
+    "views": [
+      {
+        "id": "business-status",
+        "label": "Business status",
+        "focus": [
+          "draft",
+          "pending",
+          "approved",
+          "rejected"
+        ]
+      },
+      {
+        "id": "approval",
+        "label": "Submit and decide",
+        "focus": [
+          "pending",
+          "approved",
+          "rejected"
+        ]
+      },
+      {
+        "id": "resubmission",
+        "label": "Rejected and resubmitted",
+        "focus": [
+          "rejected",
+          "pending"
+        ]
+      }
+    ],
+    "subtitle": "Business status lifecycle; processing_stage is separate."
+  },
+  "lanes": [
+    {
+      "id": "main",
+      "label": "Plan status"
+    }
+  ],
+  "states": [
+    {
+      "id": "draft",
+      "type": "start",
+      "label": "DRAFT",
+      "sublabel": "incomplete ok",
+      "lane": "main",
+      "col": 1,
+      "width": 100,
+      "tag": "Editable"
+    },
+    {
+      "id": "pending",
+      "type": "active",
+      "label": "PENDING_APPROVAL",
+      "sublabel": "snapshot locked",
+      "lane": "main",
+      "col": 2,
+      "width": 140,
+      "tag": "Review"
+    },
+    {
+      "id": "approved",
+      "type": "success",
+      "label": "APPROVED",
+      "sublabel": "AI or Checker",
+      "lane": "main",
+      "col": 4,
+      "width": 100,
+      "tag": "Final"
+    },
+    {
+      "id": "rejected",
+      "type": "failure",
+      "label": "REJECTED",
+      "sublabel": "reason required",
+      "lane": "main",
+      "col": 3,
+      "width": 150,
+      "tag": "Round closed",
+      "yOffset": 130
+    }
+  ],
+  "transitions": [
+    {
+      "id": "draft-submit",
+      "from": "draft",
+      "to": "pending",
+      "label": "valid submit",
+      "variant": "emphasis",
+      "labelDy": -28,
+      "route": "straight",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "pending-approve",
+      "from": "pending",
+      "to": "approved",
+      "variant": "emphasis",
+      "route": "straight",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "pending-reject",
+      "from": "pending",
+      "to": "rejected",
+      "variant": "security",
+      "route": "top-channel",
+      "fromSide": "top",
+      "toSide": "top",
+      "channelY": 80
+    },
+    {
+      "id": "rejected-resubmit",
+      "from": "rejected",
+      "to": "pending",
+      "label": "Resubmit next V / R",
+      "variant": "dashed",
+      "route": "bottom-channel",
+      "fromSide": "bottom",
+      "toSide": "bottom",
+      "channelY": 360,
+      "labelDy": -8
+    }
+  ]
+}

@@ -1,0 +1,183 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "Auth configuration · revisions and round snapshots",
+    "output": "docs/diagrams/organizationai-config-workflow.html",
+    "quality_profile": "showcase",
+    "views": [
+      {
+        "id": "admin-config",
+        "label": "Admin configuration API",
+        "focus": [
+          "admin",
+          "read",
+          "revision",
+          "store"
+        ]
+      },
+      {
+        "id": "signoff-gate",
+        "label": "Auto-approval enable gate",
+        "focus": [
+          "revision",
+          "enable_rejected"
+        ]
+      },
+      {
+        "id": "submission-snapshot",
+        "label": "Effective config at submit",
+        "focus": [
+          "store",
+          "resolve",
+          "round_snapshot"
+        ]
+      }
+    ],
+    "viewBox": [
+      1180,
+      660
+    ]
+  },
+  "lanes": [
+    {
+      "id": "admin",
+      "label": "Admin"
+    },
+    {
+      "id": "api",
+      "label": "Auth + configuration API"
+    },
+    {
+      "id": "store",
+      "label": "PostgreSQL config store"
+    }
+  ],
+  "mainPath": [
+    "admin",
+    "read",
+    "revision",
+    "store",
+    "resolve",
+    "round_snapshot"
+  ],
+  "nodes": [
+    {
+      "id": "admin",
+      "lane": "admin",
+      "col": 0,
+      "type": "external",
+      "label": "Admin",
+      "sublabel": "ADMIN · JWT",
+      "tag": "Code",
+      "width": 165
+    },
+    {
+      "id": "read",
+      "lane": "api",
+      "col": 1,
+      "type": "backend",
+      "label": "Read config",
+      "sublabel": "GET /api/workflow/configuration",
+      "tag": "Admin only",
+      "width": 165
+    },
+    {
+      "id": "revision",
+      "lane": "api",
+      "col": 2,
+      "type": "backend",
+      "label": "Save revision",
+      "sublabel": "POST /{kind}/revisions",
+      "tag": "Admin only",
+      "width": 165
+    },
+    {
+      "id": "enable_rejected",
+      "lane": "api",
+      "col": 3,
+      "type": "security",
+      "label": "Enable rejected",
+      "sublabel": "enabled=true rejected",
+      "tag": "Chưa có sign-off record",
+      "width": 165
+    },
+    {
+      "id": "store",
+      "lane": "store",
+      "col": 3,
+      "type": "database",
+      "label": "Config revision",
+      "sublabel": "Append-only · effective-dated",
+      "tag": "PostgreSQL",
+      "width": 165
+    },
+    {
+      "id": "resolve",
+      "lane": "api",
+      "col": 4,
+      "type": "backend",
+      "label": "Resolve config",
+      "sublabel": "At submission",
+      "tag": "Fail closed",
+      "width": 165
+    },
+    {
+      "id": "round_snapshot",
+      "lane": "store",
+      "col": 4,
+      "type": "database",
+      "label": "Round snapshot",
+      "sublabel": "Config + Checker + SLA",
+      "tag": "Plan + round",
+      "width": 165
+    }
+  ],
+  "edges": [
+    {
+      "id": "admin-read",
+      "from": "admin",
+      "to": "read",
+      "label": "authenticated request",
+      "role": "main"
+    },
+    {
+      "id": "read-revision",
+      "from": "read",
+      "to": "revision",
+      "label": "review supported configuration kind",
+      "role": "main"
+    },
+    {
+      "id": "revision-store",
+      "from": "revision",
+      "to": "store",
+      "label": "valid value + effective_at + reason",
+      "variant": "emphasis",
+      "role": "main"
+    },
+    {
+      "id": "revision-enable",
+      "from": "revision",
+      "to": "enable_rejected",
+      "label": "approval_policy.enabled = true",
+      "variant": "security",
+      "role": "error"
+    },
+    {
+      "id": "store-resolve",
+      "from": "store",
+      "to": "resolve",
+      "label": "effective revisions by timestamp",
+      "role": "main"
+    },
+    {
+      "id": "resolve-snapshot",
+      "from": "resolve",
+      "to": "round_snapshot",
+      "label": "capture at round creation",
+      "variant": "emphasis",
+      "role": "main"
+    }
+  ]
+}

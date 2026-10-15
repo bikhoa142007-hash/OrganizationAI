@@ -4,21 +4,7 @@
 
 Trong 72 giờ, hoàn thành một MVP có thể chạy và trình diễn end-to-end cho module **Phê duyệt kế hoạch marketing có hỗ trợ AI** theo luồng:
 
-```mermaid
-flowchart TD
-    A["Maker tạo kế hoạch"] --> B["Lưu nháp"]
-    B --> C["Gửi duyệt"]
-    C --> D["Local VLM trích xuất ảnh"]
-    D --> E["Kiểm duyệt truyền thông"]
-    C --> F["Đánh giá chiến lược"]
-    C --> G["Kiểm tra ngân sách"]
-    E --> H["Decision Policy Engine"]
-    F --> H
-    G --> H
-    H -->|Đạt toàn bộ policy| I["Tự động phê duyệt"]
-    H -->|Bất định hoặc không đạt| J["Checker duyệt thủ công"]
-    J -->|Từ chối| K["Maker sửa và gửi lại"]
-```
+Sơ đồ đầu tài liệu này là luồng mục tiêu Sprint 1. Hành vi hiện có trong code và các gate/runtime chưa bật được mô tả trong [sơ đồ Maker–AI–Checker as-built](diagrams/organizationai-main-workflow.html) và [pipeline AI](diagrams/organizationai-ai-technical.html).
 
 Kết quả bắt buộc:
 

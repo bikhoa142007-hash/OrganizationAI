@@ -1,0 +1,188 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "Auth AI pipeline · ordered evaluation and route",
+    "output": "docs/diagrams/organizationai-ai-technical.html",
+    "viewBox": [
+      1240,
+      534
+    ],
+    "quality_profile": "showcase",
+    "views": [
+      {
+        "id": "evaluation",
+        "label": "Ordered evaluation",
+        "focus": [
+          "vlm",
+          "media",
+          "strategy",
+          "rules"
+        ]
+      },
+      {
+        "id": "fallbacks",
+        "label": "Skipped tasks and fallback",
+        "focus": [
+          "vlm",
+          "media",
+          "strategy",
+          "rules",
+          "human"
+        ]
+      },
+      {
+        "id": "outcomes",
+        "label": "Decision outcomes",
+        "focus": [
+          "rules",
+          "auto",
+          "human"
+        ]
+      }
+    ]
+  },
+  "lanes": [
+    {
+      "id": "orchestrator",
+      "label": "Approval orchestrator"
+    },
+    {
+      "id": "engine",
+      "label": "Decision Policy Engine"
+    },
+    {
+      "id": "checker",
+      "label": "Outcome"
+    }
+  ],
+  "mainPath": [
+    "vlm",
+    "media",
+    "strategy",
+    "rules",
+    "auto"
+  ],
+  "nodes": [
+    {
+      "id": "vlm",
+      "lane": "orchestrator",
+      "col": 0,
+      "type": "backend",
+      "label": "VLM extraction",
+      "sublabel": "submitted snapshot media",
+      "width": 170,
+      "tag": "Local adapter"
+    },
+    {
+      "id": "media",
+      "lane": "orchestrator",
+      "col": 1,
+      "type": "backend",
+      "label": "Media Compliance",
+      "sublabel": "If policy applies + extraction",
+      "width": 170,
+      "tag": "May skip"
+    },
+    {
+      "id": "strategy",
+      "lane": "orchestrator",
+      "col": 2,
+      "type": "backend",
+      "label": "Strategy Evaluation",
+      "sublabel": "If supported rubric is effective",
+      "width": 175,
+      "tag": "Independent task"
+    },
+    {
+      "id": "rules",
+      "lane": "engine",
+      "col": 2,
+      "type": "security",
+      "label": "Decision engine",
+      "sublabel": "Budget · authority · policy · state",
+      "width": 180,
+      "tag": "Deterministic"
+    },
+    {
+      "id": "auto",
+      "lane": "engine",
+      "col": 3,
+      "type": "backend",
+      "label": "AUTO_APPROVED",
+      "sublabel": "Auth config off",
+      "width": 180,
+      "tag": "Code path"
+    },
+    {
+      "id": "human",
+      "lane": "checker",
+      "col": 3,
+      "type": "security",
+      "label": "Human review",
+      "sublabel": "HUMAN_REVIEW_REQUIRED",
+      "width": 180,
+      "tag": "No AI reject"
+    }
+  ],
+  "edges": [
+    {
+      "id": "vlm-media",
+      "from": "vlm",
+      "to": "media",
+      "label": "extracted evidence",
+      "variant": "emphasis",
+      "role": "main"
+    },
+    {
+      "id": "media-strategy",
+      "from": "media",
+      "to": "strategy",
+      "label": "next orchestrator step; independent output",
+      "variant": "emphasis",
+      "role": "main"
+    },
+    {
+      "id": "strategy-rules",
+      "from": "strategy",
+      "to": "rules",
+      "label": "validated results + snapshot context",
+      "variant": "emphasis",
+      "role": "main"
+    },
+    {
+      "id": "rules-auto",
+      "from": "rules",
+      "to": "auto",
+      "label": "every auto gate passes",
+      "variant": "emphasis",
+      "role": "branch"
+    },
+    {
+      "id": "rules-human",
+      "from": "rules",
+      "to": "human",
+      "label": "any gate fails / unknown / error",
+      "variant": "security",
+      "role": "branch"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Ordered evaluation and skip conditions",
+      "items": [
+        "The orchestrator reads media from the immutable submitted-version snapshot, then runs VLM extraction first. Media runs when an effective in-scope policy and extraction evidence exist; otherwise the task is skipped/recorded for review.",
+        "Strategy runs after Media when its effective rubric is supported; it is independent and can still run if Media fails. Budget is a deterministic engine check after evaluation."
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Fail closed and retry",
+      "items": [
+        "Only the rule engine chooses AUTO_APPROVED or HUMAN_REVIEW_REQUIRED. Any unknown/invalid schema, timeout, model identity error, missing config, failed evidence or gate routes to Checker.",
+        "One eligible manual retry reuses the same immutable version/round snapshot; errors do not roll back submission. There is no AI auto-reject."
+      ]
+    }
+  ]
+}

@@ -1,0 +1,385 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "OrganizationAI · deployment profiles and local inference",
+    "output": "docs/diagrams/organizationai-architecture.html",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/bikhoa142007-hash/OrganizationAI",
+      "provider": "github",
+      "revision": "b67a658f357c482bd817d4230376c68d31c7ba35"
+    },
+    "views": [
+      {
+        "id": "judge-demo",
+        "label": "Judge Demo on Render",
+        "focus": [
+          "frontend",
+          "judge_api",
+          "sqlite",
+          "mock_vlm"
+        ]
+      },
+      {
+        "id": "auth-postgres",
+        "label": "Auth + PostgreSQL",
+        "focus": [
+          "frontend",
+          "auth_api",
+          "postgres",
+          "orchestrator"
+        ]
+      },
+      {
+        "id": "local-inference",
+        "label": "Local VLM and optional tunnel",
+        "focus": [
+          "orchestrator",
+          "local_vlm",
+          "ollama",
+          "tunnel"
+        ]
+      }
+    ]
+  },
+  "layout": {
+    "mode": "grid",
+    "cols": 4,
+    "gapX": 24,
+    "gapY": 32,
+    "cellW": 180,
+    "cellH": 92
+  },
+  "components": [
+    {
+      "id": "frontend",
+      "type": "frontend",
+      "label": "React + Vite",
+      "sublabel": "Shared SPA; demo/auth config differs",
+      "row": 0,
+      "col": 1,
+      "size": [
+        170,
+        84
+      ],
+      "sources": [
+        {
+          "path": "frontend/package.json"
+        },
+        {
+          "path": "render.yaml",
+          "label": "Demo frontend"
+        },
+        {
+          "path": "deployment/render.auth-staging.yaml",
+          "label": "Auth staging frontend"
+        }
+      ]
+    },
+    {
+      "id": "judge_api",
+      "type": "backend",
+      "label": "FastAPI · Demo",
+      "sublabel": "Render profile; APP_ENV=demo",
+      "tag": "render.yaml",
+      "row": 1,
+      "col": 0,
+      "size": [
+        170,
+        84
+      ],
+      "sources": [
+        {
+          "path": "render.yaml"
+        },
+        {
+          "path": "deployment/start_backend.py"
+        },
+        {
+          "path": "src/backend/api/app.py"
+        }
+      ]
+    },
+    {
+      "id": "sqlite",
+      "type": "database",
+      "label": "SQLite",
+      "sublabel": "Demo-only; ephemeral store",
+      "row": 2,
+      "col": 0,
+      "size": [
+        170,
+        84
+      ],
+      "sources": [
+        {
+          "path": "src/backend/repositories/approval.py"
+        },
+        {
+          "path": "render.yaml"
+        }
+      ]
+    },
+    {
+      "id": "mock_vlm",
+      "type": "backend",
+      "label": "Mock VLM",
+      "sublabel": "Explicit provider; demo scenarios",
+      "tag": "DEMO",
+      "row": 0,
+      "col": 0,
+      "size": [
+        170,
+        84
+      ],
+      "sources": [
+        {
+          "path": "src/ai_pipeline/providers/mock.py"
+        },
+        {
+          "path": "src/backend/api/app.py"
+        }
+      ]
+    },
+    {
+      "id": "auth_api",
+      "type": "backend",
+      "label": "FastAPI Auth",
+      "sublabel": "JWT/RBAC + deterministic rules",
+      "tag": "Local; staging unverified",
+      "row": 1,
+      "col": 3,
+      "size": [
+        170,
+        84
+      ],
+      "sources": [
+        {
+          "path": "src/backend/api/auth.py"
+        },
+        {
+          "path": "src/backend/api/auth_workflow.py"
+        },
+        {
+          "path": "src/backend/domain/policy.py"
+        }
+      ]
+    },
+    {
+      "id": "postgres",
+      "type": "database",
+      "label": "PostgreSQL",
+      "sublabel": "Auth workflow data",
+      "row": 2,
+      "col": 3,
+      "size": [
+        170,
+        84
+      ],
+      "sources": [
+        {
+          "path": "src/backend/db/session.py"
+        },
+        {
+          "path": "src/backend/db/models/auth_workflow.py"
+        },
+        {
+          "path": "alembic/versions/20260928_03_auth_workflow.py"
+        }
+      ]
+    },
+    {
+      "id": "orchestrator",
+      "type": "backend",
+      "label": "Auth AI pipeline",
+      "sublabel": "VLM → Media → Strategy; rules decide",
+      "row": 1,
+      "col": 2,
+      "size": [
+        170,
+        84
+      ],
+      "sources": [
+        {
+          "path": "src/ai_pipeline/authenticated_orchestrator.py"
+        },
+        {
+          "path": "src/backend/application/auth_workflow.py"
+        }
+      ]
+    },
+    {
+      "id": "local_vlm",
+      "type": "backend",
+      "label": "LocalVLM adapter",
+      "sublabel": "OpenAI-compatible extraction",
+      "row": 2,
+      "col": 2,
+      "size": [
+        170,
+        84
+      ],
+      "sources": [
+        {
+          "path": "src/ai_pipeline/providers/openai_provider.py"
+        },
+        {
+          "path": "src/ai_pipeline/vlm_extraction.py"
+        }
+      ]
+    },
+    {
+      "id": "ollama",
+      "type": "external",
+      "label": "Ollama",
+      "sublabel": "Local runtime; model not bundled",
+      "row": 2,
+      "col": 1,
+      "size": [
+        170,
+        84
+      ],
+      "sources": [
+        {
+          "path": ".env.example"
+        },
+        {
+          "path": "docs/integration/local-media-strategy-inference.md"
+        }
+      ]
+    },
+    {
+      "id": "tunnel",
+      "type": "cloud",
+      "label": "Tunnel to Ollama",
+      "sublabel": "Optional; no deployed route",
+      "tag": "UNVERIFIED",
+      "row": 1,
+      "col": 1,
+      "size": [
+        170,
+        84
+      ],
+      "sources": [
+        {
+          "path": "deployment/render.auth-staging.yaml"
+        },
+        {
+          "path": "deployment/README.md"
+        }
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "Judge Demo · root Render blueprint",
+      "wraps": [
+        "judge_api",
+        "sqlite",
+        "mock_vlm"
+      ],
+      "pad": 28
+    },
+    {
+      "kind": "region",
+      "label": "Auth + PostgreSQL · local workflow; Render staging not verified deployed",
+      "wraps": [
+        "auth_api",
+        "postgres",
+        "orchestrator",
+        "local_vlm"
+      ],
+      "pad": 32
+    }
+  ],
+  "connections": [
+    {
+      "id": "frontend-judge",
+      "from": "frontend",
+      "to": "judge_api",
+      "label": "demo API",
+      "variant": "emphasis",
+      "labelAt": [
+        227,
+        178
+      ]
+    },
+    {
+      "id": "frontend-auth",
+      "from": "frontend",
+      "to": "auth_api",
+      "label": "Auth API + cookie",
+      "variant": "security"
+    },
+    {
+      "id": "judge-db",
+      "from": "judge_api",
+      "to": "sqlite",
+      "label": "SQLite",
+      "variant": "emphasis",
+      "labelDy": 24
+    },
+    {
+      "id": "judge-mock",
+      "from": "judge_api",
+      "to": "mock_vlm",
+      "label": "Mock",
+      "variant": "dashed",
+      "labelDy": 0
+    },
+    {
+      "id": "auth-db",
+      "from": "auth_api",
+      "to": "postgres",
+      "label": "PostgreSQL",
+      "variant": "emphasis",
+      "labelDy": 24
+    },
+    {
+      "id": "auth-ai",
+      "from": "auth_api",
+      "to": "orchestrator",
+      "label": "submit snapshot",
+      "variant": "emphasis",
+      "labelAt": [
+        635,
+        310
+      ]
+    },
+    {
+      "id": "ai-vlm",
+      "from": "orchestrator",
+      "to": "local_vlm",
+      "label": "frozen media bytes",
+      "variant": "emphasis",
+      "labelDy": 24
+    },
+    {
+      "id": "vlm-ollama",
+      "from": "local_vlm",
+      "to": "ollama",
+      "label": "local host alias",
+      "variant": "emphasis",
+      "labelDy": 24,
+      "labelAt": [
+        431,
+        310
+      ]
+    },
+    {
+      "id": "orchestrator-tunnel",
+      "from": "orchestrator",
+      "to": "tunnel",
+      "variant": "dashed"
+    },
+    {
+      "id": "tunnel-ollama",
+      "from": "tunnel",
+      "to": "ollama",
+      "variant": "dashed"
+    }
+  ],
+  "cards": []
+}
