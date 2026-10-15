@@ -217,9 +217,10 @@ def test_literal_near_miss_warning_and_provider_failure_do_not_auto_reject():
     raw["media_findings"] = [{
         "finding_id": "warning-1", "severity": "WARNING",
         "description": "Synthetic warning only.", "rule_id": "WARNING-ONLY",
-        "evidence_refs": ["ev-ocr"],
+        "evidence_refs": [raw["evidence"][0]["evidence_id"]],
     }]
-    warning = _evaluate(policy=_fixture_policy(), raw=raw, p=p).decision
+    warning_bundle = _evaluate(policy=_fixture_policy(), raw=raw, p=p)
+    warning = warning_bundle.decision
 
     raw = evaluation(p)
     raw.update(
@@ -232,6 +233,7 @@ def test_literal_near_miss_warning_and_provider_failure_do_not_auto_reject():
     timeout = _evaluate(policy=_fixture_policy(), raw=raw, p=p).decision
 
     assert near_miss.outcome == "AUTO_APPROVED"
+    assert warning_bundle.evaluation.status == "SUCCEEDED"
     assert warning.outcome == "AUTO_APPROVED"  # a WARNING alone is not a rejection rule
     assert timeout.outcome == "HUMAN_REVIEW_REQUIRED"
     assert timeout.auto_reject_rule_id is None
