@@ -1,4 +1,6 @@
+from concurrent.futures import ThreadPoolExecutor
 from importlib import import_module
+from threading import Event
 
 from fastapi.testclient import TestClient
 
@@ -138,6 +140,52 @@ def test_public_judge_quota_is_bounded_and_does_not_affect_other_routes(monkeypa
     assert limited.headers["retry-after"] == "60"
     assert "Synthetic public Judge input" not in limited.text
     assert health.status_code == 200
+
+
+def test_public_judge_rejects_concurrent_post_while_another_run_is_active(monkeypatch):
+    from src.verify import runner
+
+    app = _app(app_env="demo")
+    app.state.public_judge_request_gate = app_module._PublicJudgeRequestGate(
+        max_requests=10,
+        window_seconds=60,
+        max_concurrent=1,
+        clock=lambda: 10.0,
+    )
+    entered = Event()
+    release = Event()
+    calls = []
+
+    def paused_suite(suite):
+        calls.append(suite)
+        entered.set()
+        if not release.wait(timeout=5):
+            raise TimeoutError("synthetic Judge run was not released")
+        return []
+
+    monkeypatch.setattr(runner, "run_suite", paused_suite)
+
+    def run_first_request():
+        with TestClient(app) as client:
+            return client.post("/api/public/judge/runs", json={"suite": "general"})
+
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        first_future = executor.submit(run_first_request)
+        try:
+            assert entered.wait(timeout=2), "first Judge POST did not reach the synthetic pause"
+            with TestClient(app) as concurrent_client:
+                concurrent = concurrent_client.post(
+                    "/api/public/judge/runs", json={"suite": "general"},
+                )
+        finally:
+            release.set()
+        first = first_future.result(timeout=3)
+
+    assert first.status_code == 200
+    assert concurrent.status_code == 429
+    assert concurrent.json()["code"] == "RATE_LIMITED"
+    assert concurrent.headers["retry-after"] == "1"
+    assert calls == ["general"]
 
 
 def test_public_judge_is_unavailable_in_production():
