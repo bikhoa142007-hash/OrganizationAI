@@ -1,6 +1,9 @@
 import { resolveApiBaseUrl } from './apiBaseUrl'
 import type { RuntimeOutcome, VerifyEvidence, VerifyEscalationQuestion, VerifyRun } from '../types'
 
+// Leave bounded time for a cold-starting public demo service to wake.
+const PUBLIC_JUDGE_POST_TIMEOUT_MS = 90_000
+
 export type PublicJudgeSuite = 'general' | 'escalation'
 export type PublicJudgeCaseAction = 'APPROVE' | 'REJECT' | 'STOP'
 export type PublicJudgeActionStatus = 'HUMAN_APPROVED' | 'HUMAN_REJECTED' | 'STOPPED'
@@ -304,7 +307,7 @@ export class PublicJudgeService {
 
   private async post<T>(path: string, body: unknown, additionalHeaders: Record<string, string> = {}): Promise<T> {
     const controller = new AbortController()
-    const timeout = window.setTimeout(() => controller.abort(), 30_000)
+    const timeout = window.setTimeout(() => controller.abort(), PUBLIC_JUDGE_POST_TIMEOUT_MS)
     try {
       const response = await this.transport(`${this.baseUrl}/public/judge${path}`, {
         method: 'POST',
