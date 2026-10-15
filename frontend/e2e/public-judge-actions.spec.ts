@@ -56,7 +56,7 @@ test('public Judge action follows the simulated Checker API contract (mocked res
 
   await expect(page.getByRole('heading', { name: 'HUMAN_APPROVED' })).toBeVisible()
   await expect(page.getByText('ANONYMOUS_PUBLIC_JUDGE · HUMAN_APPROVED')).toBeVisible()
-  await expect(page.getByText(inputSha256)).toBeVisible()
+  await expect(page.getByText(inputSha256, { exact: true })).toBeVisible()
   expect(actionRequestBody).toEqual({ action: 'APPROVE', reason: 'Reviewed the synthetic evidence.' })
   expect(actionRequestHeaders?.['idempotency-key']).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)
   expect(actionRequestHeaders?.authorization).toBeUndefined()
