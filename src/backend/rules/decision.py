@@ -31,6 +31,7 @@ class DecisionContext(Contract):
     verified_attachment_hashes: tuple[tuple[str, ...], ...]
     valid_checker_ids: tuple[str, ...]
     suspicious_input: bool
+    valid_authority_ids: tuple[str, ...] = ()
 
     def validate(self):
         require(all(len(x) == 2 for x in self.verified_attachment_hashes), 'Invalid verified manifest')
@@ -62,8 +63,7 @@ def normalize_evaluation(raw, plan, config, ctx):
         error_code = 'INPUT_MISMATCH'
         require(actual == expected, 'Evaluation identity mismatch')
         error_code = 'UNKNOWN_MODEL'
-        require(result.model_version is None or result.model_version in
-                config.policy.known_model_versions, 'Unknown model')
+        require(result.model_version in config.policy.known_model_versions, 'Unknown model')
         error_code = 'INVALID_SCHEMA'
         if result.status == 'SUCCEEDED':
             if config.strategy_rubric is not None:
@@ -191,6 +191,18 @@ def decide(plan: MarketingPlan, config: ApprovalConfiguration, raw_evaluation,
           'Complete required payload, verified snapshot and attachments, valid distinct Checker.',
           'FACT_UNCERTAIN', ev_refs)
     check('EVAL_VALID', successful, ev.status, 'Schema-valid success and known model.', 'FACT_UNCERTAIN')
+    scope_pass = bool(
+        config.media_policy and config.media_policy.status == 'ACTIVE'
+        and config.media_policy.applies_to(plan.payload)
+        and config.strategy_rubric and config.strategy_rubric.status == 'ACTIVE'
+        and authority and authority.active
+        and plan.payload.get('department') in authority.allowed_departments
+        and budget.configuration_id is not None
+    )
+    check('DECISION_SCOPE', scope_pass,
+          {'department': plan.payload.get('department'), 'channels': plan.payload.get('channels')},
+          'Active Media and Strategy revisions, matching department/channel, budget and delegated authority scope.',
+          'POLICY_OUT_OF_SCOPE')
     # Review caused only by unresolved facts is not a validated policy violation.
     # Keep independent policy/authority failures and existing category precedence.
     factual_media = bool(ev.missing_facts or ev.evidence_conflicts) and not any(
@@ -216,8 +228,17 @@ def decide(plan: MarketingPlan, config: ApprovalConfiguration, raw_evaluation,
     check('BUDGET_LIMIT', None if budget.result == 'UNKNOWN' else budget.result == 'PASS',
           budget.to_dict(), 'budget <= uniquely applicable active same-currency limit',
           'POLICY_OUT_OF_SCOPE' if budget.result == 'UNKNOWN' else 'AUTHORITY_EXCEEDED', (budget_ref,))
-    authority_known = (authority is not None and authority.active and
-                       authority.currency == budget.currency and budget.budget_minor_units is not None)
+    authority_actor_ids = (
+        {authority.checker_id, authority.policy_owner_id, authority.budget_authority_id}
+        if authority else set()
+    )
+    authority_known = (
+        authority is not None and authority.active
+        and authority.currency == budget.currency
+        and budget.budget_minor_units is not None
+        and None not in authority_actor_ids
+        and authority_actor_ids <= set(ctx.valid_authority_ids)
+    )
     authority_pass = None
     if authority_known:
         authority_pass = (Decimal(budget.budget_minor_units) <= Decimal(authority.auto_limit_minor_units)

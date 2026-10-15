@@ -126,6 +126,10 @@ def validate_checker_assignment_value(
 def validate_authority_value(session: Session, value: dict, *, lock: bool = False) -> None:
     """Validate authority actors are active employees without granting any role."""
     checker_id = UUID(value["checker_id"]) if value.get("checker_id") else None
+    if value.get("active") is True and any(
+        value.get(field) is None for field in ("checker_id", "policy_owner_id", "budget_authority_id")
+    ):
+        raise ValueError("Active authority requires Checker, Policy Owner and Budget Authority identities.")
     if checker_id is not None and not _eligible_checker(session, checker_id, lock=lock):
         raise ValueError("Authority Checker must be an active employee with Checker authority.")
     for field in ("policy_owner_id", "budget_authority_id"):

@@ -2,6 +2,7 @@
 from src.backend.domain.models import MarketingPlan, AttachmentManifest
 from src.backend.domain.policy import (
     ApprovalConfiguration, PolicySnapshot, BudgetConfiguration, AuthoritySnapshot, Criterion,
+    MediaCompliancePolicy, MediaPolicyRule, StrategyCriterion, StrategyRubric,
 )
 
 NOW = '2026-09-20T00:00:00Z'
@@ -13,7 +14,7 @@ def plan():
         'checker_id': 'synthetic-checker', 'department': 'synthetic-marketing',
         'objective': 'Demonstrate review', 'summary': 'Synthetic example',
         'start_date': '2026-10-01', 'end_date': '2026-10-31',
-        'budget_minor_units': '10000', 'currency': 'VND',
+        'budget_minor_units': '10000', 'currency': 'VND', 'channels': ['social'],
     }, (AttachmentManifest('synthetic-image', 'a' * 64, 'image/png', 100),))
 
 
@@ -22,12 +23,27 @@ def config():
         PolicySnapshot('synthetic-policy-snapshot', 'SYNTHETIC-1', True,
                        ('title', 'maker_id', 'checker_id', 'department', 'objective',
                         'summary', 'start_date', 'end_date', 'budget_minor_units', 'currency'),
-                       (Criterion('synthetic-total', 100),), ('synthetic-model-1',),
+                       tuple(Criterion(key, weight) for key, weight in (
+                           ('objective', 15), ('audience', 15), ('channel', 15),
+                           ('timeline', 15), ('kpi', 15), ('budget_efficiency', 15),
+                           ('risk_control', 10),
+                       )), ('synthetic-model-1',),
                        ('image/png',), 1000000),
         (BudgetConfiguration('synthetic-budget', 'VND', 0, '10000', 'synthetic-marketing', True),),
         AuthoritySnapshot('synthetic-authority', 'VND', '10000',
                           ('synthetic-marketing',), 'synthetic-checker',
                           'synthetic-policy-owner', 'synthetic-budget-authority', True),
+        media_policy=MediaCompliancePolicy(
+            'SYNTHETIC-MEDIA', '1', 'ACTIVE', ('synthetic-marketing',), ('social',),
+            (MediaPolicyRule(
+                'SYNTHETIC-WARNING', 'WARNING', 'Synthetic only', ('OBSERVATION',), ()),),
+        ),
+        strategy_rubric=StrategyRubric(
+            'SYNTHETIC-RUBRIC', '1', 'ACTIVE',
+            tuple(StrategyCriterion(
+                key, key, weight) for key, weight in [('objective', 15), ('audience', 15), ('channel', 15),
+                ('timeline', 15), ('kpi', 15), ('budget_efficiency', 15), ('risk_control', 10)]),
+        ),
     )
 
 
@@ -47,9 +63,12 @@ def evaluation(p=None):
         reason='Synthetic evaluation', latency_ms=1, created_at=NOW, started_at=NOW,
         completed_at=NOW, agent_errors=[], raw_output_hash=None,
         reported_model_version=None, correlation_id='synthetic-trace',
-        criterion_scores=[dict(criterion_id='synthetic-total', score=71,
+        criterion_scores=[dict(criterion_id=key, score=71,
                                maximum_score=100, rationale='Synthetic score',
-                               evidence_refs=['ev-image'])], assumptions=[],
+                               evidence_refs=['ev-image']) for key in (
+                                   'objective', 'audience', 'channel', 'timeline', 'kpi',
+                                   'budget_efficiency', 'risk_control',
+                               )], assumptions=[],
     )
 
 

@@ -155,6 +155,36 @@ export function AuthenticatedApprovalConfigurationPage() {
     }
   }
 
+  async function signOffPolicy() {
+    setError('')
+    setMessage('')
+    if (!current || kind !== 'approval_policy') return
+    const expectedRevisions = Object.fromEntries(current.items.map(item => [
+      item.kind,
+      item.current_revision && {
+        revision_id: item.current_revision.revision_id,
+        configuration_hash: item.current_revision.configuration_hash,
+      },
+    ]))
+    if (configurationKinds.some(configurationKind => !expectedRevisions[configurationKind])) {
+      setError('Chưa đủ revision hiệu lực để ký. Cần cấu hình đầy đủ cả sáu loại trước.')
+      return
+    }
+    setSaving(true)
+    try {
+      const result = await approvalConfigurationService.signOffPolicy(
+        expectedRevisions as Record<ConfigurationKind, { revision_id: string; configuration_hash: string }>,
+      )
+      const signedAt = result.revision.signoff?.signed_at
+      setMessage(`Đã ghi sign-off của Policy Owner cho revision ${result.revision.revision}${signedAt ? ` lúc ${formatDate(signedAt)}` : ''}.${result.replayed ? ' Đây là phản hồi lặp lại của cùng sign-off.' : ''}`)
+      await load('approval_policy')
+    } catch (failure) {
+      setError(failure instanceof Error ? failure.message : String(failure))
+    } finally {
+      setSaving(false)
+    }
+  }
+
   return <section className="auth-workflow-page">
     <div className="auth-workflow-page-heading">
       <div><p className="page-eyebrow">Workflow PostgreSQL · Administrator</p><h1>Cấu hình phê duyệt</h1>
@@ -194,6 +224,23 @@ export function AuthenticatedApprovalConfigurationPage() {
         <h3>Revision kế tiếp đã lên lịch</h3>
         <RevisionSummary revision={currentItem.next_scheduled_revision} />
       </>}
+    </section>}
+
+    {!loading && kind === 'approval_policy' && currentItem?.current_revision?.value.enabled === false && <section className="auth-workflow-state" aria-label="Policy Owner sign-off">
+      <h2>Policy Owner sign-off</h2>
+      <p>Thao tác này ký revision Policy phê duyệt đang hiển thị và tạo revision kế tiếp bật auto-approve. Backend chỉ chấp nhận phiên đăng nhập của bkhoa, xác minh cả sáu revision hiện hành, danh tính và trạng thái tài khoản, scope Marketing/social, ngân sách, authority và hạn mức đã duyệt.</p>
+      <p>Người ký cần kiểm tra các revision cụ thể và hash bên dưới. Sign-off được ghi bất biến cùng actor, thời điểm và authority snapshot.</p>
+      <div aria-label="Các revision sẽ được sign-off">
+        {current?.items.map(item => item.current_revision
+          ? <RevisionSummary key={item.kind} revision={item.current_revision} />
+          : <p key={item.kind}>{kindLabels[item.kind]}: chưa cấu hình hiệu lực.</p>)}
+      </div>
+      {currentItem.current_revision.signoff && <p role="status">
+        Đã ký bởi {currentItem.current_revision.signoff.policy_owner_id} lúc {formatDate(currentItem.current_revision.signoff.signed_at)} · hash {currentItem.current_revision.signoff.approved_configuration_hash}
+      </p>}
+      <button className="button button-primary" type="button" disabled={saving || loading} onClick={() => void signOffPolicy()}>
+        {saving ? 'Đang xác minh và ghi sign-off…' : 'Policy Owner ký và bật auto-approve'}
+      </button>
     </section>}
 
     <form className="auth-plan-filters" onSubmit={validateDraft} aria-label="Soạn bản nháp cấu hình">

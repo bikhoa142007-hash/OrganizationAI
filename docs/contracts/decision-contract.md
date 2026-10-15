@@ -74,13 +74,14 @@ For an eligible submitted plan, AUTO_APPROVED requires every following condition
 | rule_id | mandatory PASS condition |
 |---|---|
 | INPUT_INTEGRITY | Complete mandatory submission data, attachment hashes match, no suspicious/tampered input, all referenced evidence belongs to this snapshot |
-| EVAL_VALID | Schema-valid successful evaluation, known model version and zero agent errors |
+| EVAL_VALID | Schema-valid successful evaluation, non-null known model version and zero agent errors |
+| DECISION_SCOPE | Active Media and Strategy revisions, payload matches configured department/channel scope, and active budget/authority include the department |
 | MEDIA_PASS | media_result = PASS |
 | MEDIA_CONFIDENCE | media_confidence >= 0.85 |
 | FEASIBILITY_SCORE | feasibility_score > 70 (71 passes, 70 fails) |
 | FEASIBILITY_CONFIDENCE | feasibility_confidence >= 0.80 |
 | BUDGET_LIMIT | budget <= uniquely applicable active budget limit, deterministic comparison |
-| AUTHORITY_LIMIT | Deterministic configured authority/mandate permits auto-approval for this plan |
+| AUTHORITY_LIMIT | Deterministic configured authority/mandate permits auto-approval; Checker, Policy Owner and Budget Authority are configured active employees |
 | NO_HARD_VIOLATION | hard_violation_count = 0 |
 | NO_EVIDENCE_CONFLICT | unresolved_conflict_count = 0; missing material facts also disqualify |
 | POLICY_ENABLED | auto_approval_policy_enabled = true |
@@ -88,6 +89,8 @@ For an eligible submitted plan, AUTO_APPROVED requires every following condition
 | ROUND_ACTIVE | approval_round_status = ACTIVE |
 
 Do not change scores to meet a threshold. An optional warning does not itself fail a gate unless it represents a hard violation, missing material fact, conflict or an applicable policy requirement. Suspicious input always fails INPUT_INTEGRITY. A deterministic hard-rule violation is preserved in applied_rule_ids, rule_checks and evidence and routes to Human Review. Human review cannot silently legitimize self-approval, mutation of submitted content or a duplicate final decision.
+
+An enabled auto-approval revision is effective only with an immutable sign-off by the authenticated, active `bkhoa` administrator. The sign-off records its actual actor/time, the enabled policy revision/hash and the exact budget, Media, Strategy, authority and Checker-assignment revision IDs/hashes. A companion revision change disables auto-approval for new rounds until a new disabled policy candidate receives a new sign-off. Each round snapshot retains the configuration revisions used for its decision.
 
 For evaluation-side counts, hard_violation_count is the number of HARD_VIOLATION entries in media_findings; unresolved_conflict_count is the length of evidence_conflicts; agent_error_count is the length of agent_errors. Independently failed deterministic checks still block auto-approval even when these three counts are zero. Invalid or absent collections are UNKNOWN, never empty passing collections.
 

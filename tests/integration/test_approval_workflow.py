@@ -10,6 +10,7 @@ from src.backend.application.workflow import ApprovalWorkflow, ApplicationError
 from src.backend.repositories.approval import ApprovalRepository
 from src.backend.domain.policy import (
     ApprovalConfiguration, PolicySnapshot, BudgetConfiguration, AuthoritySnapshot, Criterion,
+    MediaCompliancePolicy, MediaPolicyRule, StrategyCriterion, StrategyRubric,
 )
 
 
@@ -22,14 +23,27 @@ USERS = {MAKER: ('MAKER',), CHECKER: ('CHECKER',),
 
 
 def configuration():
+    strategy_criteria = (
+        ('objective', 15), ('audience', 15), ('channel', 15), ('timeline', 15),
+        ('kpi', 15), ('budget_efficiency', 15), ('risk_control', 10),
+    )
     return ApprovalConfiguration(
         PolicySnapshot('policy-1', 'POLICY-1', True,
                        ('title', 'maker_id', 'checker_id', 'department', 'objective',
                         'summary', 'start_date', 'end_date', 'budget_minor_units', 'currency'),
-                       (Criterion('total', 100),), ('mock-1',), ('image/png',), 100000),
+                       tuple(Criterion(key, weight) for key, weight in strategy_criteria),
+                       ('mock-1',), ('image/png',), 100000),
         (BudgetConfiguration('budget-1', 'VND', 0, '10000', 'marketing', True),),
         AuthoritySnapshot('authority-1', 'VND', '10000', ('marketing',),
                           CHECKER, 'policy-owner', 'budget-owner', True),
+        media_policy=MediaCompliancePolicy(
+            'media-1', '1', 'ACTIVE', ('marketing',), ('social',),
+            (MediaPolicyRule('MEDIA-WARNING-1', 'WARNING', 'Synthetic warning rule', ('OBSERVATION',)),),
+        ),
+        strategy_rubric=StrategyRubric(
+            'rubric-1', '1', 'ACTIVE',
+            tuple(StrategyCriterion(key, key, weight) for key, weight in strategy_criteria),
+        ),
     )
 
 
@@ -37,7 +51,7 @@ def payload(**changes):
     return dict(title='Campaign', checker_id=CHECKER, department='marketing',
                 objective='Reach customers', summary='Campaign overview',
                 start_date='2026-10-01', end_date='2026-10-31',
-                budget_minor_units='10000', currency='VND', **changes)
+                budget_minor_units='10000', currency='VND', channels=['social'], **changes)
 
 
 @pytest.fixture
@@ -83,8 +97,10 @@ def evaluation(submission, review=False):
         reason='Structured test evaluation', latency_ms=1, created_at=now,
         started_at=now, completed_at=now, agent_errors=[], raw_output_hash=None,
         reported_model_version=None, correlation_id=ticket['correlation_id'],
-        criterion_scores=[dict(criterion_id='total', score=71, maximum_score=100,
-                               rationale='Test assessment', evidence_refs=['image-evidence'])],
+        criterion_scores=[dict(criterion_id=criterion_id, score=71, maximum_score=100,
+                               rationale='Test assessment', evidence_refs=['image-evidence'])
+                          for criterion_id in ('objective', 'audience', 'channel', 'timeline',
+                                               'kpi', 'budget_efficiency', 'risk_control')],
         assumptions=[],
     )
 

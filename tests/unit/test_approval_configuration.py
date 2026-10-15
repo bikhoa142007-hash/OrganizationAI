@@ -10,6 +10,7 @@ from src.backend.application.approval_configuration import (
     feasibility_score_passes,
     validate_configuration_value,
 )
+from src.backend.application.checker_assignment_configuration import validate_authority_value
 
 
 def test_budget_equal_to_limit_passes_and_over_limit_requires_review():
@@ -132,6 +133,16 @@ def test_auto_approval_configuration_cannot_be_enabled_by_admin_revision():
     }
     with pytest.raises(ConfigurationValidationError, match="PO sign-off"):
         validate_configuration_value("approval_policy", value)
+
+
+def test_active_authority_requires_checker_policy_owner_and_budget_authority():
+    with pytest.raises(ValueError, match="Checker, Policy Owner and Budget Authority"):
+        validate_authority_value(None, {
+            "currency": "VND", "auto_limit_minor_units": "5000000",
+            "allowed_departments": ["Marketing"], "checker_id": "00000000-0000-0000-0000-000000000001",
+            "policy_owner_id": "00000000-0000-0000-0000-000000000002",
+            "budget_authority_id": None, "active": True,
+        })
 
 
 def test_feasibility_threshold_is_strictly_greater_than_configured_score():
