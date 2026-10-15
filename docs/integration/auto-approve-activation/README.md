@@ -1,34 +1,39 @@
 # Auto-approve activation package — OrganizationAI
 
-This package contains the user-approved Marketing/social Media policy, the current seven-criterion Strategy rubric, and the requested limits. It is configuration data, not executable instructions or a replacement for the backend configuration schema.
+This package contains the user-approved Marketing/social Media policy, the seven-criterion Strategy rubric, and the requested limits. It is configuration data, not executable instructions or a replacement for the backend configuration schema.
 
 ## Approved values
 
-- Media policy `ORG-MEDIA-MARKETING-SOCIAL`, version `1.0.0`, status `ACTIVE`, exact scope `Marketing` / `social`, with two `WARNING` rules. No wildcard scope or severity escalation.
-- Strategy rubric `BA-STRATEGY-7-1.0`, weights `15/15/15/15/15/15/15/10` as represented in `strategy-rubric.json`.
+- Media policy `ORG-MEDIA-MARKETING-SOCIAL`, version `1.0.0`, exact scope `Marketing` / `social`, with two `WARNING` rules. No wildcard scope or severity escalation.
+- Strategy rubric `BA-STRATEGY-7-1.0`, weights `15/15/15/15/15/15/10` as represented in `strategy-rubric.json`.
 - Per-plan budget ceiling: VND `10000000`.
 - Automatic authority ceiling: VND `5000000`.
 - Thresholds: feasibility score strictly greater than `70`; Media confidence at least `0.85`; feasibility confidence at least `0.80`.
 
-## Backend and deployment behavior
+## Production configuration — 2026-10-15
 
-The deployed backend supports `AUTH_WORKFLOW_MEDIA_POLICY_JSON` and `AUTH_WORKFLOW_STRATEGY_RUBRIC_JSON` as base configuration. Revisioned PostgreSQL configuration takes precedence for each approval round, including an explicitly disabled revision. Round snapshots remain immutable.
+The authenticated ADMIN configuration page validated and recorded PostgreSQL revision 1 for each item below, effective 2026-10-15 16:00 Asia/Ho_Chi_Minh:
 
-The approved activation request has `checker_id`, `policy_owner_id`, and `budget_authority_id` unset. The live configuration endpoint requires an authenticated `ADMIN` session and returned `401 UNAUTHENTICATED` during the prior verification. Therefore the effective Checker assignment and authority identities have not been verified or written. Do not infer identities from an Admin account or from test fixtures.
+- `budget`: **EFFECTIVE** — VND 10,000,000 for Marketing.
+- `media_policy`: **EFFECTIVE** — `ORG-MEDIA-MARKETING-SOCIAL` 1.0.0, Marketing/social, both approved rules remain `WARNING`. The runtime schema normalizes omitted optional `forbidden_literals` to an empty list; the UI revision stores that empty list explicitly, with no behavior change.
+- `strategy_rubric`: **EFFECTIVE** — `BA-STRATEGY-7-1.0`, seven approved criteria and weights.
+- `approval_policy`: **DISABLED** — thresholds 0.85 / score >70 / 0.80 are recorded; `enabled=false`.
+- `authority`: **DISABLED** — VND 5,000,000 and Marketing scope are recorded, but `checker_id`, `policy_owner_id`, and `budget_authority_id` are null. It must stay disabled.
+- `checker_assignment`: **UNCONFIGURED** — no default Checker revision exists.
 
-The current approval-policy validator rejects `enabled=true` with `Auto-approval cannot be enabled before PO sign-off.` The deployed schema has no sign-off field; do not bypass the validator or write around it. Auto-approval stays fail-closed until an authorized sign-off path and the live identities/configuration are verified.
+The employee directory shows three active accounts with the fixed Checker role (`bkhoa`, `smile1`, and `lekhoi`), but their employee department and job title fields are blank. Existing Marketing plans have been assigned to more than one of them, so the directory does not establish a unique Marketing default. No Policy Owner or Budget Authority designation is present in the fixed role catalog.
 
-Budget equality uses `<=` the configured budget ceiling; auto authority uses `<=` its own ceiling. A plan from an unconfigured department, one without a matching active Checker/authority, over either ceiling, outside the Media scope, with an incomplete/invalid AI result, or below any confidence/score threshold must route to Checker.
+The backend rejects `approval_policy.enabled=true` before PO sign-off, and the deployed API has no sign-off workflow. Do not bypass the validator or enable authority with null actor IDs. The recorded disabled revisions preserve the approved values while keeping decisions fail-closed. Until the missing identities, Checker default and valid PO sign-off path are established, do not claim auto-approval is active or production pass/fail is verified.
 
-## Model and test limits
+## Model and deployment status
 
-The environment example pins the previously verified Ollama identities and leaves endpoint URLs blank. Verify the current runtime digests before deployment; do not reuse old digests. No real production inference or positive production auto-approval was performed as part of creating this package.
+- Render service `organizationai-api` is running code commit `b67a658`. This branch contains configuration documentation; it is not deployed as application code.
+- Render's VLM, Media and Strategy remote-inference switches were set to `true` with the model identities/digests recorded in `render-media-strategy.env.example`. `/api/health/ready` confirmed production and PostgreSQL readiness after the Render environment restart.
+- `/api/health/ready` does not probe the VLM. No production image or plan inference was sent, so model availability and real-task output remain unverified.
+- The activation request remains `configuration_complete=false` until production identities, a Checker assignment and an allowed PO sign-off path are present.
 
-The request JSON is retained as an input record only. It is not a backend runtime schema and `configuration_complete=false` until production identities, revisioned config, and an allowed PO sign-off path are present.
+## Verification and fallback
 
-## Render rollout — 2026-10-15
+The existing decision-engine tests cover the strict score boundary (71 passes, 70 does not), budget equality and over-limit behavior, low confidence, hard violations, invalid output and error fallback. A previous targeted local run passed 59 tests. The latest rerun could not start because the available bundled Python has no `pytest` and the repository virtual-environment executable could not be launched in this worktree.
 
-- Saved the approved `AUTH_WORKFLOW_MEDIA_POLICY_JSON` to Render service `organizationai-api`; its value matches `media-policy.approved.json`. Render reported a successful service restart and `/api/health/ready` returned `status=ok`, `environment=production`, `auth_database=postgresql`.
-- `AUTH_WORKFLOW_STRATEGY_RUBRIC_JSON` on Render matches `BA-STRATEGY-7-1.0` and its seven weights.
-- Render is running code commit `b67a658`; this documentation branch has not been deployed as code. The environment policy is only the base configuration: an effective PostgreSQL `media_policy` revision, including a disabled revision, takes precedence.
-- `/api/workflow/configuration` still returns `401 UNAUTHENTICATED` without an ADMIN session, so effective assignments, limits, authority and approval-policy revisions could not be verified. No database revisions were written, no model inference was sent, and auto-approval was not enabled.
+The backend requires Media PASS, Media confidence ≥0.85, Strategy score >70, Strategy confidence ≥0.80, an active matching VND budget, an active authority at or below its cap, a configured eligible distinct Checker, no hard violation/conflict/error, and enabled approval policy. Missing configuration, scope mismatch, budget/authority excess, invalid or failed AI output, or any threshold miss must remain on the human-review/Checker path. Equality at the budget ceiling passes; one unit over it does not.
