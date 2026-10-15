@@ -2,6 +2,30 @@ import { resolveApiBaseUrl } from './apiBaseUrl'
 import type { RuntimeOutcome, VerifyEvidence, VerifyEscalationQuestion, VerifyRun } from '../types'
 
 export type PublicJudgeSuite = 'general' | 'escalation'
+export type PublicJudgeCaseAction = 'APPROVE' | 'REJECT' | 'STOP'
+export type PublicJudgeActionStatus = 'HUMAN_APPROVED' | 'HUMAN_REJECTED' | 'STOPPED'
+
+export interface PublicJudgeAuditEvent {
+  eventId?: string
+  actor: 'ANONYMOUS_PUBLIC_JUDGE'
+  action: string
+  timestamp: string
+  inputSha256?: string | null
+  reason: string
+}
+
+export interface PublicJudgeCaseActionResult {
+  runId: string
+  caseId: string
+  status: PublicJudgeActionStatus
+  action: PublicJudgeCaseAction
+  isOverride: boolean
+  timestamp: string
+  inputSha256: string
+  reason: string
+  audit: PublicJudgeAuditEvent[]
+  idempotentReplay: boolean
+}
 
 export interface PublicJudgeInput {
   title: string
@@ -22,6 +46,8 @@ export interface PublicJudgeInputResult {
   dataClassification: 'USER_SUPPLIED_UNVERIFIED'
   qualityStatus: 'NOT_MEASURED'
   outcome: 'SIMULATED_AUTO_APPROVE' | 'HUMAN_REVIEW_REQUIRED'
+  humanActionAvailable: boolean
+  humanActionStatus: PublicJudgeActionStatus | null
   category: string | null
   policyVersion: string
   reason: string
@@ -59,6 +85,8 @@ interface WireRunRow {
   policy_version?: string | null
   model_version?: string | null
   audit?: Array<{ event_id?: string; action?: string; timestamp?: string; input_sha256?: string; reason?: string }>
+  human_action_available?: boolean
+  human_action_status?: PublicJudgeActionStatus | null
 }
 
 interface WireRun {
@@ -81,6 +109,8 @@ interface WireInputResult {
   data_classification: 'USER_SUPPLIED_UNVERIFIED'
   quality_status: 'NOT_MEASURED'
   outcome: PublicJudgeInputResult['outcome']
+  human_action_available: boolean
+  human_action_status: PublicJudgeActionStatus | null
   category: string | null
   policy_version: string
   reason: string
@@ -91,8 +121,30 @@ interface WireInputResult {
   audit: { action: string; timestamp: string; input_sha256: string; reason: string }
 }
 
+interface WirePublicJudgeAuditEvent {
+  event_id?: string | null
+  actor: 'ANONYMOUS_PUBLIC_JUDGE'
+  action: string
+  timestamp: string
+  input_sha256?: string | null
+  reason: string
+}
+
+interface WirePublicJudgeCaseActionResult {
+  run_id: string
+  case_id: string
+  status: PublicJudgeActionStatus
+  action: PublicJudgeCaseAction
+  is_override: boolean
+  timestamp: string
+  input_sha256: string
+  reason: string
+  audit: WirePublicJudgeAuditEvent[]
+  idempotent_replay: boolean
+}
+
 export class PublicJudgeError extends Error {
-  constructor(message: string, public code: string, public correlationId?: string) {
+  constructor(message: string, public code: string, public correlationId?: string, public httpStatus?: number) {
     super(message)
     this.name = 'PublicJudgeError'
   }
@@ -103,6 +155,12 @@ const safeMessage: Record<string, string> = {
   INPUT_TOO_LARGE: 'Đầu vào vượt giới hạn 16 KiB.',
   RATE_LIMITED: 'Judge đang nhận quá nhiều yêu cầu. Hãy thử lại sau.',
   UNAVAILABLE: 'Judge chưa thể hoàn tất lần chạy này.',
+  IDEMPOTENCY_KEY_REQUIRED: 'Thiếu khóa idempotency cho thao tác mô phỏng.',
+  IDEMPOTENCY_KEY_INVALID: 'Khóa thao tác không hợp lệ. Hãy chạy một ca tổng hợp mới.',
+  IDEMPOTENCY_CONFLICT: 'Khóa này đã gắn với thao tác khác; hành động của ca không thể bị thay thế.',
+  ACTION_ALREADY_FINAL: 'Ca tổng hợp này đã có hành động cuối cùng.',
+  ACTION_SESSION_UNAVAILABLE: 'Phiên mô phỏng tạm thời không còn khả dụng. Hãy chạy một ca mới.',
+  JUDGE_CAPACITY_REACHED: 'Judge đang hết chỗ cho phiên mô phỏng. Có thể thử lại cùng thao tác sau.',
 }
 
 export class PublicJudgeService {
@@ -127,6 +185,8 @@ export class PublicJudgeService {
       expectedCategory: row.expected_category,
       actualAction: row.actual_action,
       actualCategory: row.actual_category,
+      humanActionAvailable: row.human_action_available,
+      humanActionStatus: row.human_action_status,
       status: row.status,
       pass: row.passed,
       reason: row.reason ?? undefined,
@@ -183,6 +243,8 @@ export class PublicJudgeService {
       dataClassification: response.data_classification,
       qualityStatus: response.quality_status,
       outcome: response.outcome,
+      humanActionAvailable: response.human_action_available,
+      humanActionStatus: response.human_action_status,
       category: response.category,
       policyVersion: response.policy_version,
       reason: response.reason,
@@ -199,7 +261,40 @@ export class PublicJudgeService {
     }
   }
 
-  private async post<T>(path: string, body: unknown): Promise<T> {
+  async actOnCase(
+    runId: string,
+    caseId: string,
+    action: PublicJudgeCaseAction,
+    reason: string,
+    idempotencyKey: string,
+  ): Promise<PublicJudgeCaseActionResult> {
+    const response = await this.post<WirePublicJudgeCaseActionResult>(
+      `/runs/${encodeURIComponent(runId)}/cases/${encodeURIComponent(caseId)}/action`,
+      { action, reason },
+      { 'Idempotency-Key': idempotencyKey },
+    )
+    return {
+      runId: response.run_id,
+      caseId: response.case_id,
+      status: response.status,
+      action: response.action,
+      isOverride: response.is_override,
+      timestamp: response.timestamp,
+      inputSha256: response.input_sha256,
+      reason: response.reason,
+      audit: response.audit.map(event => ({
+        eventId: event.event_id ?? undefined,
+        actor: event.actor,
+        action: event.action,
+        timestamp: event.timestamp,
+        inputSha256: event.input_sha256,
+        reason: event.reason,
+      })),
+      idempotentReplay: response.idempotent_replay,
+    }
+  }
+
+  private async post<T>(path: string, body: unknown, additionalHeaders: Record<string, string> = {}): Promise<T> {
     const controller = new AbortController()
     const timeout = window.setTimeout(() => controller.abort(), 30_000)
     try {
@@ -207,7 +302,7 @@ export class PublicJudgeService {
         method: 'POST',
         credentials: 'omit',
         cache: 'no-store',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...additionalHeaders },
         body: JSON.stringify(body),
         signal: controller.signal,
       })
@@ -220,14 +315,14 @@ export class PublicJudgeService {
       if (!response.ok) {
         const code = typeof data.code === 'string' ? data.code : 'UNAVAILABLE'
         throw new PublicJudgeError(safeMessage[code] ?? 'Judge request failed.', code,
-          typeof data.correlation_id === 'string' ? data.correlation_id : undefined)
+          typeof data.correlation_id === 'string' ? data.correlation_id : undefined, response.status)
       }
       return data as T
     } catch (error) {
       if (error instanceof PublicJudgeError) throw error
       if (error instanceof DOMException && error.name === 'AbortError') {
         throw new PublicJudgeError(
-          'Run timed out; the outcome is unknown. The server may still be working, and this Judge has no stop or undo action.',
+          'Request timed out; the outcome is unknown. Timeout does not stop server work or undo an effect.',
           'OUTCOME_UNKNOWN',
         )
       }

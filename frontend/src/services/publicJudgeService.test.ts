@@ -31,6 +31,7 @@ describe('PublicJudgeService', () => {
       run_id: 'JUDGE-INPUT-1', mode: 'MOCK', processing_mode: 'DETERMINISTIC_INPUT_SIMULATION',
       data_classification: 'USER_SUPPLIED_UNVERIFIED', quality_status: 'NOT_MEASURED',
       outcome: 'HUMAN_REVIEW_REQUIRED', category: 'FACT_UNCERTAIN', policy_version: 'JUDGE-INPUT-SIMULATION-1.0',
+      human_action_available: true, human_action_status: null,
       reason: 'The entered values differ and are unverified.', handoff_question: 'Which entered value has an approved source?',
       started_at: '2026-10-14T00:00:00Z', completed_at: '2026-10-14T00:00:00Z', duration_ms: 0,
       audit: { action: 'INPUT_EVALUATED', timestamp: '2026-10-14T00:00:00Z', input_sha256: 'hash', reason: 'The entered values differ.' },
@@ -51,6 +52,46 @@ describe('PublicJudgeService', () => {
     expect(result.dataClassification).toBe('USER_SUPPLIED_UNVERIFIED')
     expect(result.qualityStatus).toBe('NOT_MEASURED')
     expect(result.category).toBe('FACT_UNCERTAIN')
+    expect(result.humanActionAvailable).toBe(true)
+    expect(result.humanActionStatus).toBeNull()
+  })
+
+  it('sends a completed-case action with its UUID idempotency key and maps the audit response', async () => {
+    const timestamp = '2026-10-15T01:02:03.000Z'
+    const transport = vi.fn().mockResolvedValue(success({
+      run_id: 'JUDGE/RUN-1', case_id: 'CASE/1', status: 'HUMAN_APPROVED', action: 'APPROVE',
+      is_override: false, timestamp, input_sha256: 'sha256-case', reason: 'Checker reviewed the synthetic evidence.',
+      audit: [{ event_id: 'AUDIT-1', actor: 'ANONYMOUS_PUBLIC_JUDGE', action: 'HUMAN_APPROVED', timestamp, input_sha256: 'sha256-case', reason: 'Checker reviewed the synthetic evidence.' }],
+      idempotent_replay: true,
+    }))
+    const service = new PublicJudgeService('https://judge.example/api', false, transport)
+
+    const result = await service.actOnCase('JUDGE/RUN-1', 'CASE/1', 'APPROVE', 'Checker reviewed the synthetic evidence.', '123e4567-e89b-42d3-a456-426614174000')
+    const [url, init] = transport.mock.calls[0] as [RequestInfo | URL, RequestInit]
+    const headers = new Headers(init.headers)
+
+    expect(url).toBe('https://judge.example/api/public/judge/runs/JUDGE%2FRUN-1/cases/CASE%2F1/action')
+    expect(init.method).toBe('POST')
+    expect(init.credentials).toBe('omit')
+    expect(headers.get('Content-Type')).toBe('application/json')
+    expect(headers.get('Idempotency-Key')).toBe('123e4567-e89b-42d3-a456-426614174000')
+    expect(JSON.parse(String(init.body))).toEqual({ action: 'APPROVE', reason: 'Checker reviewed the synthetic evidence.' })
+    expect(result).toEqual({
+      runId: 'JUDGE/RUN-1', caseId: 'CASE/1', status: 'HUMAN_APPROVED', action: 'APPROVE', isOverride: false,
+      timestamp, inputSha256: 'sha256-case', reason: 'Checker reviewed the synthetic evidence.',
+      audit: [{ eventId: 'AUDIT-1', actor: 'ANONYMOUS_PUBLIC_JUDGE', action: 'HUMAN_APPROVED', timestamp, inputSha256: 'sha256-case', reason: 'Checker reviewed the synthetic evidence.' }],
+      idempotentReplay: true,
+    })
+  })
+
+  it('preserves final-action conflict status so the UI does not offer a different action', async () => {
+    const transport = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      code: 'ACTION_ALREADY_FINAL', message: 'A case action already exists.', correlation_id: 'corr-409', http_status: 409,
+    }), { status: 409, headers: { 'Content-Type': 'application/json' } }))
+    const service = new PublicJudgeService('https://judge.example/api', false, transport)
+
+    await expect(service.actOnCase('JUDGE-1', 'CASE-1', 'REJECT', 'Synthetic rejection reason.', '123e4567-e89b-42d3-a456-426614174000'))
+      .rejects.toMatchObject({ code: 'ACTION_ALREADY_FINAL', correlationId: 'corr-409', httpStatus: 409, message: 'Ca tổng hợp này đã có hành động cuối cùng.' })
   })
 
   it('does not surface arbitrary backend provider text in errors', async () => {
