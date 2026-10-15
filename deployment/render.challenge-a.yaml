@@ -30,7 +30,7 @@ services:
     runtime: static
     branch: main
     autoDeployTrigger: "off"
-    buildCommand: node --test deployment/validate_frontend.test.mjs && node deployment/validate_frontend.mjs && npm ci --include=dev --prefix frontend && npm run test --prefix frontend && npm run build --prefix frontend
+    buildCommand: node --test deployment/validate_frontend.test.mjs && node deployment/validate_frontend.mjs && npm ci --include=dev --prefix frontend && VITE_PUBLIC_JUDGE_ONLY=false npm run test --prefix frontend && npm run build --prefix frontend
     staticPublishPath: frontend/dist
     envVars:
       - key: NODE_VERSION
