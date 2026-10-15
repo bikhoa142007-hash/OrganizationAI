@@ -211,7 +211,7 @@ export interface VerifyResultRow {
   actualAction?: RuntimeOutcome | null
   actualCategory?: string | null
   humanActionAvailable?: boolean
-  humanActionStatus?: 'HUMAN_APPROVED' | 'HUMAN_REJECTED' | 'STOPPED' | null
+  humanActionStatus?: 'PENDING' | 'HUMAN_APPROVED' | 'HUMAN_REJECTED' | 'STOPPED' | null
   generatedQuestion?: VerifyEscalationQuestion[]
   evidence?: VerifyEvidence[]
   appliedRuleIds?: string[]

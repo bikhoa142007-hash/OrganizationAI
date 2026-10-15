@@ -28,7 +28,7 @@ const publicRun = {
     case_id: 'NEW-CASE-1', case_name: 'Synthetic uncertainty case', status: 'PASS', passed: true,
     expected_action: 'HUMAN_REVIEW_REQUIRED', expected_category: 'FACT_UNCERTAIN',
     actual_action: 'HUMAN_REVIEW_REQUIRED', actual_category: 'FACT_UNCERTAIN',
-    human_action_available: true, human_action_status: null,
+    human_action_available: true, human_action_status: 'PENDING',
     started_at: '2026-10-09T10:00:00Z', completed_at: '2026-10-09T10:00:02Z', duration_ms: 2000,
     reason: 'OCR evidence conflicts with the submitted budget.',
     questions: [{ category: 'FACT_UNCERTAIN', question: 'Which submitted budget value is supported by the source document?', evidence_references: ['attachment:vendor-quote'] }],
@@ -56,7 +56,7 @@ const stopActionResponse = {
 const publicInputRun = {
   run_id: 'JUDGE-INPUT-1', mode: 'MOCK', processing_mode: 'DETERMINISTIC_INPUT_SIMULATION',
   data_classification: 'USER_SUPPLIED_UNVERIFIED', quality_status: 'NOT_MEASURED',
-  outcome: 'SIMULATED_AUTO_APPROVE', category: null, human_action_available: true, human_action_status: null,
+  outcome: 'SIMULATED_AUTO_APPROVE', category: null, human_action_available: true, human_action_status: 'PENDING',
   policy_version: 'JUDGE-INPUT-SIMULATION-1.0', reason: 'Inputs fit the simulation scope.', handoff_question: null,
   started_at: '2026-10-15T01:00:00.000Z', completed_at: '2026-10-15T01:00:01.000Z', duration_ms: 1000,
   audit: { action: 'INPUT_EVALUATED', timestamp: '2026-10-15T01:00:01.000Z', input_sha256: 'sha256-input', reason: 'Inputs fit the simulation scope.' },

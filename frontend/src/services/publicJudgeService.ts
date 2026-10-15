@@ -4,10 +4,12 @@ import type { RuntimeOutcome, VerifyEvidence, VerifyEscalationQuestion, VerifyRu
 export type PublicJudgeSuite = 'general' | 'escalation'
 export type PublicJudgeCaseAction = 'APPROVE' | 'REJECT' | 'STOP'
 export type PublicJudgeActionStatus = 'HUMAN_APPROVED' | 'HUMAN_REJECTED' | 'STOPPED'
+export type PublicJudgeActionAvailabilityStatus = 'PENDING' | PublicJudgeActionStatus
+export type PublicJudgeAuditActor = 'ANONYMOUS_PUBLIC_JUDGE' | 'SYSTEM'
 
 export interface PublicJudgeAuditEvent {
   eventId?: string
-  actor: 'ANONYMOUS_PUBLIC_JUDGE'
+  actor: PublicJudgeAuditActor
   action: string
   timestamp: string
   inputSha256?: string | null
@@ -47,7 +49,7 @@ export interface PublicJudgeInputResult {
   qualityStatus: 'NOT_MEASURED'
   outcome: 'SIMULATED_AUTO_APPROVE' | 'HUMAN_REVIEW_REQUIRED'
   humanActionAvailable: boolean
-  humanActionStatus: PublicJudgeActionStatus | null
+  humanActionStatus: PublicJudgeActionAvailabilityStatus | null
   category: string | null
   policyVersion: string
   reason: string
@@ -86,7 +88,7 @@ interface WireRunRow {
   model_version?: string | null
   audit?: Array<{ event_id?: string; action?: string; timestamp?: string; input_sha256?: string; reason?: string }>
   human_action_available?: boolean
-  human_action_status?: PublicJudgeActionStatus | null
+  human_action_status?: PublicJudgeActionAvailabilityStatus | null
 }
 
 interface WireRun {
@@ -110,7 +112,7 @@ interface WireInputResult {
   quality_status: 'NOT_MEASURED'
   outcome: PublicJudgeInputResult['outcome']
   human_action_available: boolean
-  human_action_status: PublicJudgeActionStatus | null
+  human_action_status: PublicJudgeActionAvailabilityStatus | null
   category: string | null
   policy_version: string
   reason: string
@@ -123,7 +125,7 @@ interface WireInputResult {
 
 interface WirePublicJudgeAuditEvent {
   event_id?: string | null
-  actor: 'ANONYMOUS_PUBLIC_JUDGE'
+  actor?: PublicJudgeAuditActor | null
   action: string
   timestamp: string
   input_sha256?: string | null
@@ -161,6 +163,12 @@ const safeMessage: Record<string, string> = {
   ACTION_ALREADY_FINAL: 'Ca tổng hợp này đã có hành động cuối cùng.',
   ACTION_SESSION_UNAVAILABLE: 'Phiên mô phỏng tạm thời không còn khả dụng. Hãy chạy một ca mới.',
   JUDGE_CAPACITY_REACHED: 'Judge đang hết chỗ cho phiên mô phỏng. Có thể thử lại cùng thao tác sau.',
+}
+
+function mapAuditActor(actor: PublicJudgeAuditActor | null | undefined, action: string): PublicJudgeAuditActor {
+  if (actor) return actor
+  if (['HUMAN_APPROVED', 'HUMAN_REJECTED', 'STOPPED'].includes(action)) return 'ANONYMOUS_PUBLIC_JUDGE'
+  return 'SYSTEM'
 }
 
 export class PublicJudgeService {
@@ -284,7 +292,7 @@ export class PublicJudgeService {
       reason: response.reason,
       audit: response.audit.map(event => ({
         eventId: event.event_id ?? undefined,
-        actor: event.actor,
+        actor: mapAuditActor(event.actor, event.action),
         action: event.action,
         timestamp: event.timestamp,
         inputSha256: event.input_sha256,

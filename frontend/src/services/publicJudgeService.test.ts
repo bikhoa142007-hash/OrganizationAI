@@ -10,7 +10,12 @@ describe('PublicJudgeService', () => {
     const transport = vi.fn().mockResolvedValue(success({
       run_id: 'JUDGE-1', suite: 'general', status: 'COMPLETED', mode: 'MOCK', data_classification: 'SYNTHETIC',
       started_at: '2026-10-14T00:00:00Z', completed_at: '2026-10-14T00:00:01Z', duration_ms: 1000,
-      summary: { total_cases: 4, passed_cases: 3, failed_cases: 1, error_cases: 0 }, rows: [],
+      summary: { total_cases: 1, passed_cases: 1, failed_cases: 0, error_cases: 0 },
+      rows: [{
+        case_id: 'CASE-1', status: 'PASS', passed: true, actual_action: 'HUMAN_REVIEW_REQUIRED',
+        human_action_available: true, human_action_status: 'PENDING',
+        started_at: '2026-10-14T00:00:00Z', completed_at: '2026-10-14T00:00:01Z', duration_ms: 1000,
+      }],
     }))
     const service = new PublicJudgeService('https://judge.example/api', false, transport)
 
@@ -23,7 +28,8 @@ describe('PublicJudgeService', () => {
     expect(headers.get('Content-Type')).toBe('application/json')
     expect(headers.has('X-Demo-Actor')).toBe(false)
     expect(JSON.parse(String(init.body))).toEqual({ suite: 'general' })
-    expect(result.summary?.totalCases).toBe(4)
+    expect(result.summary?.totalCases).toBe(1)
+    expect(result.rows[0].humanActionStatus).toBe('PENDING')
   })
 
   it('sends only typed user input and preserves the unverified, unmeasured labels', async () => {
@@ -31,7 +37,7 @@ describe('PublicJudgeService', () => {
       run_id: 'JUDGE-INPUT-1', mode: 'MOCK', processing_mode: 'DETERMINISTIC_INPUT_SIMULATION',
       data_classification: 'USER_SUPPLIED_UNVERIFIED', quality_status: 'NOT_MEASURED',
       outcome: 'HUMAN_REVIEW_REQUIRED', category: 'FACT_UNCERTAIN', policy_version: 'JUDGE-INPUT-SIMULATION-1.0',
-      human_action_available: true, human_action_status: null,
+      human_action_available: true, human_action_status: 'PENDING',
       reason: 'The entered values differ and are unverified.', handoff_question: 'Which entered value has an approved source?',
       started_at: '2026-10-14T00:00:00Z', completed_at: '2026-10-14T00:00:00Z', duration_ms: 0,
       audit: { action: 'INPUT_EVALUATED', timestamp: '2026-10-14T00:00:00Z', input_sha256: 'hash', reason: 'The entered values differ.' },
@@ -53,7 +59,7 @@ describe('PublicJudgeService', () => {
     expect(result.qualityStatus).toBe('NOT_MEASURED')
     expect(result.category).toBe('FACT_UNCERTAIN')
     expect(result.humanActionAvailable).toBe(true)
-    expect(result.humanActionStatus).toBeNull()
+    expect(result.humanActionStatus).toBe('PENDING')
   })
 
   it('sends a completed-case action with its UUID idempotency key and maps the audit response', async () => {
@@ -61,7 +67,10 @@ describe('PublicJudgeService', () => {
     const transport = vi.fn().mockResolvedValue(success({
       run_id: 'JUDGE/RUN-1', case_id: 'CASE/1', status: 'HUMAN_APPROVED', action: 'APPROVE',
       is_override: false, timestamp, input_sha256: 'sha256-case', reason: 'Checker reviewed the synthetic evidence.',
-      audit: [{ event_id: 'AUDIT-1', actor: 'ANONYMOUS_PUBLIC_JUDGE', action: 'HUMAN_APPROVED', timestamp, input_sha256: 'sha256-case', reason: 'Checker reviewed the synthetic evidence.' }],
+      audit: [
+        { event_id: 'RUN-AUDIT-1', action: 'ENGINE_RESULT_RECORDED', timestamp, input_sha256: 'sha256-case', reason: 'The synthetic evaluation completed.' },
+        { event_id: 'AUDIT-1', actor: 'ANONYMOUS_PUBLIC_JUDGE', action: 'HUMAN_APPROVED', timestamp, input_sha256: 'sha256-case', reason: 'Checker reviewed the synthetic evidence.' },
+      ],
       idempotent_replay: true,
     }))
     const service = new PublicJudgeService('https://judge.example/api', false, transport)
@@ -79,7 +88,10 @@ describe('PublicJudgeService', () => {
     expect(result).toEqual({
       runId: 'JUDGE/RUN-1', caseId: 'CASE/1', status: 'HUMAN_APPROVED', action: 'APPROVE', isOverride: false,
       timestamp, inputSha256: 'sha256-case', reason: 'Checker reviewed the synthetic evidence.',
-      audit: [{ eventId: 'AUDIT-1', actor: 'ANONYMOUS_PUBLIC_JUDGE', action: 'HUMAN_APPROVED', timestamp, inputSha256: 'sha256-case', reason: 'Checker reviewed the synthetic evidence.' }],
+      audit: [
+        { eventId: 'RUN-AUDIT-1', actor: 'SYSTEM', action: 'ENGINE_RESULT_RECORDED', timestamp, inputSha256: 'sha256-case', reason: 'The synthetic evaluation completed.' },
+        { eventId: 'AUDIT-1', actor: 'ANONYMOUS_PUBLIC_JUDGE', action: 'HUMAN_APPROVED', timestamp, inputSha256: 'sha256-case', reason: 'Checker reviewed the synthetic evidence.' },
+      ],
       idempotentReplay: true,
     })
   })
