@@ -1,0 +1,29 @@
+{
+  "policy_id": "ORG-MEDIA-MARKETING-SOCIAL",
+  "policy_version": "1.0.0",
+  "status": "ACTIVE",
+  "scope_departments": [
+    "Marketing"
+  ],
+  "scope_channels": [
+    "social"
+  ],
+  "rules": [
+    {
+      "rule_id": "MEDIA-CLAIM-CERTAINTY",
+      "severity": "WARNING",
+      "description": "Yêu cầu người duyệt kiểm tra khi OCR chứa khẳng định tuyệt đối về kết quả hoặc hiệu quả sản phẩm/dịch vụ như chắc chắn đạt kết quả, bảo đảm thành công. FAIL chỉ khi văn bản trích xuất trực tiếp thể hiện khẳng định đó; không suy đoán từ ảnh hoặc tên sản phẩm. Đây là quy tắc rà soát nội bộ đề xuất, không phải kết luận vi phạm pháp luật.",
+      "required_evidence_kinds": [
+        "OCR_TEXT"
+      ]
+    },
+    {
+      "rule_id": "MEDIA-PROMOTION-DETAILS",
+      "severity": "WARNING",
+      "description": "Nếu OCR quảng cáo ưu đãi có điều kiện, kiểm tra điều kiện được nêu có rõ nghĩa và không mâu thuẫn trong chính phần OCR được cung cấp. FAIL khi có mâu thuẫn trực tiếp được trích dẫn; UNKNOWN khi thiếu hoặc không đọc được thông tin cần kiểm tra. Không tự tạo điều kiện ưu đãi hoặc đối chiếu dữ liệu ngoài bằng chứng được cung cấp.",
+      "required_evidence_kinds": [
+        "OCR_TEXT"
+      ]
+    }
+  ]
+}
