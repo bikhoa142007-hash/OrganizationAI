@@ -110,7 +110,7 @@ async function waitForReview(page: Page, planId: string): Promise<LivePlan> {
 async function createSubmittedPlan(page: Page, title: string): Promise<string> {
   await page.goto('/workflow/plans/new')
   await page.getByLabel('Tên kế hoạch').fill(title)
-  await page.getByLabel('Bộ phận').fill('e2e-browser')
+  await page.getByRole('textbox', { name: 'Bộ phận', exact: true }).fill('e2e-browser')
   const checker = page.getByLabel('Người phê duyệt')
   await expect(checker.locator('option').nth(1)).toBeAttached()
   await checker.selectOption({ index: 1 })
@@ -118,7 +118,7 @@ async function createSubmittedPlan(page: Page, title: string): Promise<string> {
   await expect(page.getByRole('heading', { name: title, exact: true })).toBeVisible()
   await page.getByRole('link', { name: 'Chỉnh sửa và gửi lại' }).click()
   await page.getByRole('textbox', { name: 'Mục tiêu', exact: true }).fill('Measure qualified product trial registrations.')
-  await page.getByLabel('Bộ phận').fill('e2e-browser')
+  await page.getByRole('textbox', { name: 'Bộ phận', exact: true }).fill('e2e-browser')
   await page.getByLabel('Ngày bắt đầu').fill('2026-11-01')
   await page.getByLabel('Ngày kết thúc').fill('2026-11-30')
   await page.getByLabel('Ngân sách (đơn vị nhỏ nhất)').fill('50000000')
