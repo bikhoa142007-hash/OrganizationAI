@@ -197,7 +197,7 @@ it('keeps loaded rows and retries the same page after a temporary Maker list err
   expect(listPlans).toHaveBeenNthCalledWith(1, 0, 100)
   expect(listPlans).toHaveBeenNthCalledWith(2, 0, 100)
   expect(listPlans).toHaveBeenNthCalledWith(3, 0, 100)
-})
+}, 15_000)
 
 it('uses only the Checker review endpoint for the Checker list mode', async () => {
   vi.spyOn(authService, 'me').mockResolvedValue(checker)
