@@ -144,7 +144,7 @@ def employees(
     query: str | None = Query(default=None, max_length=120),
     role: str | None = Query(default=None, pattern="^(MAKER|CHECKER|ADMIN)$"),
     status: str | None = Query(default=None, pattern="^(ACTIVE|DISABLED|PENDING_ACTIVATION)$"),
-    department: str | None = Query(default=None, max_length=160),
+    department: str | None = Query(default=None, max_length=120),
     job_title: str | None = Query(default=None, max_length=120),
     employment_status: str | None = Query(default=None, pattern="^(ACTIVE|INACTIVE)$"),
     offset: int = Query(0, ge=0),
@@ -447,7 +447,7 @@ def checkers(
     request: Request,
     principal: AuthenticatedPrincipal = Depends(require_role("MAKER")),
     session: Session = Depends(get_auth_db),
-    department: str | None = Query(default=None, max_length=120),
+    department: str | None = Query(default=None, max_length=160),
 ):
     return workflow.list_checkers(
         session, principal, _correlation(request), department_id=department,
