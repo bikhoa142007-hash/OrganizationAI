@@ -54,7 +54,7 @@ Backend Render lưu SQLite tại `/tmp/organizationai/demo-organization.sqlite3`
 | `Implemented (local)` | Approval SLA | Admin-only, revisioned configuration and immutable per-round deadlines; warning/overdue in-app notices come from an explicitly started worker. No active SLA setting is seeded. |
 | `Implemented (local)` | Auth workflow | Cookie JWT xác thực Maker/Checker; PostgreSQL lưu kế hoạch, snapshot, provider evaluation, quyết định policy, audit và hộp thư in-app; AI lỗi chuyển Checker review |
 | `Implemented (local)` | Auth AI stages | Local VLM extraction, Media Compliance và Strategy Evaluation là các bước độc lập; kết quả và cấu hình an toàn được lưu theo từng round; task chưa cấu hình sẽ chuyển Checker |
-| `Planned/TBD` | Runtime business configuration và production identity | Các giá trị Marketing/budget/authority/policy được chốt chưa có revision active được seed trong Auth; chưa xác minh Auth staging deployment hoặc rate limiting toàn diện |
+| `Planned/TBD` | Production auto-approval enablement and role assignment | Activation record ngày 15/10 báo budget, Media và Strategy revision đã hiệu lực; approval policy và authority vẫn tắt, Checker assignment chưa cấu hình, PO sign-off và inference production chưa xác minh |
 
 AI không tự động từ chối kế hoạch. Engine chỉ trả `AUTO_APPROVED` hoặc `HUMAN_REVIEW_REQUIRED`; quyết định `REJECTED` chỉ do Checker được gán thực hiện. Policy mặc định cho submission HTTP mới là `DEMO-HTTP-2` với auto-approval tắt, nên mock PASS vẫn chuyển Checker; riêng Judge Demo seed scenario `DEMO-SEED-AUTO` dùng snapshot `DEMO-HTTP-AUTO-1` để minh họa controlled auto-approval.
 

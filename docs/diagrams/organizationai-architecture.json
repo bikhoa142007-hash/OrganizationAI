@@ -253,7 +253,7 @@
       "id": "tunnel",
       "type": "cloud",
       "label": "Tunnel to Ollama",
-      "sublabel": "Optional; no deployed route",
+      "sublabel": "Endpoint not in repo",
       "tag": "UNVERIFIED",
       "row": 1,
       "col": 1,
@@ -284,7 +284,7 @@
     },
     {
       "kind": "region",
-      "label": "Auth + PostgreSQL · local workflow; Render staging not verified deployed",
+      "label": "Auth + PostgreSQL · local Compose / Render service reported",
       "wraps": [
         "auth_api",
         "postgres",
