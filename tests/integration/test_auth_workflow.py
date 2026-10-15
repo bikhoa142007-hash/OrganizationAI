@@ -2,6 +2,7 @@ from collections.abc import Iterator
 from datetime import date, datetime, timedelta, timezone
 import json
 import struct
+import time
 from uuid import UUID, uuid4
 import zlib
 
@@ -256,6 +257,48 @@ def login(client: TestClient, user: User) -> None:
         "password": "Local-demo-password-123",
     })
     assert response.status_code == 200
+
+
+def test_verify_run_api_is_admin_only_reloadable_and_idempotent(workflow_client):
+    client, factory, app = workflow_client
+    assert client.get("/api/workflow/verify/runs/latest").status_code == 401
+
+    maker = create_user(factory, "verify.api.maker", ("MAKER",))
+    maker_client = authenticated_client(app, maker)
+    assert maker_client.post(
+        "/api/workflow/verify/runs", headers={"Idempotency-Key": "verify-maker-run-01"}
+    ).status_code == 403
+
+    admin = create_user(factory, "verify.api.admin", ("ADMIN",))
+    admin_client = authenticated_client(app, admin)
+    headers = {"Idempotency-Key": "verify-admin-run-01"}
+    started = admin_client.post("/api/workflow/verify/runs", headers=headers)
+    assert started.status_code == 202, started.text
+    run_id = started.json()["run_id"]
+
+    replay = admin_client.post("/api/workflow/verify/runs", headers=headers)
+    assert replay.status_code == 202, replay.text
+    assert replay.json()["run_id"] == run_id
+
+    latest = admin_client.get("/api/workflow/verify/runs/latest")
+    assert latest.status_code == 200, latest.text
+    assert latest.json()["run_id"] == run_id
+
+    report = admin_client.get(f"/api/workflow/verify/runs/{run_id}/report")
+    assert report.status_code == 200, report.text
+    assert "attachment;" in report.headers["content-disposition"]
+
+    deadline = time.monotonic() + 15
+    while time.monotonic() < deadline:
+        report = admin_client.get(f"/api/workflow/verify/runs/{run_id}/report")
+        if report.json().get("status") != "RUNNING":
+            break
+        time.sleep(0.05)
+    assert report.json()["status"] == "COMPLETED"
+    assert [row["case_id"] for row in report.json()["rows"]] == ["TC01", "TC02", "TC03", "TC04"]
+    assert report.json()["passed_cases"] == 4
+    maker_client.close()
+    admin_client.close()
 
 
 def authenticated_client(app, user: User) -> TestClient:

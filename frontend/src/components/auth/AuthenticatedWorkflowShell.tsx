@@ -1,4 +1,4 @@
-import { Bell, ChevronDown, ClipboardCheck, Clock3, FileText, History, LayoutDashboard, LogOut, Menu, Settings2, UserRound, UsersRound, X } from 'lucide-react'
+import { Bell, ChevronDown, ClipboardCheck, Clock3, FileText, FlaskConical, History, LayoutDashboard, LogOut, Menu, Settings2, UserRound, UsersRound, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { Link, Navigate, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
@@ -83,6 +83,7 @@ export function AuthenticatedWorkflowShell() {
       </Link>
       <nav className="auth-workflow-navigation" aria-label="Điều hướng không gian làm việc">
         <NavLink to="/workflow/dashboard"><span className="auth-workflow-nav-icon"><LayoutDashboard aria-hidden="true" /></span><span>Tổng quan</span></NavLink>
+        {roles.includes('ADMIN') && <NavLink to="/workflow/verify"><span className="auth-workflow-nav-icon"><FlaskConical aria-hidden="true" /></span><span>Verify</span></NavLink>}
         <NavLink to="/workflow/notifications"><span className="auth-workflow-nav-icon"><Bell aria-hidden="true" /></span><span>Thông báo</span></NavLink>
         {(roles.includes('MAKER') || roles.includes('ADMIN')) && <NavLink to="/workflow/plans"><span className="auth-workflow-nav-icon"><FileText aria-hidden="true" /></span><span>{roles.includes('ADMIN') ? 'Toàn bộ kế hoạch' : 'Kế hoạch của tôi'}</span></NavLink>}
         {roles.includes('CHECKER') && <NavLink to="/workflow/reviews"><span className="auth-workflow-nav-icon"><ClipboardCheck aria-hidden="true" /></span><span>Hàng chờ duyệt</span></NavLink>}

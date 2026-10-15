@@ -36,7 +36,9 @@ from .approval_configuration import router as approval_configuration_router
 from .internal_notes import router as internal_notes_router
 from .workflow_dashboard import router as workflow_dashboard_router
 from .workflow_retry import router as workflow_retry_router
+from .verify_runs import router as verify_runs_router
 from .public_judge import PublicJudgeActionStore, router as public_judge_router
+from src.verify.manager import VerifyRunManager
 
 
 class _PublicJudgeRequestGate:
@@ -120,6 +122,8 @@ def create_app(settings=None, *, auth_workflow_provider=None, auth_workflow_conf
     app.state.auth_workflow_configuration = auth_workflow_configuration
     app.state.public_judge_request_gate = _PublicJudgeRequestGate()
     app.state.public_judge_action_store = PublicJudgeActionStore()
+    if not settings.public_judge_only:
+        app.state.verify_run_manager = VerifyRunManager()
     if settings.public_judge_only:
         app.include_router(public_judge_router)
     else:
@@ -130,6 +134,7 @@ def create_app(settings=None, *, auth_workflow_provider=None, auth_workflow_conf
         app.include_router(workflow_dashboard_router)
         app.include_router(internal_notes_router)
         app.include_router(workflow_retry_router)
+        app.include_router(verify_runs_router)
         if settings.app_env == 'demo':
             app.include_router(public_judge_router)
     app.add_middleware(CORSMiddleware, allow_origins=list(settings.cors_origins),

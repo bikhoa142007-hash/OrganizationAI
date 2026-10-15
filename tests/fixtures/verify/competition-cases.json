@@ -1,0 +1,134 @@
+{
+  "suite_version": "VERIFY-1.0",
+  "configuration": {
+    "budget_limit_minor_units": "10000000",
+    "auto_approval_limit_minor_units": "5000000",
+    "auto_approval_enabled": true
+  },
+  "cases": [
+    {
+      "id": "TC01",
+      "name": "Đủ điều kiện tự duyệt",
+      "input": {
+        "plan": {
+          "title": "TC01 - Marketing social trong hạn mức",
+          "department": "marketing",
+          "objective": "Tăng lượt đăng ký từ khách hàng mục tiêu",
+          "summary": "Chiến dịch social tổng hợp phục vụ kiểm thử Verify.",
+          "channels": ["social"],
+          "start_date": "2026-10-15",
+          "end_date": "2026-10-31",
+          "budget_minor_units": "3000000",
+          "currency": "VND",
+          "attachments": [
+            {"path": "ba/v2.1/images/creative-pass.png", "media_type": "image/png"}
+          ]
+        },
+        "provider_scenario": "pass"
+      },
+      "expected": {
+        "outcome": "AUTO_APPROVED",
+        "plan_status": "APPROVED",
+        "evaluation_status": "SUCCEEDED",
+        "media_result": "PASS",
+        "escalation_category": null,
+        "decision_source": "AI_AUTO_APPROVAL",
+        "audit_actions": ["PLAN_SUBMITTED", "AUTO_APPROVED"]
+      }
+    },
+    {
+      "id": "TC02",
+      "name": "Vượt hạn mức tự duyệt, chuyển Checker",
+      "input": {
+        "plan": {
+          "title": "TC02 - Marketing social trên hạn mức tự duyệt",
+          "department": "marketing",
+          "objective": "Tăng lượt đăng ký từ khách hàng mục tiêu",
+          "summary": "Cùng campaign với TC01 nhưng vượt quyền hạn tự duyệt.",
+          "channels": ["social"],
+          "start_date": "2026-10-15",
+          "end_date": "2026-10-31",
+          "budget_minor_units": "6000000",
+          "currency": "VND",
+          "attachments": [
+            {"path": "ba/v2.1/images/creative-pass.png", "media_type": "image/png"}
+          ]
+        },
+        "provider_scenario": "pass"
+      },
+      "expected": {
+        "outcome": "HUMAN_REVIEW_REQUIRED",
+        "plan_status": "PENDING_APPROVAL",
+        "evaluation_status": "SUCCEEDED",
+        "media_result": "PASS",
+        "escalation_category": "AUTHORITY_EXCEEDED",
+        "decision_source": null,
+        "failed_rule_ids": ["AUTHORITY_LIMIT"],
+        "audit_actions": ["PLAN_SUBMITTED", "ENGINE_ROUTED"]
+      }
+    },
+    {
+      "id": "TC03",
+      "name": "Thiếu bằng chứng media, chuyển Checker",
+      "input": {
+        "plan": {
+          "title": "TC03 - Ảnh đã nhận nhưng không có bằng chứng media",
+          "department": "marketing",
+          "objective": "Tăng lượt đăng ký từ khách hàng mục tiêu",
+          "summary": "Hồ sơ hợp lệ khi tiếp nhận, nhưng VLM không trả bằng chứng ảnh.",
+          "channels": ["social"],
+          "start_date": "2026-10-15",
+          "end_date": "2026-10-31",
+          "budget_minor_units": "3000000",
+          "currency": "VND",
+          "attachments": [
+            {"path": "ba/v2.1/images/creative-pass.png", "media_type": "image/png"}
+          ]
+        },
+        "provider_scenario": "missing_evidence"
+      },
+      "expected": {
+        "outcome": "HUMAN_REVIEW_REQUIRED",
+        "plan_status": "PENDING_APPROVAL",
+        "evaluation_status": "FAILED",
+        "media_result": null,
+        "escalation_category": "FACT_UNCERTAIN",
+        "decision_source": null,
+        "media_evidence_count": 0,
+        "agent_error_codes": ["INVALID_SCHEMA"],
+        "audit_actions": ["PLAN_SUBMITTED", "ENGINE_ROUTED"]
+      }
+    },
+    {
+      "id": "TC04",
+      "name": "AI timeout, hồ sơ còn và chuyển Checker",
+      "input": {
+        "plan": {
+          "title": "TC04 - Timeout provider tổng hợp",
+          "department": "marketing",
+          "objective": "Tăng lượt đăng ký từ khách hàng mục tiêu",
+          "summary": "Provider giả lập timeout có kiểm soát, không gọi AI bên ngoài.",
+          "channels": ["social"],
+          "start_date": "2026-10-15",
+          "end_date": "2026-10-31",
+          "budget_minor_units": "3000000",
+          "currency": "VND",
+          "attachments": [
+            {"path": "ba/v2.1/images/creative-pass.png", "media_type": "image/png"}
+          ]
+        },
+        "provider_scenario": "timeout"
+      },
+      "expected": {
+        "outcome": "HUMAN_REVIEW_REQUIRED",
+        "plan_status": "PENDING_APPROVAL",
+        "evaluation_status": "TIMED_OUT",
+        "media_result": null,
+        "escalation_category": "FACT_UNCERTAIN",
+        "decision_source": null,
+        "agent_error_codes": ["PROVIDER_TIMEOUT"],
+        "audit_actions": ["PLAN_SUBMITTED", "ENGINE_ROUTED"]
+      }
+    }
+  ]
+}

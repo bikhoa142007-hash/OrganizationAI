@@ -29,14 +29,14 @@ export function formatMoney(value?: string, currency = 'VND') {
 }
 
 export function statusLabel(value: string) {
-  const labels: Record<string, string> = { DRAFT: 'Bản nháp', PENDING: 'Chờ xử lý', PENDING_APPROVAL: 'Chờ duyệt', APPROVED: 'Đã duyệt', REJECTED: 'Đã từ chối', CHANGES_REQUESTED: 'Yêu cầu chỉnh sửa', HUMAN_REVIEW_REQUIRED: 'Cần người duyệt', AI_PENDING: 'Đang chờ đánh giá', AI_PROCESSING: 'Đang đánh giá', AI_PROCESSING_FAILED: 'Đánh giá lỗi', AI_AUTO_APPROVED: 'Tự động duyệt', ACTIVE: 'Đang hoạt động', CLOSED: 'Đã đóng', PASS: 'Đạt', FAIL: 'Không đạt', ERROR: 'Lỗi', RUNNING: 'Đang chạy', COMPLETED: 'Hoàn tất' }
+  const labels: Record<string, string> = { DRAFT: 'Bản nháp', PENDING: 'Chờ xử lý', PENDING_APPROVAL: 'Chờ duyệt', APPROVED: 'Đã duyệt', REJECTED: 'Đã từ chối', CHANGES_REQUESTED: 'Yêu cầu chỉnh sửa', HUMAN_REVIEW_REQUIRED: 'Cần người duyệt', AI_PENDING: 'Đang chờ đánh giá', AI_PROCESSING: 'Đang đánh giá', AI_PROCESSING_FAILED: 'Đánh giá lỗi', AI_AUTO_APPROVED: 'Tự động duyệt', ACTIVE: 'Đang hoạt động', CLOSED: 'Đã đóng', PASS: 'Đạt', FAIL: 'Không đạt', ERROR: 'Lỗi', RUNNING: 'Đang chạy', WAITING: 'Đang chờ', TIMED_OUT: 'Vượt thời hạn', COMPLETED: 'Hoàn tất' }
   return labels[value] ?? value.replaceAll('_', ' ')
 }
 
 function statusTone(value: string) {
   if (['APPROVED', 'AI_AUTO_APPROVED', 'PASS', 'COMPLETED', 'UPDATED'].includes(value)) return 'success'
   if (['PENDING', 'PENDING_APPROVAL', 'CHANGES_REQUESTED', 'HUMAN_REVIEW_REQUIRED', 'AI_PENDING', 'RUNNING', 'ACTIVE'].includes(value)) return 'warning'
-  if (['REJECTED', 'FAIL', 'ERROR', 'AI_PROCESSING_FAILED', 'STALE'].includes(value)) return 'danger'
+  if (['REJECTED', 'FAIL', 'ERROR', 'TIMED_OUT', 'AI_PROCESSING_FAILED', 'STALE'].includes(value)) return 'danger'
   if (['AI_PROCESSING', 'PROCESSING'].includes(value)) return 'info'
   return 'neutral'
 }
