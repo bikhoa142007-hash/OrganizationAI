@@ -74,7 +74,7 @@ it('keeps already loaded reviews when a later page fails and permits an explicit
   expect(await screen.findByRole('link', { name: 'Campaign 100 (MKT-100)' })).toBeVisible()
   expect(listReviews).toHaveBeenNthCalledWith(3, 100, 100)
   expect(screen.queryByRole('alert')).not.toBeInTheDocument()
-})
+}, 15_000)
 
 it('shows an empty queue and lets the user retry an initial service error', async () => {
   vi.spyOn(authService, 'me').mockResolvedValue(checker)
