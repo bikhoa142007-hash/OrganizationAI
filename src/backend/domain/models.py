@@ -278,9 +278,13 @@ class DecisionResult(Contract):
             matched_rules = [check for check in self.rule_checks
                              if check.rule_id == 'AUTO_REJECT_MATCH' and check.result == 'FAIL'
                              and bool(check.evidence_refs)]
-            require(len(matched_rules) == 1
-                    and matched_rules[0].value.get('rule_id') == self.auto_reject_rule_id
-                    and matched_rules[0].value.get('reason_code') == self.reason_code,
+            matched_observation = (
+                matched_rules[0].observed_value if len(matched_rules) == 1 else None
+            )
+            require(isinstance(matched_observation, Mapping)
+                    and matched_observation.get('rule_id') == self.auto_reject_rule_id
+                    and matched_observation.get('reason_code') == self.reason_code
+                    and matched_observation.get('literal_matched') is True,
                     'Auto rejection requires a matched rule check with evidence.')
             require(all(check.result == 'PASS' for check in self.rule_checks
                         if check.rule_id != 'AUTO_REJECT_MATCH')

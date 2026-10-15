@@ -48,7 +48,9 @@ def _evaluate(*, policy=None, raw=None, p=None, cfg=None):
 def _ocr_evidence(p, text="DEMO-CONTENT-V2"):
     attachment = p.attachments[0]
     return [{
-        "evidence_id": "ev-ocr",
+        # Keep the existing criterion reference valid while changing the
+        # attachment observation from a generic visual result to OCR text.
+        "evidence_id": "ev-image",
         "source_type": "ATTACHMENT",
         "source_ref": attachment.attachment_id,
         "observation": text,
@@ -63,8 +65,11 @@ def test_only_approved_scoped_rule_with_hash_bound_ocr_can_auto_reject():
     raw = evaluation(p)
     raw["evidence"] = _ocr_evidence(p)
 
-    decision = _evaluate(policy=_fixture_policy(), raw=raw, p=p).decision
+    bundle = _evaluate(policy=_fixture_policy(), raw=raw, p=p)
+    decision = bundle.decision
 
+    assert bundle.evaluation.status == "SUCCEEDED"
+    assert bundle.evaluation.evidence[0].evidence_id == "ev-image"
     assert decision.outcome == "AUTO_REJECTED"
     assert decision.auto_reject_rule_id == "SYNTHETIC-FORBIDDEN-LITERAL"
     assert decision.reason_code == "SYNTHETIC_FORBIDDEN_LITERAL"
@@ -78,6 +83,15 @@ def test_only_approved_scoped_rule_with_hash_bound_ocr_can_auto_reject():
         tampered[field] = value
         with pytest.raises(ValidationError, match="matched rule check with evidence"):
             DecisionResult.from_dict(tampered)
+
+    tampered_trace = decision.to_dict()
+    matched_check = next(
+        check for check in tampered_trace["rule_checks"]
+        if check["rule_id"] == "AUTO_REJECT_MATCH"
+    )
+    matched_check["observed_value"]["literal_matched"] = False
+    with pytest.raises(ValidationError, match="matched rule check with evidence"):
+        DecisionResult.from_dict(tampered_trace)
 
 
 def test_confidence_floor_is_inclusive_at_each_approved_threshold():
