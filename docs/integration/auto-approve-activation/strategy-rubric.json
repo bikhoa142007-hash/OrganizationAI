@@ -1,0 +1,42 @@
+{
+  "rubric_id": "BA-STRATEGY-7",
+  "rubric_version": "BA-STRATEGY-7-1.0",
+  "status": "ACTIVE",
+  "criteria": [
+    {
+      "criterion_id": "objective",
+      "label": "Mục tiêu",
+      "weight": 15
+    },
+    {
+      "criterion_id": "audience",
+      "label": "Đối tượng",
+      "weight": 15
+    },
+    {
+      "criterion_id": "channel",
+      "label": "Kênh",
+      "weight": 15
+    },
+    {
+      "criterion_id": "timeline",
+      "label": "Thời gian",
+      "weight": 15
+    },
+    {
+      "criterion_id": "kpi",
+      "label": "KPI",
+      "weight": 15
+    },
+    {
+      "criterion_id": "budget_efficiency",
+      "label": "Hiệu quả ngân sách",
+      "weight": 15
+    },
+    {
+      "criterion_id": "risk_control",
+      "label": "Kiểm soát rủi ro",
+      "weight": 10
+    }
+  ]
+}
