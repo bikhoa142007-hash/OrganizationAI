@@ -8,10 +8,16 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from datetime import datetime, timezone
+from collections import OrderedDict
+from copy import deepcopy
+from dataclasses import dataclass
+from threading import RLock
 from time import perf_counter
+from time import monotonic
 from typing import Any, TypeVar
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse, Response
@@ -22,6 +28,8 @@ from src.backend.api.errors import error_response
 from src.backend.api.public_judge_schemas import (
     PublicJudgeInputRequest,
     PublicJudgeInputResponse,
+    PublicJudgeActionRequest,
+    PublicJudgeActionResponse,
     PublicJudgeRunRequest,
     PublicJudgeRunResponse,
 )
@@ -32,6 +40,9 @@ JUDGE_INPUT_POLICY_VERSION = "JUDGE-INPUT-SIMULATION-1.0"
 JUDGE_INPUT_BUDGET_LIMIT_VND = 100_000_000
 JUDGE_INPUT_DEPARTMENT = "DEMO-DEPT-01"
 JUDGE_INPUT_CHANNELS = frozenset({"DEMO_SOCIAL", "DEMO_EMAIL"})
+ACTION_TTL_SECONDS = 15 * 60
+MAX_ACTION_CASES = 3_000
+SHA256_PATTERN = re.compile(r"^[0-9a-f]{64}$")
 
 router = APIRouter(prefix="/api/public/judge", tags=["Public Challenge A Judge"])
 RequestModel = TypeVar("RequestModel", bound=BaseModel)
@@ -42,6 +53,150 @@ class _RequestError(Exception):
         self.code = code
         self.message = message
         self.status = status
+
+
+class PublicJudgeActionError(Exception):
+    def __init__(self, code: str, status_code: int):
+        self.code = code
+        self.status_code = status_code
+
+
+@dataclass
+class _ActionCase:
+    recommendation: str
+    input_sha256: str
+    reason: str
+    audit: list[dict[str, Any]]
+    expires_at: float
+    final_response: dict[str, Any] | None = None
+    idempotency_key: str | None = None
+    idempotency_action: str | None = None
+    idempotency_reason: str | None = None
+
+
+class PublicJudgeActionStore:
+    """Bounded process-local state for synthetic, post-result human actions."""
+
+    def __init__(self, *, clock=monotonic, max_cases: int = MAX_ACTION_CASES,
+                 ttl_seconds: int = ACTION_TTL_SECONDS):
+        if max_cases < 1 or ttl_seconds < 1:
+            raise ValueError("Public Judge action-store limits must be positive.")
+        self._clock = clock
+        self._max_cases = max_cases
+        self._ttl_seconds = ttl_seconds
+        self._records: OrderedDict[tuple[str, str], _ActionCase] = OrderedDict()
+        self._lock = RLock()
+
+    def register_run(self, run_id: str, cases: list[dict[str, Any]]) -> bool:
+        now = self._clock()
+        with self._lock:
+            self._prune(now)
+            keys = [(run_id, case["case_id"]) for case in cases]
+            if len(keys) != len(set(keys)) or any(key in self._records for key in keys):
+                return False
+            if any(
+                case.get("recommendation") not in {"AUTO_APPROVED", "HUMAN_REVIEW_REQUIRED"}
+                or not isinstance(case.get("input_sha256"), str)
+                or SHA256_PATTERN.fullmatch(case["input_sha256"]) is None
+                for case in cases
+            ):
+                return False
+            self._make_room(len(keys))
+            if len(self._records) + len(keys) > self._max_cases:
+                return False
+            for key, case in zip(keys, cases):
+                input_sha256 = case["input_sha256"]
+                self._records[key] = _ActionCase(
+                    recommendation=case["recommendation"],
+                    input_sha256=input_sha256,
+                    reason=str(case.get("reason") or "Synthetic Judge result.")[:500],
+                    audit=deepcopy(case.get("audit") or []),
+                    expires_at=now + self._ttl_seconds,
+                )
+            return True
+
+    def perform_action(self, run_id: str, case_id: str, action: str, reason: str,
+                       idempotency_key: str) -> dict[str, Any]:
+        now = self._clock()
+        key = (run_id, case_id)
+        with self._lock:
+            self._prune(now)
+            record = self._records.get(key)
+            if record is None:
+                raise PublicJudgeActionError("ACTION_SESSION_UNAVAILABLE", 404)
+            if record.idempotency_key == idempotency_key:
+                if record.idempotency_action != action or record.idempotency_reason != reason:
+                    raise PublicJudgeActionError("IDEMPOTENCY_CONFLICT", 409)
+                replay = deepcopy(record.final_response)
+                if replay is None:
+                    raise PublicJudgeActionError("ACTION_SESSION_UNAVAILABLE", 404)
+                replay["idempotent_replay"] = True
+                return replay
+            if record.final_response is not None:
+                raise PublicJudgeActionError("ACTION_ALREADY_FINAL", 409)
+
+            status = {"APPROVE": "HUMAN_APPROVED", "REJECT": "HUMAN_REJECTED", "STOP": "STOPPED"}[action]
+            is_override = record.recommendation == "AUTO_APPROVED"
+            action_suffix = {"APPROVE": "APPROVED", "REJECT": "REJECTED", "STOP": "STOPPED"}[action]
+            audit_action = f"HUMAN_OVERRIDE_{action_suffix}" if is_override else f"HUMAN_{action_suffix}"
+            timestamp = _now()
+            event = {
+                "event_id": "AUDIT-" + uuid4().hex,
+                "action": audit_action,
+                "timestamp": timestamp,
+                "input_sha256": record.input_sha256,
+                "reason": reason,
+                "actor": "ANONYMOUS_PUBLIC_JUDGE",
+            }
+            audit = [*record.audit, event]
+            result = {
+                "run_id": run_id,
+                "case_id": case_id,
+                "status": status,
+                "action": action,
+                "is_override": is_override,
+                "timestamp": timestamp,
+                "input_sha256": record.input_sha256,
+                "reason": reason,
+                "audit": audit,
+                "idempotent_replay": False,
+            }
+            record.final_response = deepcopy(result)
+            record.idempotency_key = idempotency_key
+            record.idempotency_action = action
+            record.idempotency_reason = reason
+            record.audit = audit
+            return result
+
+    def _prune(self, now: float) -> None:
+        expired = [key for key, record in self._records.items() if record.expires_at <= now]
+        for key in expired:
+            del self._records[key]
+
+    def _make_room(self, needed: int) -> None:
+        while len(self._records) + needed > self._max_cases:
+            completed = next((key for key, value in self._records.items() if value.final_response is not None), None)
+            if completed is None:
+                return
+            del self._records[completed]
+
+
+def _action_store(request: Request) -> PublicJudgeActionStore:
+    store = getattr(request.app.state, "public_judge_action_store", None)
+    if store is None:
+        store = PublicJudgeActionStore()
+        request.app.state.public_judge_action_store = store
+    return store
+
+
+def _input_hash(row: dict[str, Any]) -> str:
+    for event in row.get("audit", []):
+        candidate = event.get("input_sha256")
+        if isinstance(candidate, str) and SHA256_PATTERN.fullmatch(candidate):
+            return candidate
+    canonical = json.dumps(row.get("input") or {}, ensure_ascii=False, sort_keys=True,
+                           separators=(",", ":")).encode("utf-8")
+    return hashlib.sha256(canonical).hexdigest()
 
 
 def _now() -> str:
@@ -220,8 +375,9 @@ async def run_fixed_suite(request: Request):
     try:
         rows = [_fixed_row(row) for row in source_rows]
         completed_at = _now()
+        run_id = "JUDGE-" + uuid4().hex
         result = PublicJudgeRunResponse.model_validate({
-            "run_id": "JUDGE-" + uuid4().hex,
+            "run_id": run_id,
             "suite": body.suite,
             "status": "ERROR" if any(row["status"] == "ERROR" for row in rows) else "COMPLETED",
             "mode": "MOCK",
@@ -237,6 +393,36 @@ async def run_fixed_suite(request: Request):
             },
             "rows": rows,
         }, strict=True).model_dump(mode="json")
+        action_cases = []
+        for row in result["rows"]:
+            recommendation = row.get("actual_action")
+            if row.get("status") == "ERROR" or recommendation not in {"AUTO_APPROVED", "HUMAN_REVIEW_REQUIRED"}:
+                continue
+            input_sha256 = _input_hash(row)
+            if not row["audit"]:
+                row["audit"] = [{
+                    "event_id": "AUDIT-" + uuid4().hex,
+                    "action": "ENGINE_RESULT_RECORDED",
+                    "timestamp": row.get("completed_at") or completed_at,
+                    "input_sha256": input_sha256,
+                    "reason": row.get("reason") or "Synthetic Judge result.",
+                }]
+            else:
+                for event in row["audit"]:
+                    if not event.get("input_sha256") or SHA256_PATTERN.fullmatch(event["input_sha256"]) is None:
+                        event["input_sha256"] = input_sha256
+            row["human_action_available"] = True
+            row["human_action_status"] = "PENDING"
+            action_cases.append({
+                "case_id": row["case_id"],
+                "recommendation": recommendation,
+                "input_sha256": input_sha256,
+                "reason": row.get("reason"),
+                "audit": row["audit"],
+            })
+        if not _action_store(request).register_run(run_id, action_cases):
+            return _error("JUDGE_CAPACITY_REACHED", "Judge cannot retain another synthetic review right now.", 503, correlation_id)
+        result = PublicJudgeRunResponse.model_validate(result, strict=True).model_dump(mode="json")
     except Exception:
         return _error("UNAVAILABLE", "Judge response failed schema validation.", 503, correlation_id)
     return _no_store(JSONResponse(result), correlation_id)
@@ -258,8 +444,9 @@ async def run_user_input(request: Request):
     completed_at = _now()
     elapsed = max(0, int((perf_counter() - started) * 1000))
     try:
+        run_id = "JUDGE-" + uuid4().hex
         result = PublicJudgeInputResponse.model_validate({
-            "run_id": "JUDGE-" + uuid4().hex,
+            "run_id": run_id,
             "mode": "MOCK",
             "processing_mode": "DETERMINISTIC_INPUT_SIMULATION",
             "data_classification": "USER_SUPPLIED_UNVERIFIED",
@@ -279,6 +466,62 @@ async def run_user_input(request: Request):
                 "reason": reason,
             },
         }, strict=True).model_dump(mode="json")
+        recommendation = "AUTO_APPROVED" if outcome == "SIMULATED_AUTO_APPROVE" else "HUMAN_REVIEW_REQUIRED"
+        if not _action_store(request).register_run(run_id, [{
+            "case_id": "NEW_INPUT",
+            "recommendation": recommendation,
+            "input_sha256": input_sha256,
+            "reason": reason,
+            "audit": [{
+                "event_id": "AUDIT-" + uuid4().hex,
+                "action": "INPUT_EVALUATED",
+                "timestamp": completed_at,
+                "input_sha256": input_sha256,
+                "reason": reason,
+            }],
+        }]):
+            return _error("JUDGE_CAPACITY_REACHED", "Judge cannot retain another synthetic review right now.", 503, correlation_id)
+        result["human_action_available"] = True
+        result["human_action_status"] = "PENDING"
+        result = PublicJudgeInputResponse.model_validate(result, strict=True).model_dump(mode="json")
     except Exception:
         return _error("UNAVAILABLE", "Judge response failed schema validation.", 503, correlation_id)
     return _no_store(JSONResponse(result), correlation_id)
+
+
+@router.post("/runs/{run_id}/cases/{case_id}/action")
+async def record_human_action(request: Request, run_id: str, case_id: str):
+    correlation_id = _correlation_id(request)
+    try:
+        body = await _parse_limited_json(request, PublicJudgeActionRequest)
+    except _RequestError as exc:
+        return _error(exc.code, exc.message, exc.status, correlation_id)
+
+    idempotency_key = request.headers.get("Idempotency-Key", "").strip()
+    if not idempotency_key:
+        return _error("IDEMPOTENCY_KEY_REQUIRED", "A UUID Idempotency-Key is required.", 422, correlation_id)
+    try:
+        parsed_key = UUID(idempotency_key)
+        if str(parsed_key) != idempotency_key.lower():
+            raise ValueError
+        idempotency_key = str(parsed_key)
+    except (ValueError, AttributeError):
+        return _error("IDEMPOTENCY_KEY_INVALID", "Idempotency-Key must be a UUID.", 422, correlation_id)
+
+    try:
+        result = _action_store(request).perform_action(
+            run_id, case_id, body.action, body.reason, idempotency_key,
+        )
+    except PublicJudgeActionError as exc:
+        messages = {
+            "ACTION_SESSION_UNAVAILABLE": "The synthetic case is unavailable or expired.",
+            "ACTION_ALREADY_FINAL": "This synthetic case already has a final human action.",
+            "IDEMPOTENCY_CONFLICT": "This Idempotency-Key was already used for another action.",
+        }
+        return _error(exc.code, messages.get(exc.code, "Judge action could not be recorded."), exc.status_code, correlation_id)
+
+    try:
+        payload = PublicJudgeActionResponse.model_validate(result, strict=True).model_dump(mode="json")
+    except Exception:
+        return _error("UNAVAILABLE", "Judge action response failed schema validation.", 503, correlation_id)
+    return _no_store(JSONResponse(payload), correlation_id)

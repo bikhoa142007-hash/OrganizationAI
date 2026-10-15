@@ -2,7 +2,7 @@
 
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, StrictInt, StrictStr
+from pydantic import BaseModel, ConfigDict, Field, StrictInt, StrictStr, field_validator
 
 
 class PublicJudgeRequest(BaseModel):
@@ -23,6 +23,19 @@ class PublicJudgeInputRequest(PublicJudgeRequest):
     currency: StrictStr = Field(min_length=3, max_length=3, pattern=r"^[A-Z]{3}$")
     budget_vnd: StrictInt = Field(ge=0, le=100_000_000_000)
     source_budget_vnd: StrictInt | None = Field(default=None, ge=0, le=100_000_000_000)
+
+
+class PublicJudgeActionRequest(PublicJudgeRequest):
+    action: Literal["APPROVE", "REJECT", "STOP"]
+    reason: StrictStr = Field(min_length=1, max_length=500)
+
+    @field_validator("reason")
+    @classmethod
+    def require_nonblank_reason(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("reason must contain non-whitespace characters")
+        return value
 
 
 class PublicJudgeEvidence(PublicJudgeRequest):
@@ -46,6 +59,7 @@ class PublicJudgeAuditEvent(PublicJudgeRequest):
     timestamp: StrictStr | None = None
     input_sha256: StrictStr | None = None
     reason: StrictStr | None = None
+    actor: StrictStr | None = None
 
 
 class PublicJudgeRunRow(PublicJudgeRequest):
@@ -68,6 +82,8 @@ class PublicJudgeRunRow(PublicJudgeRequest):
     policy_version: StrictStr | None = None
     model_version: StrictStr | None = None
     audit: list[PublicJudgeAuditEvent] = Field(default_factory=list)
+    human_action_available: bool = False
+    human_action_status: Literal["PENDING", "HUMAN_APPROVED", "HUMAN_REJECTED", "STOPPED"] | None = None
 
 
 class PublicJudgeRunSummary(PublicJudgeRequest):
@@ -112,3 +128,18 @@ class PublicJudgeInputResponse(PublicJudgeRequest):
     completed_at: StrictStr
     duration_ms: int = Field(ge=0)
     audit: PublicJudgeInputAudit
+    human_action_available: bool = False
+    human_action_status: Literal["PENDING", "HUMAN_APPROVED", "HUMAN_REJECTED", "STOPPED"] | None = None
+
+
+class PublicJudgeActionResponse(PublicJudgeRequest):
+    run_id: StrictStr
+    case_id: StrictStr
+    status: Literal["HUMAN_APPROVED", "HUMAN_REJECTED", "STOPPED"]
+    action: Literal["APPROVE", "REJECT", "STOP"]
+    is_override: bool
+    timestamp: StrictStr
+    input_sha256: StrictStr = Field(pattern=r"^[0-9a-f]{64}$")
+    reason: StrictStr
+    audit: list[PublicJudgeAuditEvent]
+    idempotent_replay: bool

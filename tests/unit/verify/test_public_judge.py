@@ -1,11 +1,13 @@
+import hashlib
 import json
-from threading import Event, Thread
+from threading import Barrier, Event, Lock, Thread
 from pathlib import Path
+from uuid import uuid4
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from src.backend.api.public_judge import router
+from src.backend.api.public_judge import PublicJudgeActionStore, PublicJudgeActionError, router
 
 
 def _client():
@@ -79,6 +81,27 @@ def test_input_rejects_unknown_fields_and_enforces_small_body_limit():
     assert "expected_action" not in unknown.text
     assert large.status_code == 413
     assert large.json()["code"] == "INPUT_TOO_LARGE"
+
+
+def test_new_input_review_can_be_stopped_with_hash_and_reason_audit():
+    client = _client()
+    run = client.post("/api/public/judge/input-runs", json=_input(source_budget_vnd=42_000_000)).json()
+
+    response = client.post(
+        f"/api/public/judge/runs/{run['run_id']}/cases/NEW_INPUT/action",
+        json={"action": "STOP", "reason": "Stop the synthetic case pending source verification."},
+        headers={"Idempotency-Key": str(uuid4())},
+    )
+
+    assert response.status_code == 200
+    result = response.json()
+    assert run["human_action_available"] is True
+    assert run["human_action_status"] == "PENDING"
+    assert result["status"] == "STOPPED"
+    assert result["is_override"] is False
+    assert result["input_sha256"] == run["audit"]["input_sha256"]
+    assert result["audit"][-1]["action"] == "HUMAN_STOPPED"
+    assert result["audit"][-1]["reason"] == "Stop the synthetic case pending source verification."
 
 
 def test_fixed_suite_uses_server_oracle_and_needs_no_actor_or_cookie(monkeypatch):
@@ -207,4 +230,121 @@ def test_public_router_has_only_the_two_post_run_routes():
     assert routes == {
         ("/api/public/judge/runs", ("POST",)),
         ("/api/public/judge/input-runs", ("POST",)),
+        ("/api/public/judge/runs/{run_id}/cases/{case_id}/action", ("POST",)),
     }
+
+
+def test_public_judge_action_store_keeps_only_hash_and_audit_metadata():
+    store = PublicJudgeActionStore()
+    raw_input = {"title": "Synthetic title must not be retained", "budget_vnd": 123}
+
+    input_hash = hashlib.sha256(json.dumps(raw_input, sort_keys=True).encode()).hexdigest()
+    assert store.register_run("RUN-1", [{
+        "case_id": "CASE-1",
+        "recommendation": "HUMAN_REVIEW_REQUIRED",
+        "input_sha256": input_hash,
+        "reason": "Synthetic conflict needs human review.",
+        "audit": [],
+    }])
+
+    result = store.perform_action(
+        "RUN-1", "CASE-1", "APPROVE", "Checker verifies source authority.", str(uuid4()),
+    )
+
+    assert result["status"] == "HUMAN_APPROVED"
+    assert result["is_override"] is False
+    assert result["input_sha256"] == input_hash
+    assert result["audit"][-1]["action"] == "HUMAN_APPROVED"
+    assert result["audit"][-1]["timestamp"]
+    assert result["audit"][-1]["reason"] == "Checker verifies source authority."
+    assert "Synthetic title must not be retained" not in repr(store._records)
+    assert "raw_input" not in repr(store._records)
+
+
+def test_public_judge_action_store_marks_auto_decision_as_override_and_replays_idempotently():
+    store = PublicJudgeActionStore()
+    store.register_run("RUN-2", [{
+        "case_id": "CASE-2",
+        "recommendation": "AUTO_APPROVED",
+        "input_sha256": "a" * 64,
+        "reason": "Synthetic automatic result.",
+        "audit": [{"action": "AUTO_APPROVED", "timestamp": "2026-10-15T00:00:00Z",
+                   "input_sha256": "a" * 64, "reason": "Synthetic automatic result."}],
+    }])
+    idempotency_key = str(uuid4())
+
+    result = store.perform_action("RUN-2", "CASE-2", "REJECT", "Human stops this simulation.", idempotency_key)
+    replay = store.perform_action("RUN-2", "CASE-2", "REJECT", "Human stops this simulation.", idempotency_key)
+
+    assert result["status"] == "HUMAN_REJECTED"
+    assert result["is_override"] is True
+    assert replay["idempotent_replay"] is True
+    assert replay["audit"] == result["audit"]
+    assert replay["audit"][-1]["action"] == "HUMAN_OVERRIDE_REJECTED"
+    assert replay["audit"][-1]["input_sha256"] == "a" * 64
+
+
+def test_public_judge_action_store_rejects_a_second_final_action():
+    store = PublicJudgeActionStore()
+    store.register_run("RUN-3", [{
+        "case_id": "CASE-3", "recommendation": "HUMAN_REVIEW_REQUIRED",
+        "input_sha256": "b" * 64, "reason": "Needs decision.", "audit": [],
+    }])
+    store.perform_action("RUN-3", "CASE-3", "STOP", "Stop the simulation.", str(uuid4()))
+
+    try:
+        store.perform_action("RUN-3", "CASE-3", "APPROVE", "Different final action.", str(uuid4()))
+    except PublicJudgeActionError as exc:
+        assert exc.code == "ACTION_ALREADY_FINAL"
+        assert exc.status_code == 409
+    else:
+        raise AssertionError("a case must have at most one final human action")
+
+
+def test_public_judge_action_store_expires_sessions_and_bounds_pending_cases():
+    now = [0.0]
+    store = PublicJudgeActionStore(clock=lambda: now[0], max_cases=1, ttl_seconds=10)
+    case = [{
+        "case_id": "CASE",
+        "recommendation": "HUMAN_REVIEW_REQUIRED",
+        "input_sha256": "e" * 64,
+        "reason": "Synthetic review.",
+        "audit": [],
+    }]
+
+    assert store.register_run("RUN-1", case)
+    assert not store.register_run("RUN-2", case)
+    now[0] = 11.0
+    assert store.register_run("RUN-2", case)
+
+
+def test_public_judge_action_store_serializes_concurrent_final_actions():
+    store = PublicJudgeActionStore()
+    store.register_run("RUN-4", [{
+        "case_id": "CASE-4", "recommendation": "HUMAN_REVIEW_REQUIRED",
+        "input_sha256": "c" * 64, "reason": "Needs decision.", "audit": [],
+    }])
+    barrier = Barrier(3)
+    results = []
+    result_lock = Lock()
+
+    def decide(action):
+        barrier.wait(timeout=2)
+        try:
+            value = store.perform_action("RUN-4", "CASE-4", action, f"Synthetic {action}.", str(uuid4()))
+            outcome = ("OK", value["status"])
+        except PublicJudgeActionError as exc:
+            outcome = ("ERROR", exc.code)
+        with result_lock:
+            results.append(outcome)
+
+    threads = [Thread(target=decide, args=(action,)) for action in ("APPROVE", "STOP")]
+    for thread in threads:
+        thread.start()
+    barrier.wait(timeout=2)
+    for thread in threads:
+        thread.join(timeout=2)
+
+    assert all(not thread.is_alive() for thread in threads)
+    assert sorted(result[0] for result in results) == ["ERROR", "OK"]
+    assert [result[1] for result in results if result[0] == "ERROR"] == ["ACTION_ALREADY_FINAL"]
