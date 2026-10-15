@@ -447,8 +447,11 @@ def checkers(
     request: Request,
     principal: AuthenticatedPrincipal = Depends(require_role("MAKER")),
     session: Session = Depends(get_auth_db),
+    department: str | None = Query(default=None, max_length=160),
 ):
-    return workflow.list_checkers(session, principal, _correlation(request))
+    return workflow.list_checkers(
+        session, principal, _correlation(request), department_id=department,
+    )
 
 
 @router.get("/plans", response_model=list[WorkflowPlanResponse])

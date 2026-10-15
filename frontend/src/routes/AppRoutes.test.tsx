@@ -234,7 +234,6 @@ describe('Auth-first route entry', () => {
     const user = userEvent.setup()
     vi.spyOn(authService, 'me').mockResolvedValue(adminMaker)
     vi.spyOn(authWorkflowService, 'listPlans').mockResolvedValue([])
-    const listCheckers = vi.spyOn(authWorkflowService, 'listCheckers').mockResolvedValue([])
     renderApplication('/')
 
     expect(await screen.findByRole('heading', { name: 'Toàn bộ kế hoạch' })).toBeVisible()
@@ -244,7 +243,6 @@ describe('Auth-first route entry', () => {
 
     expect(await screen.findByRole('heading', { name: 'Tạo kế hoạch marketing' })).toBeVisible()
     expect(screen.getByRole('button', { name: 'Lưu bản nháp' })).toBeEnabled()
-    expect(listCheckers).toHaveBeenCalledOnce()
   })
 
   it('shows the read-only audit log to Admin and denies it to Maker', async () => {

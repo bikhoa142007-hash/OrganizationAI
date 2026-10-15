@@ -59,6 +59,55 @@ def _eligible_checker(session: Session, checker_id: UUID, *, lock: bool = False)
     return session.scalar(query) is not None
 
 
+def list_effective_checker_options(
+    session: Session,
+    department_id: str,
+    maker_id: UUID,
+    effective_at: datetime,
+) -> list[User]:
+    """Return only Checker choices the effective assignment policy permits."""
+    resolution = resolve_configuration_kind(session, "checker_assignment", effective_at)
+    if resolution.status != "EFFECTIVE":
+        return []
+
+    value = resolution.value or {}
+    default = next(
+        (item for item in value.get("defaults", []) if item.get("department") == department_id),
+        None,
+    )
+    if default is None:
+        return []
+
+    default_id = UUID(default["checker_id"])
+    maker_may_select_other = value.get("maker_may_select_other") is True
+    query = (
+        select(User)
+        .join(EmployeeProfile, EmployeeProfile.user_id == User.id)
+        .where(
+            User.status == "ACTIVE",
+            User.activation_pending.is_(False),
+            User.employment_status == "ACTIVE",
+            EmployeeProfile.employment_status == "ACTIVE",
+            effective_role_filter("CHECKER"),
+            User.id != maker_id,
+        )
+    )
+    if not maker_may_select_other:
+        if default_id == maker_id:
+            return []
+        query = query.where(User.id == default_id)
+
+    users = session.scalars(query).unique().all()
+    return sorted(
+        users,
+        key=lambda user: (
+            user.id != default_id,
+            user.display_name.casefold(),
+            user.user_code,
+        ),
+    )
+
+
 def validate_checker_assignment_value(
     session: Session,
     value: dict,

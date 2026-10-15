@@ -1858,6 +1858,52 @@ def test_effective_checker_assignment_allows_explicit_choice_only_when_policy_en
     assert updated.json()["checker_id"] == str(alternate_checker.id)
 
 
+def test_checker_options_only_return_effective_default_when_maker_cannot_choose(workflow_client):
+    client, factory, app = workflow_client
+    maker = create_user(factory, "assignment.options.default.maker", ("MAKER",))
+    default_checker = create_user(factory, "assignment.options.default", ("CHECKER",))
+    alternate_checker = create_user(factory, "assignment.options.alternate", ("CHECKER",))
+    admin = create_user(factory, "assignment.options.default.admin", ("ADMIN",))
+    maker_client = authenticated_client(app, maker)
+    admin_client = authenticated_client(app, admin)
+    create_configuration_revision(admin_client, "checker_assignment", {
+        "maker_may_select_other": False,
+        "defaults": [{"department": "Marketing", "checker_id": str(default_checker.id)}],
+    })
+
+    allowed = maker_client.get("/api/workflow/checkers", params={"department": "Marketing"})
+    unconfigured_department = maker_client.get(
+        "/api/workflow/checkers", params={"department": "Operations"},
+    )
+
+    assert allowed.status_code == 200, allowed.text
+    assert [item["id"] for item in allowed.json()] == [str(default_checker.id)]
+    assert str(alternate_checker.id) not in {item["id"] for item in allowed.json()}
+    assert unconfigured_department.status_code == 200, unconfigured_department.text
+    assert unconfigured_department.json() == []
+
+
+def test_checker_options_include_alternates_only_when_policy_allows_them(workflow_client):
+    client, factory, app = workflow_client
+    maker = create_user(factory, "assignment.options.select.maker", ("MAKER",))
+    default_checker = create_user(factory, "assignment.options.select.default", ("CHECKER",))
+    alternate_checker = create_user(factory, "assignment.options.select.alternate", ("CHECKER",))
+    admin = create_user(factory, "assignment.options.select.admin", ("ADMIN",))
+    maker_client = authenticated_client(app, maker)
+    admin_client = authenticated_client(app, admin)
+    create_configuration_revision(admin_client, "checker_assignment", {
+        "maker_may_select_other": True,
+        "defaults": [{"department": "Marketing", "checker_id": str(default_checker.id)}],
+    })
+
+    response = maker_client.get("/api/workflow/checkers", params={"department": "Marketing"})
+
+    assert response.status_code == 200, response.text
+    assert [item["id"] for item in response.json()] == [
+        str(default_checker.id), str(alternate_checker.id),
+    ]
+
+
 def test_department_change_without_checker_selection_uses_new_department_default(workflow_client):
     client, factory, app = workflow_client
     maker = create_user(factory, "assignment.department.maker", ("MAKER",))

@@ -43,9 +43,10 @@ function readyCheckers() {
 
 async function enterValidSubmission(budgetMinorUnits: string) {
   const payload: WorkflowPayload = {
-    ...blankPayload, title: 'Zero budget campaign', objective: 'Reach customers', summary: 'Plan summary',
+    ...blankPayload, title: 'Zero budget campaign', objective: 'Reach customers', summary: 'Plan summary', department: 'Marketing',
     start_date: '2026-10-01', end_date: '2026-10-31', budget_minor_units: budgetMinorUnits,
   }
+  fireEvent.change(screen.getByLabelText('Bộ phận'), { target: { value: payload.department } })
   await screen.findByRole('option', { name: 'Checker One' })
   fireEvent.change(screen.getByLabelText('Tên kế hoạch'), { target: { value: payload.title } })
   fireEvent.change(screen.getByLabelText('Mục tiêu'), { target: { value: payload.objective } })
@@ -98,6 +99,7 @@ it('shows contract-specific field errors before submit and does not call the API
   const create = vi.spyOn(authWorkflowService, 'createPlan')
   renderForm()
 
+  fireEvent.change(screen.getByLabelText('Bộ phận'), { target: { value: 'Marketing' } })
   await screen.findByRole('option', { name: 'Checker One' })
   fireEvent.click(screen.getByRole('button', { name: 'Gửi duyệt' }))
 
@@ -113,12 +115,60 @@ it('shows Checker loading and disables submit until the current Checker response
   vi.spyOn(authWorkflowService, 'listCheckers').mockImplementation(() => new Promise(resolve => { finishCheckers = resolve }))
   renderForm()
 
-  expect(screen.getByText('Đang tải danh sách Checker…')).toBeVisible()
+  fireEvent.change(screen.getByLabelText('Bộ phận'), { target: { value: 'Marketing' } })
+  expect(screen.getByText('Đang tải Checker được phân công cho bộ phận…')).toBeVisible()
   expect(screen.getByLabelText(/Người phê duyệt/)).toBeDisabled()
   expect(screen.getByRole('button', { name: 'Gửi duyệt' })).toBeDisabled()
   finishCheckers([checker])
   expect(await screen.findByRole('option', { name: 'Checker One' })).toBeVisible()
   expect(screen.getByLabelText(/Người phê duyệt/)).toBeEnabled()
+})
+
+it('reloads permitted Checker options when the department changes and replaces the old default', async () => {
+  const salesChecker = { id: 'checker-sales', display_name: 'Checker Sales' }
+  const listCheckers = vi.spyOn(authWorkflowService, 'listCheckers').mockImplementation(async department =>
+    department === 'Marketing' ? [checker] : department === 'Sales' ? [salesChecker] : [])
+  renderForm()
+
+  fireEvent.change(screen.getByLabelText('Bộ phận'), { target: { value: 'Marketing' } })
+  const checkerSelect = screen.getByLabelText(/Người phê duyệt/)
+  await screen.findByRole('option', { name: 'Checker One' })
+  expect(checkerSelect).toHaveValue(checker.id)
+
+  fireEvent.change(screen.getByLabelText('Bộ phận'), { target: { value: 'Sales' } })
+
+  await screen.findByRole('option', { name: 'Checker Sales' })
+  expect(checkerSelect).toHaveValue(salesChecker.id)
+  expect(screen.queryByRole('option', { name: 'Checker One' })).not.toBeInTheDocument()
+  expect(listCheckers).toHaveBeenNthCalledWith(1, 'Marketing')
+  expect(listCheckers).toHaveBeenNthCalledWith(2, 'Sales')
+})
+
+it('refreshes a stale Checker assignment and never retries the rejected mutation', async () => {
+  const refreshedChecker = { id: 'checker-refreshed', display_name: 'Refreshed Checker' }
+  const listCheckers = vi.spyOn(authWorkflowService, 'listCheckers')
+    .mockResolvedValueOnce([checker])
+    .mockResolvedValueOnce([refreshedChecker])
+  const create = vi.spyOn(authWorkflowService, 'createPlan').mockRejectedValue(new AuthApiError(
+    422,
+    'The selected Checker is not allowed by the effective department assignment.',
+    'VALIDATION_ERROR',
+    'trace-checker-assignment',
+  ))
+  renderForm()
+
+  fireEvent.change(screen.getByLabelText('Bộ phận'), { target: { value: 'Marketing' } })
+  await screen.findByRole('option', { name: 'Checker One' })
+  fireEvent.change(screen.getByLabelText('Tên kế hoạch'), { target: { value: 'Assignment guidance' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Lưu bản nháp' }))
+
+  expect(await screen.findByRole('alert')).toHaveTextContent(
+    'Checker đã chọn không thuộc phân công hiệu lực của bộ phận.',
+  )
+  await screen.findByRole('option', { name: 'Refreshed Checker' })
+  expect(screen.getByLabelText(/Người phê duyệt/)).toHaveValue(refreshedChecker.id)
+  expect(create).toHaveBeenCalledOnce()
+  expect(listCheckers).toHaveBeenCalledTimes(2)
 })
 
 it('rejects oversized attachments before calling upload', async () => {
@@ -152,7 +202,7 @@ it('rejects oversized images before create or upload', async () => {
 it('submits only after create, upload and submit succeed, using returned revisions', async () => {
   readyCheckers()
   const requestPayload: WorkflowPayload = {
-    ...blankPayload, title: 'Campaign', objective: 'Reach customers', summary: 'Plan summary',
+    ...blankPayload, title: 'Campaign', objective: 'Reach customers', summary: 'Plan summary', department: 'Marketing',
     start_date: '2026-10-01', end_date: '2026-10-31', budget_minor_units: '500000', channels: ['Email'],
   }
   const created = planFixture({ payload: requestPayload, checker_id: checker.id, checker_name: checker.display_name, revision: 2 })
@@ -166,6 +216,7 @@ it('submits only after create, upload and submit succeed, using returned revisio
   const submit = vi.spyOn(authWorkflowService, 'submitPlan').mockResolvedValue(submitted)
   renderForm()
 
+  fireEvent.change(screen.getByLabelText('Bộ phận'), { target: { value: 'Marketing' } })
   await screen.findByRole('option', { name: 'Checker One' })
   fireEvent.change(screen.getByLabelText('Tên kế hoạch'), { target: { value: requestPayload.title } })
   fireEvent.change(screen.getByLabelText('Mục tiêu'), { target: { value: requestPayload.objective } })
@@ -218,7 +269,6 @@ it('explains that changed data cannot reuse a consumed creation intent', async (
   ))
   renderForm('/workflow/plans/new?creation_intent=11111111-1111-4111-8111-111111111111&creation_pending=1')
 
-  await screen.findByRole('option', { name: 'Checker One' })
   fireEvent.change(screen.getByLabelText('Tên kế hoạch'), { target: { value: 'Different content' } })
   fireEvent.click(screen.getByRole('button', { name: 'Tôi đã kiểm tra — cho phép thử lại' }))
   fireEvent.click(screen.getByRole('button', { name: 'Lưu bản nháp' }))

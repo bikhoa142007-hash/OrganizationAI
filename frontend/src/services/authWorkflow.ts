@@ -301,8 +301,11 @@ export const authWorkflowService = {
     return request<unknown>(`/workflow/reviews?${query.toString()}`, 'GET').then(parseWorkflowPlanList)
   },
 
-  listCheckers(): Promise<WorkflowChecker[]> {
-    return request('/workflow/checkers', 'GET')
+  listCheckers(department?: string): Promise<WorkflowChecker[]> {
+    const params = new URLSearchParams()
+    if (department?.trim()) params.set('department', department)
+    const suffix = params.size ? `?${params.toString()}` : ''
+    return request(`/workflow/checkers${suffix}`, 'GET')
   },
 
   getPlan(planId: string): Promise<WorkflowPlan> {

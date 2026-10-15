@@ -169,7 +169,7 @@ async function readMakerPlans(page: Page) {
 async function enterDraftTitle(page: Page, title: string, checkerId?: string): Promise<string> {
   await expect(page.getByLabel('Tên kế hoạch')).toBeVisible()
   await page.getByLabel('Tên kế hoạch').fill(title)
-  await page.getByLabel('Bộ phận').fill('e2e-browser')
+  await page.getByRole('textbox', { name: 'Bộ phận', exact: true }).fill('e2e-browser')
   const checkerSelect = page.getByLabel('Người phê duyệt')
   await expect(checkerSelect.locator('option').nth(1)).toBeAttached()
   const selectedCheckerId = checkerId ?? await checkerSelect.locator('option').nth(1).getAttribute('value')
@@ -252,7 +252,7 @@ test('live Auth Maker-to-Checker browser workflow preserves a rejected version t
       await maker.getByRole('link', { name: 'Tạo kế hoạch' }).click()
       title = `Synthetic local Auth browser ${new Date().toISOString()}`
       await maker.getByLabel('Tên kế hoạch').fill(title)
-      await maker.getByLabel('Bộ phận').fill('e2e-browser')
+      await maker.getByRole('textbox', { name: 'Bộ phận', exact: true }).fill('e2e-browser')
       const checkerSelect = maker.getByLabel('Người phê duyệt')
       await expect(checkerSelect.locator('option').nth(1)).toBeAttached()
       await checkerSelect.selectOption(syntheticCheckerId)
@@ -263,7 +263,7 @@ test('live Auth Maker-to-Checker browser workflow preserves a rejected version t
 
       await maker.getByRole('link', { name: 'Chỉnh sửa và gửi lại' }).click()
       await maker.getByRole('textbox', { name: 'Mục tiêu', exact: true }).fill('Measure qualified product trial registrations.')
-      await maker.getByLabel('Bộ phận').fill('e2e-browser')
+      await maker.getByRole('textbox', { name: 'Bộ phận', exact: true }).fill('e2e-browser')
       await maker.getByLabel('Ngày bắt đầu').fill('2026-11-01')
       await maker.getByLabel('Ngày kết thúc').fill('2026-11-30')
       await maker.getByLabel('Ngân sách (đơn vị nhỏ nhất)').fill('50000000')
