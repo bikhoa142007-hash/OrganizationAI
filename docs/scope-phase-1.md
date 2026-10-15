@@ -192,9 +192,9 @@ Không sử dụng các trạng thái:
 - Chờ ngân hàng duyệt.
 - Hoàn tất theo nghĩa onboarding.
 
-### 6.1.1. Trạng thái xử lý AI nội bộ (scope target)
+### 6.1.1. Trạng thái xử lý AI nội bộ
 
-Các giá trị dưới đây mô tả trạng thái xử lý mục tiêu trong scope Phase 1; đây không phải danh sách enum đã xác minh trong code. Chúng không thay thế trạng thái nghiệp vụ của kế hoạch:
+Bảng này tách giá trị đã triển khai khỏi scope target chưa được triển khai; các stage không thay thế trạng thái nghiệp vụ của kế hoạch:
 
 | Mã | Ý nghĩa | Xử lý tiếp theo |
 |---|---|---|
@@ -202,11 +202,12 @@ Các giá trị dưới đây mô tả trạng thái xử lý mục tiêu trong 
 | AI_PROCESSING | Các agent đang xử lý | Khóa quyết định cho đến khi có kết quả hoặc timeout |
 | HUMAN_REVIEW_REQUIRED | Không đủ điều kiện tự động duyệt | Hiển thị trong danh sách của Checker |
 | AI_AUTO_APPROVED | Đã đạt toàn bộ điều kiện tự động duyệt | Chuyển trạng thái nghiệp vụ sang Đã duyệt |
-| AI_PROCESSING_FAILED | Pipeline lỗi, timeout hoặc thiếu kết quả | Chuyển Checker, không tự động từ chối |
+| AI_AUTO_REJECTED | Rule OCR production được Policy Owner ký khớp; mọi gate duyệt thông thường đều đạt | Chuyển sang REJECTED và đóng vòng duyệt; mặc định production tắt |
+| AI_PROCESSING_FAILED | Scope target: pipeline lỗi, timeout hoặc thiếu kết quả | Runtime hiện chuyển Checker bằng HUMAN_REVIEW_REQUIRED; không tự động từ chối |
 
-`AI_AUTO_REJECTED` chỉ xuất hiện trong harness Verify với dữ liệu tổng hợp và rule fixture được ký giả lập. Nó không phải trạng thái được phép cho kế hoạch Auth/production; policy auto-reject production chưa được duyệt.
+`AI_AUTO_REJECTED` được hỗ trợ trong Auth workflow và Verify harness. Auth chỉ có thể dùng outcome này khi một policy production đang bật được ký bởi Policy Owner trên đúng revision/hash, rule khớp bằng OCR evidence đầy đủ đã kiểm tra digest, và toàn bộ gate quyết định thông thường đều `PASS`. Rule khớp được ưu tiên trước auto-approve; nếu có bất kỳ gate nào không đạt, bao gồm scope, Media result, score/confidence, budget, authority, evidence hoặc trạng thái round, hồ sơ giữ luồng Checker hiện hành. Media `WARNING` không tự trở thành auto-reject.
 
-Trong luồng kế hoạch Auth/production, `processing_stage` hiện gồm `DRAFT`, `AI_PENDING`, `AI_PROCESSING`, `HUMAN_REVIEW_REQUIRED`, `AI_AUTO_APPROVED` và `COMPLETED`. Pipeline failure chuyển trực tiếp sang `HUMAN_REVIEW_REQUIRED`; chưa có stage `AI_PROCESSING_FAILED`. `AI_AUTO_REJECTED` chỉ là kết quả cô lập của Verify fixture. Xem [lifecycle as-built](diagrams/organizationai-lifecycle.html) để biết trạng thái code hiện tại.
+Migration chỉ thêm khả năng lưu outcome và revision/sign-off; không seed hoặc bật policy. Hiện chưa có rule auto-reject production được người dùng duyệt hoặc sign-off, nên Auth production tiếp tục fail-closed và không tự từ chối. Khi một rule đủ điều kiện ký, quyết định SYSTEM đóng round, chuyển plan sang `REJECTED`/`AI_AUTO_REJECTED`, ghi rule/reason/evidence refs vào quyết định và audit, gửi notification riêng cho Maker, và giữ resubmit theo version/round mới. Không áp dụng hồi tố cho round đã gửi. Pipeline failure vẫn chuyển `HUMAN_REVIEW_REQUIRED`; chưa có stage `AI_PROCESSING_FAILED`. Xem [lifecycle as-built](diagrams/organizationai-lifecycle.html) để biết state machine.
 
 ### 6.2. Sơ đồ trạng thái
 

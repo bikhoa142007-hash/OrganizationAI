@@ -170,10 +170,13 @@ def _auto_reject_match(policy, plan, evaluation, ctx, config):
     """Match explicit revisioned literals only against complete, hash-bound OCR evidence."""
     if policy is None or not policy.enabled or not policy.applies_to(plan.payload):
         return "NOT_APPLICABLE", None, (), None
-    # Automatic rejection is currently permitted only for the isolated Verify
-    # fixture. Production activation requires an approved rule and authenticated
-    # Policy Owner sign-off path.
-    if policy.environment != "SYNTHETIC_TEST":
+    # Synthetic policies are confined to Verify. Production policies require an
+    # exact revision/hash signed by the authenticated Policy Owner.
+    if (policy.environment == "SYNTHETIC_TEST"
+            and policy.signoff_source != "SYNTHETIC_FIXTURE"):
+        return "UNKNOWN", None, (), None
+    if (policy.environment == "PRODUCTION"
+            and policy.signoff_source != "AUTHENTICATED_POLICY_OWNER"):
         return "UNKNOWN", None, (), None
     if not (
         config.media_policy and config.media_policy.status == "ACTIVE"
@@ -373,6 +376,9 @@ def decide(plan: MarketingPlan, config: ApprovalConfiguration, raw_evaluation,
     auto_reject = (
         reject_status == "MATCH"
         and reject_rule is not None
+        # A matching reject rule takes precedence over approval only when every
+        # ordinary approval gate also passes. Low score, budget/authority
+        # limits, warnings and uncertainty continue to route to Checker.
         and all(check.result == "PASS" for check in checks
                 if check.rule_id != "AUTO_REJECT_MATCH")
     )

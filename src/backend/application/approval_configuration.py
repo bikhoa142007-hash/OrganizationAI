@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 
 from src.backend.application.workflow import ApplicationError
 from src.backend.db.models.approval_configuration import (
+    AuthWorkflowAutoRejectPolicySignoff,
     AuthWorkflowApprovalPolicySignoff,
     AuthWorkflowConfigurationLock,
     AuthWorkflowConfigurationHead,
@@ -21,7 +22,7 @@ from src.backend.db.models.approval_configuration import (
     AuthWorkflowRoundConfigurationSnapshot,
 )
 from src.backend.db.models.employee import AdminAuditEvent
-from src.backend.db.models import EmployeeProfile, User
+from src.backend.db.models import EmployeeProfile, Role, User, UserRole
 from src.shared.validation import canonical_hash, json_value
 
 CONFIGURATION_KINDS = (
@@ -31,6 +32,7 @@ CONFIGURATION_KINDS = (
     "strategy_rubric",
     "authority",
     "checker_assignment",
+    "auto_reject_policy",
 )
 ConfigurationStatus = Literal["UNCONFIGURED", "DISABLED", "EFFECTIVE", "SCHEDULED", "SUPERSEDED"]
 _AMOUNT_PATTERN = re.compile(r"(?:0|[1-9][0-9]{0,23})\Z")
@@ -286,6 +288,36 @@ def validate_configuration_value(kind: str, value: Any) -> dict[str, Any]:
             raise ConfigurationValidationError("Media policy does not match the supported schema.") from exc
         return policy.to_dict()
 
+    if kind == "auto_reject_policy":
+        from src.backend.domain.policy import AutoRejectPolicy
+        raw = _object(value, kind, {
+            "configuration_id", "policy_version", "revision", "enabled", "environment",
+            "scope_departments", "scope_channels", "rules",
+        })
+        if raw["enabled"] is not False:
+            raise ConfigurationValidationError(
+                "Auto-reject policy revisions must remain disabled until authenticated Policy Owner sign-off."
+            )
+        if not isinstance(raw["scope_departments"], list) or not isinstance(raw["scope_channels"], list):
+            raise ConfigurationValidationError("Auto-reject policy requires explicit department and channel scope.")
+        if not isinstance(raw["rules"], list):
+            raise ConfigurationValidationError("Auto-reject policy rules must be an array.")
+        try:
+            policy = AutoRejectPolicy.from_dict({
+                **raw,
+                "configuration_hash": None,
+                "signoff_source": None,
+                "signed_by": None,
+                "signed_at": None,
+            })
+        except (TypeError, ValueError, KeyError) as exc:
+            raise ConfigurationValidationError("Auto-reject policy does not match the supported schema.") from exc
+        return {
+            key: item for key, item in policy.to_dict().items()
+            if key in {"configuration_id", "policy_version", "revision", "enabled", "environment",
+                       "scope_departments", "scope_channels", "rules"}
+        }
+
     raise ConfigurationValidationError("Unknown configuration kind.")
 
 
@@ -317,11 +349,49 @@ def _validate_signed_approval_policy_value(
         and isinstance(candidate_revision, Mapping)
         and candidate_revision.get("revision_id") == signoff.get("candidate_revision_id")
         and isinstance(candidate_revision.get("configuration_hash"), str)
-        and set(approved_revisions) == set(CONFIGURATION_KINDS) | {"approval_policy_candidate"}
+        and frozenset(approved_revisions) in {
+            frozenset(set(CONFIGURATION_KINDS) | {"approval_policy_candidate"}),
+            frozenset((set(CONFIGURATION_KINDS) - {"auto_reject_policy"}) | {"approval_policy_candidate"}),
+        }
         and canonical_configuration_hash(enabled_value) == configuration_hash
     )
     if not require_signoff:
         raise ConfigurationValidationError("Enabled auto-approval policy has no matching Policy Owner sign-off.")
+    return enabled_value
+
+
+def _validate_signed_auto_reject_policy_value(
+    value: Any,
+    signoff: Mapping[str, Any] | None,
+    *,
+    revision_id: str,
+    configuration_hash: str,
+) -> dict[str, Any]:
+    """Allow an enabled rejection rule only when its exact stored revision was signed."""
+    if not isinstance(value, Mapping) or value.get("enabled") is not True:
+        return validate_configuration_value("auto_reject_policy", value)
+    disabled = dict(value)
+    disabled["enabled"] = False
+    normalized = validate_configuration_value("auto_reject_policy", disabled)
+    enabled_value = {**normalized, "enabled": True}
+    revisions = signoff.get("configuration_revisions") if isinstance(signoff, Mapping) else None
+    candidate = revisions.get("auto_reject_policy_candidate") if isinstance(revisions, Mapping) else None
+    valid_signoff = (
+        isinstance(signoff, Mapping)
+        and signoff.get("auto_reject_policy_revision_id") == revision_id
+        and signoff.get("approved_configuration_hash") == configuration_hash
+        and bool(signoff.get("policy_owner_id"))
+        and isinstance(signoff.get("candidate_revision_id"), str)
+        and isinstance(candidate, Mapping)
+        and candidate.get("revision_id") == signoff.get("candidate_revision_id")
+        and isinstance(candidate.get("configuration_hash"), str)
+        and set(revisions) == set(CONFIGURATION_KINDS) | {"auto_reject_policy_candidate"}
+        and canonical_configuration_hash(enabled_value) == configuration_hash
+    )
+    if not valid_signoff:
+        raise ConfigurationValidationError(
+            "Enabled auto-reject policy has no matching authenticated Policy Owner sign-off."
+        )
     return enabled_value
 
 
@@ -341,6 +411,8 @@ def _value_is_enabled(kind: str, value: Mapping[str, Any]) -> bool:
         return value.get("active") is True
     if kind == "checker_assignment":
         return bool(value.get("defaults"))
+    if kind == "auto_reject_policy":
+        return value.get("enabled") is True
     return False
 
 
@@ -416,6 +488,21 @@ def _signoff_dict(row: AuthWorkflowApprovalPolicySignoff | None) -> dict[str, An
     }
 
 
+def _auto_reject_signoff_dict(
+    row: AuthWorkflowAutoRejectPolicySignoff | None,
+) -> dict[str, Any] | None:
+    if row is None:
+        return None
+    return {
+        "candidate_revision_id": str(row.candidate_revision_id),
+        "auto_reject_policy_revision_id": str(row.auto_reject_policy_revision_id),
+        "approved_configuration_hash": row.approved_configuration_hash,
+        "policy_owner_id": str(row.policy_owner_id),
+        "signed_at": _iso_utc(row.signed_at),
+        "configuration_revisions": deepcopy(row.configuration_revisions),
+    }
+
+
 def _signoff_matches_configuration_revisions(
     signoff: Mapping[str, Any] | None,
     configurations: Mapping[str, Any],
@@ -427,7 +514,7 @@ def _signoff_matches_configuration_revisions(
     if not isinstance(approved, Mapping):
         return False
     for kind in CONFIGURATION_KINDS:
-        if kind == "approval_policy":
+        if kind in {"approval_policy", "auto_reject_policy"}:
             continue
         expected = approved.get(kind)
         captured = configurations.get(kind)
@@ -439,6 +526,39 @@ def _signoff_matches_configuration_revisions(
         ):
             return False
     return True
+
+
+def _auto_reject_signoff_matches_configuration_revisions(
+    signoff: Mapping[str, Any] | None,
+    configurations: Mapping[str, Any],
+) -> bool:
+    """Auto-reject sign-off follows current rules, scope and mandate snapshots, not itself."""
+    if not isinstance(signoff, Mapping):
+        return False
+    approved = signoff.get("configuration_revisions")
+    if not isinstance(approved, Mapping):
+        return False
+    if set(approved) != set(CONFIGURATION_KINDS) | {"auto_reject_policy_candidate"}:
+        return False
+    for kind in CONFIGURATION_KINDS:
+        if kind == "auto_reject_policy":
+            continue
+        expected = approved.get(kind)
+        captured = configurations.get(kind)
+        if not isinstance(expected, Mapping) or not isinstance(captured, Mapping):
+            return False
+        if (
+            expected.get("revision_id") != captured.get("revision_id")
+            or expected.get("configuration_hash") != captured.get("configuration_hash")
+        ):
+            return False
+    candidate = approved.get("auto_reject_policy_candidate")
+    return (
+        isinstance(candidate, Mapping)
+        and candidate.get("revision_id") == signoff.get("candidate_revision_id")
+        and isinstance(candidate.get("configuration_hash"), str)
+        and candidate.get("configuration_hash") != ""
+    )
 
 
 def _resolution_from_row(
@@ -469,6 +589,38 @@ def _resolution_from_row(
                     "configuration_hash": related.configuration_hash if related else None,
                 }
             is_enabled = _signoff_matches_configuration_revisions(signoff, live_configurations)
+    elif kind == "auto_reject_policy" and is_enabled:
+        signoff_row = session.scalar(select(AuthWorkflowAutoRejectPolicySignoff).where(
+            AuthWorkflowAutoRejectPolicySignoff.auto_reject_policy_revision_id == row.id,
+            AuthWorkflowAutoRejectPolicySignoff.approved_configuration_hash == row.configuration_hash,
+        ))
+        signoff = _auto_reject_signoff_dict(signoff_row)
+        candidate = session.get(
+            AuthWorkflowConfigurationRevision,
+            signoff_row.candidate_revision_id,
+        ) if signoff_row is not None else None
+        candidate_reference = (
+            signoff.get("configuration_revisions", {}).get("auto_reject_policy_candidate")
+            if signoff is not None else None
+        )
+        is_enabled = bool(
+            signoff is not None
+            and candidate is not None
+            and candidate.kind == "auto_reject_policy"
+            and candidate.value.get("enabled") is False
+            and isinstance(candidate_reference, Mapping)
+            and candidate_reference.get("revision_id") == str(candidate.id)
+            and candidate_reference.get("configuration_hash") == candidate.configuration_hash
+        )
+        if is_enabled:
+            live_configurations = {}
+            for related_kind in CONFIGURATION_KINDS:
+                related = _revision_row(session, related_kind, effective_at)
+                live_configurations[related_kind] = {
+                    "revision_id": str(related.id) if related else None,
+                    "configuration_hash": related.configuration_hash if related else None,
+                }
+            is_enabled = _auto_reject_signoff_matches_configuration_revisions(signoff, live_configurations)
     return ConfigurationResolution(
         kind=kind,
         status="EFFECTIVE" if is_enabled else "DISABLED",
@@ -900,6 +1052,258 @@ def sign_off_approval_policy(
         raise ApplicationError("CONFLICT", "Policy Owner sign-off conflicted with a concurrent configuration change.", correlation_id) from exc
 
 
+def sign_off_auto_reject_policy(
+    session: Session,
+    principal: Any,
+    correlation_id: str,
+    *,
+    expected_revisions: Mapping[str, Mapping[str, Any]],
+) -> dict[str, Any]:
+    """Activate one exact production rule revision only through its authenticated Policy Owner."""
+    if "ADMIN" not in getattr(principal, "roles", ()):
+        raise ApplicationError("FORBIDDEN", "An authenticated administrator Policy Owner is required for sign-off.", correlation_id)
+    if set(expected_revisions) != set(CONFIGURATION_KINDS):
+        raise ApplicationError("VALIDATION_ERROR", "Sign-off requires the current revision of every workflow configuration.", correlation_id)
+
+    try:
+        with _write_transaction(session):
+            lock_configuration_registry(session)
+            moment = datetime.now(timezone.utc)
+            policy_ref = expected_revisions["auto_reject_policy"]
+            candidate = session.scalar(select(AuthWorkflowConfigurationRevision).where(
+                AuthWorkflowConfigurationRevision.kind == "auto_reject_policy",
+                AuthWorkflowConfigurationRevision.id == UUID(policy_ref["revision_id"]),
+            ).with_for_update())
+            if candidate is None:
+                raise ApplicationError("CONFLICT", "The auto-reject policy changed; reload before signing.", correlation_id)
+
+            prior_signoff = session.scalar(select(AuthWorkflowAutoRejectPolicySignoff).where(
+                AuthWorkflowAutoRejectPolicySignoff.candidate_revision_id == candidate.id,
+            ))
+            if prior_signoff is not None:
+                if prior_signoff.policy_owner_id != principal.id:
+                    raise ApplicationError("FORBIDDEN", "Only the original Policy Owner may replay this sign-off.", correlation_id)
+                revision = session.get(AuthWorkflowConfigurationRevision, prior_signoff.auto_reject_policy_revision_id)
+                status = _resolution_from_row(session, "auto_reject_policy", revision, datetime.now(timezone.utc)).status
+                return {
+                    "revision": configuration_revision_dict(
+                        revision, status=status, signoff=_auto_reject_signoff_dict(prior_signoff),
+                    ),
+                    "replayed": True,
+                }
+
+            resolved: dict[str, AuthWorkflowConfigurationRevision] = {}
+            for kind in CONFIGURATION_KINDS:
+                row = _revision_row(session, kind, moment)
+                reference = expected_revisions[kind]
+                if (row is None or str(row.id) != reference["revision_id"]
+                        or row.configuration_hash != reference["configuration_hash"]):
+                    raise ApplicationError("CONFLICT", "Workflow configuration changed; reload all revisions before signing.", correlation_id)
+                resolved[kind] = row
+
+            head = session.scalar(select(AuthWorkflowConfigurationHead).where(
+                AuthWorkflowConfigurationHead.kind == "auto_reject_policy",
+            ).with_for_update())
+            if (head is None or head.latest_revision != candidate.revision
+                    or _utc_from_storage(candidate.effective_at) > moment):
+                raise ApplicationError("CONFLICT", "A newer or scheduled auto-reject revision exists; reload before signing.", correlation_id)
+            if candidate.configuration_hash != policy_ref["configuration_hash"] or candidate.value.get("enabled") is not False:
+                raise ApplicationError("CONFLICT", "Sign-off must target the current disabled auto-reject candidate.", correlation_id)
+
+            try:
+                disabled_policy = validate_configuration_value("auto_reject_policy", candidate.value)
+            except ConfigurationValidationError as exc:
+                raise ApplicationError("VALIDATION_ERROR", str(exc), correlation_id) from exc
+            if (disabled_policy["environment"] != "PRODUCTION"
+                    or disabled_policy["configuration_id"].startswith("VERIFY-")
+                    or disabled_policy["scope_departments"] != ["Marketing"]
+                    or disabled_policy["scope_channels"] != ["social"]):
+                raise ApplicationError("VALIDATION_ERROR", "Production auto-reject must use Marketing/social and cannot use a Verify fixture identity.", correlation_id)
+            if any(rule["media_confidence_threshold"] < 0.85
+                   or rule["feasibility_confidence_threshold"] < 0.80
+                   for rule in disabled_policy["rules"]):
+                raise ApplicationError("VALIDATION_ERROR", "Auto-reject rules cannot lower the approved Media/Strategy confidence floors.", correlation_id)
+
+            approval_value = resolved["approval_policy"].value
+            if not isinstance(approval_value, Mapping) or approval_value.get("enabled") is not True:
+                raise ApplicationError("VALIDATION_ERROR", "Production auto-reject requires the currently signed auto-approval policy and all ordinary approval gates.", correlation_id)
+            approval_signoff_row = session.scalar(select(AuthWorkflowApprovalPolicySignoff).where(
+                AuthWorkflowApprovalPolicySignoff.approval_policy_revision_id == resolved["approval_policy"].id,
+            ))
+            approval_signoff = _signoff_dict(approval_signoff_row)
+            try:
+                validate_configuration_value("approval_policy", {
+                    **approval_value, "enabled": False,
+                })
+                _validate_signed_approval_policy_value(
+                    approval_value, approval_signoff,
+                    revision_id=str(resolved["approval_policy"].id),
+                    configuration_hash=resolved["approval_policy"].configuration_hash,
+                )
+            except ConfigurationValidationError as exc:
+                raise ApplicationError("VALIDATION_ERROR", "Production auto-reject requires a valid, current auto-approval Policy Owner sign-off.", correlation_id) from exc
+            if (approval_value.get("media_confidence_threshold") != 0.85
+                    or approval_value.get("feasibility_score_threshold_exclusive") != 70
+                    or approval_value.get("feasibility_confidence_threshold") != 0.80):
+                raise ApplicationError("VALIDATION_ERROR", "The approved auto-approval thresholds must remain 0.85, >70 and 0.80.", correlation_id)
+            live_revisions = {
+                kind: {"revision_id": str(row.id), "configuration_hash": row.configuration_hash}
+                for kind, row in resolved.items()
+            }
+            if not _signoff_matches_configuration_revisions(approval_signoff, live_revisions):
+                raise ApplicationError("VALIDATION_ERROR", "The auto-approval sign-off no longer matches current budget, authority, Media, Strategy or assignment revisions.", correlation_id)
+
+            budget = validate_configuration_value("budget", resolved["budget"].value)
+            marketing_limits = [item for item in budget["limits"] if item["department"] == "Marketing" and item["active"]]
+            if budget["currency"] != "VND" or len(marketing_limits) != 1 or marketing_limits[0]["limit_minor_units"] != "10000000":
+                raise ApplicationError("VALIDATION_ERROR", "Marketing's active budget must be exactly 10,000,000 VND.", correlation_id)
+
+            media = validate_configuration_value("media_policy", resolved["media_policy"].value)
+            if (media["status"] != "ACTIVE" or media["scope_departments"] != ["Marketing"]
+                    or media["scope_channels"] != ["social"] or len(media["rules"]) != 2
+                    or any(rule["severity"] != "WARNING" for rule in media["rules"])):
+                raise ApplicationError("VALIDATION_ERROR", "Media policy must retain the two approved WARNING rules in Marketing/social scope.", correlation_id)
+
+            rubric = validate_configuration_value("strategy_rubric", resolved["strategy_rubric"].value)
+            from src.backend.domain.policy import STRATEGY_CRITERIA
+            expected_weights = {criterion_id: weight for criterion_id, _label, weight in STRATEGY_CRITERIA}
+            actual_weights = {item["criterion_id"]: item["weight"] for item in rubric["criteria"]}
+            if rubric["status"] != "ACTIVE" or actual_weights != expected_weights:
+                raise ApplicationError("VALIDATION_ERROR", "The active Strategy rubric does not match the approved rubric weights.", correlation_id)
+
+            assignment = validate_configuration_value("checker_assignment", resolved["checker_assignment"].value)
+            from src.backend.application.checker_assignment_configuration import validate_checker_assignment_value
+            try:
+                validate_checker_assignment_value(session, assignment, lock=True)
+            except ValueError as exc:
+                raise ApplicationError("VALIDATION_ERROR", str(exc), correlation_id) from exc
+            marketing_assignment = next((item for item in assignment["defaults"] if item["department"] == "Marketing"), None)
+            if marketing_assignment is None or assignment["maker_may_select_other"] is not True:
+                raise ApplicationError("VALIDATION_ERROR", "Marketing must retain its default Checker and eligible Checker selection.", correlation_id)
+            checker = session.scalar(select(User).where(
+                User.id == UUID(marketing_assignment["checker_id"]), User.username == "lekhoi",
+                User.status == "ACTIVE", User.activation_pending.is_(False), User.employment_status == "ACTIVE",
+            ))
+            if checker is None:
+                raise ApplicationError("VALIDATION_ERROR", "The configured default Checker is not the active lekhoi account.", correlation_id)
+
+            authority = validate_configuration_value("authority", resolved["authority"].value)
+            if (authority["active"] is not True or authority["currency"] != "VND"
+                    or authority["auto_limit_minor_units"] != "5000000"
+                    or authority["allowed_departments"] != ["Marketing"]
+                    or authority["checker_id"] != str(checker.id)
+                    or authority["policy_owner_id"] != str(principal.id)
+                    or authority["budget_authority_id"] is None):
+                raise ApplicationError("VALIDATION_ERROR", "A complete active 5,000,000 VND Marketing authority must identify the assigned Checker, signing Policy Owner and Budget Authority.", correlation_id)
+            budget_authority = session.scalar(
+                select(User).join(EmployeeProfile, EmployeeProfile.user_id == User.id).where(
+                    User.id == UUID(authority["budget_authority_id"]),
+                    User.status == "ACTIVE", User.activation_pending.is_(False),
+                    User.employment_status == "ACTIVE", EmployeeProfile.employment_status == "ACTIVE",
+                ).with_for_update()
+            )
+            if budget_authority is None:
+                raise ApplicationError("VALIDATION_ERROR", "The configured Budget Authority account must be active before auto-reject sign-off.", correlation_id)
+
+            owner = session.scalar(
+                select(User).join(EmployeeProfile, EmployeeProfile.user_id == User.id)
+                .join(UserRole, UserRole.user_id == User.id).join(Role, Role.id == UserRole.role_id)
+                .where(
+                    User.id == principal.id, User.username == "bkhoa", Role.code == "ADMIN",
+                    User.status == "ACTIVE", User.activation_pending.is_(False),
+                    User.employment_status == "ACTIVE", EmployeeProfile.employment_status == "ACTIVE",
+                ).with_for_update()
+            )
+            if owner is None:
+                raise ApplicationError("FORBIDDEN", "Sign-off requires the active bkhoa Policy Owner administrator account.", correlation_id)
+
+            active_value = {
+                **disabled_policy,
+                "revision": head.latest_revision + 1,
+                "enabled": True,
+            }
+            policy_hash = canonical_configuration_hash(active_value)
+            activated_id = uuid4()
+            configuration_revisions = {
+                **{
+                    kind: {"revision_id": str(row.id), "configuration_hash": row.configuration_hash}
+                    for kind, row in resolved.items()
+                },
+                "auto_reject_policy_candidate": {
+                    "revision_id": str(candidate.id), "configuration_hash": candidate.configuration_hash,
+                },
+            }
+            signoff_proof = {
+                "candidate_revision_id": str(candidate.id),
+                "auto_reject_policy_revision_id": str(activated_id),
+                "approved_configuration_hash": policy_hash,
+                "policy_owner_id": str(principal.id),
+                "configuration_revisions": configuration_revisions,
+            }
+            normalized_enabled = _validate_signed_auto_reject_policy_value(
+                active_value, signoff_proof, revision_id=str(activated_id), configuration_hash=policy_hash,
+            )
+            activated_at = moment
+            while session.scalar(select(AuthWorkflowConfigurationRevision.id).where(
+                AuthWorkflowConfigurationRevision.kind == "auto_reject_policy",
+                AuthWorkflowConfigurationRevision.effective_at == activated_at,
+            )) is not None:
+                activated_at += timedelta(microseconds=1)
+            activated = AuthWorkflowConfigurationRevision(
+                id=activated_id, kind="auto_reject_policy", revision=head.latest_revision + 1,
+                effective_at=activated_at,
+                change_reason="Policy Owner ký duyệt cấu hình auto-reject theo rule và hash cụ thể.",
+                value=normalized_enabled, configuration_hash=policy_hash, changed_by=principal.id,
+            )
+            session.add(activated)
+            head.latest_revision = activated.revision
+            signature = AuthWorkflowAutoRejectPolicySignoff(
+                candidate_revision_id=candidate.id,
+                auto_reject_policy_revision_id=activated_id,
+                approved_configuration_hash=policy_hash,
+                policy_owner_id=principal.id,
+                signed_at=moment,
+                configuration_revisions=configuration_revisions,
+            )
+            session.add(signature)
+            session.flush()
+            signoff = _auto_reject_signoff_dict(signature)
+            session.add(AdminAuditEvent(
+                actor_id=principal.id, employee_id=None,
+                action="WORKFLOW_AUTO_REJECT_SIGNOFF",
+                before_state={
+                    "auto_reject_policy_revision_id": str(candidate.id),
+                    "configuration_hash": candidate.configuration_hash,
+                    "enabled": False,
+                },
+                after_state={
+                    "auto_reject_policy_revision_id": str(activated.id),
+                    "revision": activated.revision,
+                    "approved_configuration_hash": policy_hash,
+                    "effective_at": _iso_utc(activated_at),
+                    "policy_owner_id": str(principal.id),
+                    "signed_at": _iso_utc(moment),
+                    "configuration_revisions": deepcopy(configuration_revisions),
+                    "scope_departments": disabled_policy["scope_departments"],
+                    "scope_channels": disabled_policy["scope_channels"],
+                    "rules": [{
+                        "rule_id": rule["rule_id"], "reason_code": rule["reason_code"],
+                        "evidence_kind": rule["evidence_kind"],
+                        "evidence_confidence_threshold": rule["evidence_confidence_threshold"],
+                        "media_confidence_threshold": rule["media_confidence_threshold"],
+                        "feasibility_confidence_threshold": rule["feasibility_confidence_threshold"],
+                    } for rule in disabled_policy["rules"]],
+                    "result": "SUCCESS",
+                },
+            ))
+            session.flush()
+            session.refresh(activated)
+            return {"revision": configuration_revision_dict(activated, status="EFFECTIVE", signoff=signoff), "replayed": False}
+    except IntegrityError as exc:
+        session.rollback()
+        raise ApplicationError("CONFLICT", "Policy Owner sign-off conflicted with a concurrent configuration change.", correlation_id) from exc
+
+
 def configuration_revision_dict(
     revision: AuthWorkflowConfigurationRevision,
     *,
@@ -989,7 +1393,14 @@ def configuration_history(
         signoff_row = session.scalar(select(AuthWorkflowApprovalPolicySignoff).where(
             AuthWorkflowApprovalPolicySignoff.approval_policy_revision_id == row.id,
         )) if kind == "approval_policy" else None
-        items.append(configuration_revision_dict(row, status=status, signoff=_signoff_dict(signoff_row)))
+        auto_reject_signoff = session.scalar(select(AuthWorkflowAutoRejectPolicySignoff).where(
+            AuthWorkflowAutoRejectPolicySignoff.auto_reject_policy_revision_id == row.id,
+        )) if kind == "auto_reject_policy" else None
+        revision_signoff = (
+            _signoff_dict(signoff_row) if signoff_row is not None
+            else _auto_reject_signoff_dict(auto_reject_signoff)
+        )
+        items.append(configuration_revision_dict(row, status=status, signoff=revision_signoff))
     return {"kind": kind, "as_of": _iso_utc(moment), "items": items, "offset": offset, "limit": limit, "total": total}
 
 
@@ -1166,7 +1577,21 @@ def apply_round_configuration_snapshot(base_configuration, snapshot):
     )
 
     configurations = getattr(snapshot, "configurations", None)
-    if not isinstance(configurations, Mapping) or set(configurations) != set(CONFIGURATION_KINDS):
+    if not isinstance(configurations, Mapping):
+        raise ConfigurationValidationError("Round configuration snapshot is incomplete.")
+    # Older immutable rounds captured the original six kinds. Add an in-memory
+    # fail-closed value for the new policy; never rewrite a historical snapshot.
+    legacy_kinds = set(CONFIGURATION_KINDS) - {"auto_reject_policy"}
+    if set(configurations) == legacy_kinds:
+        configurations = {
+            **configurations,
+            "auto_reject_policy": {
+                "kind": "auto_reject_policy", "status": "UNCONFIGURED",
+                "revision_id": None, "revision": None, "effective_at": None,
+                "configuration_hash": None, "value": None, "signoff": None,
+            },
+        }
+    if set(configurations) != set(CONFIGURATION_KINDS):
         raise ConfigurationValidationError("Round configuration snapshot is incomplete.")
 
     resolutions: dict[str, tuple[str, dict[str, Any] | None, Mapping[str, Any]]] = {}
@@ -1185,12 +1610,21 @@ def apply_round_configuration_snapshot(base_configuration, snapshot):
             continue
         if not isinstance(value, Mapping):
             raise ConfigurationValidationError("Configured snapshot entry has no value.")
+        signoff_configuration_matches = True
         if kind == "approval_policy" and value.get("enabled") is True:
             normalized = _validate_signed_approval_policy_value(
                 value, entry.get("signoff"), revision_id=entry["revision_id"],
                 configuration_hash=entry["configuration_hash"],
             )
             signoff_configuration_matches = _signoff_matches_configuration_revisions(
+                entry.get("signoff"), configurations,
+            )
+        elif kind == "auto_reject_policy" and value.get("enabled") is True:
+            normalized = _validate_signed_auto_reject_policy_value(
+                value, entry.get("signoff"), revision_id=entry["revision_id"],
+                configuration_hash=entry["configuration_hash"],
+            )
+            signoff_configuration_matches = _auto_reject_signoff_matches_configuration_revisions(
                 entry.get("signoff"), configurations,
             )
         else:
@@ -1202,6 +1636,11 @@ def apply_round_configuration_snapshot(base_configuration, snapshot):
         if (_value_is_enabled(kind, normalized) != (status == "EFFECTIVE")):
             is_stale_signed_policy = (
                 kind == "approval_policy"
+                and normalized.get("enabled") is True
+                and status == "DISABLED"
+                and not signoff_configuration_matches
+            ) or (
+                kind == "auto_reject_policy"
                 and normalized.get("enabled") is True
                 and status == "DISABLED"
                 and not signoff_configuration_matches
@@ -1302,12 +1741,30 @@ def apply_round_configuration_snapshot(base_configuration, snapshot):
     else:
         authority = None
 
+    auto_reject_status, auto_reject_value, auto_reject_entry = resolutions["auto_reject_policy"]
+    auto_reject_policy = None
+    if (auto_reject_status == "EFFECTIVE" and auto_reject_value is not None
+            and auto_reject_value.get("enabled") is True
+            and _auto_reject_signoff_matches_configuration_revisions(
+                auto_reject_entry.get("signoff"), configurations,
+            )):
+        from src.backend.domain.policy import AutoRejectPolicy
+        signoff = auto_reject_entry["signoff"]
+        auto_reject_policy = AutoRejectPolicy.from_dict({
+            **auto_reject_value,
+            "configuration_hash": auto_reject_entry["configuration_hash"],
+            "signoff_source": "AUTHENTICATED_POLICY_OWNER",
+            "signed_by": signoff["policy_owner_id"],
+            "signed_at": signoff["signed_at"],
+        })
+
     return ApprovalConfiguration(
         policy=policy,
         budgets=budgets,
         authority=authority,
         media_policy=media_policy,
         strategy_rubric=strategy_rubric,
+        auto_reject_policy=auto_reject_policy,
         media_model_snapshot=json_value(base_configuration.media_model_snapshot),
         strategy_model_snapshot=json_value(base_configuration.strategy_model_snapshot),
         visual_model_snapshot=json_value(base_configuration.visual_model_snapshot),

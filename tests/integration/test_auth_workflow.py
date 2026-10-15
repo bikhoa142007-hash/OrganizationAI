@@ -1,5 +1,6 @@
 from collections.abc import Iterator
 from datetime import date, datetime, timedelta, timezone
+import hashlib
 import json
 import struct
 import time
@@ -24,7 +25,7 @@ from src.backend.application.role_admin import BUILTIN_PERMISSIONS
 from src.backend.application import auth_workflow as auth_workflow_application
 from src.backend.db.base import Base
 from src.backend.db.models import (
-    AuthWorkflowEvaluationRun, AuthWorkflowEvent, AuthWorkflowNotification,
+    AuthWorkflowEngineDecision, AuthWorkflowEvaluationRun, AuthWorkflowEvent, AuthWorkflowNotification,
     AuthWorkflowPlan, AuthWorkflowRoundConfigurationSnapshot,
     AuthWorkflowSlaConfiguration, AuthWorkflowSlaRound,
     EmployeeProfile, Role, RolePermission, User, UserRole,
@@ -32,6 +33,8 @@ from src.backend.db.models import (
 from src.backend.db.security import hash_password
 from src.backend.domain.policy import (
     ApprovalConfiguration,
+    AutoRejectPolicy,
+    AutoRejectRule,
     AuthoritySnapshot,
     BudgetConfiguration,
     Criterion,
@@ -406,18 +409,20 @@ def test_admin_employee_directory_is_authorized_filtered_paginated_and_read_only
 
 
 def make_plan(client: TestClient, checker_id: UUID, *, title: str = "Spring campaign",
-              channels: tuple[str, ...] = ()) -> dict:
-    configure_test_checker_assignment(client, checker_id, "marketing")
+              channels: tuple[str, ...] = (), budget_minor_units: str = "50000000",
+              department: str = "marketing", configure_assignment: bool = True) -> dict:
+    if configure_assignment:
+        configure_test_checker_assignment(client, checker_id, department)
     response = client.post("/api/workflow/plans", json={
         "checker_user_id": str(checker_id),
         "payload": {
             "title": title,
             "objective": "Reach qualified customers",
             "summary": "A measured campaign with a clear audience and outcome.",
-            "department": "marketing",
+            "department": department,
             "start_date": "2026-10-01",
             "end_date": "2026-10-31",
-            "budget_minor_units": "50000000",
+            "budget_minor_units": budget_minor_units,
             "currency": "VND",
             "channels": list(channels),
         },
@@ -525,6 +530,24 @@ class LowConfidenceMediaProvider(FakeAuthenticatedTaskProvider):
         output["confidence"] = 0.80
         return ProviderAnalysis(output, model_revision=analysis.model_revision,
                                 reported_model_id=analysis.reported_model_id)
+
+
+class ForbiddenLiteralAuthenticatedMockProvider(AuthenticatedMockVLMProvider):
+    """Emit hash-bound test OCR once, then safe OCR for a resubmission."""
+
+    def analyze_image(self, request):
+        analysis = super().analyze_image(request)
+        output = dict(analysis.output)
+        images = [dict(image) for image in output["images"]]
+        text = "DEMO-CONTENT-V2" if self.calls == 1 else "Revised synthetic campaign"
+        images[0]["ocr_text"] = text
+        output["images"] = images
+        raw = json.dumps(output, sort_keys=True, separators=(",", ":")).encode("utf-8")
+        return ProviderAnalysis(
+            output, raw_output_hash=hashlib.sha256(raw).hexdigest(),
+            model_revision=analysis.model_revision,
+            reported_model_id=analysis.reported_model_id,
+        )
 
 
 def upload_plan_image(client: TestClient, plan_id: str, revision: int) -> dict:
@@ -1080,6 +1103,194 @@ def test_round_snapshot_thresholds_override_legacy_policy_and_keep_auto_approval
     assert not [item for item in maker_notifications["items"] if item["event_type"] == "PLAN_AUTO_APPROVED"]
     checker_notifications = authenticated_client(app, checker).get("/api/workflow/notifications").json()
     assert [item["event_type"] for item in checker_notifications["items"]] == ["PLAN_SUBMITTED"]
+
+
+def test_authenticated_workflow_persists_signed_auto_reject_and_resubmission(workflow_client):
+    client, factory, app = workflow_client
+    maker = create_user(factory, "maker.auto-reject-e2e", ("MAKER",))
+    checker = create_user(factory, "lekhoi", ("CHECKER",))
+    owner = create_user(factory, "bkhoa", ("ADMIN",))
+    budget_authority = create_user(factory, "test-budget-authority", ())
+    admin_client = authenticated_client(app, owner)
+    login(client, maker)
+    configured_sla = admin_client.put("/api/workflow/sla/configuration", json={
+        "enabled": True,
+        "duration_minutes": 24 * 60,
+        "warning_before_minutes": 4 * 60,
+        "expected_revision": 0,
+        "change_reason": "Isolated auto-reject integration test",
+    })
+    assert configured_sla.status_code == 200, configured_sla.text
+
+    app.state.auth_workflow_configuration = auto_approval_configuration(checker.id)
+    app.state.auth_workflow_provider = ForbiddenLiteralAuthenticatedMockProvider("pass")
+    app.state.auth_workflow_media_provider = FakeAuthenticatedTaskProvider("MEDIA_COMPLIANCE")
+    app.state.auth_workflow_strategy_provider = FakeAuthenticatedTaskProvider("STRATEGY_EVALUATION")
+
+    rule = AutoRejectRule(
+        rule_id="TEST-ONLY-E2E-FORBIDDEN-LITERAL", evidence_kind="OCR_TEXT",
+        forbidden_literals=("DEMO-CONTENT-V2",), evidence_confidence_threshold=0.85,
+        media_confidence_threshold=0.85, feasibility_confidence_threshold=0.80,
+        reason_code="TEST_ONLY_E2E_FORBIDDEN_LITERAL", exceptions=(),
+    )
+    configs = {
+        "budget": {
+            "currency": "VND",
+            "limits": [{"department": "Marketing", "limit_minor_units": "10000000", "active": True}],
+        },
+        "media_policy": {
+            "policy_id": "TEST-ONLY-MEDIA", "policy_version": "TEST-ONLY-1",
+            "status": "ACTIVE", "scope_departments": ["Marketing"], "scope_channels": ["social"],
+            "rules": [
+                {"rule_id": "TEST-ONLY-WARNING-1", "severity": "WARNING", "description": "Test warning one.", "required_evidence_kinds": ["OBSERVATION"], "forbidden_literals": []},
+                {"rule_id": "TEST-ONLY-WARNING-2", "severity": "WARNING", "description": "Test warning two.", "required_evidence_kinds": ["OCR_TEXT"], "forbidden_literals": []},
+            ],
+        },
+        "strategy_rubric": baseline_strategy_rubric_value(version="TEST-ONLY-1"),
+        "authority": {
+            "currency": "VND", "auto_limit_minor_units": "5000000",
+            "allowed_departments": ["Marketing"], "checker_id": str(checker.id),
+            "policy_owner_id": str(owner.id), "budget_authority_id": str(budget_authority.id),
+            "active": True,
+        },
+        "checker_assignment": {
+            "maker_may_select_other": True,
+            "defaults": [{"department": "Marketing", "checker_id": str(checker.id)}],
+        },
+        "approval_policy": {
+            "enabled": False, "media_confidence_threshold": 0.85,
+            "feasibility_score_threshold_exclusive": 70,
+            "feasibility_confidence_threshold": 0.80,
+        },
+        "auto_reject_policy": {
+            "configuration_id": "TEST-ONLY-PRODUCTION-CANDIDATE",
+            "policy_version": "TEST-ONLY-1", "revision": 1, "enabled": False,
+            "environment": "PRODUCTION", "scope_departments": ["Marketing"],
+            "scope_channels": ["social"], "rules": [{
+                "rule_id": rule.rule_id, "evidence_kind": rule.evidence_kind,
+                "forbidden_literals": list(rule.forbidden_literals),
+                "evidence_confidence_threshold": rule.evidence_confidence_threshold,
+                "media_confidence_threshold": rule.media_confidence_threshold,
+                "feasibility_confidence_threshold": rule.feasibility_confidence_threshold,
+                "reason_code": rule.reason_code, "exceptions": [],
+            }],
+        },
+    }
+    created_revisions = {
+        kind: create_configuration_revision(admin_client, kind, value)
+        for kind, value in configs.items()
+    }
+    expected_approval_revisions = {
+        kind: {"revision_id": row["revision_id"], "configuration_hash": row["configuration_hash"]}
+        for kind, row in created_revisions.items()
+    }
+    approval_signoff = admin_client.post(
+        "/api/workflow/configuration/approval-policy/signoff",
+        json={"expected_revisions": expected_approval_revisions},
+        headers={"Origin": "http://localhost:5173"},
+    )
+    assert approval_signoff.status_code == 200, approval_signoff.text
+
+    current = admin_client.get("/api/workflow/configuration").json()
+    expected_auto_reject_revisions = {
+        item["kind"]: {
+            "revision_id": item["current_revision"]["revision_id"],
+            "configuration_hash": item["current_revision"]["configuration_hash"],
+        }
+        for item in current["items"] if item["current_revision"] is not None
+    }
+    auto_reject_signoff = admin_client.post(
+        "/api/workflow/configuration/auto-reject-policy/signoff",
+        json={"expected_revisions": expected_auto_reject_revisions},
+        headers={"Origin": "http://localhost:5173"},
+    )
+    assert auto_reject_signoff.status_code == 200, auto_reject_signoff.text
+    signed_revision = auto_reject_signoff.json()["revision"]
+    assert signed_revision["value"]["enabled"] is True
+    assert signed_revision["value"]["revision"] == signed_revision["revision"]
+    assert signed_revision["signoff"]["policy_owner_id"] == str(owner.id)
+    assert signed_revision["signoff"]["approved_configuration_hash"] == signed_revision["configuration_hash"]
+
+    draft = make_plan(
+        client, checker.id, title="Synthetic forbidden-literal test", channels=("social",),
+        budget_minor_units="3000000", department="Marketing", configure_assignment=False,
+    )
+    draft = upload_plan_image(client, draft["id"], draft["revision"])
+    rejected = submit_plan(client, draft)
+
+    assert rejected["status"] == "REJECTED", json.dumps(rejected["engine_decisions"][0]["decision"], indent=2)
+    assert rejected["processing_stage"] == "AI_AUTO_REJECTED"
+    first_evaluation = rejected["ai_evaluations"][0]
+    first_decision = rejected["engine_decisions"][0]
+    assert first_decision["outcome"] == "AUTO_REJECTED"
+    assert first_decision["decision"]["auto_reject_rule_id"] == rule.rule_id
+    assert first_decision["decision"]["reason_code"] == rule.reason_code
+    assert first_decision["decision"]["decided_by"]["actor_type"] == "SYSTEM"
+    assert first_decision["decision"]["evidence"]
+    assert first_evaluation["visual_extraction"]["attachments"][0]["ocr_text"] == "DEMO-CONTENT-V2"
+    reject_event = next(event for event in rejected["history"] if event["action"] == "AI_AUTO_REJECTED")
+    assert reject_event["actor_type"] == "SYSTEM"
+    assert reject_event["details"]["auto_reject_rule_id"] == rule.rule_id
+    assert reject_event["details"]["reason_code"] == rule.reason_code
+    assert reject_event["details"]["evidence_reference"]
+
+    maker_notifications = client.get("/api/workflow/notifications").json()["items"]
+    reject_notifications = [item for item in maker_notifications if item["event_type"] == "PLAN_AUTO_REJECTED"]
+    assert len(reject_notifications) == 1
+    assert "rule đã ký" in reject_notifications[0]["message"]
+    with factory() as session:
+        stored_decision = session.scalar(select(AuthWorkflowEngineDecision).where(
+            AuthWorkflowEngineDecision.plan_id == UUID(rejected["id"]),
+            AuthWorkflowEngineDecision.round_number == 1,
+        ))
+        stored_snapshot = session.scalar(select(AuthWorkflowRoundConfigurationSnapshot).where(
+            AuthWorkflowRoundConfigurationSnapshot.plan_id == UUID(rejected["id"]),
+        ))
+        sla_round = session.scalar(select(AuthWorkflowSlaRound).where(
+            AuthWorkflowSlaRound.plan_id == UUID(rejected["id"]),
+            AuthWorkflowSlaRound.round_number == 1,
+        ))
+        assert stored_decision is not None and stored_decision.outcome == "AUTO_REJECTED"
+        assert stored_snapshot is not None
+        assert sla_round is not None and sla_round.closed_at is not None
+        assert stored_snapshot.configurations["auto_reject_policy"]["value"]["environment"] == "PRODUCTION"
+        assert stored_snapshot.configurations["auto_reject_policy"]["signoff"]["policy_owner_id"] == str(owner.id)
+        assert stored_snapshot.configurations["auto_reject_policy"]["configuration_hash"] == signed_revision["configuration_hash"]
+        assert reject_event["details"]["auto_reject_policy_revision_id"] == stored_snapshot.configurations["auto_reject_policy"]["revision_id"]
+        assert reject_event["details"]["auto_reject_policy_configuration_hash"] == stored_snapshot.configurations["auto_reject_policy"]["configuration_hash"]
+        assert reject_event["details"]["auto_reject_policy_signoff_actor_id"] == str(owner.id)
+        assert reject_event["details"]["auto_reject_policy_signed_at"] == stored_snapshot.configurations["auto_reject_policy"]["signoff"]["signed_at"]
+        assert stored_snapshot.configurations["authority"]["value"]["budget_authority_id"] == str(budget_authority.id)
+
+    edited = client.put(f"/api/workflow/plans/{rejected['id']}", json={
+        "expected_revision": rejected["revision"],
+        "payload": {**rejected["payload"], "title": "Safe resubmission"},
+    })
+    assert edited.status_code == 200, edited.text
+    resubmitted = submit_plan(client, edited.json())
+
+    assert resubmitted["current_version"] == 2
+    assert resubmitted["current_round"] == 2
+    assert resubmitted["status"] == "APPROVED"
+    assert resubmitted["engine_decisions"][0] == first_decision
+    assert resubmitted["engine_decisions"][1]["outcome"] == "AUTO_APPROVED"
+    def normalize_saved_evaluation(value):
+        normalized = dict(value)
+        for field in ("created_at", "started_at", "completed_at"):
+            timestamp = datetime.fromisoformat(normalized[field].replace("Z", "+00:00"))
+            normalized[field] = (
+                timestamp.replace(tzinfo=timezone.utc)
+                if timestamp.tzinfo is None else timestamp.astimezone(timezone.utc)
+            )
+        return normalized
+
+    assert normalize_saved_evaluation(resubmitted["ai_evaluations"][0]) == normalize_saved_evaluation(first_evaluation)
+    assert app.state.auth_workflow_provider.calls == 2
+    assert next(event for event in resubmitted["history"] if event["action"] == "AI_AUTO_REJECTED")["details"]["round"] == 1
+    audit = authenticated_client(app, owner).get("/api/workflow/audit?offset=0&limit=100").json()
+    assert any(event["plan_id"] == rejected["id"] and event["action"] == "AI_AUTO_REJECTED"
+               and event["details"].get("auto_reject_rule_id") == rule.rule_id
+               for event in audit["items"])
 
 
 def test_manual_retry_reuses_round_configuration_and_appends_one_decision_per_attempt(workflow_client):

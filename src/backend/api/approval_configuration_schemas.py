@@ -8,6 +8,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 ConfigurationKind = Literal[
     "approval_policy", "budget", "media_policy", "strategy_rubric", "authority", "checker_assignment",
+    "auto_reject_policy",
 ]
 ConfigurationStatus = Literal["UNCONFIGURED", "DISABLED", "EFFECTIVE", "SCHEDULED", "SUPERSEDED"]
 

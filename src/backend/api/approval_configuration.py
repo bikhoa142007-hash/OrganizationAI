@@ -90,3 +90,22 @@ def sign_off_approval_policy(
             for kind, item in body.expected_revisions.items()
         },
     )
+
+
+@router.post("/auto-reject-policy/signoff", response_model=ApprovalPolicySignoffResponse)
+def sign_off_auto_reject_policy(
+    body: ApprovalPolicySignoffRequest,
+    request: Request,
+    principal: AuthenticatedPrincipal = Depends(get_current_principal),
+    session: Session = Depends(get_auth_db),
+):
+    _check_browser_origin(request)
+    return configuration.sign_off_auto_reject_policy(
+        session,
+        principal,
+        _correlation(request),
+        expected_revisions={
+            kind: {"revision_id": str(item.revision_id), "configuration_hash": item.configuration_hash}
+            for kind, item in body.expected_revisions.items()
+        },
+    )

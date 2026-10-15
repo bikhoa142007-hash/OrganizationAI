@@ -121,7 +121,7 @@ function parseEmployeePage(value: unknown): WorkflowEmployeePage {
 function parseNotification(value: unknown): WorkflowNotification | null {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null
   const item = value as Record<string, unknown>
-  const eventTypes = ['PLAN_SUBMITTED', 'PLAN_APPROVED', 'PLAN_AUTO_APPROVED', 'PLAN_REJECTED', 'SLA_WARNING', 'SLA_OVERDUE']
+  const eventTypes = ['PLAN_SUBMITTED', 'PLAN_APPROVED', 'PLAN_AUTO_APPROVED', 'PLAN_REJECTED', 'PLAN_AUTO_REJECTED', 'SLA_WARNING', 'SLA_OVERDUE']
   return typeof item.id === 'string'
     && eventTypes.includes(String(item.event_type))
     && typeof item.plan_id === 'string'

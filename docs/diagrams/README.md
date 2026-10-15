@@ -1,6 +1,6 @@
 # OrganizationAI diagrams
 
-Code and schema basis: b67a658f357c482bd817d4230376c68d31c7ba35. The seven commits from that code revision through origin/main d73bf61584af7b8690780df55b4ead537c126ee5 add configuration/deployment records but no backend code changes. Runtime configuration below follows the [activation package](../integration/auto-approve-activation/README.md), which reports a Render check on 2026-10-15. The source files remain editable; Archify JSON diagrams have checked-in HTML renders. The ERD is Mermaid in Markdown and renders in GitHub's Markdown view.
+Source basis: deployed main commit `20f4f0124a7bd7467d2e7bce0ab1883740aee35a` plus the auto-reject implementation on this branch. Render reported both Auth API and frontend Live at that main SHA on 2026-10-16; that check does not prove an AI inference. Runtime configuration below is based on the [activation package](../integration/auto-approve-activation/README.md), last checked on 2026-10-15. This branch is not production-deployed until its required review and gates pass. The source files remain editable; Archify JSON diagrams have checked-in HTML renders. The ERD is Mermaid in Markdown and renders in GitHub's Markdown view.
 
 ## Diagram index
 
@@ -27,14 +27,15 @@ These paths are mounted by the Auth workflow profile. The endpoint names and met
 | Retry an eligible evaluation | **POST** /api/workflow/plans/{plan_id}/rounds/{round_number}/evaluation-retries | [retry router](../../src/backend/api/workflow_retry.py) |
 | Read Admin audit history | **GET** /api/workflow/audit | [workflow router](../../src/backend/api/auth_workflow.py) |
 | Read current configuration / history / create revision | **GET** /api/workflow/configuration · **GET** /api/workflow/configuration/{kind}/history · **POST** /api/workflow/configuration/{kind}/revisions | [configuration router](../../src/backend/api/approval_configuration.py) |
+| Sign off auto-approval / exact auto-reject revision | **POST** /api/workflow/configuration/approval-policy/signoff · **POST** /api/workflow/configuration/auto-reject-policy/signoff | [configuration router](../../src/backend/api/approval_configuration.py) |
 
 Authentication and permission flow: POST /api/auth/login sets the Auth cookie; GET /api/auth/me returns the authenticated identity; POST /api/auth/logout clears the session. Backend guards enforce Maker permissions for owned plan changes and submission, Checker permission for assigned reviews and decisions, and Admin permission for configuration. A Maker cannot decide their own plan.
 
-Configuration revision kinds in code are approval_policy, budget, media_policy, strategy_rubric, authority, and checker_assignment. The authenticated configuration API requires Admin permission. Revisions are effective-dated and append-only; each submitted round stores its own configuration snapshot.
+Configuration revision kinds in code are approval_policy, budget, media_policy, strategy_rubric, authority, checker_assignment and auto_reject_policy. The authenticated configuration API requires Admin permission. Revisions are effective-dated and append-only; each submitted round stores its own configuration snapshot. An auto-reject production revision stays disabled until the authenticated Policy Owner signs its exact rule revision/hash and the current auto-approval, authority, Media, Strategy, budget and assignment revisions.
 
 Auto-approval requires an enabled policy, Media PASS with confidence ≥ 0.85, Strategy score strictly > 70 with confidence ≥ 0.80, budget at or below its effective limit, an active authority within its limit and scope for the assigned Checker, no hard violations or unresolved conflicts, no agent errors, and a pending plan with an active round. A successful inference is not an approval.
 
-The implemented business statuses are DRAFT, PENDING_APPROVAL, APPROVED, and REJECTED. The separate processing_stage values are DRAFT, AI_PENDING, AI_PROCESSING, HUMAN_REVIEW_REQUIRED, AI_AUTO_APPROVED, and COMPLETED. Pipeline failures route to HUMAN_REVIEW_REQUIRED; AI_PROCESSING_FAILED is a scope target, not a code status. The AI engine has no automatic-rejection outcome.
+The implemented business statuses are DRAFT, PENDING_APPROVAL, APPROVED, and REJECTED. The separate processing_stage values include DRAFT, AI_PENDING, AI_PROCESSING, HUMAN_REVIEW_REQUIRED, AI_AUTO_APPROVED, AI_AUTO_REJECTED, and COMPLETED. Pipeline failures route to HUMAN_REVIEW_REQUIRED; AI_PROCESSING_FAILED is a scope target, not a code status. Production auto-reject is implemented but remains unavailable without a concrete signed Policy Owner rule.
 
 ## Configuration status
 
@@ -65,7 +66,7 @@ The activation record reports production remote-inference switches enabled and m
 ## Runtime and deployment boundary
 
 - The checked-in root [Render blueprint](../../render.yaml) describes the Judge Demo profile: React/Vite static frontend, FastAPI demo backend, SQLite at a temporary path, and explicit Mock mode.
-- Auth + PostgreSQL is implemented for local Compose. A separate [Auth staging blueprint](../../deployment/render.auth-staging.yaml) exists and is documented as not deployed. The latest activation record reports Render service organizationai-api was running code commit b67a658 on 2026-10-15 and that PostgreSQL readiness passed after restart. This review did not query Render directly, so later deployments remain unverified.
+- Auth + PostgreSQL is implemented for local Compose. A separate [Auth staging blueprint](../../deployment/render.auth-staging.yaml) exists. The 2026-10-16 Render check found both Auth services Live at `20f4f0124a7bd7467d2e7bce0ab1883740aee35a`; API readiness reported PostgreSQL available. The auto-reject implementation on this branch has not been deployed or production-verified.
 - Local Compose connects the backend to Ollama through its configured host alias and server-side LOCAL_VLM_BASE_URL. Production remote-inference switches and model pins are reported as configured, but no production inference was run. Endpoint values are not checked into the repository.
 - The Auth staging blueprint sets remote VLM access false and declares no tunnel. The optional tunnel route in the architecture diagram is not independently verified for the production service; no temporary URL or secret is included.
 

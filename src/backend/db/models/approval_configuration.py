@@ -25,7 +25,7 @@ class AuthWorkflowConfigurationHead(Base):
     __tablename__ = "auth_workflow_configuration_heads"
     __table_args__ = (
         CheckConstraint(
-            "kind IN ('approval_policy', 'budget', 'media_policy', 'strategy_rubric', 'authority', 'checker_assignment')",
+            "kind IN ('approval_policy', 'budget', 'media_policy', 'strategy_rubric', 'authority', 'checker_assignment', 'auto_reject_policy')",
             name="ck_workflow_config_heads_kind",
         ),
         CheckConstraint("latest_revision >= 0", name="ck_workflow_config_heads_revision"),
@@ -41,7 +41,7 @@ class AuthWorkflowConfigurationRevision(Base):
     __tablename__ = "auth_workflow_configuration_revisions"
     __table_args__ = (
         CheckConstraint(
-            "kind IN ('approval_policy', 'budget', 'media_policy', 'strategy_rubric', 'authority', 'checker_assignment')",
+            "kind IN ('approval_policy', 'budget', 'media_policy', 'strategy_rubric', 'authority', 'checker_assignment', 'auto_reject_policy')",
             name="ck_workflow_config_revisions_kind",
         ),
         CheckConstraint("revision > 0", name="ck_workflow_config_revisions_revision"),
@@ -96,6 +96,32 @@ class AuthWorkflowApprovalPolicySignoff(Base):
     configuration_revisions: Mapped[dict] = mapped_column(JSON, nullable=False)
 
 
+class AuthWorkflowAutoRejectPolicySignoff(Base):
+    """Immutable Policy Owner sign-off bound to one exact enabled rejection revision."""
+
+    __tablename__ = "auth_workflow_auto_reject_policy_signoffs"
+    __table_args__ = (
+        CheckConstraint("length(approved_configuration_hash) = 64", name="ck_auto_reject_signoffs_policy_hash"),
+        UniqueConstraint("candidate_revision_id", name="uq_auto_reject_signoffs_candidate_revision"),
+        UniqueConstraint("auto_reject_policy_revision_id", name="uq_auto_reject_signoffs_policy_revision"),
+        Index("ix_auto_reject_signoffs_policy_revision", "auto_reject_policy_revision_id", "approved_configuration_hash"),
+    )
+
+    id: Mapped[UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid4)
+    candidate_revision_id: Mapped[UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("auth_workflow_configuration_revisions.id", ondelete="RESTRICT"), nullable=False
+    )
+    auto_reject_policy_revision_id: Mapped[UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("auth_workflow_configuration_revisions.id", ondelete="RESTRICT"), nullable=False
+    )
+    approved_configuration_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    policy_owner_id: Mapped[UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
+    )
+    signed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    configuration_revisions: Mapped[dict] = mapped_column(JSON, nullable=False)
+
+
 class AuthWorkflowRoundConfigurationSnapshot(Base):
     """Immutable configuration and Checker assignment captured once per approval round."""
 
@@ -139,6 +165,7 @@ def _reject_mutation(_mapper, _connection, _target) -> None:
 for _immutable_model in (
     AuthWorkflowConfigurationRevision,
     AuthWorkflowApprovalPolicySignoff,
+    AuthWorkflowAutoRejectPolicySignoff,
     AuthWorkflowRoundConfigurationSnapshot,
 ):
     event.listen(_immutable_model, "before_update", _reject_mutation)

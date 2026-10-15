@@ -3,6 +3,7 @@ import { resolveApiBaseUrl } from './apiBaseUrl'
 
 export const configurationKinds = [
   'approval_policy', 'budget', 'media_policy', 'strategy_rubric', 'authority', 'checker_assignment',
+  'auto_reject_policy',
 ] as const
 
 export type ConfigurationKind = typeof configurationKinds[number]
@@ -21,13 +22,14 @@ export type ConfigurationRevision = {
   created_at: string
   signoff?: {
     candidate_revision_id: string
-    approval_policy_revision_id: string
     approved_configuration_hash: string
     policy_owner_id: string
     signed_at: string
-    authority_revision_id: string
-    authority_configuration_hash: string
     configuration_revisions: Record<string, { revision_id: string; configuration_hash: string }>
+    approval_policy_revision_id?: string
+    authority_revision_id?: string
+    authority_configuration_hash?: string
+    auto_reject_policy_revision_id?: string
   } | null
 }
 
@@ -128,6 +130,31 @@ export function validateConfigurationValue(kind: ConfigurationKind, value: unkno
     }
     return value.rules.length ? null : 'Media policy cần ít nhất một rule.'
   }
+  if (kind === 'auto_reject_policy') {
+    if (!hasKeys(value, ['configuration_id', 'policy_version', 'revision', 'enabled', 'environment', 'scope_departments', 'scope_channels', 'rules'])
+      || !nonblank(value.configuration_id) || !nonblank(value.policy_version)
+      || typeof value.revision !== 'number' || !Number.isInteger(value.revision) || value.revision < 1
+      || value.enabled !== false || value.environment !== 'PRODUCTION'
+      || !Array.isArray(value.scope_departments) || !Array.isArray(value.scope_channels)
+      || !Array.isArray(value.rules)) return 'Auto-reject draft phải là policy production đang tắt, có revision và scope rõ ràng.'
+    if (!value.scope_departments.length || !value.scope_channels.length
+      || value.scope_departments.some(item => !nonblank(item, 120))
+      || value.scope_channels.some(item => !nonblank(item, 120))) return 'Auto-reject draft cần scope bộ phận và kênh không rỗng.'
+    const ruleIds = new Set<string>()
+    for (const item of value.rules) {
+      if (!record(item) || !hasKeys(item, ['rule_id', 'evidence_kind', 'forbidden_literals', 'evidence_confidence_threshold', 'media_confidence_threshold', 'feasibility_confidence_threshold', 'reason_code', 'exceptions'])
+        || !nonblank(item.rule_id, 80) || item.evidence_kind !== 'OCR_TEXT'
+        || !Array.isArray(item.forbidden_literals) || !item.forbidden_literals.length
+        || item.forbidden_literals.some(text => !nonblank(text, 500))
+        || !Array.isArray(item.exceptions) || item.exceptions.some(text => !nonblank(text, 500))
+        || !nonblank(item.reason_code, 80) || !/^[A-Z][A-Z0-9_]{2,79}$/.test(item.reason_code)
+        || [item.evidence_confidence_threshold, item.media_confidence_threshold, item.feasibility_confidence_threshold]
+          .some(value => typeof value !== 'number' || !Number.isFinite(value) || value < 0 || value > 1)) return 'Auto-reject rule cần OCR literal cụ thể, confidence hợp lệ, reason_code và ngoại lệ.'
+      if (ruleIds.has(item.rule_id)) return 'rule_id phải duy nhất trong policy.'
+      ruleIds.add(item.rule_id)
+    }
+    return value.rules.length ? null : 'Auto-reject policy cần ít nhất một rule cụ thể.'
+  }
   return 'Configuration kind không được hỗ trợ.'
 }
 
@@ -204,6 +231,16 @@ export const approvalConfigurationService = {
     })
     if (!record(result) || !isRevision(result.revision) || result.revision.kind !== 'approval_policy' || typeof result.replayed !== 'boolean') {
       throw new AuthApiError(502, 'Dịch vụ sign-off trả về dữ liệu không hợp lệ.', 'INVALID_RESPONSE')
+    }
+    return result as { revision: ConfigurationRevision; replayed: boolean }
+  },
+
+  async signOffAutoRejectPolicy(expectedRevisions: Record<ConfigurationKind, { revision_id: string; configuration_hash: string }>): Promise<{ revision: ConfigurationRevision; replayed: boolean }> {
+    const result = await request<unknown>('/workflow/configuration/auto-reject-policy/signoff', 'POST', {
+      expected_revisions: expectedRevisions,
+    })
+    if (!record(result) || !isRevision(result.revision) || result.revision.kind !== 'auto_reject_policy' || typeof result.replayed !== 'boolean') {
+      throw new AuthApiError(502, 'Dịch vụ sign-off auto-reject trả về dữ liệu không hợp lệ.', 'INVALID_RESPONSE')
     }
     return result as { revision: ConfigurationRevision; replayed: boolean }
   },

@@ -233,12 +233,12 @@ def _record_retry_evaluator_failure(
             )
             .limit(1)
         )
-        auto_approval = session.scalar(
+        final_engine_decision = session.scalar(
             select(AuthWorkflowEngineDecision.id)
             .where(
                 AuthWorkflowEngineDecision.plan_id == plan_id,
                 AuthWorkflowEngineDecision.round_number == run.round_number,
-                AuthWorkflowEngineDecision.outcome == "AUTO_APPROVED",
+                AuthWorkflowEngineDecision.outcome.in_(("AUTO_APPROVED", "AUTO_REJECTED")),
             )
             .limit(1)
         )
@@ -249,7 +249,7 @@ def _record_retry_evaluator_failure(
             and plan.processing_stage in {"AI_PENDING", "AI_PROCESSING", "HUMAN_REVIEW_REQUIRED"}
             and current_decision is None
             and checker_decision is None
-            and auto_approval is None
+            and final_engine_decision is None
         )
 
         run.status = "FAILED"
@@ -407,10 +407,10 @@ def _claim_retry(
             select(AuthWorkflowEngineDecision.id).where(
                 AuthWorkflowEngineDecision.plan_id == plan_id,
                 AuthWorkflowEngineDecision.round_number == round_number,
-                AuthWorkflowEngineDecision.outcome == "AUTO_APPROVED",
+                AuthWorkflowEngineDecision.outcome.in_(("AUTO_APPROVED", "AUTO_REJECTED")),
             ).limit(1)
         ) is not None:
-            _fail("CONFLICT", "This approval round is already auto-approved.", correlation_id)
+            _fail("CONFLICT", "This approval round already has a final automatic decision.", correlation_id)
 
         latest = session.scalar(
             select(AuthWorkflowEvaluationRun)

@@ -83,8 +83,7 @@ is committed in short transactions between provider calls, preserving one
 successful step if a later step fails. Reload reads saved results and never
 starts inference again. Missing policy/provider, unknown model, invalid output,
 missing evidence, timeout or engine errors route to Checker without rolling
-back submission. The pipeline never derives a Strategy score from OCR or
-auto-rejects. Maximum configured run time is 190 seconds; stale-run recovery
+back submission. The pipeline never derives a Strategy score from OCR. An explicit deterministic OCR rule can produce AUTO_REJECTED only after authenticated Policy Owner sign-off and only while every ordinary approval gate passes; the production registry ships with no enabled rule. Maximum configured run time is 190 seconds; stale-run recovery
 waits 240 seconds before routing an interrupted run to Checker.
 
 Provider selection is explicit through `AUTH_WORKFLOW_AI_PROVIDER`. The default

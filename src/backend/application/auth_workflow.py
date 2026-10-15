@@ -360,10 +360,14 @@ def _record_notification(
             "Kế hoạch cần được chỉnh sửa",
             f"Checker đã từ chối kế hoạch {plan.code} (vòng {round_number}). Lý do: {reason.strip() if isinstance(reason, str) else ''}",
         ),
+        "PLAN_AUTO_REJECTED": (
+            "Hệ thống từ chối kế hoạch",
+            f"Hệ thống đã từ chối kế hoạch {plan.code} theo rule đã ký (vòng {round_number}). Lý do: {reason.strip() if isinstance(reason, str) else ''}",
+        ),
     }.get(event_type)
     if copy is None:
         raise ValueError("Unsupported workflow notification event type")
-    if event_type == "PLAN_REJECTED" and (not isinstance(reason, str) or not reason.strip()):
+    if event_type in {"PLAN_REJECTED", "PLAN_AUTO_REJECTED"} and (not isinstance(reason, str) or not reason.strip()):
         raise ValueError("A rejection notification requires its decision reason")
     event_key = f"plan:{plan.id}:round:{round_number}:{event_type.lower()}:user:{recipient_user_id}"
     existing = session.scalar(
@@ -1439,11 +1443,48 @@ def evaluate_submission(
                 plan.processing_stage = "AI_AUTO_APPROVED"
                 plan.decision_reason = None
                 action = "AI_AUTO_APPROVED"
+            elif bundle.decision.outcome == "AUTO_REJECTED":
+                plan.status = "REJECTED"
+                close_round_snapshot(
+                    session, plan_id=plan.id, round_number=run.round_number,
+                    closed_at=run.completed_at or _now_datetime(),
+                )
+                plan.processing_stage = "AI_AUTO_REJECTED"
+                plan.decision_reason = bundle.decision.reason
+                action = "AI_AUTO_REJECTED"
             else:
                 plan.processing_stage = "HUMAN_REVIEW_REQUIRED"
                 plan.decision_reason = bundle.decision.reason
                 action = "AI_REVIEW_ROUTED"
             plan.revision += 1
+            auto_reject_audit_trace = {}
+            if bundle.decision.outcome == "AUTO_REJECTED":
+                snapshot_configurations = (
+                    round_configuration_snapshot.configurations
+                    if round_configuration_snapshot is not None else None
+                )
+                auto_reject_configuration = (
+                    snapshot_configurations.get("auto_reject_policy")
+                    if isinstance(snapshot_configurations, dict) else None
+                )
+                if (
+                    not isinstance(auto_reject_configuration, dict)
+                    or not isinstance(auto_reject_configuration.get("revision_id"), str)
+                    or not isinstance(auto_reject_configuration.get("configuration_hash"), str)
+                    or not isinstance(auto_reject_configuration.get("signoff"), dict)
+                    or not isinstance(auto_reject_configuration["signoff"].get("policy_owner_id"), str)
+                ):
+                    _fail(
+                        "CONFLICT",
+                        "The signed auto-reject policy trace is missing from this approval-round snapshot.",
+                        correlation_id,
+                    )
+                auto_reject_audit_trace = {
+                    "auto_reject_policy_revision_id": auto_reject_configuration["revision_id"],
+                    "auto_reject_policy_configuration_hash": auto_reject_configuration["configuration_hash"],
+                    "auto_reject_policy_signoff_actor_id": auto_reject_configuration["signoff"]["policy_owner_id"],
+                    "auto_reject_policy_signed_at": auto_reject_configuration["signoff"].get("signed_at"),
+                }
             _record_event(
                 session, plan_id=plan.id, actor_id=None, actor_type="SYSTEM",
                 action="AI_EVALUATION_COMPLETED", status_before="PENDING_APPROVAL",
@@ -1480,16 +1521,29 @@ def evaluate_submission(
                     "input_hash": run.input_hash,
                     "processing_stage_before": before_stage,
                     "processing_stage_after": plan.processing_stage,
+                    **({
+                        "auto_reject_rule_id": bundle.decision.auto_reject_rule_id,
+                        "reason_code": bundle.decision.reason_code,
+                        "evidence_reference": next((list(check.evidence_refs)
+                                                     for check in bundle.decision.rule_checks
+                                                     if check.rule_id == "AUTO_REJECT_MATCH" and check.result == "FAIL"), []),
+                        **auto_reject_audit_trace,
+                    } if bundle.decision.outcome == "AUTO_REJECTED" else {}),
                 },
             )
-            if bundle.decision.outcome == "AUTO_APPROVED":
+            if bundle.decision.outcome in {"AUTO_APPROVED", "AUTO_REJECTED"}:
+                notification_event = (
+                    "PLAN_AUTO_APPROVED" if bundle.decision.outcome == "AUTO_APPROVED"
+                    else "PLAN_AUTO_REJECTED"
+                )
                 _record_notification(
                     session,
                     recipient_user_id=plan.maker_id,
                     plan=plan,
-                    event_type="PLAN_AUTO_APPROVED",
+                    event_type=notification_event,
                     version_number=run.version_number,
                     round_number=run.round_number,
+                    reason=bundle.decision.reason if bundle.decision.outcome == "AUTO_REJECTED" else None,
                 )
             session.flush()
             session.refresh(plan)

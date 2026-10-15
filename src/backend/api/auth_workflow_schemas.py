@@ -112,7 +112,7 @@ class WorkflowEngineDecisionResponse(AuthWorkflowDTO):
     version_number: int
     round_number: int
     decision_id: str
-    outcome: Literal["AUTO_APPROVED", "HUMAN_REVIEW_REQUIRED"]
+    outcome: Literal["AUTO_APPROVED", "HUMAN_REVIEW_REQUIRED", "AUTO_REJECTED"]
     decision: dict[str, Any]
     created_at: datetime
 
@@ -170,7 +170,7 @@ class WorkflowAuditPageResponse(AuthWorkflowDTO):
 
 class WorkflowNotificationResponse(AuthWorkflowDTO):
     id: UUID
-    event_type: Literal["PLAN_SUBMITTED", "PLAN_APPROVED", "PLAN_AUTO_APPROVED", "PLAN_REJECTED", "SLA_WARNING", "SLA_OVERDUE"]
+    event_type: Literal["PLAN_SUBMITTED", "PLAN_APPROVED", "PLAN_AUTO_APPROVED", "PLAN_REJECTED", "PLAN_AUTO_REJECTED", "SLA_WARNING", "SLA_OVERDUE"]
     plan_id: UUID
     plan_code: str
     title: str

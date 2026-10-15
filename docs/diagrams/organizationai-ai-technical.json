@@ -37,6 +37,7 @@
         "focus": [
           "rules",
           "auto",
+          "reject",
           "human"
         ]
       }
@@ -122,7 +123,17 @@
       "label": "Human review",
       "sublabel": "HUMAN_REVIEW_REQUIRED",
       "width": 180,
-      "tag": "No AI reject"
+      "tag": "Fallback"
+    },
+    {
+      "id": "reject",
+      "lane": "checker",
+      "col": 2,
+      "type": "security",
+      "label": "AI_AUTO_REJECTED",
+      "sublabel": "Exact signed rule only",
+      "width": 180,
+      "tag": "Off by default"
     }
   ],
   "edges": [
@@ -165,6 +176,14 @@
       "label": "any gate fails / unknown / error",
       "variant": "security",
       "role": "branch"
+    },
+    {
+      "id": "rules-reject",
+      "from": "rules",
+      "to": "reject",
+      "label": "exact signed rule + all gates pass",
+      "variant": "security",
+      "role": "branch"
     }
   ],
   "cards": [
@@ -180,8 +199,9 @@
       "dot": "rose",
       "title": "Fail closed and retry",
       "items": [
-        "Only the rule engine chooses AUTO_APPROVED or HUMAN_REVIEW_REQUIRED. Any unknown/invalid schema, timeout, model identity error, missing config, failed evidence or gate routes to Checker.",
-        "One eligible manual retry reuses the same immutable version/round snapshot; errors do not roll back submission. There is no AI auto-reject."
+        "Any unknown/invalid schema, timeout, model identity error, missing config, failed evidence or approval gate routes to Checker. AI review recommendations never reject a plan.",
+        "An explicit OCR rule can return AI_AUTO_REJECTED only after authenticated Policy Owner sign-off on its exact revision/hash and only when every ordinary approval gate passes. Production has no signed rule, so this route is off.",
+        "One eligible manual retry reuses the same immutable version/round snapshot; errors do not roll back submission."
       ]
     }
   ]

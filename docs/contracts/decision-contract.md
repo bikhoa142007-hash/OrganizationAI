@@ -1,6 +1,6 @@
 # Decision contract — WP1 / schema version 1
 
-Status: frozen proposal for user approval. AGENTS.md and the approved WP1 clarification govern this contract. AI/VLM provides evidence and evaluation only. The deterministic Decision Policy Engine alone evaluates the auto-approval gates; only an authorized human can reject a production plan. The separately labelled Verify fixture exception below is synthetic test data only.
+Status: production contract after authenticated-policy expansion. AI/VLM provides evidence and evaluation only. The deterministic Decision Policy Engine evaluates auto-approval and any separately approved auto-rejection rule. Production auto-reject remains off until a concrete business rule is reviewed and signed by the authenticated Policy Owner. The Verify fixture below remains isolated synthetic test data.
 
 ## Outcome catalog and runtime boundary
 
@@ -8,10 +8,15 @@ Status: frozen proposal for user approval. AGENTS.md and the approved WP1 clarif
 |---|---|---|---|---|
 | AUTO_APPROVED | ACTIVE | true | true | Sprint 1 controlled auto-approval |
 | HUMAN_REVIEW_REQUIRED | ACTIVE | true | true | Sprint 1 human-review routing |
-| REJECTED_BY_DETERMINISTIC_POLICY | RESERVED | false | false | future policy-controlled release only |
+| AUTO_REJECTED | SUPPORTED_DISABLED_BY_DEFAULT | false until signed rule | possible only with exact authenticated Policy Owner sign-off | Explicit OCR evidence rule; never infer from approval-gate failure |
 
-RuntimeOutcome = `AUTO_APPROVED | HUMAN_REVIEW_REQUIRED`.
-The reserved production outcome is documentation/catalog metadata only. Production Auth workflow, configuration registry and routes continue to accept only `AUTO_APPROVED` or `HUMAN_REVIEW_REQUIRED`; no production AI or Rules Engine auto-reject is enabled. The Admin-only Verify suite has a separately labelled, test-only `AUTO_REJECTED` result for a synthetic image, a fixture-signed exact OCR token rule, valid hash-bound evidence, and a temporary in-memory SQLite workflow. The fixture match can override AUTO_APPROVED only after every ordinary auto-approval gate passes; if any ordinary gate would route the plan to Checker, Checker routing takes precedence. That fixture rule cannot be loaded as an enabled production policy. Missing/invalid evidence, conflicts, low confidence, timeouts, unknown models, input-integrity failures and out-of-scope inputs still route to Checker. A production rule would require an approved rule, immutable revision/hash scope, authenticated Policy Owner sign-off and a contract/migration review before implementation or activation.
+`RuntimeOutcome = AUTO_APPROVED | HUMAN_REVIEW_REQUIRED | AUTO_REJECTED`.
+
+The authenticated workflow can persist `AUTO_REJECTED`, close the round, set `REJECTED/AI_AUTO_REJECTED`, write SYSTEM audit details, send a distinct Maker notification, and preserve ordinary resubmission. Migration adds no candidate rule or enabled revision. No concrete production rule is currently approved or signed, so no production plan can be auto-rejected.
+
+Decision priority is deterministic: an exact enabled and signed rule with complete, digest-bound OCR evidence wins over auto-approval only when every ordinary approval gate passes. A warning, score `<= 70`, budget/authority excess, out-of-scope plan, incomplete or conflicting evidence, low confidence, timeout, schema/model failure, missing configuration, or inactive/stale round does not cause auto-reject and routes to Checker under the existing rule. A near-match or rule exception does not match. The ordinary auto-approval gates remain mandatory; an explicit rule cannot turn a failed approval gate into a rejection.
+
+The Admin-only Verify suite retains a separately labelled, test-only `AUTO_REJECTED` result for synthetic image data, a fixture-signed exact OCR literal rule, valid hash-bound evidence, and a temporary in-memory SQLite workflow. A synthetic signature/environment cannot activate a production policy. Missing/invalid evidence, conflicts, low confidence, timeouts, unknown models, input-integrity failures and out-of-scope inputs still route to Checker.
 
 ## Common types and identity
 
@@ -34,7 +39,7 @@ RuleCheck = { rule_id, result: PASS | FAIL | UNKNOWN, observed_value: JSON value
 | plan_version | integer >= 1 |
 | approval_round | integer >= 1; added for round correlation |
 | outcome | RuntimeOutcome only |
-| escalation_category | EscalationCategory or null; null iff AUTO_APPROVED |
+| escalation_category | EscalationCategory or null; null iff AUTO_APPROVED or AUTO_REJECTED |
 | reason | nonblank, readable rationale; no secrets |
 | applied_rule_ids | nonempty array of distinct rule IDs actually checked |
 | input_hash | InputHash; equals submitted snapshot and evaluation |
@@ -45,7 +50,7 @@ RuleCheck = { rule_id, result: PASS | FAIL | UNKNOWN, observed_value: JSON value
 | schema_version | integer, fixed 1 |
 | rule_checks | nonempty RuleCheck[]; exactly the checks named in applied_rule_ids |
 | evidence | Evidence[] supporting checks; references resolve here or in Evaluation |
-| escalation_ids | nonempty array for HUMAN_REVIEW_REQUIRED, empty for AUTO_APPROVED |
+| escalation_ids | nonempty array for HUMAN_REVIEW_REQUIRED, empty for AUTO_APPROVED or AUTO_REJECTED |
 | policy_snapshot_id | immutable configuration reference |
 | policy_snapshot_hash | InputHash |
 | budget_validation | object specified below |
@@ -62,14 +67,14 @@ budget_validation = { configuration_id: string | null, configuration_hash: Input
 These fields represent different parts of the workflow:
 
 - `Evaluation.proposed_action` is an advisory evaluation recommendation (`RECOMMEND_AUTO_APPROVAL` or `RECOMMEND_HUMAN_REVIEW`). `RECOMMEND_HUMAN_REVIEW` means the submission needs a Checker; it is not a rejection recommendation.
-- `DecisionResult.outcome` is the deterministic policy engine result. `AUTO_APPROVED` is a final automatic approval. `HUMAN_REVIEW_REQUIRED` routes the still-pending, active round to a Checker and is not a final decision.
+- `DecisionResult.outcome` is the deterministic policy engine result. `AUTO_APPROVED` and `AUTO_REJECTED` are final system decisions. `HUMAN_REVIEW_REQUIRED` routes the still-pending, active round to a Checker and is not a final decision.
 - `processing_stage` records that workflow routing state. The Checker later records a separate `HumanDecision.action` (`APPROVED` or `REJECTED`), which closes the round.
 
 The current override rule compares the Checker action with the stored evaluation recommendation: an approval without `override_reason` requires `RECOMMEND_AUTO_APPROVAL`; a rejection without `override_reason` requires `RECOMMEND_HUMAN_REVIEW`. This pairing controls whether the Checker action is recorded as an override; it does not turn `RECOMMEND_HUMAN_REVIEW` into a rejection or force the Checker to choose either action. An absent/failed recommendation requires a nonblank override reason for either action. The API and UI must apply the same rule, and the deterministic engine continues to decide automatic approval versus Checker routing independently.
 
 ## Auto-approval gates and rule IDs
 
-For an eligible submitted plan, AUTO_APPROVED requires every following condition. Any FAIL or UNKNOWN means HUMAN_REVIEW_REQUIRED.
+For an eligible submitted plan, AUTO_APPROVED requires every following condition. Any FAIL or UNKNOWN means HUMAN_REVIEW_REQUIRED. AUTO_REJECTED can occur only when an exact signed OCR rule matches and these same ordinary gates all PASS; rejection never repairs or overrides a failed gate.
 
 | rule_id | mandatory PASS condition |
 |---|---|
@@ -112,7 +117,7 @@ The future application boundary exposes semantic operations (transport and URLs 
 
 Only the owning Maker can edit DRAFT or REJECTED plans. PENDING_APPROVAL/APPROVED content and attachments are locked. Submission validates mandatory fields, at least one attachment and a valid Checker distinct from Maker, then atomically creates immutable version 1/round 1 (or the next version/round after rejection), configuration snapshots and audit. Exactly one active round per plan. AI starts after successful submission; AI failure cannot roll it back.
 
-Before committing any engine or human decision, atomically recheck plan/version/round/revision, permission, snapshot hashes and final-decision absence. Serialize auto-approval and human final decisions on the same round guard; at most one final decision per (plan_id, approval_round). AUTO_APPROVED closes the round and sets APPROVED. HUMAN_REVIEW_REQUIRED is a routing record, keeps PENDING_APPROVAL and ACTIVE, and does not occupy the unique final-decision slot. It must not block the Checker from deciding.
+Before committing any engine or human decision, atomically recheck plan/version/round/revision, permission, snapshot hashes and final-decision absence. Serialize auto-approval, auto-rejection and human final decisions on the same round guard; at most one final decision per (plan_id, approval_round). AUTO_APPROVED closes the round and sets APPROVED. AUTO_REJECTED closes the round and sets REJECTED with `AI_AUTO_REJECTED`, a SYSTEM actor, and the exact rule/reason/evidence trace. HUMAN_REVIEW_REQUIRED is a routing record, keeps PENDING_APPROVAL and ACTIVE, and does not occupy the unique final-decision slot. It must not block the Checker from deciding.
 
 A stale/closed-round invocation returns CONFLICT (or replays the same successful intent); it cannot reopen an APPROVED/REJECTED plan or overwrite an earlier decision. Failed state guards block mutation, rather than applying Human Review to an already completed round. For an otherwise eligible pending submission, all unmet evaluation/policy gates route to Human Review.
 
@@ -123,7 +128,7 @@ Claim each idempotency key atomically in the authenticated actor/resource/operat
 HumanDecision = { human_decision_id, plan_id, plan_version, approval_round, action: APPROVED | REJECTED, based_on_decision_id, evaluation_id, actor: Actor, reason: string | null, override_reason: string | null, decided_at, input_hash, policy_version, idempotency_key, correlation_id, round_revision }.
 IDs, hashes, timestamps and revisions follow common types. actor must be HUMAN and must be the currently authorized Checker; never the plan's Maker. based_on_decision_id references the Human Review routing record. action is a separate human-action enum and must not be added to RuntimeOutcome.
 
-Reject requires a nonblank reason. If the human action contradicts the recorded evaluation recommendation (including approving after RECOMMEND_HUMAN_REVIEW), override_reason must be nonblank. A null/failed recommendation treats human approval as an override. Actor, reason/override_reason and timestamp are preserved in both the final record and audit. Reject closes the round and changes state to REJECTED; revisions create the next snapshot/round. Human approval closes the round as APPROVED. Historical decisions, evaluations and versions remain immutable.
+Checker rejection requires a nonblank reason. If the human action contradicts the recorded evaluation recommendation (including approving after RECOMMEND_HUMAN_REVIEW), override_reason must be nonblank. A null/failed recommendation treats human approval as an override. Actor, reason/override_reason and timestamp are preserved in both the final record and audit. Checker rejection closes the round and changes state to `REJECTED` with `HUMAN_REJECTED`; a system rule rejection is separately recorded as `AUTO_REJECTED`/`AI_AUTO_REJECTED`. Revisions create the next snapshot/round. Human approval closes the round as APPROVED. Historical decisions, evaluations and versions remain immutable.
 
 ## Consumers and validation
 

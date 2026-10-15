@@ -694,6 +694,8 @@ class AuthenticatedEvaluationOrchestrator:
                 result.append({
                     "evidence_id": evidence["evidence_id"],
                     "kind": evidence["kind"],
+                    "evidence_kind": evidence["kind"],
+                    "confidence": attachment.get("confidence"),
                     "source_type": "ATTACHMENT",
                     "source_ref": evidence["source_attachment_id"],
                     "observation": evidence["text"],

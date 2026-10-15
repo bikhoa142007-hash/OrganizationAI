@@ -59,7 +59,7 @@ Before: DRAFT -> submit -> PENDING_APPROVAL/AI_PENDING -> mock PASS + enabled ga
 After: new HTTP plans use disabled `DEMO-HTTP-2`; submit still creates the immutable
 version/round, evaluation yields evidence and HUMAN_REVIEW_REQUIRED, and the
 assigned Checker commits APPROVED or REJECTED. Rejection allows editing and the
-next version/round. There are no new states, auto-rejection or reopen operations.
+next version/round. Auth workflow has an `AI_AUTO_REJECTED` state for a specifically signed deterministic rule; no production rule is currently approved or active.
 
 The required controlled-auto demo remains ONLY as the explicitly configured
 `DEMO-SEED-AUTO` with `DEMO-HTTP-AUTO-1`. All original gates and audit evidence

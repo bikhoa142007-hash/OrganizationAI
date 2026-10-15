@@ -162,7 +162,7 @@ export function AuthenticatedWorkflowDetailPage() {
         <div><dt>KPI kỳ vọng</dt><dd>{plan.payload.kpi_expected || '—'}</dd></div>
         <div><dt>Kênh</dt><dd>{plan.payload.channels.join(', ') || '—'}</dd></div>
         <div><dt>Ghi chú</dt><dd>{plan.payload.notes || '—'}</dd></div>
-      </dl>{Boolean(plan.decision_reason?.trim()) && ['REJECTED', 'PENDING_APPROVAL'].includes(plan.status) && <div className={`auth-workflow-alert ${plan.status === 'REJECTED' ? 'is-error' : 'is-review'}`}><strong>{plan.status === 'REJECTED' ? 'Kết quả xử lý' : 'Trạng thái hồ sơ'}</strong><p>{plan.status === 'REJECTED' ? 'Hồ sơ đã bị từ chối.' : plan.processing_stage === 'HUMAN_REVIEW_REQUIRED' ? 'Hồ sơ đang chờ Checker xem xét.' : 'Hồ sơ đang được xử lý.'}</p>{displayablePlanReason && <p>{displayablePlanReason}</p>}</div>}
+      </dl>{Boolean(plan.decision_reason?.trim()) && ['REJECTED', 'PENDING_APPROVAL'].includes(plan.status) && <div className={`auth-workflow-alert ${plan.status === 'REJECTED' ? 'is-error' : 'is-review'}`}><strong>{plan.status === 'REJECTED' ? 'Kết quả xử lý' : 'Trạng thái hồ sơ'}</strong><p>{plan.processing_stage === 'AI_AUTO_REJECTED' ? 'Hệ thống tự từ chối theo rule đã ký.' : plan.status === 'REJECTED' ? 'Checker đã từ chối hồ sơ.' : plan.processing_stage === 'HUMAN_REVIEW_REQUIRED' ? 'Hồ sơ đang chờ Checker xem xét.' : 'Hồ sơ đang được xử lý.'}</p>{displayablePlanReason && <p>{displayablePlanReason}</p>}</div>}
         <div className="auth-workflow-attachments"><h3>Ảnh đính kèm</h3>{plan.attachments.length ? plan.attachments.map(item => <div key={item.id} className="auth-workflow-attachment">{canViewAttachments && <AuthAttachmentPreview planId={plan.id} attachmentId={item.id} filename={item.filename} />}<span><strong>{item.filename}</strong><small>{item.media_type} · {Math.ceil(item.byte_size / 1024)} KB</small></span></div>) : <p>Chưa có ảnh đính kèm.</p>}</div>
       </section>
       <section className="auth-workflow-card"><div className="auth-workflow-card-heading"><History /><h2>Lịch sử xử lý</h2><span className="auth-workflow-history-count">{history.length} sự kiện</span></div>{history.length === 0 ? <p className="auth-workflow-history-empty">Chưa có sự kiện hoạt động được ghi nhận.</p> : <ol className="auth-workflow-history" aria-label="Sự kiện của kế hoạch">{history.map((event, index) => {
@@ -177,7 +177,7 @@ export function AuthenticatedWorkflowDetailPage() {
           <span className="history-icon">
             {event.action === 'APPROVED' || event.action === 'AI_AUTO_APPROVED'
               ? <Check aria-hidden="true" />
-              : event.action === 'REJECTED' ? <X aria-hidden="true" /> : <Clock3 aria-hidden="true" />}
+              : event.action === 'REJECTED' || event.action === 'AI_AUTO_REJECTED' ? <X aria-hidden="true" /> : <Clock3 aria-hidden="true" />}
           </span>
           <div>
             <strong>{eventLabel(event.action)}</strong>
@@ -472,6 +472,7 @@ function eventLabel(action: string) {
     AI_EVALUATION_COMPLETED: 'Hoàn tất đánh giá AI',
     AI_RECOVERY_REVIEW_ROUTED: 'Chuyển Checker sau khi khôi phục',
     AI_AUTO_APPROVED: 'AI tự động phê duyệt',
+    AI_AUTO_REJECTED: 'Hệ thống tự từ chối theo rule đã ký',
     SLA_WARNING_SENT: 'Đã gửi cảnh báo SLA',
     SLA_OVERDUE_SENT: 'Đã gửi cảnh báo quá hạn SLA',
     CHECKER_REASSIGNED: 'Đổi Checker được giao',
@@ -653,7 +654,7 @@ function workflowStageLabel(status: string) {
     DRAFT: 'Bản nháp', PENDING_APPROVAL: 'Chờ duyệt', APPROVED: 'Đã duyệt', REJECTED: 'Đã từ chối',
     AI_PENDING: 'Đang chờ đánh giá', AI_PROCESSING: 'Đang đánh giá',
     AI_PROCESSING_FAILED: 'Chưa thể hoàn tất đánh giá', HUMAN_REVIEW_REQUIRED: 'Chờ Checker xem xét',
-    AI_AUTO_APPROVED: 'Đã tự động phê duyệt', COMPLETED: 'Hoàn tất',
+    AI_AUTO_APPROVED: 'Đã tự động phê duyệt', AI_AUTO_REJECTED: 'Hệ thống tự từ chối', COMPLETED: 'Hoàn tất',
   } as Record<string, string>)[status] ?? 'Đang xử lý'
 }
 
