@@ -2,13 +2,20 @@
 
 Status: implementation contract for the Challenge A Judge only. The automatic outcomes below apply only to isolated synthetic runs. They do not authorize production auto-approval or deployment.
 
+## Current status (2026-10-15)
+
+- Latest local Judge UI/client commit: `3e94c1b874b4e98eb4b627837faa1a78af2ecb5b`, clean on branch `codex/challenge-a-judge-12539-20261015`, based on D baseline `12539b30eaaf74379508f5a5735ab338d0ea64ed`. No push, merge, or deployment was performed.
+- The frontend understands D's reported completed-case action contract and ephemeral action session. Frontend verification on this commit: 28 files / 199 Vitest tests, typecheck and build passed; browser execution of the action E2E was blocked by the local sandbox's Python/browser/loopback restrictions. This does not verify the server action endpoint.
+- D's action implementation is not yet available at a final committed SHA. D reports a pending Judge-only startup isolation fix because startup still constructs Auth AI/config. Until D supplies a committed SHA and verifies that fix, the new backend isolation is NOT PASS. No deployed Judge URL/SHA exists in this evidence.
+- Current brief status is summarized in “Current acceptance gap map at this checkpoint” below. Earlier acceptance tables are explicitly historical snapshots and must not be presented as current passes.
+
 ## Scope and data boundary
 
 - `POST /api/public/judge/runs` accepts only the server-owned `general` and `escalation` suite names. Case inputs and expected results stay in repository fixtures; the server runs the application workflow before comparing with the fixture oracle.
 - Verify chung runs four cases: three expected automatic outcomes and one human-review case. Verify → Escalation runs five cases: three expected automatic outcomes and two human-review cases. Each case gets a new in-memory workflow/repository and a server-generated run id.
 - `tests/fixtures/ba/v2.1/ground-truth-cases.json` is the 15-case reference catalog. Public requests cannot select individual cases, upload content, provide expected results, or configure policy/provider/model values.
 - The suite runs use the repository's mock fixture provider path. `mode=MOCK` is mandatory evidence labeling; a passing assertion proves the workflow matched its synthetic oracle, not that real inference is accurate.
-- The Judge router has no Auth dependency, actor namespace/header, Auth or shared demo database dependency, persistent result store, history endpoint, stop endpoint, or override endpoint. D mounted it in local candidate SHA `d6fb87c3068a61f127af32403d5ec4a4ad976e78`; this candidate state does not establish deployed/public acceptance.
+- At pre-action candidate SHA `d6fb87c3068a61f127af32403d5ec4a4ad976e78`, the Judge route had no Auth route dependency or persistent result store and had no user-action endpoint. That is historical baseline state: D now reports an in-progress process-local action store and action endpoint. D also found Auth AI/config construction during Judge-only startup and is fixing it; the latest candidate's isolation is not verified yet.
 - No public clock/admin controls or production workflow access are part of this work package. D's candidate preserves the existing CORS allowlist and adds a process-local request/concurrency gate for Judge POSTs only.
 
 The existing `/demo/verify` route remains in Demo mode and continues to call `VerifyService`, including its 15-case regression suite; its `DEMO · MOCK` label disqualifies those runs as public acceptance evidence. D's local integration candidate `d6fb87c3068a61f127af32403d5ec4a4ad976e78` adds `/challenge-a`, which renders `VerifyDashboardPage mode="public"` and calls `publicJudgeService`. This is local candidate wiring, not a deployed public acceptance result.
@@ -17,19 +24,19 @@ The existing `/demo/verify` route remains in Demo mode and continues to call `Ve
 
 - Router prefix is `/api/public/judge` in `src/backend/api/public_judge.py`. D's local candidate SHA `d6fb87c3068a61f127af32403d5ec4a4ad976e78` includes it in `src/backend/api/app.py` and adds the SPA route `/challenge-a` in `frontend/src/routes/AppRoutes.tsx`.
 - `POST /api/public/judge/runs` accepts exactly `{"suite":"general"}` or `{"suite":"escalation"}`. The response contains a generated run id, suite status, `mode=MOCK`, `data_classification=SYNTHETIC`, timestamps/duration, summary, and per-case server expected/actual routes, PASS/FAIL/ERROR, input snapshot, evidence, questions, audit projection, and applied rule ids.
-- `POST /api/public/judge/input-runs` accepts only the strict typed fields in `public_judge_schemas.py` (`title`, `department`, `objective`, `summary`, `target_audience`, `channel`, `currency`, `budget_vnd`, `source_budget_vnd`). It returns `mode=MOCK`, `processing_mode=DETERMINISTIC_INPUT_SIMULATION`, `USER_SUPPLIED_UNVERIFIED`, `NOT_MEASURED`, outcome/category/reason/question, timestamps, run id, and an immediate audit summary with input SHA-256. It persists nothing.
+- `POST /api/public/judge/input-runs` accepts only the strict typed fields in `public_judge_schemas.py` (`title`, `department`, `objective`, `summary`, `target_audience`, `channel`, `currency`, `budget_vnd`, `source_budget_vnd`). It returns `mode=MOCK`, `processing_mode=DETERMINISTIC_INPUT_SIMULATION`, `USER_SUPPLIED_UNVERIFIED`, `NOT_MEASURED`, outcome/category/reason/question, timestamps, run id, and an immediate audit summary with input SHA-256. Raw input is not retained. D reports a separate process-local action session keeps only bounded derived/action audit metadata for up to 15 minutes; it is not durable run history.
 - Request and response schemas reject unknown fields. The router limits bodies to 16 KiB. Proxy/edge enforcement of a body cap has not been evidenced; confirm it before public deployment.
-- The frontend sends `POST` with `Content-Type: application/json`, `credentials: omit`, no actor/auth/idempotency header, and `cache: no-store`. It sends no cookie and the router uses no Auth dependency or actor namespace.
-- Errors follow `{code,message,correlation_id,http_status}`: `VALIDATION_ERROR` 422, `INPUT_TOO_LARGE` 413, `RATE_LIMITED` 429, `UNAVAILABLE` 503. Error responses do not include stack/provider text.
-- D's candidate applies a process-local gate to Judge POSTs: 30 requests per rolling 60 seconds and at most 1 active POST per process. It does not partition by visitor/IP or trust `Forwarded`/`X-Forwarded-For`. Deployment instance/worker count has not been verified in this review and must be confirmed before public acceptance. Additional workers or instances have independent gates and increase aggregate capacity; this is not a distributed deployment-wide limit.
-- The candidate keeps the existing `settings.cors_origins` CORS allowlist; no Auth CORS policy was expanded for Judge. The Judge client sends `POST` JSON with `credentials: omit` and no actor/auth headers. Do not loosen the shared allowlist to make this work.
-- No stop/status/retry/override/admin/clock endpoints exist. Browser timeout means unknown completion, not cancellation.
+- Suite and new-input calls use `POST` with `Content-Type: application/json`, `credentials: omit`, no actor/auth header, and `cache: no-store`; the action call additionally sends a UUID `Idempotency-Key`. The client sends no cookie. This describes client request headers and does not by itself prove server startup isolation.
+- Errors follow `{code,message,correlation_id,http_status}`: baseline run/input errors include `VALIDATION_ERROR` 422, `INPUT_TOO_LARGE` 413, `RATE_LIMITED` 429, and `UNAVAILABLE` 503. D reports action errors `IDEMPOTENCY_KEY_REQUIRED`, `IDEMPOTENCY_KEY_INVALID`, `IDEMPOTENCY_CONFLICT`, `ACTION_ALREADY_FINAL`, `ACTION_SESSION_UNAVAILABLE`, and retryable `JUDGE_CAPACITY_REACHED` 503. Error responses must not include stack/provider text.
+- Pre-action candidate `d6fb87c3068a61f127af32403d5ec4a4ad976e78` applied a process-local gate to Judge POSTs: 30 requests per rolling 60 seconds and at most 1 active POST per process. It did not partition by visitor/IP or trust `Forwarded`/`X-Forwarded-For`. Current candidate topology and aggregate quota are unverified and must be confirmed before public acceptance; additional workers/instances have independent gates, not a distributed deployment-wide limit.
+- In baseline candidate `d6fb87c3068a61f127af32403d5ec4a4ad976e78`, the existing `settings.cors_origins` allowlist was preserved and no Auth CORS policy was expanded for Judge. Do not loosen the shared allowlist to make this work. Current candidate startup isolation and deployment CORS remain unverified until D supplies its committed SHA.
+- There is no dedicated cancellation/status/retry endpoint and no public admin/clock endpoint. D reports one action endpoint for a terminal APPROVE/REJECT/STOP on a completed result, with same-key replay. STOP is post-result only; a browser timeout means unknown completion, not cancellation.
 
 ## New-input simulation policy
 
-Policy identifier: `JUDGE-INPUT-SIMULATION-1.0`. This deterministic simulation accepts a small allowlist of text and numeric fields. It is not submitted as a marketing plan and it does not invoke VLM or strategy inference. The department, channel, currency, and budget values below are synthetic Judge-only simulation assumptions explicitly approved by the user on 2026-10-14 for this test scope only. This is not PO sign-off, company policy, or production auto-approval. The endpoint is mounted only in D's local candidate; do not claim deployed/public acceptance or production auto-approval.
+Policy identifier: `JUDGE-INPUT-SIMULATION-1.0`. This deterministic simulation accepts a small allowlist of text and numeric fields. It is not submitted as a marketing plan and it does not invoke VLM or strategy inference. The department, channel, currency, and budget values below are synthetic Judge-only simulation assumptions approved by the user on 2026-10-14 and reconfirmed on 2026-10-15 for this test scope only. This is not PO sign-off, company policy, or production auto-approval. Do not claim deployed/public acceptance or production auto-approval.
 
-All submitted fields remain `USER_SUPPLIED_UNVERIFIED`; `quality_status` is always `NOT_MEASURED`. The response contains only an outcome, reason, contextual handoff question where needed, timestamp, input SHA-256, and an in-memory audit summary. The body, result, and provider output are not saved or logged. Do not enter confidential or personal data.
+All submitted fields remain `USER_SUPPLIED_UNVERIFIED`; `quality_status` is always `NOT_MEASURED`. The input response contains an outcome, reason, contextual handoff question where needed, timestamp, input SHA-256, and an in-memory audit summary. Raw body and provider output are not retained or logged. For D's reported action contract, bounded derived recommendation/reason, input hash, action audit metadata and one final action/response are held in a process-local session for at most 15 minutes; restart, expiry, or another instance can lose it. This is not durable audit/history. Do not enter confidential or personal data.
 
 Rules run in this order:
 
@@ -42,9 +49,9 @@ The request body is limited to 16 KiB. Unknown fields, including fixture/oracle/
 
 ## Audit, timeout, and intervention behavior
 
-- Fixed suites return each real in-memory run's action, timestamp, input hash, reason, expected/actual route, pass/fail, evidence references, and escalation question. The suite does not retain a server-side run record.
-- New-input evaluation returns an `INPUT_EVALUATED` audit summary with completion timestamp, SHA-256 of canonical typed input, and reason. That summary is delivered in the immediate response only; no persistent audit/history exists for this public input path because the approved data contract forbids retention.
-- The Challenge A acceptance criterion requires intervention, stop, and override behavior to follow the contract and forbids claiming that irreversible effects were undone. This public Judge contract supports escalation only as a handoff recommendation; it does not expose a human decision, stop, status, retry, or override endpoint. A browser timeout or disconnect means unknown completion, not cancellation. The Judge simulation has no production side effects, and this route cannot claim cancellation, reversal, or Checker override. The authenticated product Checker workflow is separate and is not reachable through this public Judge route.
+- Fixed suites return each in-memory run's action, timestamp, input hash, reason, expected/actual route, pass/fail, evidence references, and escalation question. D's reported follow-up stores only bounded derived/action metadata in a process-local action session for up to 15 minutes; it does not keep raw input or durable run history.
+- New-input evaluation returns an `INPUT_EVALUATED` audit summary with completion timestamp, SHA-256 of canonical typed input, and reason. The raw request body is not retained. The follow-up action and projected audit metadata are temporary and can be lost on expiry/restart/instance change; no durable audit/history exists for this public Judge path.
+- The Challenge A acceptance criterion requires intervention, stop, and override behavior to follow the contract and forbids claiming that irreversible effects were undone. D reports a completed-result action endpoint with APPROVE/REJECT/STOP and idempotent replay; the frontend labels it as a simulated action by an anonymous public Judge, not a logged-in Checker. STOP is not cancellation and does not undo effects. A browser timeout or disconnect means unknown completion. The authenticated product Checker workflow is separate and is not reachable through this public Judge route.
 - Standard public errors use `{code, message, correlation_id, http_status}` and do not include stack traces, submitted field values, or provider text.
 
 ## Local verification
@@ -70,7 +77,7 @@ For local candidate acceptance on D's mounted `/challenge-a`, use a disposable e
 2. Confirm the first instruction is one sentence and the first action runs general Verify once.
 3. Confirm general has 4 timestamped results and escalation has 5; compare actual vs server expected. Confirm escalation has 3 automatic and 2 human-review outcomes with case-specific questions.
 4. Enter new allowed values, then vary source budget, department/channel/currency, and budget limit. Confirm `FACT_UNCERTAIN`, `POLICY_OUT_OF_SCOPE`, and `AUTHORITY_EXCEEDED` each arise from entered values, with `USER_SUPPLIED_UNVERIFIED`, `MOCK`, and `NOT_MEASURED` labels.
-5. Confirm no Auth cookie/header is sent, request bodies are never retained, no stop/admin/clock route is exposed, and no production data is reachable.
+5. Confirm suite/input calls send no Auth cookie/header; the action call sends only the required idempotency key besides JSON content type. Confirm raw request bodies are not retained, derived action state is temporary, no admin/clock route is exposed, and the Judge cannot reach Auth or production data. The STOP action is post-result only, not cancellation.
 6. If the browser request times out, report outcome unknown. Do not report that server work stopped or was undone.
 
 
@@ -113,6 +120,8 @@ Do not perform public acceptance on a deployment until D supplies the deployed S
 
 ## Challenge A brief acceptance gaps (local source 9c7f541; 2026-10-15)
 
+Historical snapshot only: every status in this table describes source `9c7f541`, before the later 12539 UI work and D-reported action endpoint. Use the current checkpoint/gap map below for present status.
+
 | Brief criterion | Evidence at this source | Status / remaining gap |
 | --- | --- | --- |
 | Public entry without account; first instruction is actionable | Local `/challenge-a` browser run; page text and first instruction asserted; request had no Authorization or Cookie header | Local functional PASS. A deployed public URL/SHA has not been supplied. |
@@ -146,6 +155,8 @@ The screenshot verifies functional behavior but also records the unresolved form
 - The immediate input response contains an audit summary and hash but no durable audit/history; retention needs a separately approved data contract.
 
 ## D baseline 12539 follow-up: Judge UI and acceptance audit (2026-10-15)
+
+This section records the **pre-action** 12539 integration snapshot. Its “no human-action endpoint” gap statements are historical and are superseded by the later “Judge action contract checkpoint” section. They remain here only to preserve what the earlier source actually implemented and verified.
 
 - D supplied integration baseline `12539b30eaaf74379508f5a5735ab338d0ea64ed`. Judge's local code commit is `2e6ce52a7742a16b0f260ed640d233a3f28ee961`, directly based on that SHA. It is not deployed. Only `VerifyDashboardPage.tsx`, its page-local CSS, and a responsive Playwright spec changed in the code commit.
 - The UI fix replaces generic form classes with Judge-scoped classes; the new page-local CSS lays out fields in two columns on desktop and one column at widths up to 680 px, constrains controls to their field, and gives keyboard focus a visible outline. The regression spec checks field containment, label/control order, overlap, and horizontal overflow at 320, 768, 1024, and 1440 px.
