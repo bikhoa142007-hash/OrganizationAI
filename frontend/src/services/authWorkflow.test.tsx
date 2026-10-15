@@ -163,20 +163,23 @@ it('distinguishes an expired session from an authenticated authorization denial'
   window.removeEventListener('organizationai:access-denied', denied)
 })
 
-it('reads the current Checker list and request detail from the existing API routes', async () => {
+it('reads department-aware Checker options and request detail from the existing API routes', async () => {
   const fetchMock = vi.fn()
     .mockResolvedValueOnce(new Response('[{"id":"checker-1","display_name":"Checker One"}]', { status: 200 }))
     .mockResolvedValueOnce(new Response('{"id":"plan-1","code":"MKT-1"}', { status: 200 }))
+    .mockResolvedValueOnce(new Response('[]', { status: 200 }))
   vi.stubGlobal('fetch', fetchMock)
-  await expect(authWorkflowService.listCheckers()).resolves.toEqual([{ id: 'checker-1', display_name: 'Checker One' }])
+  await expect(authWorkflowService.listCheckers('Marketing')).resolves.toEqual([{ id: 'checker-1', display_name: 'Checker One' }])
   await expect(authWorkflowService.getPlan('plan/one')).resolves.toMatchObject({ id: 'plan-1' })
+  await expect(authWorkflowService.listCheckers(' Marketing ')).resolves.toEqual([])
 
   expect(fetchMock.mock.calls.map(([url, options]) => [
     apiPath(url as string), (options as RequestInit).method,
     (options as RequestInit).credentials,
   ])).toEqual([
-    ['/workflow/checkers', 'GET', 'include'],
+    ['/workflow/checkers?department=Marketing', 'GET', 'include'],
     ['/workflow/plans/plan%2Fone', 'GET', 'include'],
+    ['/workflow/checkers?department=+Marketing+', 'GET', 'include'],
   ])
 })
 

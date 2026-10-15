@@ -22,7 +22,10 @@ from src.backend.application.approval_configuration import (
     get_round_configuration_snapshot,
     lock_configuration_registry,
 )
-from src.backend.application.checker_assignment_configuration import resolve_checker_assignment
+from src.backend.application.checker_assignment_configuration import (
+    list_effective_checker_options,
+    resolve_checker_assignment,
+)
 from src.backend.application.role_admin import effective_role_filter
 from src.backend.db.models import (
     AuthWorkflowAttachment,
@@ -517,8 +520,24 @@ def _plan_dict(session: Session, plan: AuthWorkflowPlan) -> dict[str, Any]:
     }
 
 
-def list_checkers(session: Session, principal: AuthenticatedPrincipal, correlation_id: str):
+def list_checkers(
+    session: Session,
+    principal: AuthenticatedPrincipal,
+    correlation_id: str,
+    department_id: str | None = None,
+):
     _require_role(principal, "MAKER", correlation_id)
+    if department_id is not None:
+        users = list_effective_checker_options(
+            session,
+            department_id,
+            principal.id,
+            _now_datetime(),
+        )
+        return [{"id": str(user.id), "display_name": user.display_name} for user in users]
+
+    # Preserve the legacy unfiltered response for existing clients. The Maker
+    # form supplies a department and uses the effective-assignment-filtered path.
     users = session.scalars(
         select(User)
         .where(

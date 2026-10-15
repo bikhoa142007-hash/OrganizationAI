@@ -43,6 +43,7 @@ export function AuthenticatedWorkflowFormPage() {
   const [file, setFile] = useState<File | null>(null)
   const [fileValidationPending, setFileValidationPending] = useState(false)
   const fileValidationRequest = useRef(0)
+  const checkerRequestId = useRef(0)
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
   const [planError, setPlanError] = useState<AuthApiError | null>(null)
   const [apiError, setApiError] = useState<AuthApiError | null>(null)
@@ -69,19 +70,37 @@ export function AuthenticatedWorkflowFormPage() {
     setSearchParams(next, { replace: true })
   }
 
-  const loadCheckers = useCallback(async () => {
-    setCheckersLoading(true)
+  const loadCheckers = useCallback(async (department: string) => {
+    const requestId = ++checkerRequestId.current
+    const hasDepartment = Boolean(department.trim())
     setCheckerError(null)
+    if (!hasDepartment) {
+      setCheckers([])
+      setCheckerId('')
+      setCheckersLoading(false)
+      return
+    }
+
+    setCheckersLoading(true)
     try {
-      setCheckers(await authWorkflowService.listCheckers())
+      const options = await authWorkflowService.listCheckers(department)
+      if (requestId !== checkerRequestId.current) return
+      setCheckers(options)
+      setCheckerId(current => options.some(checker => checker.id === current)
+        ? current : options[0]?.id ?? '')
     } catch (reason) {
+      if (requestId !== checkerRequestId.current) return
+      setCheckers([])
       setCheckerError(asApiError(reason, 'Không thể tải danh sách Checker.'))
     } finally {
-      setCheckersLoading(false)
+      if (requestId === checkerRequestId.current) setCheckersLoading(false)
     }
   }, [])
 
-  useEffect(() => { void loadCheckers() }, [loadCheckers])
+  useEffect(() => {
+    void loadCheckers(payload.department)
+    return () => { checkerRequestId.current += 1 }
+  }, [loadCheckers, payload.department])
 
   useEffect(() => {
     let active = true
@@ -133,6 +152,11 @@ export function AuthenticatedWorkflowFormPage() {
     setFieldErrors(current => ({ ...current, checker_user_id: undefined }))
     setApiError(null)
     setNotice('')
+  }
+
+  function updateDepartment(value: string) {
+    if (value !== payload.department) setCheckerId('')
+    update('department', value)
   }
 
   async function selectFile(nextFile: File | null) {
@@ -222,6 +246,10 @@ export function AuthenticatedWorkflowFormPage() {
       const failure = asApiError(reason, 'Không thể hoàn tất thao tác với kế hoạch.')
       setApiError(failure)
       setFailedAction(currentAction)
+      if (failure.code === 'VALIDATION_ERROR'
+        && failure.message === 'The selected Checker is not allowed by the effective department assignment.') {
+        void loadCheckers(payload.department)
+      }
       setRevisionConflict(failure.code === 'CONFLICT')
       const intentConflict = !currentPlan && currentAction === 'saving' && failure.code === 'IDEMPOTENCY_CONFLICT'
       setCreationIntentConflict(intentConflict)
@@ -318,14 +346,20 @@ export function AuthenticatedWorkflowFormPage() {
               {checkers.map(checker => <option key={checker.id} value={checker.id}>{checker.display_name}</option>)}
             </select>
             {fieldErrors.checker_user_id ? <span className="auth-field-error" id="workflow-checker-error">{fieldErrors.checker_user_id}</span>
-              : <small id="workflow-checker-help">{checkersLoading ? 'Đang tải danh sách Checker…' : 'Danh sách lấy từ tài khoản Checker đang hoạt động.'}</small>}
+              : <small id="workflow-checker-help">{checkersLoading
+                ? 'Đang tải Checker được phân công cho bộ phận…'
+                : !payload.department.trim()
+                  ? 'Nhập bộ phận để xem Checker được phân công.'
+                  : checkers.length === 0
+                    ? 'Chưa có Checker hiệu lực cho bộ phận này. Hãy liên hệ Admin; bạn vẫn có thể lưu bản nháp.'
+                    : 'Danh sách chỉ hiển thị Checker được phép theo phân công hiệu lực của bộ phận.'}</small>}
           </label>
           <label className="auth-field" htmlFor="workflow-objective">Mục tiêu
             <input id="workflow-objective" maxLength={2000} value={payload.objective} aria-invalid={Boolean(fieldErrors.objective)} aria-describedby={fieldErrors.objective ? 'workflow-objective-error' : undefined} onChange={event => update('objective', event.target.value)} />
             {fieldErrors.objective && <span className="auth-field-error" id="workflow-objective-error">{fieldErrors.objective}</span>}
           </label>
           <label className="auth-field" htmlFor="workflow-department">Bộ phận
-            <input id="workflow-department" maxLength={160} value={payload.department} aria-invalid={Boolean(fieldErrors.department)} aria-describedby={fieldErrors.department ? 'workflow-department-error' : undefined} onChange={event => update('department', event.target.value)} />
+            <input id="workflow-department" maxLength={160} value={payload.department} aria-invalid={Boolean(fieldErrors.department)} aria-describedby={fieldErrors.department ? 'workflow-department-error' : undefined} onChange={event => updateDepartment(event.target.value)} />
             {fieldErrors.department && <span className="auth-field-error" id="workflow-department-error">{fieldErrors.department}</span>}
           </label>
           <label className="auth-field" htmlFor="workflow-start-date">Ngày bắt đầu
@@ -378,8 +412,8 @@ export function AuthenticatedWorkflowFormPage() {
         {!file && !plan?.attachments.length && <p className="auth-workflow-form-hint">Chưa có ảnh tải lên. Gửi duyệt yêu cầu ít nhất một ảnh.</p>}
       </fieldset>
 
-      {checkerError && <div className="auth-workflow-alert is-error" role="alert"><div><strong>Không tải được danh sách Checker</strong><p>{apiFailureText(checkerError, 'loading')}</p></div><button className="button button-secondary" type="button" onClick={() => void loadCheckers()} disabled={checkersLoading}>Thử lại</button></div>}
-      {!checkersLoading && !checkerError && checkers.length === 0 && <div className="auth-workflow-alert is-review" role="status"><p>Hiện chưa có Checker khả dụng. Bạn vẫn có thể lưu bản nháp; chưa thể gửi duyệt.</p></div>}
+      {checkerError && <div className="auth-workflow-alert is-error" role="alert"><div><strong>Không tải được danh sách Checker</strong><p>{apiFailureText(checkerError, 'loading')}</p></div><button className="button button-secondary" type="button" onClick={() => void loadCheckers(payload.department)} disabled={checkersLoading}>Thử lại</button></div>}
+      {!checkersLoading && !checkerError && checkers.length === 0 && payload.department.trim() && <div className="auth-workflow-alert is-review" role="status"><p>Chưa có Checker hiệu lực cho bộ phận này. Bạn vẫn có thể lưu bản nháp; chưa thể gửi duyệt.</p></div>}
       {fileValidationPending && <p className="auth-workflow-operation" role="status" aria-live="polite">Đang kiểm tra kích thước ảnh…</p>}
       {busyAction && <p className="auth-workflow-operation" role="status" aria-live="polite">{operationLabel(busyAction)}</p>}
       <div className="auth-workflow-form-footer"><p>Sau khi gửi, bạn có thể xem trạng thái đánh giá trong hồ sơ. Tiến độ sẽ được cập nhật khi có kết quả.</p><div className="button-row">
@@ -458,6 +492,10 @@ function apiFailureHeading(error: AuthApiError | null, action: WorkflowAction) {
 
 function apiFailureText(error: AuthApiError | null, action: WorkflowAction) {
   if (error?.code === 'IDEMPOTENCY_CONFLICT') return 'Hệ thống không tạo thêm bản nháp. Hãy kiểm tra danh sách hoặc mở một biểu mẫu mới để tiếp tục.'
+  if (error?.code === 'VALIDATION_ERROR'
+    && error.message === 'The selected Checker is not allowed by the effective department assignment.') {
+    return 'Checker đã chọn không thuộc phân công hiệu lực của bộ phận. Hãy chọn Checker trong danh sách của bộ phận hoặc kiểm tra lại bộ phận.'
+  }
   if (error?.status === 404) return 'Kế hoạch không còn tồn tại hoặc không thuộc phạm vi tài khoản hiện tại.'
   if (error?.status === 409 || error?.code === 'CONFLICT') return 'Kế hoạch đã thay đổi trên hệ thống. Các giá trị bạn đang nhập vẫn được giữ; hãy tải lại trạng thái trước khi lưu lại.'
   if (error?.status === 422 || error?.code === 'VALIDATION_ERROR') return 'Thông tin chưa hợp lệ hoặc chưa đầy đủ. Hãy kiểm tra các trường trong biểu mẫu rồi thử lại.'
