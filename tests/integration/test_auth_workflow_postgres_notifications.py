@@ -19,7 +19,7 @@ from uuid import UUID, uuid4
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, select
+from sqlalchemy import create_engine, func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, sessionmaker
 from scripts.postgres_test_target import verify_runner_provisioned_database
@@ -36,11 +36,13 @@ from src.backend.db.models import (
     AuthWorkflowDecision,
     AuthWorkflowEngineDecision,
     AuthWorkflowEvaluationRun,
+    AuthWorkflowEvent,
     AuthWorkflowNotification,
     AuthWorkflowPlan,
     AuthWorkflowRoundConfigurationSnapshot,
     EmployeeProfile,
     Role,
+    RolePermission,
     User,
     UserRole,
 )
@@ -84,6 +86,49 @@ def _create_user(factory: sessionmaker[Session], username: str, role_code: str, 
         )
         session.add(user)
         session.flush()
+        session.add(UserRole(user_id=user.id, role_id=role.id))
+        session.add(EmployeeProfile(
+            id=user.id,
+            user_code=user.user_code,
+            display_name=user.display_name,
+            email=user.email,
+            phone=user.phone,
+            user_id=user.id,
+        ))
+        session.flush()
+        session.expunge(user)
+    return user
+
+
+def _create_partial_permission_user(
+    factory: sessionmaker[Session],
+    username: str,
+    role_code: str,
+    permissions: tuple[str, ...],
+    password: str,
+) -> User:
+    with factory.begin() as session:
+        role = Role(
+            id=uuid4(), code=role_code, name=role_code,
+            description="Synthetic partial permission role.",
+            is_builtin=False, status="ACTIVE",
+        )
+        user = User(
+            id=uuid4(),
+            user_code=f"PG-{uuid4().hex[:12].upper()}",
+            username=username,
+            email=f"{username}@example.invalid",
+            phone=None,
+            password_hash=hash_password(password),
+            display_name=username,
+            status="ACTIVE",
+        )
+        session.add_all((role, user))
+        session.flush()
+        session.add_all(
+            RolePermission(role_id=role.id, permission_code=permission)
+            for permission in permissions
+        )
         session.add(UserRole(user_id=user.id, role_id=role.id))
         session.add(EmployeeProfile(
             id=user.id,
@@ -307,6 +352,27 @@ def postgres_workflow(monkeypatch):
     for client, user in zip(clients, (maker, checker, next_checker, outsider)):
         _login(client, user.username, password)
     try:
+        assignment_admin = _create_user(factory, f"pg_admin_assignment_{suffix}", "ADMIN", password)
+        assignment_admin_client = TestClient(app, raise_server_exceptions=False)
+        try:
+            _login(assignment_admin_client, assignment_admin.username, password)
+            assignment_history = assignment_admin_client.get(
+                "/api/workflow/configuration/checker_assignment/history"
+            )
+            assert assignment_history.status_code == 200, assignment_history.text
+            assignment_items = assignment_history.json()["items"]
+            expected_assignment_revision = assignment_items[0]["revision"] if assignment_items else None
+            _create_configuration_revision(
+                assignment_admin_client,
+                "checker_assignment",
+                {
+                    "maker_may_select_other": True,
+                    "defaults": [{"department": "marketing", "checker_id": str(checker.id)}],
+                },
+                expected_revision=expected_assignment_revision,
+            )
+        finally:
+            assignment_admin_client.close()
         yield {
             "app": app,
             "default_configuration": default_configuration,
@@ -324,6 +390,88 @@ def postgres_workflow(monkeypatch):
         for client in clients:
             client.close()
         engine.dispose()
+
+
+def _assert_partial_custom_roles_do_not_grant_workflow_scope(state, pending_plan_id: str) -> None:
+    factory = state["factory"]
+    app = state["app"]
+    suffix = uuid4().hex[:10]
+    partial_maker_permissions = (
+        "MARKETING_PLAN_READ", "MARKETING_HISTORY_READ", "MARKETING_PLAN_EDIT_OWN",
+    )
+    partial_checker_permissions = (
+        "MARKETING_PLAN_READ", "MARKETING_HISTORY_READ",
+        "MARKETING_REVIEW_ASSIGNED", "MARKETING_APPROVE",
+    )
+    partial_maker_role = f"CUSTOM_PARTIAL_MAKER_{suffix.upper()}"
+    partial_checker_role = f"CUSTOM_PARTIAL_CHECKER_{suffix.upper()}"
+    password = os.environ["AUTH_SEED_PASSWORD"]
+    partial_maker = _create_partial_permission_user(
+        factory, f"pg_partial_maker_{suffix}", partial_maker_role,
+        partial_maker_permissions, password,
+    )
+    partial_checker = _create_partial_permission_user(
+        factory, f"pg_partial_checker_{suffix}", partial_checker_role,
+        partial_checker_permissions, password,
+    )
+    partial_maker_client = TestClient(app, raise_server_exceptions=False)
+    partial_checker_client = TestClient(app, raise_server_exceptions=False)
+    original_checker_id = None
+    try:
+        _login(partial_maker_client, partial_maker.username, password)
+        _login(partial_checker_client, partial_checker.username, password)
+
+        maker_identity = partial_maker_client.get("/api/auth/me").json()["user"]
+        assert set(maker_identity["effective_permissions"]) == set(partial_maker_permissions)
+        assert partial_maker_role in maker_identity["roles"]
+        assert "MAKER" not in maker_identity["roles"]
+
+        checker_identity = partial_checker_client.get("/api/auth/me").json()["user"]
+        assert set(checker_identity["effective_permissions"]) == set(partial_checker_permissions)
+        assert partial_checker_role in checker_identity["roles"]
+        assert "CHECKER" not in checker_identity["roles"]
+
+        editable_draft = _create_plan(
+            state["maker_client"], state["checker"].id, "Partial Maker row-scope fixture",
+        )
+        with factory.begin() as session:
+            draft_row = session.get(AuthWorkflowPlan, UUID(editable_draft["id"]))
+            pending_row = session.get(AuthWorkflowPlan, UUID(pending_plan_id))
+            assert draft_row is not None and draft_row.status == "DRAFT"
+            assert pending_row is not None and pending_row.status == "PENDING_APPROVAL"
+            draft_row.maker_id = partial_maker.id
+            original_checker_id = pending_row.checker_id
+            pending_row.checker_id = partial_checker.id
+
+        maker_list = partial_maker_client.get("/api/workflow/plans")
+        maker_detail = partial_maker_client.get(f"/api/workflow/plans/{editable_draft['id']}")
+        maker_update = partial_maker_client.put(
+            f"/api/workflow/plans/{editable_draft['id']}",
+            json={"expected_revision": editable_draft["revision"], "payload": editable_draft["payload"]},
+        )
+        assert maker_list.status_code == 403, maker_list.text
+        assert maker_detail.status_code == 403, maker_detail.text
+        assert maker_update.status_code == 403, maker_update.text
+
+        checker_list = partial_checker_client.get("/api/workflow/plans")
+        checker_reviews = partial_checker_client.get("/api/workflow/reviews")
+        checker_detail = partial_checker_client.get(f"/api/workflow/plans/{pending_plan_id}")
+        checker_decision = partial_checker_client.post(
+            f"/api/workflow/plans/{pending_plan_id}/rounds/1/decision",
+            json={"action": "APPROVED", "override_reason": "Synthetic role-scope regression."},
+        )
+        assert checker_list.status_code == 403, checker_list.text
+        assert checker_reviews.status_code == 403, checker_reviews.text
+        assert checker_detail.status_code == 403, checker_detail.text
+        assert checker_decision.status_code == 403, checker_decision.text
+    finally:
+        if original_checker_id is not None:
+            with factory.begin() as session:
+                pending_row = session.get(AuthWorkflowPlan, UUID(pending_plan_id))
+                if pending_row is not None:
+                    pending_row.checker_id = original_checker_id
+        partial_maker_client.close()
+        partial_checker_client.close()
 
 
 def test_postgres_retry_race_reuses_the_round_snapshot(postgres_workflow):
@@ -498,13 +646,463 @@ def test_postgres_retry_race_reuses_the_round_snapshot(postgres_workflow):
             AuthWorkflowEngineDecision.plan_id == plan_id,
             AuthWorkflowEngineDecision.round_number == 1,
         )).all()
+        retry_request_events = session.scalars(select(AuthWorkflowEvent).where(
+            AuthWorkflowEvent.plan_id == plan_id,
+            AuthWorkflowEvent.action == "AI_EVALUATION_RETRY_REQUESTED",
+        )).all()
         assert len(runs) == 2
         assert [run.attempt_number for run in runs] == [1, 2]
+        assert len(retry_request_events) == 1
+        retry_request_event = retry_request_events[0]
+        assert retry_request_event.actor_type == "HUMAN"
+        assert retry_request_event.actor_id == checker.id
+        assert retry_request_event.status_before == retry_request_event.status_after == "PENDING_APPROVAL"
+        assert retry_request_event.created_at is not None
+        assert retry_request_event.details["result"] == "RETRY_ACCEPTED"
+        assert retry_request_event.details["version"] == failed["current_version"] == 1
+        assert retry_request_event.details["round"] == retry_request_event.details["approval_round"] == 1
+        assert retry_request_event.details["attempt_number"] == runs[1].attempt_number == 2
+        assert retry_request_event.details["run_id"] == runs[1].run_id
+        assert retry_request_event.details["retry_parent_run_id"] == str(runs[0].id)
+        assert retry_request_event.details["failure_codes"] == ["PROVIDER_ERROR"]
         assert runs[1].policy_snapshot == frozen_policy
         assert runs[1].policy_snapshot_hash == frozen_policy_hash
         assert round_snapshot.snapshot_hash == frozen_round_hash
         assert len(decisions) == 2
         assert sum(decision.outcome == "AUTO_APPROVED" for decision in decisions) <= 1
+
+
+@pytest.mark.parametrize(
+    (
+        "stale_after_claim",
+        "expected_disposition",
+        "expected_result",
+        "expected_status",
+        "expected_stage",
+    ),
+    [
+        (False, "APPLIED", "HUMAN_REVIEW_REQUIRED", "PENDING_APPROVAL", "HUMAN_REVIEW_REQUIRED"),
+        (True, "STALE", "IGNORED_STALE", "APPROVED", "COMPLETED"),
+    ],
+)
+def test_postgres_retry_evaluator_failure_audit_persists_disposition_and_round(
+    postgres_workflow,
+    monkeypatch,
+    stale_after_claim,
+    expected_disposition,
+    expected_result,
+    expected_status,
+    expected_stage,
+):
+    state = postgres_workflow
+    app = state["app"]
+    factory = state["factory"]
+    checker = state["checker"]
+    checker_client = state["checker_client"]
+    media_settings = _task_settings("MEDIA_COMPLIANCE")
+    strategy_settings = _task_settings("STRATEGY_EVALUATION")
+    configuration = _auto_approval_configuration(checker.id)
+    app.state.auth_workflow_configuration = replace(
+        configuration,
+        policy=replace(configuration.policy, auto_approval_policy_enabled=False),
+        media_model_snapshot=media_settings.public_snapshot(),
+        strategy_model_snapshot=strategy_settings.public_snapshot(),
+    )
+    app.state.auth_workflow_provider = AuthenticatedMockVLMProvider("pass", model_version="mock-1")
+
+    admin = _create_user(
+        factory, f"pg_admin_retry_failure_{uuid4().hex[:10]}", "ADMIN", os.environ["AUTH_SEED_PASSWORD"],
+    )
+    admin_client = TestClient(app, raise_server_exceptions=False)
+    _login(admin_client, admin.username, os.environ["AUTH_SEED_PASSWORD"])
+
+    def create_current_revision(kind, value):
+        history = admin_client.get(
+            f"/api/workflow/configuration/{kind}/history?offset=0&limit=1"
+        )
+        assert history.status_code == 200, history.text
+        revisions = history.json()["items"]
+        expected_revision = revisions[0]["revision"] if revisions else None
+        return _create_configuration_revision(
+            admin_client, kind, value, expected_revision=expected_revision,
+        )
+
+    try:
+        create_current_revision("approval_policy", {
+            "enabled": False,
+            "media_confidence_threshold": 0.85,
+            "feasibility_score_threshold_exclusive": 70,
+            "feasibility_confidence_threshold": 0.8,
+        })
+        retry_rubric = {
+            "rubric_id": "SYNTHETIC-POSTGRES-STRATEGY",
+            "rubric_version": "retry-failure-r1",
+            "status": "ACTIVE",
+            "criteria": [{"criterion_id": key, "label": label, "weight": weight}
+                         for key, label, weight in STRATEGY_CRITERIA],
+        }
+        create_current_revision("strategy_rubric", retry_rubric)
+    finally:
+        admin_client.close()
+
+    class FailingMediaProvider(_SyntheticTaskProvider):
+        def evaluate(self, request):
+            raise ProviderError("private synthetic provider response")
+
+    app.state.auth_workflow_media_provider = FailingMediaProvider("MEDIA_COMPLIANCE")
+    app.state.auth_workflow_strategy_provider = _SyntheticTaskProvider("STRATEGY_EVALUATION")
+    plan = _create_plan(state["maker_client"], checker.id, "PostgreSQL retry failure audit")
+    submitted = _upload_and_submit(state["maker_client"], plan)
+    assert submitted["processing_stage"] == "HUMAN_REVIEW_REQUIRED"
+    assert submitted["ai_evaluations"][0]["failure_reason"] == "PROVIDER_ERROR"
+
+    plan_id = UUID(plan["id"])
+    with factory() as session:
+        first_run = session.scalar(
+            select(AuthWorkflowEvaluationRun)
+            .where(
+                AuthWorkflowEvaluationRun.plan_id == plan_id,
+                AuthWorkflowEvaluationRun.attempt_number == 1,
+            )
+        )
+        assert first_run is not None
+        agent_errors = first_run.evaluation.get("agent_errors", []) if isinstance(first_run.evaluation, dict) else []
+        agent_error_codes = sorted({
+            item["code"]
+            for item in agent_errors
+            if isinstance(item, dict) and isinstance(item.get("code"), str)
+        })
+        retry_eligibility_diagnostic = {
+            "status": first_run.status,
+            "result_disposition": first_run.result_disposition,
+            "failure_reason": first_run.failure_reason,
+            "agent_error_codes": agent_error_codes,
+        }
+        assert first_run.status in {"FAILED", "TIMED_OUT"}, retry_eligibility_diagnostic
+        assert first_run.result_disposition == "APPLIED", retry_eligibility_diagnostic
+        assert first_run.failure_reason == "PROVIDER_ERROR", retry_eligibility_diagnostic
+        assert agent_error_codes == ["PROVIDER_ERROR"], retry_eligibility_diagnostic
+
+    def fail_retry_evaluator(_session, _plan_id, _run_id, _orchestrator, _correlation_id):
+        if stale_after_claim:
+            with factory.begin() as concurrent_session:
+                concurrent_plan = concurrent_session.scalar(
+                    select(AuthWorkflowPlan)
+                    .where(AuthWorkflowPlan.id == plan_id)
+                    .with_for_update()
+                )
+                assert concurrent_plan is not None
+                concurrent_plan.status = "APPROVED"
+                concurrent_plan.processing_stage = "COMPLETED"
+                concurrent_plan.revision += 1
+                concurrent_session.add(AuthWorkflowDecision(
+                    plan_id=plan_id,
+                    round_number=1,
+                    checker_id=checker.id,
+                    action="APPROVED",
+                    reason="Synthetic concurrent decision for stale-result coverage.",
+                ))
+        raise RuntimeError("private retry evaluator response")
+
+    monkeypatch.setattr(workflow, "evaluate_run_by_id", fail_retry_evaluator)
+    retry_key = f"pg-retry-failure-{uuid4().hex}"
+    response = checker_client.post(
+        f"/api/workflow/plans/{plan_id}/rounds/1/evaluation-retries",
+        json={
+            "expected_plan_version": submitted["current_version"],
+            "expected_round_revision": submitted["revision"],
+        },
+        headers={"Idempotency-Key": retry_key},
+    )
+    assert response.status_code == 200, response.text
+    assert response.json()["result_disposition"] == expected_disposition
+    assert response.json()["approval_round"] == 1
+    assert response.json()["run_status"] == "FAILED"
+
+    with factory() as session:
+        failed_run = session.scalar(
+            select(AuthWorkflowEvaluationRun)
+            .where(
+                AuthWorkflowEvaluationRun.plan_id == plan_id,
+                AuthWorkflowEvaluationRun.attempt_number == 2,
+            )
+        )
+        assert failed_run is not None
+        assert failed_run.status == "FAILED"
+        assert failed_run.result_disposition == expected_disposition
+        assert failed_run.version_number == 1
+        assert failed_run.round_number == 1
+
+        failure_events = session.scalars(
+            select(AuthWorkflowEvent)
+            .where(
+                AuthWorkflowEvent.plan_id == plan_id,
+                AuthWorkflowEvent.action == "AI_EVALUATION_RETRY_FAILED",
+            )
+        ).all()
+        assert len(failure_events) == 1
+        failure_event = failure_events[0]
+        assert failure_event.actor_type == "SYSTEM"
+        assert failure_event.actor_id is None
+        assert failure_event.status_before == failure_event.status_after == expected_status
+        assert failure_event.details["result"] == expected_result
+        assert failure_event.details["round"] == 1
+        assert failure_event.details["approval_round"] == 1
+        assert failure_event.details["version"] == 1
+        assert failure_event.details["attempt_number"] == 2
+        assert failure_event.details["failure_code"] == "RETRY_EVALUATOR_ERROR"
+        assert failure_event.details["result_disposition"] == expected_disposition
+        assert failure_event.details["processing_stage_before"] == expected_stage
+        assert failure_event.details["processing_stage_after"] == expected_stage
+        assert "private retry evaluator response" not in json.dumps(failure_event.details)
+
+    replay = checker_client.post(
+        f"/api/workflow/plans/{plan_id}/rounds/1/evaluation-retries",
+        json={
+            "expected_plan_version": submitted["current_version"],
+            "expected_round_revision": submitted["revision"],
+        },
+        headers={"Idempotency-Key": retry_key},
+    )
+    assert replay.status_code == 200, replay.text
+    assert replay.json() == response.json()
+    with factory() as session:
+        assert session.scalar(
+            select(func.count(AuthWorkflowEvent.id)).where(
+                AuthWorkflowEvent.plan_id == plan_id,
+                AuthWorkflowEvent.action == "AI_EVALUATION_RETRY_FAILED",
+            )
+        ) == 1
+
+
+def test_postgres_committed_submission_survives_provider_timeout(postgres_workflow):
+    state = postgres_workflow
+    app = state["app"]
+    checker = state["checker"]
+    factory = state["factory"]
+    app.state.auth_workflow_provider = AuthenticatedMockVLMProvider("timeout", model_version="mock-1")
+
+    plan = _create_plan(state["maker_client"], checker.id, "PostgreSQL committed timeout")
+    submitted = _upload_and_submit(state["maker_client"], plan)
+
+    assert submitted["status"] == "PENDING_APPROVAL"
+    assert submitted["processing_stage"] == "HUMAN_REVIEW_REQUIRED"
+    assert submitted["ai_evaluations"][0]["status"] == "TIMED_OUT"
+    expected_lifecycle = [
+        "CREATED", "ATTACHMENT_UPLOADED", "SUBMITTED", "AI_EVALUATION_QUEUED",
+        "AI_EVALUATION_STARTED", "AI_EVALUATION_COMPLETED", "AI_REVIEW_ROUTED",
+    ]
+    lifecycle_events = [
+        event for event in submitted["history"]
+        if event["action"] in expected_lifecycle
+    ]
+    assert [event["action"] for event in lifecycle_events] == expected_lifecycle
+    assert all(
+        event["actor_type"] == "SYSTEM" and event["actor_id"] is None
+        for event in lifecycle_events
+        if event["action"].startswith("AI_")
+    )
+
+    checker_notices = state["checker_client"].get("/api/workflow/notifications").json()
+    assert checker_notices["total"] == checker_notices["unread_count"] == 1
+    assert [
+        (item["event_type"], item["version_number"], item["round_number"])
+        for item in checker_notices["items"]
+    ] == [("PLAN_SUBMITTED", 1, 1)]
+    with factory() as session:
+        persisted = session.get(AuthWorkflowPlan, UUID(plan["id"]))
+        assert persisted is not None
+        assert (persisted.status, persisted.current_version, persisted.current_round) == (
+            "PENDING_APPROVAL", 1, 1,
+        )
+        run = session.scalar(select(AuthWorkflowEvaluationRun).where(
+            AuthWorkflowEvaluationRun.plan_id == persisted.id,
+            AuthWorkflowEvaluationRun.round_number == 1,
+        ))
+        assert run is not None and run.status == "TIMED_OUT"
+        assert session.scalar(select(func.count(AuthWorkflowNotification.id)).where(
+            AuthWorkflowNotification.plan_id == persisted.id,
+        )) == 1
+
+
+def test_postgres_late_vlm_result_is_audited_after_recovery(postgres_workflow):
+    import httpx
+
+    from src.ai_pipeline.providers.openai_provider import LocalVLMProvider
+    from src.backend.application.auth_workflow_ai import unconfigured_approval_configuration
+
+    state = postgres_workflow
+    app = state["app"]
+    factory = state["factory"]
+    maker_client = state["maker_client"]
+    checker = state["checker"]
+    captured = []
+    plan_id = None
+
+    def finish_after_recovery(_request):
+        captured.append(True)
+        with factory.begin() as session:
+            run = session.scalar(select(AuthWorkflowEvaluationRun).where(
+                AuthWorkflowEvaluationRun.plan_id == UUID(plan_id),
+                AuthWorkflowEvaluationRun.round_number == 1,
+            ))
+            run.started_at = datetime.now(timezone.utc) - timedelta(minutes=3)
+        with factory() as recovery_session:
+            workflow.recover_stale_evaluations(
+                recovery_session,
+                "postgres-late-vlm-test",
+                age_seconds=120,
+                visible_plan_ids=(UUID(plan_id),),
+            )
+        extraction = {
+            "images": [{
+                "image_index": 0,
+                "status": "COMPLETE",
+                "ocr_text": "Late output must not replace recovery.",
+                "observations": [],
+                "uncertainties": [],
+            }],
+        }
+        return httpx.Response(200, json={
+            "model": "configured-model-id",
+            "choices": [{
+                "message": {"role": "assistant", "content": json.dumps(extraction)},
+                "finish_reason": "stop",
+            }],
+        })
+
+    provider = LocalVLMProvider(
+        model="configured-model-id",
+        model_version="late-test-model-revision",
+        base_url="http://localhost:8000/v1",
+        client=httpx.Client(transport=httpx.MockTransport(finish_after_recovery)),
+    )
+    app.state.auth_workflow_provider = provider
+    app.state.auth_workflow_configuration = unconfigured_approval_configuration(provider)
+
+    plan = _create_plan(maker_client, checker.id, "PostgreSQL late VLM result")
+    plan_id = plan["id"]
+    submitted = _upload_and_submit(maker_client, plan)
+
+    assert captured == [True]
+    assert submitted["processing_stage"] == "HUMAN_REVIEW_REQUIRED"
+    run = submitted["ai_evaluations"][0]
+    assert run["status"] == "FAILED"
+    assert run["evaluation"]["agent_errors"][0]["code"] == "RUN_INTERRUPTED"
+    assert run["visual_extraction"]["error_code"] == "RUN_INTERRUPTED"
+    assert "Late output must not replace recovery." not in json.dumps(run)
+    assert len(submitted["engine_decisions"]) == 1
+    assert [event["action"] for event in submitted["history"][-2:]] == [
+        "AI_RECOVERY_REVIEW_ROUTED",
+        "AI_RESULT_IGNORED_STALE",
+    ]
+    recovery_event = submitted["history"][-2]
+    assert recovery_event["status_before"] == recovery_event["status_after"] == "PENDING_APPROVAL"
+    assert recovery_event["details"]["processing_stage_before"] == "AI_PROCESSING"
+    assert recovery_event["details"]["processing_stage_after"] == "HUMAN_REVIEW_REQUIRED"
+    assert recovery_event["details"]["result"] == "HUMAN_REVIEW_REQUIRED"
+    assert recovery_event["details"]["run_id"] == run["run_id"]
+    assert recovery_event["details"]["evaluation_id"] == run["evaluation_id"]
+    assert recovery_event["details"]["correlation_id"] == run["correlation_id"]
+    assert recovery_event["details"]["input_hash"] == run["input_hash"]
+    assert recovery_event["details"]["run_status_before"] == "PROCESSING"
+    assert recovery_event["details"]["run_status_after"] == "FAILED"
+    assert recovery_event["details"]["failure_code"] == "RUN_INTERRUPTED"
+    assert recovery_event["details"]["result_disposition"] == "APPLIED"
+    assert recovery_event["details"]["decision_id"] == submitted["engine_decisions"][0]["decision_id"]
+    assert recovery_event["details"]["engine_decision_outcome"] == submitted["engine_decisions"][0]["outcome"]
+    ignored_result = submitted["history"][-1]
+    assert ignored_result["actor_type"] == "SYSTEM"
+    assert ignored_result["actor_id"] is None
+    assert (ignored_result["details"]["version"], ignored_result["details"]["round"]) == (1, 1)
+
+
+def test_postgres_recovery_without_version_snapshot_audits_missing_version_route(postgres_workflow):
+    state = postgres_workflow
+    factory = state["factory"]
+    maker_client = state["maker_client"]
+    checker = state["checker"]
+    plan = _create_plan(maker_client, checker.id, "PostgreSQL recovery without version snapshot")
+    plan_id = UUID(plan["id"])
+    correlation_id = f"missing-version-recovery-{uuid4().hex[:12]}"
+    run_id = f"RUN-MISSING-VERSION-{uuid4().hex[:12]}"
+    evaluation_id = f"EVAL-MISSING-VERSION-{uuid4().hex[:12]}"
+
+    with factory.begin() as session:
+        stored_plan = session.get(AuthWorkflowPlan, plan_id)
+        assert stored_plan is not None
+        stored_plan.status = "PENDING_APPROVAL"
+        stored_plan.processing_stage = "AI_PROCESSING"
+        stored_plan.current_version = 1
+        stored_plan.current_round = 1
+        session.add(AuthWorkflowEvaluationRun(
+            id=uuid4(),
+            plan_id=plan_id,
+            version_number=1,
+            round_number=1,
+            attempt_number=1,
+            run_id=run_id,
+            evaluation_id=evaluation_id,
+            idempotency_key=f"idempotency-{uuid4().hex}",
+            correlation_id=correlation_id,
+            input_hash="b" * 64,
+            provider="MOCK_VLM",
+            model_id="synthetic-model",
+            model_version="synthetic-version",
+            policy_version="synthetic-policy-v1",
+            policy_snapshot_id="synthetic-policy-v1",
+            policy_snapshot_hash="a" * 64,
+            policy_snapshot={},
+            status="PROCESSING",
+            attempts=1,
+            retried=False,
+            started_at=datetime.now(timezone.utc) - timedelta(minutes=3),
+        ))
+
+    with factory() as session:
+        workflow.recover_stale_evaluations(
+            session,
+            "missing-version-recovery-test",
+            age_seconds=120,
+            visible_plan_ids=(plan_id,),
+        )
+    with factory() as session:
+        workflow.recover_stale_evaluations(
+            session,
+            "missing-version-recovery-replay",
+            age_seconds=120,
+            visible_plan_ids=(plan_id,),
+        )
+
+    response = maker_client.get(f"/api/workflow/plans/{plan_id}")
+    assert response.status_code == 200, response.text
+    recovered = response.json()
+    assert recovered["status"] == "PENDING_APPROVAL"
+    assert recovered["processing_stage"] == "HUMAN_REVIEW_REQUIRED"
+    assert recovered["versions"] == []
+    recovery_event = next(
+        event for event in recovered["history"]
+        if event["action"] == "AI_RECOVERY_REVIEW_ROUTED"
+    )
+    assert recovery_event["actor_type"] == "SYSTEM"
+    assert recovery_event["actor_id"] is None
+    assert recovery_event["status_before"] == recovery_event["status_after"] == "PENDING_APPROVAL"
+    assert recovery_event["details"]["processing_stage_before"] == "AI_PROCESSING"
+    assert recovery_event["details"]["processing_stage_after"] == "HUMAN_REVIEW_REQUIRED"
+    assert recovery_event["details"]["result"] == "HUMAN_REVIEW_REQUIRED"
+    assert (recovery_event["details"]["version"], recovery_event["details"]["round"]) == (1, 1)
+    assert recovery_event["details"]["run_id"] == run_id
+    assert recovery_event["details"]["evaluation_id"] == evaluation_id
+    assert recovery_event["details"]["correlation_id"] == correlation_id
+    assert recovery_event["details"]["input_hash"] == "b" * 64
+    assert recovery_event["details"]["run_status_before"] == "PROCESSING"
+    assert recovery_event["details"]["run_status_after"] == "FAILED"
+    assert recovery_event["details"]["failure_code"] == "RUN_INTERRUPTED_SNAPSHOT_UNAVAILABLE"
+    assert recovery_event["details"]["result_disposition"] == "APPLIED"
+    assert "decision_id" not in recovery_event["details"]
+    assert "engine_decision_outcome" not in recovery_event["details"]
+    assert recovery_event["details"]["reason"] == "RUN_INTERRUPTED_SNAPSHOT_UNAVAILABLE"
+    assert sum(event["action"] == "AI_RECOVERY_REVIEW_ROUTED" for event in recovered["history"]) == 1
 
 
 def test_postgres_policy_conflict_persists_safe_attempt_provenance_and_routes_to_checker(postgres_workflow):
@@ -595,6 +1193,42 @@ def test_postgres_notification_lifecycle_permissions_replay_and_rollback(postgre
     plan = _create_plan(maker_client, checker.id, "PostgreSQL notification lifecycle")
     submitted = _upload_and_submit(maker_client, plan)
     assert submitted["ai_evaluations"][0]["provider"] == "MOCK_VLM"
+    # PO policy keeps complete role bundles; partial custom permissions do not grant row scope.
+    _assert_partial_custom_roles_do_not_grant_workflow_scope(state, submitted["id"])
+    expected_lifecycle = [
+        "CREATED", "ATTACHMENT_UPLOADED", "SUBMITTED", "AI_EVALUATION_QUEUED",
+        "AI_EVALUATION_STARTED", "AI_EVALUATION_COMPLETED", "AI_REVIEW_ROUTED",
+    ]
+    lifecycle_events = [
+        event for event in submitted["history"]
+        if event["action"] in expected_lifecycle
+    ]
+    assert [event["action"] for event in lifecycle_events] == expected_lifecycle
+    assert all(
+        event["actor_type"] == "SYSTEM" and event["actor_id"] is None
+        for event in lifecycle_events
+        if event["action"].startswith("AI_")
+    )
+    assert all(event["created_at"] is not None for event in lifecycle_events)
+    assert all("result" in event["details"] for event in lifecycle_events)
+    assert lifecycle_events[0]["details"]["actor_role"] == "MAKER"
+    assert lifecycle_events[2]["details"]["actor_role"] == "MAKER"
+    assert (lifecycle_events[2]["details"]["version"], lifecycle_events[2]["details"]["round"]) == (1, 1)
+    queued_event = next(event for event in lifecycle_events if event["action"] == "AI_EVALUATION_QUEUED")
+    started_event = next(event for event in lifecycle_events if event["action"] == "AI_EVALUATION_STARTED")
+    evaluation_event = next(event for event in lifecycle_events if event["action"] == "AI_EVALUATION_COMPLETED")
+    routed_event = next(event for event in lifecycle_events if event["action"] == "AI_REVIEW_ROUTED")
+    assert queued_event["details"]["processing_stage_before"] == "DRAFT"
+    assert queued_event["details"]["processing_stage_after"] == "AI_PENDING"
+    assert started_event["details"]["processing_stage_before"] == "AI_PENDING"
+    assert started_event["details"]["processing_stage_after"] == "AI_PROCESSING"
+    assert evaluation_event["details"]["processing_stage_before"] == "AI_PROCESSING"
+    assert evaluation_event["details"]["processing_stage_after"] == "HUMAN_REVIEW_REQUIRED"
+    assert routed_event["details"]["processing_stage_before"] == "AI_PROCESSING"
+    assert routed_event["details"]["processing_stage_after"] == "HUMAN_REVIEW_REQUIRED"
+    assert evaluation_event["details"]["result"] == submitted["ai_evaluations"][0]["status"]
+    assert evaluation_event["details"]["result_summary"]["status"] == submitted["ai_evaluations"][0]["status"]
+    assert "PRIVATE-OBJECTIVE-DO-NOT-LEAK" not in json.dumps(lifecycle_events)
     notice_response = checker_client.get("/api/workflow/notifications")
     assert notice_response.status_code == 200
     notice_page = notice_response.json()
@@ -616,6 +1250,7 @@ def test_postgres_notification_lifecycle_permissions_replay_and_rollback(postgre
     with factory() as session:
         stored_submit_notice = session.get(AuthWorkflowNotification, UUID(submit_notice["id"]))
         assert stored_submit_notice is not None and stored_submit_notice.read_at is None
+        assert stored_submit_notice.event_key.endswith(f"user:{checker.id}")
 
     # Repeated GET does not mutate; repeated mark-read is safe and stable.
     assert checker_client.get("/api/workflow/notifications").json()["unread_count"] == 1
@@ -640,8 +1275,16 @@ def test_postgres_notification_lifecycle_permissions_replay_and_rollback(postgre
     replayed_rejection = checker_client.post(decision_url, json=reject_body)
     assert rejected.status_code == replayed_rejection.status_code == 200
     assert rejected.json()["status"] == "REJECTED"
+    assert rejected.json()["history"] == replayed_rejection.json()["history"]
+    assert sum(event["action"] == "REJECTED" for event in rejected.json()["history"]) == 1
     maker_notices = maker_client.get("/api/workflow/notifications").json()
     assert [(item["event_type"], item["round_number"]) for item in maker_notices["items"]] == [("PLAN_REJECTED", 1)]
+    assert reject_body["reason"] in maker_notices["items"][0]["message"]
+    rejected_event = rejected.json()["history"][-1]
+    assert rejected_event["details"]["actor_role"] == "CHECKER"
+    assert rejected_event["details"]["result"] == "SUCCESS"
+    assert rejected_event["details"]["human_decision_id"]
+    assert rejected_event["details"]["evaluation_id"] == submitted["ai_evaluations"][0]["evaluation_id"]
     rejected_plan = rejected.json()
     updated = maker_client.put(f"/api/workflow/plans/{plan['id']}", json={
         "expected_revision": rejected_plan["revision"],
@@ -651,6 +1294,13 @@ def test_postgres_notification_lifecycle_permissions_replay_and_rollback(postgre
     assert updated.status_code == 200, updated.text
     resubmitted = _upload_and_submit(maker_client, updated.json())
     assert resubmitted["current_version"] == resubmitted["current_round"] == 2
+    resubmission_queue = next(
+        event for event in resubmitted["history"]
+        if event["action"] == "AI_EVALUATION_QUEUED"
+        and (event["details"]["version"], event["details"]["round"]) == (2, 2)
+    )
+    assert resubmission_queue["details"]["processing_stage_before"] == "COMPLETED"
+    assert resubmission_queue["details"]["processing_stage_after"] == "AI_PENDING"
     next_checker_notices = next_checker_client.get("/api/workflow/notifications").json()
     assert next_checker_notices["total"] == 1
     assert next_checker_notices["items"][0]["event_type"] == "PLAN_SUBMITTED"
@@ -668,6 +1318,17 @@ def test_postgres_notification_lifecycle_permissions_replay_and_rollback(postgre
     approval_replay = next_checker_client.post(round_two_url, json=approve_body)
     assert approved.status_code == approval_replay.status_code == 200
     assert approved.json()["status"] == "APPROVED"
+    assert approved.json()["history"] == approval_replay.json()["history"]
+    assert sum(event["action"] == "APPROVED" for event in approved.json()["history"]) == 1
+    approval_event = approved.json()["history"][-1]
+    assert approval_event["details"]["actor_role"] == "CHECKER"
+    assert (approval_event["details"]["version"], approval_event["details"]["round"]) == (2, 2)
+    assert approval_event["details"]["result"] == "SUCCESS"
+    assert approval_event["details"]["human_decision_id"]
+    round_two_evaluation = next(
+        item for item in resubmitted["ai_evaluations"] if item["round_number"] == 2
+    )
+    assert approval_event["details"]["evaluation_id"] == round_two_evaluation["evaluation_id"]
     assert {(item["event_type"], item["round_number"]) for item in maker_client.get("/api/workflow/notifications").json()["items"]} == {
         ("PLAN_REJECTED", 1), ("PLAN_APPROVED", 2),
     }
@@ -728,6 +1389,7 @@ def test_postgres_notification_lifecycle_permissions_replay_and_rollback(postgre
 
     def insert_then_fail(*args, **kwargs):
         original_recorder(*args, **kwargs)
+        args[0].flush()
         raise RuntimeError("synthetic notification rollback")
 
     with monkeypatch.context() as patch:
@@ -740,6 +1402,12 @@ def test_postgres_notification_lifecycle_permissions_replay_and_rollback(postgre
     with factory() as session:
         persisted = session.get(AuthWorkflowPlan, UUID(rollback_submit_plan["id"]))
         assert persisted.status == "DRAFT" and persisted.current_version == 0
+        assert not any(
+            event["action"] in {"SUBMITTED", "AI_EVALUATION_QUEUED"}
+            for event in maker_client.get(
+                f"/api/workflow/plans/{rollback_submit_plan['id']}"
+            ).json()["history"]
+        )
         assert session.scalar(select(AuthWorkflowNotification.id).where(
             AuthWorkflowNotification.plan_id == persisted.id
         )) is None
@@ -760,6 +1428,12 @@ def test_postgres_notification_lifecycle_permissions_replay_and_rollback(postgre
     with factory() as session:
         persisted = session.get(AuthWorkflowPlan, UUID(rollback_decision_plan["id"]))
         assert persisted.status == "PENDING_APPROVAL"
+        assert not any(
+            event["action"] in {"APPROVED", "REJECTED"}
+            for event in next_checker_client.get(
+                f"/api/workflow/plans/{rollback_decision_plan['id']}"
+            ).json()["history"]
+        )
         assert session.scalar(select(AuthWorkflowDecision.id).where(
             AuthWorkflowDecision.plan_id == persisted.id
         )) is None

@@ -6,6 +6,7 @@ import { useAuth } from '../../context/AuthContext'
 
 export function AuthenticatedWorkflowShell() {
   const { user, roles, logout } = useAuth()
+  const permissions = user?.effective_permissions ?? []
   const navigate = useNavigate()
   const location = useLocation()
   const [logoutError, setLogoutError] = useState('')
@@ -85,9 +86,9 @@ export function AuthenticatedWorkflowShell() {
         <NavLink to="/workflow/notifications"><span className="auth-workflow-nav-icon"><Bell aria-hidden="true" /></span><span>Thông báo</span></NavLink>
         {(roles.includes('MAKER') || roles.includes('ADMIN')) && <NavLink to="/workflow/plans"><span className="auth-workflow-nav-icon"><FileText aria-hidden="true" /></span><span>{roles.includes('ADMIN') ? 'Toàn bộ kế hoạch' : 'Kế hoạch của tôi'}</span></NavLink>}
         {roles.includes('CHECKER') && <NavLink to="/workflow/reviews"><span className="auth-workflow-nav-icon"><ClipboardCheck aria-hidden="true" /></span><span>Hàng chờ duyệt</span></NavLink>}
-        {roles.includes('ADMIN') && <NavLink to="/workflow/audit"><span className="auth-workflow-nav-icon"><History aria-hidden="true" /></span><span>Nhật ký kiểm toán</span></NavLink>}
-        {roles.includes('ADMIN') && <NavLink to="/workflow/employees"><span className="auth-workflow-nav-icon"><UsersRound aria-hidden="true" /></span><span>Nhân viên</span></NavLink>}
-        {roles.includes('ADMIN') && <NavLink to="/workflow/roles"><span className="auth-workflow-nav-icon"><UsersRound aria-hidden="true" /></span><span>Vai trò</span></NavLink>}
+        {roles.includes('ADMIN') && permissions.includes('ADMIN_AUDIT_READ') && <NavLink to="/workflow/audit"><span className="auth-workflow-nav-icon"><History aria-hidden="true" /></span><span>Nhật ký kiểm toán</span></NavLink>}
+        {roles.includes('ADMIN') && permissions.includes('ADMIN_EMPLOYEE_MANAGE') && <NavLink to="/workflow/employees"><span className="auth-workflow-nav-icon"><UsersRound aria-hidden="true" /></span><span>Nhân viên</span></NavLink>}
+        {roles.includes('ADMIN') && permissions.includes('ADMIN_ROLE_MANAGE') && <NavLink to="/workflow/roles"><span className="auth-workflow-nav-icon"><UsersRound aria-hidden="true" /></span><span>Vai trò</span></NavLink>}
         {roles.includes('ADMIN') && <NavLink to="/workflow/configuration"><span className="auth-workflow-nav-icon"><Settings2 aria-hidden="true" /></span><span>Cấu hình phê duyệt</span></NavLink>}
         {roles.includes('ADMIN') && user?.effective_permissions?.includes('ADMIN_SLA_MANAGE') && <NavLink to="/workflow/sla"><span className="auth-workflow-nav-icon"><Clock3 aria-hidden="true" /></span><span>Cấu hình SLA</span></NavLink>}
         <NavLink to="/account"><span className="auth-workflow-nav-icon"><UserRound aria-hidden="true" /></span><span>Tài khoản</span></NavLink>

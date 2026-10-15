@@ -6,6 +6,7 @@ from src.backend.api.auth import (
     AuthenticatedPrincipal,
     _check_browser_origin,
     get_auth_db,
+    require_permission,
     require_role,
 )
 from src.backend.application import auth_sla as sla
@@ -22,7 +23,10 @@ def _correlation(request: Request) -> str:
     return getattr(request.state, "correlation_id", "workflow-request")
 
 
-@router.get("/configuration", response_model=SlaConfigurationResponse)
+@router.get(
+    "/configuration", response_model=SlaConfigurationResponse,
+    dependencies=[Depends(require_permission("ADMIN_SLA_MANAGE"))],
+)
 def configuration(
     request: Request,
     principal: AuthenticatedPrincipal = Depends(require_role("ADMIN")),
@@ -31,7 +35,10 @@ def configuration(
     return sla.get_configuration(session, principal, _correlation(request))
 
 
-@router.get("/configuration/history", response_model=SlaConfigurationHistoryResponse)
+@router.get(
+    "/configuration/history", response_model=SlaConfigurationHistoryResponse,
+    dependencies=[Depends(require_permission("ADMIN_SLA_MANAGE"))],
+)
 def configuration_history(
     request: Request,
     principal: AuthenticatedPrincipal = Depends(require_role("ADMIN")),
@@ -44,7 +51,10 @@ def configuration_history(
     )
 
 
-@router.put("/configuration", response_model=SlaConfigurationResponse)
+@router.put(
+    "/configuration", response_model=SlaConfigurationResponse,
+    dependencies=[Depends(require_permission("ADMIN_SLA_MANAGE"))],
+)
 def update_configuration(
     body: SlaConfigurationUpdateRequest,
     request: Request,

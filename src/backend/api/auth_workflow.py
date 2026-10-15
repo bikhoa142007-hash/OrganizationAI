@@ -12,6 +12,7 @@ from src.backend.api.auth import (
     get_current_principal,
     get_auth_db,
     require_any_role,
+    require_permission,
     require_role,
 )
 from src.backend.application import auth_workflow as workflow
@@ -53,6 +54,46 @@ def _correlation(request: Request) -> str:
     return getattr(request.state, "correlation_id", "workflow-request")
 
 
+def _enforce_permission(
+    request: Request,
+    principal: AuthenticatedPrincipal,
+    permission_code: str,
+) -> None:
+    """Reuse D's dependency implementation for body-dependent route checks."""
+    require_permission(permission_code)(request, principal)
+
+
+def _plan_list_principal(
+    request: Request,
+    principal: AuthenticatedPrincipal = Depends(require_any_role("MAKER", "CHECKER", "ADMIN")),
+) -> AuthenticatedPrincipal:
+    _enforce_permission(request, principal, "MARKETING_PLAN_READ")
+    if "ADMIN" in principal.roles:
+        _enforce_permission(request, principal, "MARKETING_PLAN_VIEW_ALL")
+    return principal
+
+
+def _plan_detail_principal(
+    request: Request,
+    principal: AuthenticatedPrincipal = Depends(get_current_principal),
+) -> AuthenticatedPrincipal:
+    _enforce_permission(request, principal, "MARKETING_PLAN_READ")
+    _enforce_permission(request, principal, "MARKETING_HISTORY_READ")
+    if "ADMIN" in principal.roles:
+        _enforce_permission(request, principal, "MARKETING_PLAN_VIEW_ALL")
+    return principal
+
+
+def _plan_attachment_principal(
+    request: Request,
+    principal: AuthenticatedPrincipal = Depends(get_current_principal),
+) -> AuthenticatedPrincipal:
+    _enforce_permission(request, principal, "MARKETING_PLAN_READ")
+    if "ADMIN" in principal.roles:
+        _enforce_permission(request, principal, "MARKETING_PLAN_VIEW_ALL")
+    return principal
+
+
 @router.get("/notifications", response_model=WorkflowNotificationPageResponse)
 def notifications(
     principal: AuthenticatedPrincipal = Depends(get_current_principal),
@@ -76,7 +117,10 @@ def mark_notification_read(
     )
 
 
-@router.get("/audit", response_model=WorkflowAuditPageResponse)
+@router.get(
+    "/audit", response_model=WorkflowAuditPageResponse,
+    dependencies=[Depends(require_permission("ADMIN_AUDIT_READ"))],
+)
 def audit_events(
     request: Request,
     principal: AuthenticatedPrincipal = Depends(require_role("ADMIN")),
@@ -89,7 +133,10 @@ def audit_events(
     )
 
 
-@router.get("/employees", response_model=WorkflowEmployeePageResponse)
+@router.get(
+    "/employees", response_model=WorkflowEmployeePageResponse,
+    dependencies=[Depends(require_permission("ADMIN_EMPLOYEE_MANAGE"))],
+)
 def employees(
     request: Request,
     principal: AuthenticatedPrincipal = Depends(get_current_principal),
@@ -130,7 +177,10 @@ def _normalize_employee_contacts(values: dict, correlation_id: str) -> None:
         values[field] = normalized
 
 
-@router.post("/employees", response_model=WorkflowEmployeeResponse, status_code=201)
+@router.post(
+    "/employees", response_model=WorkflowEmployeeResponse, status_code=201,
+    dependencies=[Depends(require_permission("ADMIN_EMPLOYEE_MANAGE"))],
+)
 def create_employee(
     body: EmployeeProfileCreateRequest,
     request: Request,
@@ -150,7 +200,10 @@ def create_employee(
     return employee_admin.create_employee(session, principal, _correlation(request), values)
 
 
-@router.get("/employees/{employee_id}", response_model=WorkflowEmployeeResponse)
+@router.get(
+    "/employees/{employee_id}", response_model=WorkflowEmployeeResponse,
+    dependencies=[Depends(require_permission("ADMIN_EMPLOYEE_MANAGE"))],
+)
 def get_employee(
     employee_id: UUID,
     request: Request,
@@ -160,7 +213,10 @@ def get_employee(
     return employee_admin.get_employee(session, principal, employee_id, _correlation(request))
 
 
-@router.put("/employees/{employee_id}", response_model=WorkflowEmployeeResponse)
+@router.put(
+    "/employees/{employee_id}", response_model=WorkflowEmployeeResponse,
+    dependencies=[Depends(require_permission("ADMIN_EMPLOYEE_MANAGE"))],
+)
 def update_employee(
     employee_id: UUID,
     body: EmployeeProfileUpdateRequest,
@@ -222,7 +278,10 @@ def pending_checker_plans(
     )
 
 
-@router.get("/admin-audit", response_model=AdminAuditPageResponse)
+@router.get(
+    "/admin-audit", response_model=AdminAuditPageResponse,
+    dependencies=[Depends(require_permission("ADMIN_AUDIT_READ"))],
+)
 def admin_audit_events(
     request: Request,
     principal: AuthenticatedPrincipal = Depends(get_current_principal),
@@ -235,7 +294,10 @@ def admin_audit_events(
     )
 
 
-@router.post("/employees/{employee_id}/account", response_model=EmployeeAccountCreateResponse, status_code=201)
+@router.post(
+    "/employees/{employee_id}/account", response_model=EmployeeAccountCreateResponse,
+    status_code=201, dependencies=[Depends(require_permission("ADMIN_EMPLOYEE_MANAGE"))],
+)
 def create_employee_account(
     employee_id: UUID,
     body: EmployeeAccountCreateRequest,
@@ -247,7 +309,10 @@ def create_employee_account(
     return employee_admin.create_account(session, principal, employee_id, body.username, _correlation(request))
 
 
-@router.post("/employees/{employee_id}/account/activation", response_model=AccountHandoverResponse)
+@router.post(
+    "/employees/{employee_id}/account/activation", response_model=AccountHandoverResponse,
+    dependencies=[Depends(require_permission("ADMIN_EMPLOYEE_MANAGE"))],
+)
 def reissue_employee_activation_link(
     employee_id: UUID,
     request: Request,
@@ -258,7 +323,10 @@ def reissue_employee_activation_link(
     return employee_admin.reissue_activation_link(session, principal, employee_id, _correlation(request))
 
 
-@router.post("/employees/{employee_id}/account/password-reset", response_model=AccountHandoverResponse)
+@router.post(
+    "/employees/{employee_id}/account/password-reset", response_model=AccountHandoverResponse,
+    dependencies=[Depends(require_permission("ADMIN_EMPLOYEE_MANAGE"))],
+)
 def request_employee_password_reset(
     employee_id: UUID,
     request: Request,
@@ -269,7 +337,10 @@ def request_employee_password_reset(
     return employee_admin.request_password_reset(session, principal, employee_id, _correlation(request))
 
 
-@router.post("/employees/{employee_id}/account/lock", response_model=WorkflowEmployeeResponse)
+@router.post(
+    "/employees/{employee_id}/account/lock", response_model=WorkflowEmployeeResponse,
+    dependencies=[Depends(require_permission("ADMIN_EMPLOYEE_MANAGE"))],
+)
 def lock_employee_account(
     employee_id: UUID,
     request: Request,
@@ -280,7 +351,10 @@ def lock_employee_account(
     return employee_admin.set_account_lock(session, principal, employee_id, _correlation(request), locked=True)
 
 
-@router.post("/employees/{employee_id}/account/unlock", response_model=WorkflowEmployeeResponse)
+@router.post(
+    "/employees/{employee_id}/account/unlock", response_model=WorkflowEmployeeResponse,
+    dependencies=[Depends(require_permission("ADMIN_EMPLOYEE_MANAGE"))],
+)
 def unlock_employee_account(
     employee_id: UUID,
     request: Request,
@@ -291,7 +365,10 @@ def unlock_employee_account(
     return employee_admin.set_account_lock(session, principal, employee_id, _correlation(request), locked=False)
 
 
-@router.put("/employees/{employee_id}/roles")
+@router.put(
+    "/employees/{employee_id}/roles",
+    dependencies=[Depends(require_permission("ADMIN_ROLE_MANAGE"))],
+)
 def replace_employee_roles(
     employee_id: UUID,
     body: EmployeeRoleRequest,
@@ -303,7 +380,10 @@ def replace_employee_roles(
     return role_admin.replace_employee_roles(session, principal, employee_id, _correlation(request), body.role_codes)
 
 
-@router.get("/roles", response_model=AdminRolePageResponse)
+@router.get(
+    "/roles", response_model=AdminRolePageResponse,
+    dependencies=[Depends(require_permission("ADMIN_ROLE_MANAGE"))],
+)
 def list_roles(
     request: Request,
     principal: AuthenticatedPrincipal = Depends(get_current_principal),
@@ -316,7 +396,10 @@ def list_roles(
                                  query=query, status=status, builtin=builtin)
 
 
-@router.post("/roles", response_model=AdminRoleResponse, status_code=201)
+@router.post(
+    "/roles", response_model=AdminRoleResponse, status_code=201,
+    dependencies=[Depends(require_permission("ADMIN_ROLE_MANAGE"))],
+)
 def create_role(
     body: AdminRoleCreateRequest,
     request: Request,
@@ -328,7 +411,10 @@ def create_role(
                                   body.description, body.permissions)
 
 
-@router.put("/roles/{role_id}", response_model=AdminRoleResponse)
+@router.put(
+    "/roles/{role_id}", response_model=AdminRoleResponse,
+    dependencies=[Depends(require_permission("ADMIN_ROLE_MANAGE"))],
+)
 def update_role(
     role_id: UUID,
     body: AdminRoleUpdateRequest,
@@ -342,7 +428,10 @@ def update_role(
                                   permissions=body.permissions)
 
 
-@router.post("/roles/{role_id}/deactivation", response_model=AdminRoleResponse)
+@router.post(
+    "/roles/{role_id}/deactivation", response_model=AdminRoleResponse,
+    dependencies=[Depends(require_permission("ADMIN_ROLE_MANAGE"))],
+)
 def deactivate_role(
     role_id: UUID,
     request: Request,
@@ -365,7 +454,7 @@ def checkers(
 @router.get("/plans", response_model=list[WorkflowPlanResponse])
 def plans(
     request: Request,
-    principal: AuthenticatedPrincipal = Depends(require_any_role("MAKER", "ADMIN")),
+    principal: AuthenticatedPrincipal = Depends(_plan_list_principal),
     session: Session = Depends(get_auth_db),
     offset: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=200),
@@ -375,7 +464,10 @@ def plans(
     )
 
 
-@router.get("/reviews", response_model=list[WorkflowPlanResponse])
+@router.get(
+    "/reviews", response_model=list[WorkflowPlanResponse],
+    dependencies=[Depends(require_permission("MARKETING_REVIEW_ASSIGNED"))],
+)
 def reviews(
     request: Request,
     principal: AuthenticatedPrincipal = Depends(require_role("CHECKER")),
@@ -389,7 +481,10 @@ def reviews(
     )
 
 
-@router.post("/plans", response_model=WorkflowPlanResponse, status_code=201)
+@router.post(
+    "/plans", response_model=WorkflowPlanResponse, status_code=201,
+    dependencies=[Depends(require_permission("MARKETING_PLAN_CREATE"))],
+)
 def create_plan(
     body: CreateWorkflowPlanRequest,
     request: Request,
@@ -412,7 +507,7 @@ def create_plan(
 def detail(
     plan_id: UUID,
     request: Request,
-    principal: AuthenticatedPrincipal = Depends(get_current_principal),
+    principal: AuthenticatedPrincipal = Depends(_plan_detail_principal),
     session: Session = Depends(get_auth_db),
 ):
     return workflow.get_plan(session, principal, plan_id, _correlation(request))
@@ -436,7 +531,10 @@ def recover_interrupted_round(
     )
 
 
-@router.put("/plans/{plan_id}", response_model=WorkflowPlanResponse)
+@router.put(
+    "/plans/{plan_id}", response_model=WorkflowPlanResponse,
+    dependencies=[Depends(require_permission("MARKETING_PLAN_EDIT_OWN"))],
+)
 def update_plan(
     plan_id: UUID,
     body: UpdateWorkflowPlanRequest,
@@ -457,7 +555,10 @@ def update_plan(
     )
 
 
-@router.post("/plans/{plan_id}/attachments", response_model=WorkflowPlanResponse)
+@router.post(
+    "/plans/{plan_id}/attachments", response_model=WorkflowPlanResponse,
+    dependencies=[Depends(require_permission("MARKETING_ATTACHMENT_MANAGE"))],
+)
 async def upload_attachment(
     plan_id: UUID,
     request: Request,
@@ -482,7 +583,7 @@ def attachment(
     plan_id: UUID,
     attachment_id: UUID,
     request: Request,
-    principal: AuthenticatedPrincipal = Depends(get_current_principal),
+    principal: AuthenticatedPrincipal = Depends(_plan_attachment_principal),
     session: Session = Depends(get_auth_db),
 ):
     media_type, content = workflow.get_attachment(
@@ -491,7 +592,10 @@ def attachment(
     return Response(content=content, media_type=media_type, headers={"Content-Disposition": "attachment"})
 
 
-@router.post("/plans/{plan_id}/submit", response_model=WorkflowPlanResponse)
+@router.post(
+    "/plans/{plan_id}/submit", response_model=WorkflowPlanResponse,
+    dependencies=[Depends(require_permission("MARKETING_PLAN_SUBMIT"))],
+)
 def submit_plan(
     plan_id: UUID,
     body: SubmitWorkflowPlanRequest,
@@ -536,6 +640,11 @@ def decide(
     principal: AuthenticatedPrincipal = Depends(require_role("CHECKER")),
     session: Session = Depends(get_auth_db),
 ):
+    _enforce_permission(
+        request,
+        principal,
+        "MARKETING_APPROVE" if body.action == "APPROVED" else "MARKETING_REJECT",
+    )
     _check_browser_origin(request)
     return workflow.decide_plan(
         session,

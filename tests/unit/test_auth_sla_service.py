@@ -327,6 +327,12 @@ def test_configuration_starts_unconfigured_and_is_revisioned_with_audit(db_facto
         assert session.scalar(select(func.count(AuthWorkflowSlaConfiguration.id))) == 2
 
         assert session.scalar(select(func.count(AdminAuditEvent.id))) == 2
+        audit_events = session.scalars(select(AdminAuditEvent)).all()
+        assert all(event.actor_id == admin.id for event in audit_events)
+        assert all(event.created_at is not None for event in audit_events)
+        assert all(event.action == "SLA_CONFIGURATION_UPDATED" for event in audit_events)
+        assert all("audit_metadata" not in event.after_state for event in audit_events)
+        assert all(event.after_state["result"] == "SUCCESS" for event in audit_events)
 
 
 
@@ -573,6 +579,15 @@ def test_warning_and_overdue_notifications_are_recipient_scoped_and_idempotent(d
         }
 
         assert session.scalar(select(func.count(AuthWorkflowEvent.id))) == 3
+        events = session.scalars(select(AuthWorkflowEvent).where(
+            AuthWorkflowEvent.plan_id == plan.id
+        ).order_by(AuthWorkflowEvent.sequence_number)).all()
+        assert {(event.action, event.details["recipient_id"], event.details["result"], event.details["channel"])
+                for event in events} == {
+            ("SLA_WARNING_SENT", str(checker.id), "RECORDED", "IN_APP"),
+            ("SLA_OVERDUE_SENT", str(maker.id), "RECORDED", "IN_APP"),
+            ("SLA_OVERDUE_SENT", str(checker.id), "RECORDED", "IN_APP"),
+        }
 
 
 
@@ -635,6 +650,42 @@ def test_reassigned_checker_gets_immediate_warning_or_overdue_notice(db_factory)
             ("SLA_WARNING", replacement.id), ("SLA_OVERDUE", maker.id), ("SLA_OVERDUE", checker.id),
 
         }
+
+def test_stale_warning_scan_is_suppressed_after_overdue_notification(db_factory):
+    admin, maker, checker = _user("ADMIN-8"), _user("MAKER-8"), _user("CHECKER-8")
+    started = datetime(2026, 10, 11, 8, tzinfo=timezone.utc)
+    with db_factory() as session:
+        session.add_all([admin, maker, checker])
+        session.flush()
+        plan, _, snapshot = _seed_round(
+            session, admin, started_at=started, maker=maker, checker=checker
+        )
+        session.commit()
+
+    assert auth_sla.process_due_sla_notifications(
+        db_factory, now=snapshot.due_at, batch_size=10
+    ) == 2
+    # A delayed scan from before the deadline must not emit a late warning
+    # after the overdue notification transaction has already committed.
+    assert auth_sla.process_due_sla_notifications(
+        db_factory, now=snapshot.warning_at, batch_size=10
+    ) == 0
+
+    with db_factory() as session:
+        notices = session.scalars(
+            select(AuthWorkflowNotification).where(
+                AuthWorkflowNotification.plan_id == plan.id
+            )
+        ).all()
+        assert {(item.event_type, item.recipient_user_id) for item in notices} == {
+            ("SLA_OVERDUE", maker.id), ("SLA_OVERDUE", checker.id),
+        }
+        events = session.scalars(
+            select(AuthWorkflowEvent).where(AuthWorkflowEvent.plan_id == plan.id)
+        ).all()
+        assert [event.action for event in events] == [
+            "SLA_OVERDUE_SENT", "SLA_OVERDUE_SENT",
+        ]
 
 def test_first_worker_scan_after_deadline_skips_warning_and_catches_up_overdue(db_factory):
     admin, maker, checker = _user("ADMIN-7"), _user("MAKER-7"), _user("CHECKER-7")

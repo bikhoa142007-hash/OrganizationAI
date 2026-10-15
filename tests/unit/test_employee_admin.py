@@ -36,7 +36,9 @@ def admin_db():
         session.flush()
         session.add(UserRole(user_id=admin.id, role_id=session.scalar(select(Role.id).where(Role.code == "ADMIN"))))
         session.flush()
-        principal = SimpleNamespace(id=admin.id, roles=("ADMIN",), permissions=())
+        principal = SimpleNamespace(
+            id=admin.id, roles=("ADMIN",), permissions=("ADMIN_APPROVER_MANAGE",),
+        )
     try:
         yield factory, principal
     finally:
@@ -97,6 +99,7 @@ def test_employee_profile_can_exist_without_an_account_and_is_audited(admin_db):
         assert employee["employment_status"] == "ACTIVE"
         audit = session.scalar(select(AdminAuditEvent).where(AdminAuditEvent.action == "EMPLOYEE_CREATED"))
         assert audit is not None and audit.employee_id == UUID(employee["id"])
+        assert audit.after_state["result"] == "SUCCESS"
 
 
 def test_account_activation_and_reset_links_are_single_use_and_never_store_raw_token(admin_db):
@@ -275,6 +278,9 @@ def test_checker_deactivation_uses_configured_default_and_preserves_event_histor
         assert event.action == "CHECKER_REASSIGNED"
         assert event.details["previous_checker_id"] == str(departing_user_id)
         assert event.details["new_checker_id"] == str(replacement_id)
+        assert event.details["version"] == 1
+        assert event.details["round"] == 1
+        assert event.details["result"] == "SUCCESS"
         assert event.details["assignment_configuration_revision"] == 1
         assert event.details["assignment_configuration_hash"]
         sla = session.scalar(select(AuthWorkflowSlaRound).where(AuthWorkflowSlaRound.plan_id == plan_id))
@@ -421,3 +427,81 @@ def test_custom_checker_permission_bundle_is_a_valid_replacement_and_cannot_be_r
     with factory() as session:
         with pytest.raises(ApplicationError, match="Reassign pending plans"):
             role_admin.replace_employee_roles(session, principal, replacement_id, "test", [])
+
+
+def test_custom_checker_role_cannot_drop_effective_checker_access_with_pending_work(admin_db):
+    factory, principal = admin_db
+    checker_profile_id, checker_id = add_profile(
+        factory, "EMP-CUSTOM-CHECKER", "Custom Checker", roles=("MAKER",),
+    )
+    _, maker_id = add_profile(factory, "EMP-CHECKER-MAKER", "Plan Maker", roles=("MAKER",))
+    permissions = ["MARKETING_REVIEW_ASSIGNED", "MARKETING_APPROVE", "MARKETING_REJECT"]
+    with factory() as session:
+        custom = role_admin.create_role(
+            session, principal, "test", "CUSTOM_PENDING_REVIEW", "Pending Review", None, permissions,
+        )
+        role_id = UUID(custom["id"])
+        role_admin.replace_employee_roles(
+            session, principal, checker_profile_id, "test", [custom["code"]],
+        )
+    with factory.begin() as session:
+        session.add(AuthWorkflowPlan(
+            code="PLAN-CUSTOM-CHECKER-ROLE-LOCK",
+            maker_id=maker_id,
+            checker_id=checker_id,
+            payload={"department": "Marketing"},
+            status="PENDING_APPROVAL",
+            processing_stage="HUMAN_REVIEW_REQUIRED",
+            current_version=1,
+            current_round=1,
+        ))
+    with factory() as session:
+        with pytest.raises(ApplicationError, match="Reassign pending plans"):
+            role_admin.update_role(
+                session, principal, role_id, "test", name="Review without rejection",
+                description=None, permissions=permissions[:-1],
+            )
+    with factory() as session:
+        role = session.get(Role, role_id)
+        assert {item.permission_code for item in role.permissions} == set(permissions)
+
+@pytest.mark.parametrize(
+    "operation",
+    ["list", "create", "update", "deactivate", "replace_assignment"],
+)
+def test_role_admin_service_permission_matrix_denies_maker(admin_db, operation):
+    factory, _admin_principal = admin_db
+    maker = SimpleNamespace(id=uuid4(), roles=("MAKER",), permissions=())
+    with factory() as session:
+        with pytest.raises(ApplicationError) as error:
+            if operation == "list":
+                role_admin.list_roles(session, maker, "permission-matrix-test")
+            elif operation == "create":
+                role_admin.create_role(
+                    session,
+                    maker,
+                    "permission-matrix-test",
+                    "CUSTOM_DENIED_ROLE",
+                    "Denied role",
+                    None,
+                    ["MARKETING_PLAN_READ"],
+                )
+            elif operation == "update":
+                role_admin.update_role(
+                    session,
+                    maker,
+                    uuid4(),
+                    "permission-matrix-test",
+                    name="Denied update",
+                    description=None,
+                    permissions=[],
+                )
+            elif operation == "deactivate":
+                role_admin.deactivate_role(
+                    session, maker, uuid4(), "permission-matrix-test",
+                )
+            else:
+                role_admin.replace_employee_roles(
+                    session, maker, uuid4(), "permission-matrix-test", [],
+                )
+        assert error.value.code == "FORBIDDEN"

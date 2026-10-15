@@ -13,6 +13,47 @@ def test_public_configuration_accepts_https_and_ephemeral_database_path():
     assert port == 10000
 
 
+def test_public_judge_only_configuration_rejects_any_auth_database_url():
+    env = environment()
+    env["PUBLIC_JUDGE_ONLY"] = "true"
+    env["DATABASE_URL"] = "postgresql://synthetic.invalid/should-not-be-used"
+
+    with pytest.raises(ValueError, match="must not configure DATABASE_URL"):
+        validate_environment(env)
+
+
+def test_public_judge_only_configuration_needs_no_database_path():
+    env = environment()
+    env["PUBLIC_JUDGE_ONLY"] = "true"
+    env.pop("DEMO_DATABASE")
+    database, port = validate_environment(env)
+
+    assert database is None
+    assert port == 10000
+
+
+def test_public_judge_only_startup_does_not_seed_or_open_shared_demo_database(monkeypatch):
+    from deployment import start_backend
+
+    for key, value in environment().items():
+        monkeypatch.setenv(key, value)
+    monkeypatch.setenv("PUBLIC_JUDGE_ONLY", "true")
+    monkeypatch.delenv("DEMO_DATABASE", raising=False)
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+    called = {}
+
+    def forbidden_seed(_database):
+        raise AssertionError("Public Judge-only startup must not seed the shared demo database")
+
+    monkeypatch.setattr(start_backend, "initialize_demo_database", forbidden_seed)
+    monkeypatch.setattr(start_backend.os, "execv", lambda executable, args: called.update(executable=executable, args=args))
+
+    start_backend.main()
+
+    assert called["args"][1:3] == ["-m", "uvicorn"]
+    assert "src.backend.api.app:app" in called["args"]
+
+
 @pytest.mark.parametrize('key,value', [
     ('APP_ENV', 'production'), ('CORS_ORIGINS', '*'),
     ('CORS_ORIGINS', 'http://judge.example.com'),

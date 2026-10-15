@@ -1,5 +1,9 @@
 """Minimal demo-only HTTP transport. No policy decision logic in routes."""
-from typing import Annotated
+from collections import deque
+from math import ceil
+from threading import BoundedSemaphore, Lock
+from time import monotonic
+from typing import Annotated, Callable
 from uuid import uuid4
 
 from fastapi import FastAPI, Depends, File, Form, Header, Query, Request, UploadFile
@@ -32,29 +36,81 @@ from .approval_configuration import router as approval_configuration_router
 from .internal_notes import router as internal_notes_router
 from .workflow_dashboard import router as workflow_dashboard_router
 from .workflow_retry import router as workflow_retry_router
+from .public_judge import PublicJudgeActionStore, router as public_judge_router
+
+
+class _PublicJudgeRequestGate:
+    """Process-local public Judge quota; do not trust forwarded client-IP headers."""
+
+    def __init__(
+        self,
+        *,
+        max_requests: int = 30,
+        window_seconds: int = 60,
+        max_concurrent: int = 1,
+        clock: Callable[[], float] = monotonic,
+    ) -> None:
+        if max_requests < 1 or window_seconds < 1 or max_concurrent < 1:
+            raise ValueError("Public Judge request limits must be positive.")
+        self._max_requests = max_requests
+        self._window_seconds = window_seconds
+        self._clock = clock
+        self._attempts: deque[float] = deque()
+        self._lock = Lock()
+        self._active = BoundedSemaphore(max_concurrent)
+
+    def try_acquire(self) -> int | None:
+        now = self._clock()
+        with self._lock:
+            while self._attempts and now - self._attempts[0] >= self._window_seconds:
+                self._attempts.popleft()
+            if len(self._attempts) >= self._max_requests:
+                return max(1, ceil(self._window_seconds - (now - self._attempts[0])))
+            self._attempts.append(now)
+            if not self._active.acquire(blocking=False):
+                return 1
+        return None
+
+    def release(self) -> None:
+        self._active.release()
 
 
 def create_app(settings=None, *, auth_workflow_provider=None, auth_workflow_configuration=None,
                auth_workflow_media_provider=None, auth_workflow_strategy_provider=None):
     settings = settings or Settings.from_environment()
     settings.validate()
-    auth_workflow_provider = auth_workflow_provider or create_authenticated_provider(settings.app_env)
-    configured_media, configured_strategy, media_policy, strategy_rubric = configured_task_components()
-    auth_workflow_media_provider = auth_workflow_media_provider or configured_media
-    auth_workflow_strategy_provider = auth_workflow_strategy_provider or configured_strategy
-    media_settings = getattr(auth_workflow_media_provider, "settings", None)
-    strategy_settings = getattr(auth_workflow_strategy_provider, "settings", None)
-    auth_workflow_configuration = auth_workflow_configuration or unconfigured_approval_configuration(
-        auth_workflow_provider,
-        media_policy=media_policy,
-        strategy_rubric=strategy_rubric,
-        media_model_snapshot=media_settings.public_snapshot() if media_settings else None,
-        strategy_model_snapshot=strategy_settings.public_snapshot() if strategy_settings else None,
-        visual_model_snapshot=auth_workflow_provider.get_model_metadata(),
-    )
+    if settings.public_judge_only:
+        # This profile does not mount authenticated workflow routes. Avoid
+        # reading Auth provider or policy configuration during its startup.
+        auth_workflow_provider = None
+        auth_workflow_media_provider = None
+        auth_workflow_strategy_provider = None
+        auth_workflow_configuration = None
+    else:
+        auth_workflow_provider = auth_workflow_provider or create_authenticated_provider(settings.app_env)
+        configured_media, configured_strategy, media_policy, strategy_rubric = configured_task_components()
+        auth_workflow_media_provider = auth_workflow_media_provider or configured_media
+        auth_workflow_strategy_provider = auth_workflow_strategy_provider or configured_strategy
+        media_settings = getattr(auth_workflow_media_provider, "settings", None)
+        strategy_settings = getattr(auth_workflow_strategy_provider, "settings", None)
+        auth_workflow_configuration = auth_workflow_configuration or unconfigured_approval_configuration(
+            auth_workflow_provider,
+            media_policy=media_policy,
+            strategy_rubric=strategy_rubric,
+            media_model_snapshot=media_settings.public_snapshot() if media_settings else None,
+            strategy_model_snapshot=strategy_settings.public_snapshot() if strategy_settings else None,
+            visual_model_snapshot=auth_workflow_provider.get_model_metadata(),
+        )
     verify_runs = {}
     app = FastAPI(title='OrganizationAI API', version='1.0',
-                  description='PostgreSQL authentication and authenticated Maker-Checker workflow, plus a separate SQLite synthetic approval demo. Demo-actor routes are available only in APP_ENV=demo.',
+                  description=(
+                      'Isolated public synthetic Challenge A Judge.'
+                      if settings.public_judge_only else
+                      'PostgreSQL authentication and authenticated Maker-Checker workflow, plus a separate SQLite synthetic approval demo. Demo-actor routes are available only in APP_ENV=demo.'
+                  ),
+                  docs_url=None if settings.public_judge_only else '/docs',
+                  redoc_url=None if settings.public_judge_only else '/redoc',
+                  openapi_url=None if settings.public_judge_only else '/openapi.json',
                   responses={code: {'model': ErrorResponse} for code in (401, 403, 404, 409, 422, 429, 503)})
     app.state.allowed_origins = tuple(settings.cors_origins)
     app.state.auth_attempt_limiter = AuthAttemptLimiter()
@@ -62,21 +118,51 @@ def create_app(settings=None, *, auth_workflow_provider=None, auth_workflow_conf
     app.state.auth_workflow_media_provider = auth_workflow_media_provider
     app.state.auth_workflow_strategy_provider = auth_workflow_strategy_provider
     app.state.auth_workflow_configuration = auth_workflow_configuration
-    app.include_router(auth_router)
-    app.include_router(auth_workflow_router)
-    app.include_router(auth_sla_router)
-    app.include_router(approval_configuration_router)
-    app.include_router(workflow_dashboard_router)
-    app.include_router(internal_notes_router)
-    app.include_router(workflow_retry_router)
-    app.add_middleware(CORSMiddleware, allow_origins=list(settings.cors_origins), allow_credentials=True,
+    app.state.public_judge_request_gate = _PublicJudgeRequestGate()
+    app.state.public_judge_action_store = PublicJudgeActionStore()
+    if settings.public_judge_only:
+        app.include_router(public_judge_router)
+    else:
+        app.include_router(auth_router)
+        app.include_router(auth_workflow_router)
+        app.include_router(auth_sla_router)
+        app.include_router(approval_configuration_router)
+        app.include_router(workflow_dashboard_router)
+        app.include_router(internal_notes_router)
+        app.include_router(workflow_retry_router)
+        if settings.app_env == 'demo':
+            app.include_router(public_judge_router)
+    app.add_middleware(CORSMiddleware, allow_origins=list(settings.cors_origins),
+                       allow_credentials=not settings.public_judge_only,
                        allow_methods=['GET', 'POST', 'PUT'],
-                       allow_headers=['Content-Type', 'X-Demo-Actor', 'Idempotency-Key', 'X-Correlation-ID'])
+                       allow_headers=(['Content-Type', 'Idempotency-Key', 'X-Correlation-ID'] if settings.public_judge_only else
+                                      ['Content-Type', 'X-Demo-Actor', 'Idempotency-Key', 'X-Correlation-ID']))
 
     @app.middleware('http')
     async def request_context(request, call_next):
         request.state.correlation_id = 'http-' + uuid4().hex
-        response = await call_next(request)
+        is_public_judge_post = (
+            settings.app_env == 'demo'
+            and request.method == 'POST'
+            and request.url.path.startswith('/api/public/judge/')
+        )
+        if is_public_judge_post:
+            retry_after = app.state.public_judge_request_gate.try_acquire()
+            if retry_after is None:
+                try:
+                    response = await call_next(request)
+                finally:
+                    app.state.public_judge_request_gate.release()
+            else:
+                response = error_response(
+                    'RATE_LIMITED',
+                    'Public Judge is busy. Wait before starting another run.',
+                    request.state.correlation_id,
+                    429,
+                )
+                response.headers['Retry-After'] = str(retry_after)
+        else:
+            response = await call_next(request)
         response.headers['X-Correlation-ID'] = request.state.correlation_id
         response.headers['X-Content-Type-Options'] = 'nosniff'
         response.headers['Cache-Control'] = 'no-store'
@@ -99,6 +185,13 @@ def create_app(settings=None, *, auth_workflow_provider=None, auth_workflow_conf
     @app.exception_handler(Exception)
     async def unexpected_error(request, exc):
         return error_response('UNAVAILABLE', 'Request could not be completed.', request.state.correlation_id)
+
+    if settings.public_judge_only:
+        @app.get('/api/health')
+        async def public_judge_health():
+            return {'status': 'ok', 'environment': settings.app_env, 'profile': 'public-judge-only'}
+
+        return app
 
     async def actor(request: Request, x_demo_actor: Annotated[str | None, Header()] = None):
         if settings.app_env != 'demo' or x_demo_actor not in PRINCIPALS or x_demo_actor == ENGINE:

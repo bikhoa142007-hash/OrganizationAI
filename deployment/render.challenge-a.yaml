@@ -1,0 +1,63 @@
+# Isolated public Challenge A Judge. This Blueprint creates two new services only.
+# Keep the existing Auth service and root render.yaml out of this Blueprint.
+services:
+  - type: web
+    name: organizationai-challenge-a-api
+    runtime: python
+    region: singapore
+    plan: free
+    branch: main
+    numInstances: 1
+    autoDeployTrigger: "off"
+    buildCommand: python -m pip install -r requirements.txt && python scripts/run_render_build_tests.py
+    startCommand: python -m deployment.start_backend
+    healthCheckPath: /api/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.13.14
+      - key: APP_ENV
+        value: demo
+      - key: PUBLIC_JUDGE_ONLY
+        value: "true"
+      - key: CORS_ORIGINS
+        fromService:
+          name: organizationai-challenge-a-web
+          type: web
+          envVarKey: RENDER_EXTERNAL_URL
+
+  - type: web
+    name: organizationai-challenge-a-web
+    runtime: static
+    branch: main
+    autoDeployTrigger: "off"
+    buildCommand: node --test deployment/validate_frontend.test.mjs && node deployment/validate_frontend.mjs && npm ci --include=dev --prefix frontend && npm run test --prefix frontend && npm run build --prefix frontend
+    staticPublishPath: frontend/dist
+    envVars:
+      - key: NODE_VERSION
+        value: 24.17.0
+      - key: VITE_API_BASE_URL
+        fromService:
+          name: organizationai-challenge-a-api
+          type: web
+          envVarKey: RENDER_EXTERNAL_URL
+      - key: VITE_DEMO_ENABLED
+        value: "true"
+      - key: VITE_PUBLIC_JUDGE_ONLY
+        value: "true"
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    headers:
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: Referrer-Policy
+        value: strict-origin-when-cross-origin
+      - path: /*
+        name: X-Frame-Options
+        value: DENY
+      - path: /*
+        name: Strict-Transport-Security
+        value: max-age=31536000

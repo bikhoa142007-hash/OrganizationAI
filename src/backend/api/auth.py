@@ -357,6 +357,26 @@ def require_any_role(*roles: str):
     return dependency
 
 
+def require_permission(permission_code: str):
+    """Require a catalog permission; callers must still enforce record-level scope."""
+    if (
+        not isinstance(permission_code, str)
+        or not permission_code
+        or permission_code.strip() != permission_code
+    ):
+        raise ValueError("permission_code must be a non-empty, trimmed permission identifier.")
+
+    def dependency(
+        request: Request,
+        principal: AuthenticatedPrincipal = Depends(get_current_principal),
+    ) -> AuthenticatedPrincipal:
+        if permission_code not in principal.permissions:
+            raise _error(request, "FORBIDDEN", "You do not have permission to perform this action.")
+        return principal
+
+    return dependency
+
+
 @router.post("/login", response_model=AuthResponse)
 def login(
     body: LoginRequest,

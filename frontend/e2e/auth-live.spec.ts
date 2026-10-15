@@ -15,6 +15,7 @@ const protectedPlanIds = new Set([
   '0c50b0eb-d31c-40a8-8fdd-99bcaa083e62',
 ])
 const image = resolve(import.meta.dirname, '../../tests/fixtures/ba/v2.1/images/creative-pass.png')
+let syntheticCheckerId = ''
 
 type LivePlan = {
   id: string
@@ -91,18 +92,59 @@ test.beforeAll(async ({ browser }) => {
       if (!checkers.length) throw new Error('The temporary Auth seed has no eligible Checker.')
       return checkers[0].id
     }, apiBase)
+    syntheticCheckerId = checkerId
 
     await login(admin, 'admin', '/workflow/plans', 'ADMIN')
+    const assignmentReason = 'Synthetic PostgreSQL browser acceptance default Checker assignment.'
     await admin.goto('/workflow/configuration')
     await admin.getByLabel('Loại cấu hình').selectOption('checker_assignment')
-    await admin.getByLabel('Giá trị JSON').fill(JSON.stringify({
-      maker_may_select_other: false,
-      defaults: [{ department: 'Marketing', checker_id: checkerId }],
-    }, null, 2))
-    await admin.getByLabel(/Hiệu lực từ thời điểm/).fill(localDateTime(1))
-    await admin.getByLabel('Lý do thay đổi').fill('Synthetic PostgreSQL browser acceptance default Checker assignment.')
-    await admin.getByRole('button', { name: 'Tạo revision bất biến' }).click()
-    await expect(admin.getByRole('status').filter({ hasText: 'Đã tạo revision 1' })).toBeVisible()
+    const existingRevision = await admin.evaluate(async ({ base, checkerId, reason }) => {
+      const response = await fetch(`${base}/workflow/configuration/checker_assignment/history?offset=0&limit=200`, { credentials: 'include' })
+      if (!response.ok) throw new Error(`Could not load synthetic Checker assignment history (HTTP ${response.status}).`)
+      const history = await response.json() as { items: Array<{ revision: number; change_reason: string; value: Record<string, unknown> }> }
+      const existing = history.items.find(item => item.change_reason === reason)
+      if (!existing) return null
+      const value = existing.value as { maker_may_select_other?: unknown; defaults?: Array<{ department?: unknown; checker_id?: unknown }> }
+      const exactFixture = value.maker_may_select_other === false
+        && Array.isArray(value.defaults)
+        && value.defaults.some(item => item.department === 'e2e-browser' && item.checker_id === checkerId)
+      if (!exactFixture) throw new Error('Existing synthetic Checker assignment revision has different fixture data.')
+      return existing.revision
+    }, { base: apiBase, checkerId, reason: assignmentReason })
+    let revisionNumber = existingRevision
+    if (revisionNumber === null) {
+      await admin.getByLabel('Giá trị JSON').fill(JSON.stringify({
+        maker_may_select_other: false,
+        defaults: [{ department: 'e2e-browser', checker_id: checkerId }],
+      }, null, 2))
+      await admin.getByLabel(/Hiệu lực từ thời điểm/).fill(localDateTime(24 * 60))
+      await admin.getByLabel('Lý do thay đổi').fill(assignmentReason)
+      await admin.getByRole('button', { name: 'Tạo revision bất biến' }).click()
+      const status = admin.getByRole('status').filter({ hasText: /Đã tạo revision \d+/ })
+      await expect(status).toBeVisible()
+      const match = (await status.textContent())?.match(/Đã tạo revision (\d+)/)
+      if (!match) throw new Error('Configuration revision status did not include a revision number.')
+      revisionNumber = Number(match[1])
+    }
+    await expect(admin.getByRole('region', { name: 'Lịch sử revision cấu hình' }).getByRole('heading', { name: new RegExp(`^Revision ${revisionNumber} ·`) })).toBeVisible()
+    const activeAssignment = await admin.evaluate(async ({ base, checkerId }) => {
+      const response = await fetch(`${base}/workflow/configuration`, { credentials: 'include' })
+      if (!response.ok) throw new Error(`Could not read current Checker assignment configuration (HTTP ${response.status}).`)
+      const config = await response.json() as { items?: Array<{
+        kind?: string
+        status?: string
+        current_revision?: { value?: { maker_may_select_other?: unknown; defaults?: Array<{ department?: unknown; checker_id?: unknown }> } } | null
+      }> }
+      const assignment = config.items?.find(item => item.kind === 'checker_assignment')
+      return {
+        effective: assignment?.status === 'EFFECTIVE',
+        hasExpectedDefault: assignment?.current_revision?.value?.defaults?.some(
+          item => item.department === 'e2e-browser' && item.checker_id === checkerId,
+        ) ?? false,
+        makerMaySelectOther: assignment?.current_revision?.value?.maker_may_select_other ?? null,
+      }
+    }, { base: apiBase, checkerId })
+    expect(activeAssignment).toEqual({ effective: true, hasExpectedDefault: true, makerMaySelectOther: false })
   } finally {
     await makerContext.close()
     await adminContext.close()
@@ -127,6 +169,7 @@ async function readMakerPlans(page: Page) {
 async function enterDraftTitle(page: Page, title: string, checkerId?: string): Promise<string> {
   await expect(page.getByLabel('Tên kế hoạch')).toBeVisible()
   await page.getByLabel('Tên kế hoạch').fill(title)
+  await page.getByLabel('Bộ phận').fill('e2e-browser')
   const checkerSelect = page.getByLabel('Người phê duyệt')
   await expect(checkerSelect.locator('option').nth(1)).toBeAttached()
   const selectedCheckerId = checkerId ?? await checkerSelect.locator('option').nth(1).getAttribute('value')
@@ -209,16 +252,18 @@ test('live Auth Maker-to-Checker browser workflow preserves a rejected version t
       await maker.getByRole('link', { name: 'Tạo kế hoạch' }).click()
       title = `Synthetic local Auth browser ${new Date().toISOString()}`
       await maker.getByLabel('Tên kế hoạch').fill(title)
+      await maker.getByLabel('Bộ phận').fill('e2e-browser')
       const checkerSelect = maker.getByLabel('Người phê duyệt')
       await expect(checkerSelect.locator('option').nth(1)).toBeAttached()
-      await checkerSelect.selectOption({ index: 1 })
+      await checkerSelect.selectOption(syntheticCheckerId)
+      await expect(checkerSelect).toHaveValue(syntheticCheckerId)
       await maker.getByRole('button', { name: 'Lưu bản nháp' }).click()
       await expect(maker.getByRole('heading', { name: title, exact: true })).toBeVisible()
       await expect(maker.locator('.auth-workflow-page-heading .workflow-status')).toHaveText('Bản nháp')
 
       await maker.getByRole('link', { name: 'Chỉnh sửa và gửi lại' }).click()
       await maker.getByRole('textbox', { name: 'Mục tiêu', exact: true }).fill('Measure qualified product trial registrations.')
-      await maker.getByLabel('Bộ phận').fill('Marketing')
+      await maker.getByLabel('Bộ phận').fill('e2e-browser')
       await maker.getByLabel('Ngày bắt đầu').fill('2026-11-01')
       await maker.getByLabel('Ngày kết thúc').fill('2026-11-30')
       await maker.getByLabel('Ngân sách (đơn vị nhỏ nhất)').fill('50000000')
@@ -369,7 +414,7 @@ test('creation intent replays a lost PostgreSQL draft response and rejects chang
   if (!intentId) throw new Error('The new form did not receive a creation intent.')
   expect(intentId).toMatch(/^[\da-f]{8}-[\da-f]{4}-4[\da-f]{3}-[89ab][\da-f]{3}-[\da-f]{12}$/i)
 
-  const checkerId = await enterDraftTitle(page, title)
+  const checkerId = await enterDraftTitle(page, title, syntheticCheckerId)
   const requestBody = { payload: { title, objective: '', summary: '', department: '', start_date: '', end_date: '',
     budget_minor_units: '', currency: 'VND', target_audience: '', channels: [], kpi_expected: '', notes: '' },
   checker_user_id: checkerId }
@@ -381,6 +426,7 @@ test('creation intent replays a lost PostgreSQL draft response and rejects chang
 
   let serverCreatedId = ''
   let serverCreatedStatus = 0
+  let serverCreatedDiagnostic = 'no structured response body'
   const interceptedBody: { value?: Record<string, unknown> } = {}
   const abortCommittedResponse = async (route: Route) => {
     if (route.request().method() !== 'POST') {
@@ -390,14 +436,18 @@ test('creation intent replays a lost PostgreSQL draft response and rejects chang
     interceptedBody.value = route.request().postDataJSON() as Record<string, unknown>
     const committedResponse = await route.fetch()
     serverCreatedStatus = committedResponse.status()
-    const body = await committedResponse.json() as { id: string }
-    serverCreatedId = body.id
+    const body = await committedResponse.json() as { id?: string; code?: string; message?: string }
+    serverCreatedId = typeof body.id === 'string' ? body.id : ''
+    if (typeof body.code === 'string') {
+      const safeMessage = typeof body.message === 'string' ? body.message.slice(0, 160) : 'no message'
+      serverCreatedDiagnostic = `${body.code}: ${safeMessage}`
+    }
     await route.abort('failed')
   }
   await page.route(`${apiBase}/workflow/plans`, abortCommittedResponse)
   await page.getByRole('button', { name: 'Lưu bản nháp' }).click()
   await expect(page.getByRole('alert').filter({ hasText: 'Chưa nhận được xác nhận' })).toBeVisible()
-  expect(serverCreatedStatus).toBe(201)
+  expect(serverCreatedStatus, `Draft create response: HTTP ${serverCreatedStatus}; ${serverCreatedDiagnostic}`).toBe(201)
   expect(serverCreatedId).toMatch(/^[0-9a-f-]{36}$/i)
   expect((interceptedBody.value?.payload as { title?: string } | undefined)?.title).toBe(title)
   expect(interceptedBody.value?.checker_user_id).toBe(checkerId)

@@ -12,6 +12,9 @@ import {
   type ConfigurationRevision,
 } from '../services/approvalConfiguration'
 import { SessionProvider } from '../services/SessionProvider'
+import { ServicesProvider } from '../services/ServiceProvider'
+import { createApiServices } from '../services/api'
+import { isPublicJudgeOnly } from '../services/apiBaseUrl'
 import type { WorkflowPayload, WorkflowPlan } from '../types/authWorkflow'
 import { AppRoutes } from './AppRoutes'
 
@@ -20,19 +23,67 @@ const maker = {
   phone: null, display_name: 'Maker One', status: 'ACTIVE' as const, roles: ['MAKER'],
 }
 const checker = { ...maker, id: 'checker-id', username: 'checker', roles: ['CHECKER'] }
-const admin = { ...maker, id: 'admin-id', username: 'admin', roles: ['ADMIN'] }
+const admin = {
+  ...maker,
+  id: 'admin-id',
+  username: 'admin',
+  roles: ['ADMIN'],
+  effective_permissions: [
+    'MARKETING_PLAN_READ', 'MARKETING_PLAN_VIEW_ALL', 'MARKETING_HISTORY_READ',
+    'ADMIN_EMPLOYEE_MANAGE', 'ADMIN_ROLE_MANAGE', 'ADMIN_APPROVER_MANAGE',
+    'ADMIN_SLA_MANAGE', 'ADMIN_AUDIT_READ',
+  ],
+}
 const adminMaker = { ...admin, id: 'admin-maker-id', username: 'admin.maker', roles: ['ADMIN', 'MAKER'] }
 
 function renderApplication(path = '/') {
-  return render(<MemoryRouter initialEntries={[path]}><SessionProvider><AuthProvider><AppRoutes /></AuthProvider></SessionProvider></MemoryRouter>)
+  const routes = isPublicJudgeOnly()
+    ? <AppRoutes />
+    : <SessionProvider><AuthProvider><AppRoutes /></AuthProvider></SessionProvider>
+  return render(<MemoryRouter initialEntries={[path]}><ServicesProvider services={createApiServices()}>{routes}</ServicesProvider></MemoryRouter>)
 }
 
-afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals() })
+afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); vi.unstubAllEnvs() })
 beforeEach(() => {
   vi.spyOn(authService, 'getRegistrationConfig').mockResolvedValue({ registration_enabled: false })
 })
 
 describe('Auth-first route entry', () => {
+  it('limits a Public Judge-only build to Judge routes without loading Auth', async () => {
+    vi.stubEnv('VITE_PUBLIC_JUDGE_ONLY', 'true')
+    vi.stubEnv('VITE_DEMO_ENABLED', 'true')
+    const loadPrincipal = vi.spyOn(authService, 'me')
+
+    renderApplication('/workflow/plans/new')
+
+    expect(await screen.findByRole('heading', { name: 'Verify workflow' })).toBeVisible()
+    expect(screen.getByText('Judge công khai, không cần tạo tài khoản')).toBeVisible()
+    expect(screen.queryByRole('heading', { name: 'Đăng nhập' })).not.toBeInTheDocument()
+    expect(loadPrincipal).not.toHaveBeenCalled()
+  })
+
+  it('exposes the public Challenge A Judge without Auth when Demo is enabled', async () => {
+    vi.stubEnv('VITE_DEMO_ENABLED', 'true')
+    const loadPrincipal = vi.spyOn(authService, 'me')
+
+    renderApplication('/challenge-a')
+
+    expect(await screen.findByRole('heading', { name: 'Verify workflow' })).toBeVisible()
+    expect(screen.getByText('Judge công khai, không cần tạo tài khoản')).toBeVisible()
+    expect(loadPrincipal).not.toHaveBeenCalled()
+  })
+
+  it('does not expose the public Challenge A route when Demo is disabled', async () => {
+    vi.stubEnv('DEV', false)
+    vi.stubEnv('VITE_DEMO_ENABLED', 'false')
+    vi.spyOn(authService, 'me').mockRejectedValue(new AuthApiError(401, 'Authentication is required.'))
+
+    renderApplication('/challenge-a')
+
+    expect(await screen.findByRole('heading', { name: 'Chào mừng trở lại' })).toBeVisible()
+    expect(screen.queryByText('Judge công khai, không cần tạo tài khoản')).not.toBeInTheDocument()
+  })
+
   it('protects approval configuration with the Admin role', async () => {
     vi.spyOn(authService, 'me').mockResolvedValue(maker)
     const deniedLoad = vi.spyOn(approvalConfigurationService, 'current')
@@ -252,7 +303,9 @@ describe('Auth-first route entry', () => {
   })
 
   it('shows SLA configuration only to Admin with the existing management permission', async () => {
-    vi.spyOn(authService, 'me').mockResolvedValue(admin)
+    vi.spyOn(authService, 'me').mockResolvedValue({
+      ...admin, effective_permissions: ['ADMIN_AUDIT_READ', 'ADMIN_EMPLOYEE_MANAGE', 'ADMIN_ROLE_MANAGE'],
+    })
     const deniedLoad = vi.spyOn(authWorkflowService, 'getSlaConfiguration')
     const denied = renderApplication('/workflow/sla')
     expect(await screen.findByRole('heading', { name: 'Không có quyền truy cập' })).toBeVisible()
@@ -399,5 +452,44 @@ describe('Auth-first route entry', () => {
 
     expect(await screen.findByRole('heading', { name: 'Không có quyền truy cập' })).toBeVisible()
     expect(screen.queryByRole('heading', { name: 'Chào mừng trở lại' })).not.toBeInTheDocument()
+  })
+
+  it('does not load the audit page for an Admin missing ADMIN_AUDIT_READ', async () => {
+    vi.spyOn(authService, 'me').mockResolvedValue({
+      ...admin,
+      effective_permissions: ['ADMIN_EMPLOYEE_MANAGE'],
+    })
+    const listAudit = vi.spyOn(authWorkflowService, 'listAuditEvents')
+
+    renderApplication('/workflow/audit')
+
+    expect(await screen.findByRole('heading', { name: 'Không có quyền truy cập' })).toBeVisible()
+    expect(listAudit).not.toHaveBeenCalled()
+  })
+
+  it('does not load employee administration for an Admin missing ADMIN_EMPLOYEE_MANAGE', async () => {
+    vi.spyOn(authService, 'me').mockResolvedValue({
+      ...admin,
+      effective_permissions: ['ADMIN_AUDIT_READ'],
+    })
+    const listEmployees = vi.spyOn(authWorkflowService, 'listEmployees')
+
+    renderApplication('/workflow/employees')
+
+    expect(await screen.findByRole('heading', { name: 'Không có quyền truy cập' })).toBeVisible()
+    expect(listEmployees).not.toHaveBeenCalled()
+  })
+
+  it('does not load role administration for an Admin missing ADMIN_ROLE_MANAGE', async () => {
+    vi.spyOn(authService, 'me').mockResolvedValue({
+      ...admin,
+      effective_permissions: ['ADMIN_AUDIT_READ'],
+    })
+    const listRoles = vi.spyOn(authWorkflowService, 'listRoles')
+
+    renderApplication('/workflow/roles')
+
+    expect(await screen.findByRole('heading', { name: 'Không có quyền truy cập' })).toBeVisible()
+    expect(listRoles).not.toHaveBeenCalled()
   })
 })

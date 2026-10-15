@@ -31,14 +31,23 @@ import { VerifyDashboardPage } from '../pages/VerifyDashboardPage'
 import { useSession } from '../services/SessionProvider'
 import { useAuth } from '../context/AuthContext'
 import { homeForRoles } from '../services/authNavigation'
-import { isDemoEnabled } from '../services/apiBaseUrl'
+import { isDemoEnabled, isPublicJudgeOnly } from '../services/apiBaseUrl'
 
 export function AppRoutes() {
+  if (isPublicJudgeOnly()) {
+    return <Routes>
+      <Route path="/" element={<Navigate to="/challenge-a" replace />} />
+      <Route path="/challenge-a" element={isDemoEnabled() ? <VerifyDashboardPage mode="public" /> : <StatePanel kind="error" title="Judge chưa sẵn sàng" description="Trang kiểm thử công khai chưa được bật trong môi trường này." />} />
+      <Route path="*" element={<Navigate to="/challenge-a" replace />} />
+    </Routes>
+  }
+
   return <Routes>
     <Route path="/" element={<AuthEntryPage />} />
     <Route path="/login" element={<LoginPage />} />
     <Route path="/register" element={<RegisterPage />} />
     <Route path="/activate" element={<AccountHandoverPage />} />
+    <Route path="/challenge-a" element={isDemoEnabled() ? <VerifyDashboardPage mode="public" /> : <Navigate to="/" replace />} />
     <Route path="/account" element={<RequireAuth><AuthenticatedAccountPage /></RequireAuth>} />
     <Route path="/access-denied" element={<RequireAuth><AccessDeniedPage /></RequireAuth>} />
     <Route path="/workflow" element={<RequireAuth><AuthenticatedWorkflowShell /></RequireAuth>}>
@@ -50,10 +59,10 @@ export function AppRoutes() {
       <Route path="plans/:planId" element={<AuthWorkflowRoleGuard roles={['MAKER', 'CHECKER', 'ADMIN']}><AuthenticatedWorkflowDetailPage /></AuthWorkflowRoleGuard>} />
       <Route path="plans/:planId/edit" element={<AuthWorkflowRoleGuard roles={['MAKER']}><AuthenticatedWorkflowFormPage /></AuthWorkflowRoleGuard>} />
       <Route path="reviews" element={<AuthWorkflowRoleGuard roles={['CHECKER']}><AuthenticatedPlansPage reviews /></AuthWorkflowRoleGuard>} />
-      <Route path="audit" element={<AuthWorkflowRoleGuard roles={['ADMIN']}><AuthenticatedAuditPage /></AuthWorkflowRoleGuard>} />
+      <Route path="audit" element={<AuthWorkflowPermissionGuard role="ADMIN" permission="ADMIN_AUDIT_READ"><AuthenticatedAuditPage /></AuthWorkflowPermissionGuard>} />
       <Route path="configuration" element={<AuthWorkflowRoleGuard roles={['ADMIN']}><AuthenticatedApprovalConfigurationPage /></AuthWorkflowRoleGuard>} />
-      <Route path="employees" element={<AuthWorkflowRoleGuard roles={['ADMIN']}><AuthenticatedEmployeesPage /></AuthWorkflowRoleGuard>} />
-      <Route path="roles" element={<AuthWorkflowRoleGuard roles={['ADMIN']}><AuthenticatedRolesPage /></AuthWorkflowRoleGuard>} />
+      <Route path="employees" element={<AuthWorkflowPermissionGuard role="ADMIN" permission="ADMIN_EMPLOYEE_MANAGE"><AuthenticatedEmployeesPage /></AuthWorkflowPermissionGuard>} />
+      <Route path="roles" element={<AuthWorkflowPermissionGuard role="ADMIN" permission="ADMIN_ROLE_MANAGE"><AuthenticatedRolesPage /></AuthWorkflowPermissionGuard>} />
       <Route path="sla" element={<AuthWorkflowPermissionGuard role="ADMIN" permission="ADMIN_SLA_MANAGE"><AuthenticatedSlaPage /></AuthWorkflowPermissionGuard>} />
     </Route>
 

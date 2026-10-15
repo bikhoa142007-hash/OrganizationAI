@@ -31,3 +31,7 @@ export function resolveApiBaseUrl(
 export function isDemoEnabled() {
   return import.meta.env.DEV || import.meta.env.VITE_DEMO_ENABLED === 'true'
 }
+
+export function isPublicJudgeOnly() {
+  return import.meta.env.VITE_PUBLIC_JUDGE_ONLY === 'true'
+}

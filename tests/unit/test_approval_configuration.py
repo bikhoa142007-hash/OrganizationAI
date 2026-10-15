@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from uuid import uuid4
 import pytest
 
 from src.backend.application.approval_configuration import (
@@ -33,6 +34,23 @@ def test_missing_or_ambiguous_budget_is_unknown():
             "limits": [
                 {"department": "Marketing", "limit_minor_units": "10", "active": True},
                 {"department": "Marketing", "limit_minor_units": "20", "active": True},
+            ],
+        })
+
+
+def test_checker_assignment_requires_boolean_toggle_and_unique_department_defaults():
+    with pytest.raises(ConfigurationValidationError, match="must be a boolean"):
+        validate_configuration_value("checker_assignment", {
+            "maker_may_select_other": 1,
+            "defaults": [],
+        })
+
+    with pytest.raises(ConfigurationValidationError, match="more than one default Checker"):
+        validate_configuration_value("checker_assignment", {
+            "maker_may_select_other": False,
+            "defaults": [
+                {"department": "Marketing", "checker_id": str(uuid4())},
+                {"department": "Marketing", "checker_id": str(uuid4())},
             ],
         })
 

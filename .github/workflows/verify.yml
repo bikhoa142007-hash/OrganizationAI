@@ -98,6 +98,15 @@ jobs:
         run: npm run test:e2e -- --config playwright.config.ts workflow.spec.ts
         env:
           ORGANIZATIONAI_TEST_PYTHON: .venv/bin/python
+      - name: Run isolated Public Judge-only acceptance, actions, and responsive layout
+        run: npm run test:e2e -- --config playwright.config.ts public-judge.spec.ts public-judge-layout.spec.ts public-judge-actions.spec.ts
+        env:
+          APP_ENV: demo
+          PUBLIC_JUDGE_ONLY: 'true'
+          VITE_DEMO_ENABLED: 'true'
+          VITE_PUBLIC_JUDGE_ONLY: 'true'
+          VITE_API_BASE_URL: http://127.0.0.1:8008/api
+          ORGANIZATIONAI_TEST_PYTHON: .venv/bin/python
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
@@ -234,14 +243,18 @@ jobs:
 
           base_url = verify_runner_provisioned_database(os.environ)
           databases = (
+              os.environ["AUTH_E2E_POSTGRES_TEST_DATABASE"],
               os.environ["SLA_POSTGRES_TEST_DATABASE"],
               os.environ["SLA_EMPTY_POSTGRES_TEST_DATABASE"],
           )
           if any(
-              not re.fullmatch(r"organizationai_sla_[a-z0-9_]{1,40}", name)
+              not (
+                  re.fullmatch(r"organizationai_auth_e2e_[a-z0-9_]{1,40}", name)
+                  or re.fullmatch(r"organizationai_sla_[a-z0-9_]{1,40}", name)
+              )
               for name in databases
           ):
-              raise RuntimeError("Run-scoped SLA database name is invalid.")
+              raise RuntimeError("Run-scoped Auth/SLA database name is invalid.")
 
           with psycopg.connect(
               host=base_url.host,
@@ -288,6 +301,7 @@ jobs:
           POSTGRES_TEST_DATABASE: organizationai_test_${{ github.run_id }}_${{ github.run_attempt }}
           POSTGRES_TEST_USER: organizationai_test
           POSTGRES_TEST_RUN_ID: ${{ github.run_id }}_${{ github.run_attempt }}
+          AUTH_E2E_POSTGRES_TEST_DATABASE: organizationai_auth_e2e_${{ github.run_id }}_${{ github.run_attempt }}
           SLA_POSTGRES_TEST_DATABASE: organizationai_sla_acceptance_${{ github.run_id }}_${{ github.run_attempt }}
           SLA_EMPTY_POSTGRES_TEST_DATABASE: organizationai_sla_empty_${{ github.run_id }}_${{ github.run_attempt }}
       - name: Verify complete PostgreSQL acceptance marker selection
@@ -308,8 +322,19 @@ jobs:
               "tests/integration/test_auth_sla_postgres.py::test_postgres_migration_constraints_indexes_and_immutability_triggers",
               "tests/integration/test_auth_sla_postgres.py::test_postgres_missing_and_disabled_configuration_do_not_start_a_round",
               "tests/integration/test_auth_workflow_postgres_notifications.py::test_postgres_retry_race_reuses_the_round_snapshot",
+              "tests/integration/test_auth_workflow_postgres_notifications.py::test_postgres_committed_submission_survives_provider_timeout",
+              "tests/integration/test_auth_workflow_postgres_notifications.py::test_postgres_late_vlm_result_is_audited_after_recovery",
               "tests/integration/test_auth_workflow_postgres_notifications.py::test_postgres_policy_conflict_persists_safe_attempt_provenance_and_routes_to_checker",
               "tests/integration/test_auth_workflow_postgres_notifications.py::test_postgres_notification_lifecycle_permissions_replay_and_rollback",
+              "tests/integration/test_auth_workflow_postgres_notifications.py::test_postgres_retry_evaluator_failure_audit_persists_disposition_and_round[False-APPLIED-HUMAN_REVIEW_REQUIRED-PENDING_APPROVAL-HUMAN_REVIEW_REQUIRED]",
+              "tests/integration/test_auth_workflow_postgres_notifications.py::test_postgres_retry_evaluator_failure_audit_persists_disposition_and_round[True-STALE-IGNORED_STALE-APPROVED-COMPLETED]",
+              "tests/integration/test_auth_workflow_postgres_notifications.py::test_postgres_recovery_without_version_snapshot_audits_missing_version_route",
+              "tests/integration/test_approval_configuration_api.py::test_postgres_custom_role_crud_assignment_and_audit",
+              "tests/integration/test_approval_configuration_api.py::test_postgres_employee_update_rejects_status_mass_assignment",
+              "tests/integration/test_approval_configuration_api.py::test_postgres_employee_role_filter_uses_permissions_across_custom_roles",
+              "tests/integration/test_approval_configuration_api.py::test_postgres_role_admin_keeps_admin_grants_self_assignment_and_builtins_locked",
+              "tests/integration/test_approval_configuration_api.py::test_postgres_checker_reassignment_audit_records_version_round_and_result",
+              "tests/integration/test_approval_configuration_api.py::test_checker_assignment_config_requires_approver_permission",
           }
           result = subprocess.run(
               [sys.executable, "-m", "pytest", "--collect-only", "-q", "-m", "postgres"],
@@ -331,7 +356,7 @@ jobs:
               print(f"Missing PostgreSQL acceptance tests: {sorted(expected - selected)}", file=sys.stderr)
               print(f"Unexpected PostgreSQL-marked tests: {sorted(selected - expected)}", file=sys.stderr)
               raise SystemExit(1)
-          print("Verified exact PostgreSQL marker selection: all 13 configuration, retry, SLA, and notification acceptance tests.")
+          print("Verified exact PostgreSQL marker selection: all 24 configuration, employee, retry, SLA, and notification acceptance tests.")
           PY
         working-directory: .
         env:
@@ -412,7 +437,7 @@ jobs:
         env:
           APP_ENV: demo
           AUTH_SEED_PASSWORD: ci-only-auth-password
-          DATABASE_URL: postgresql+psycopg://organizationai_test:ci-only-test-password@127.0.0.1:${{ job.services.postgres.ports[5432] }}/organizationai_test_${{ github.run_id }}_${{ github.run_attempt }}
+          DATABASE_URL: postgresql+psycopg://organizationai_test:ci-only-test-password@127.0.0.1:${{ job.services.postgres.ports[5432] }}/organizationai_auth_e2e_${{ github.run_id }}_${{ github.run_attempt }}
           JWT_SECRET: ci-only-test-jwt-secret-at-least-32-characters
           AUTH_WORKFLOW_AI_PROVIDER: MOCK_VLM
           AUTH_WORKFLOW_MOCK_SCENARIO: review

@@ -6,7 +6,7 @@ import secrets
 from typing import TYPE_CHECKING, Any
 from uuid import UUID, uuid4
 
-from sqlalchemy import and_, func, or_, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
@@ -26,6 +26,15 @@ if TYPE_CHECKING:
 
 ACTIVATION_TOKEN_TTL = timedelta(minutes=30)
 RESET_TOKEN_TTL = timedelta(minutes=30)
+EMPLOYEE_PROFILE_EDITABLE_FIELDS = frozenset({
+    "user_code",
+    "display_name",
+    "email",
+    "phone",
+    "department",
+    "job_title",
+    "employment_start_date",
+})
 
 
 def _require_admin(principal: AuthenticatedPrincipal, correlation_id: str) -> None:
@@ -41,9 +50,11 @@ def _write_transaction(session: Session):
 
 def _audit(session: Session, actor_id: UUID, employee_id: UUID | None, action: str,
            before: dict[str, Any] | None, after: dict[str, Any] | None) -> None:
+    successful_state = dict(after) if after is not None else {}
+    successful_state["result"] = "SUCCESS"
     session.add(AdminAuditEvent(
         actor_id=actor_id, employee_id=employee_id, action=action,
-        before_state=before, after_state=after,
+        before_state=before, after_state=successful_state,
     ))
 
 
@@ -114,15 +125,7 @@ def list_employees(
         ))
     if role:
         filters.append(EmployeeProfile.user_id.is_not(None))
-        role_filters = [UserRole.role.has(and_(Role.code == role, Role.status == "ACTIVE"))]
-        required_permissions = PERMISSION_ROLE_REQUIREMENTS.get(role)
-        if required_permissions:
-            role_filters.append(and_(*[
-                UserRole.role.has(and_(Role.status == "ACTIVE",
-                                       Role.permissions.any(RolePermission.permission_code == permission)))
-                for permission in sorted(required_permissions)
-            ]))
-        filters.append(User.user_roles.any(or_(*role_filters)))
+        filters.append(effective_role_filter(role))
     if status:
         filters.append(EmployeeProfile.user_id.is_not(None))
         if status == "PENDING_ACTIVATION":
@@ -219,6 +222,13 @@ def create_employee(session: Session, principal: AuthenticatedPrincipal, correla
 def update_employee(session: Session, principal: AuthenticatedPrincipal, employee_id: UUID,
                     correlation_id: str, changes: dict[str, Any]) -> dict:
     _require_admin(principal, correlation_id)
+    forbidden_fields = set(changes) - EMPLOYEE_PROFILE_EDITABLE_FIELDS
+    if forbidden_fields:
+        raise ApplicationError(
+            "VALIDATION_ERROR",
+            "Employee status, account linkage, and system fields require dedicated administrative actions.",
+            correlation_id,
+        )
     try:
         with _write_transaction(session):
             profile = session.scalar(select(EmployeeProfile).where(EmployeeProfile.id == employee_id).with_for_update())
@@ -306,6 +316,9 @@ def deactivate_employee(session: Session, principal: AuthenticatedPrincipal, emp
                 details={
                     "previous_checker_id": str(previous_id),
                     "new_checker_id": str(replacement_id),
+                    "version": plan.current_version,
+                    "round": plan.current_round,
+                    "result": "SUCCESS",
                     "reason": "Employee deactivation using the active department default",
                     "assignment_configuration_revision_id": assignment.configuration_revision_id,
                     "assignment_configuration_revision": assignment.configuration_revision,

@@ -111,11 +111,11 @@ def resolve_checker_assignment(
     lock_eligible_checker: bool = False,
     lock_configuration: bool = False,
 ) -> CheckerAssignmentResult:
-    """Resolve the configured default or preserve the explicit pre-config selection.
+    """Resolve the configured default or an explicitly permitted department choice.
 
-    This function never infers a substitute Checker from the employee catalog. If a
-    revision is absent, an explicitly selected, currently eligible Checker remains
-    compatible with the existing workflow while the result stays UNCONFIGURED.
+    This function never infers a substitute Checker from the employee catalog. An
+    absent revision or department default fails closed, including for an explicit
+    Checker selection.
     """
     if lock_configuration:
         lock_configuration_registry(session)
@@ -127,20 +127,9 @@ def resolve_checker_assignment(
     }
 
     if resolution.status == "UNCONFIGURED":
-        if selected_checker_id is None:
-            return CheckerAssignmentResult(
-                None, False, "UNCONFIGURED", **metadata, source="NONE",
-                reason="No default assignment configuration or explicit Checker was supplied.",
-            )
-        if selected_checker_id == maker_id or not _eligible_checker(session, selected_checker_id, lock=lock_eligible_checker):
-            return CheckerAssignmentResult(
-                None, False, "UNCONFIGURED", **metadata, source="NONE",
-                reason="The explicit Checker is not an active, eligible Checker distinct from the Maker.",
-            )
         return CheckerAssignmentResult(
-            selected_checker_id, True, "UNCONFIGURED", **metadata,
-            source="EXPLICIT_UNCONFIGURED",
-            reason="The existing explicit Checker is eligible; no assignment configuration is effective.",
+            None, False, "UNCONFIGURED", **metadata, source="NONE",
+            reason="No effective Checker assignment configuration exists for this department.",
         )
 
     if resolution.status != "EFFECTIVE" or not department_id:
@@ -153,6 +142,12 @@ def resolve_checker_assignment(
     match = next((item for item in value.get("defaults", []) if item.get("department") == department_id), None)
     default_id = UUID(match["checker_id"]) if match else None
     may_choose = value.get("maker_may_select_other") is True
+
+    if default_id is None:
+        return CheckerAssignmentResult(
+            None, False, "NO_ELIGIBLE_CHECKER", **metadata, source="NONE",
+            reason="No default Checker is configured for this department.",
+        )
 
     if selected_checker_id is None:
         candidate_id = default_id
