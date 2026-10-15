@@ -23,7 +23,12 @@ from src.backend.domain.policy import (
     BudgetConfiguration,
     Criterion,
     MANDATORY_FIELDS,
+    MediaCompliancePolicy,
+    MediaPolicyRule,
     PolicySnapshot,
+    STRATEGY_CRITERIA,
+    StrategyCriterion,
+    StrategyRubric,
 )
 from src.backend.repositories.approval import ApprovalRepository
 from src.shared.validation import require
@@ -63,12 +68,16 @@ def _load_cases() -> tuple[dict[str, Any], list[dict[str, Any]]]:
 
 
 def _approval_configuration(fixture: dict[str, Any]) -> ApprovalConfiguration:
+    strategy_criteria = tuple(
+        Criterion(criterion_id, weight)
+        for criterion_id, _label, weight in STRATEGY_CRITERIA
+    )
     policy = PolicySnapshot(
         "VERIFY-POLICY-1",
         "VERIFY-1.0",
         fixture["auto_approval_enabled"],
         MANDATORY_FIELDS,
-        (Criterion("strategy", 100),),
+        strategy_criteria,
         ("mock-1",),
         ("image/png", "image/jpeg", "image/webp"),
         5_000_000,
@@ -86,7 +95,33 @@ def _approval_configuration(fixture: dict[str, Any]) -> ApprovalConfiguration:
         "VERIFY-BUDGET-AUTHORITY",
         True,
     )
-    return ApprovalConfiguration(policy, (budget,), authority)
+    return ApprovalConfiguration(
+        policy,
+        (budget,),
+        authority,
+        media_policy=MediaCompliancePolicy(
+            "VERIFY-MEDIA-1",
+            "1",
+            "ACTIVE",
+            ("marketing",),
+            ("social",),
+            (MediaPolicyRule(
+                "VERIFY-EVIDENCE-1",
+                "WARNING",
+                "Synthetic media evidence check.",
+                ("OBSERVATION",),
+            ),),
+        ),
+        strategy_rubric=StrategyRubric(
+            "VERIFY-RUBRIC-1",
+            "1",
+            "ACTIVE",
+            tuple(
+                StrategyCriterion(criterion_id, label, weight)
+                for criterion_id, label, weight in STRATEGY_CRITERIA
+            ),
+        ),
+    )
 
 
 class _MissingEvidenceMockProvider(MockVLMProvider):
