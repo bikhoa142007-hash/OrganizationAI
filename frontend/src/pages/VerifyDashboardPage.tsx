@@ -5,6 +5,7 @@ import { PageHeader, StatePanel, StatusBadge, formatDateTime } from '../componen
 import { publicJudgeService, type PublicJudgeInputResult } from '../services/publicJudgeService'
 import { useServices } from '../services/ServiceProvider'
 import type { VerifyResultRow, VerifyRun, VerifySuite } from '../types'
+import './VerifyDashboardPage.css'
 
 const suiteCounts: Record<VerifySuite, number> = { general: 4, escalation: 5, regression: 15 }
 
@@ -95,17 +96,17 @@ export function VerifyDashboardPage({ mode = 'demo' }: { mode?: 'demo' | 'public
     {isPublic && <section className="content-section public-judge-input">
       <div className="section-toolbar"><div><p className="page-eyebrow">Đầu vào mới</p><h3>Thử một bộ dữ liệu có cấu trúc</h3></div><span className="readonly-label">Không lưu</span></div>
       <p>Simulation v1 chỉ áp dụng cho DEMO-DEPT-01, kênh DEMO_SOCIAL hoặc DEMO_EMAIL, tiền tệ VND và ngân sách không quá 100.000.000 VND. Ngoài phạm vi, thiếu/xung đột fact, hoặc vượt trần sẽ chuyển tiếp để người có thẩm quyền xem.</p>
-      <form className="form-grid" onSubmit={event => void evaluateInput(event)}>
-        <label className="form-field"><span>Tên ca</span><input required maxLength={120} value={inputForm.title} onChange={event => updateInput('title', event.target.value)} /></label>
-        <label className="form-field"><span>Department</span><input required maxLength={80} value={inputForm.department} onChange={event => updateInput('department', event.target.value)} /></label>
-        <label className="form-field"><span>Mục tiêu</span><input required maxLength={500} value={inputForm.objective} onChange={event => updateInput('objective', event.target.value)} /></label>
-        <label className="form-field"><span>Tóm tắt</span><textarea required maxLength={1000} value={inputForm.summary} onChange={event => updateInput('summary', event.target.value)} /></label>
-        <label className="form-field"><span>Đối tượng</span><input required maxLength={200} value={inputForm.targetAudience} onChange={event => updateInput('targetAudience', event.target.value)} /></label>
-        <label className="form-field"><span>Kênh</span><input required maxLength={80} value={inputForm.channel} onChange={event => updateInput('channel', event.target.value)} /></label>
-        <label className="form-field"><span>Tiền tệ</span><input required minLength={3} maxLength={3} pattern="[A-Z]{3}" value={inputForm.currency} onChange={event => updateInput('currency', event.target.value.toUpperCase())} /></label>
-        <label className="form-field"><span>Ngân sách khai báo (VND)</span><input required type="number" min="0" max="100000000000" step="1" value={inputForm.budgetVnd} onChange={event => updateInput('budgetVnd', event.target.value)} /></label>
-        <label className="form-field"><span>Ngân sách theo nguồn (VND)</span><input type="number" min="0" max="100000000000" step="1" value={inputForm.sourceBudgetVnd} onChange={event => updateInput('sourceBudgetVnd', event.target.value)} /><small>Để trống để kiểm tra trường hợp thiếu fact.</small></label>
-        <div className="form-actions"><button className="button button-secondary" type="submit" disabled={inputStarting}><Play /> {inputStarting ? 'Đang đánh giá...' : 'Đánh giá đầu vào mới'}</button></div>
+      <form className="public-judge-form" onSubmit={event => void evaluateInput(event)}>
+        <label className="public-judge-field"><span>Tên ca</span><input required maxLength={120} value={inputForm.title} onChange={event => updateInput('title', event.target.value)} /></label>
+        <label className="public-judge-field"><span>Department</span><input required maxLength={80} value={inputForm.department} onChange={event => updateInput('department', event.target.value)} /></label>
+        <label className="public-judge-field"><span>Mục tiêu</span><input required maxLength={500} value={inputForm.objective} onChange={event => updateInput('objective', event.target.value)} /></label>
+        <label className="public-judge-field"><span>Tóm tắt</span><textarea required maxLength={1000} value={inputForm.summary} onChange={event => updateInput('summary', event.target.value)} /></label>
+        <label className="public-judge-field"><span>Đối tượng</span><input required maxLength={200} value={inputForm.targetAudience} onChange={event => updateInput('targetAudience', event.target.value)} /></label>
+        <label className="public-judge-field"><span>Kênh</span><input required maxLength={80} value={inputForm.channel} onChange={event => updateInput('channel', event.target.value)} /></label>
+        <label className="public-judge-field"><span>Tiền tệ</span><input required minLength={3} maxLength={3} pattern="[A-Z]{3}" value={inputForm.currency} onChange={event => updateInput('currency', event.target.value.toUpperCase())} /></label>
+        <label className="public-judge-field"><span>Ngân sách khai báo (VND)</span><input required type="number" min="0" max="100000000000" step="1" value={inputForm.budgetVnd} onChange={event => updateInput('budgetVnd', event.target.value)} /></label>
+        <label className="public-judge-field"><span>Ngân sách theo nguồn (VND)</span><input type="number" min="0" max="100000000000" step="1" value={inputForm.sourceBudgetVnd} onChange={event => updateInput('sourceBudgetVnd', event.target.value)} /><small>Để trống để kiểm tra trường hợp thiếu fact.</small></label>
+        <div className="public-judge-actions"><button className="button button-secondary" type="submit" disabled={inputStarting}><Play /> {inputStarting ? 'Đang đánh giá...' : 'Đánh giá đầu vào mới'}</button></div>
       </form>
       {inputError && <StatePanel kind="error" title="Không thể đánh giá đầu vào" description={inputError} />}
       {inputRun && <section className="verify-summary" aria-live="polite"><div className="section-toolbar"><div><p className="page-eyebrow">Kết quả mô phỏng</p><h3>{inputRun.outcome}</h3></div><span className="readonly-label">{inputRun.category ?? 'Không chuyển tiếp'}</span></div><dl><div><dt>Mode / chất lượng</dt><dd>{inputRun.mode} · {inputRun.qualityStatus}</dd></div><div><dt>Phân loại dữ liệu</dt><dd>{inputRun.dataClassification}</dd></div><div><dt>Policy scope</dt><dd>{inputRun.policyVersion}</dd></div><div><dt>Hoàn tất</dt><dd>{formatDateTime(inputRun.completedAt)}</dd></div><div><dt>Thời lượng</dt><dd>{inputRun.durationMs} ms</dd></div><div><dt>Audit action</dt><dd>{inputRun.audit.action}</dd></div><div className="definition-wide"><dt>Lý do</dt><dd>{inputRun.reason}</dd></div><div className="definition-wide"><dt>Input SHA-256</dt><dd><code>{inputRun.audit.inputSha256}</code></dd></div></dl>{inputRun.handoffQuestion && <section className="verify-escalation-questions"><h4>Câu hỏi chuyển tiếp</h4><p>{inputRun.handoffQuestion}</p></section>}</section>}
