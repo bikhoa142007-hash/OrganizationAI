@@ -25,3 +25,10 @@ Budget equality uses `<=` the configured budget ceiling; auto authority uses `<=
 The environment example pins the previously verified Ollama identities and leaves endpoint URLs blank. Verify the current runtime digests before deployment; do not reuse old digests. No real production inference or positive production auto-approval was performed as part of creating this package.
 
 The request JSON is retained as an input record only. It is not a backend runtime schema and `configuration_complete=false` until production identities, revisioned config, and an allowed PO sign-off path are present.
+
+## Render rollout — 2026-10-15
+
+- Saved the approved `AUTH_WORKFLOW_MEDIA_POLICY_JSON` to Render service `organizationai-api`; its value matches `media-policy.approved.json`. Render reported a successful service restart and `/api/health/ready` returned `status=ok`, `environment=production`, `auth_database=postgresql`.
+- `AUTH_WORKFLOW_STRATEGY_RUBRIC_JSON` on Render matches `BA-STRATEGY-7-1.0` and its seven weights.
+- Render is running code commit `b67a658`; this documentation branch has not been deployed as code. The environment policy is only the base configuration: an effective PostgreSQL `media_policy` revision, including a disabled revision, takes precedence.
+- `/api/workflow/configuration` still returns `401 UNAUTHENTICATED` without an ADMIN session, so effective assignments, limits, authority and approval-policy revisions could not be verified. No database revisions were written, no model inference was sent, and auto-approval was not enabled.
