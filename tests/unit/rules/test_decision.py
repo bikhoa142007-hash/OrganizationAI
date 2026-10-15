@@ -13,7 +13,8 @@ class DecisionTests(unittest.TestCase):
                                       'synthetic-trace', 'synthetic-intent', NOW,
                                       'PENDING_APPROVAL', 'ACTIVE', 0,
                                       p.input_hash, (('synthetic-image', 'a' * 64),),
-                                      ('synthetic-checker',), False))
+                                      ('synthetic-checker',), False,
+                                      ('synthetic-checker', 'synthetic-policy-owner', 'synthetic-budget-authority')))
 
     def assert_review(self, bundle, code, category):
         d = bundle.decision
@@ -30,9 +31,39 @@ class DecisionTests(unittest.TestCase):
         self.assertIsNone(b.decision.escalation_category)
         self.assertEqual(b.audit.action, 'AUTO_APPROVED')
 
+    def test_five_million_auto_limit_and_ten_million_budget_boundaries(self):
+        cfg = config()
+        cfg = replace(
+            cfg,
+            budgets=(replace(cfg.budgets[0], limit_minor_units='10000000'),),
+            authority=replace(cfg.authority, auto_limit_minor_units='5000000'),
+        )
+        p = plan()
+
+        at_auto_limit = replace(p, payload={**p.payload, 'budget_minor_units': '5000000'})
+        self.assertEqual(self.run_case(cfg=cfg, p=at_auto_limit).decision.outcome, 'AUTO_APPROVED')
+
+        over_auto_limit = replace(p, payload={**p.payload, 'budget_minor_units': '5000001'})
+        over_auto_bundle = self.run_case(cfg=cfg, p=over_auto_limit)
+        self.assertEqual(over_auto_bundle.decision.outcome, 'HUMAN_REVIEW_REQUIRED')
+        self.assertEqual(over_auto_bundle.decision.budget_validation.result, 'PASS')
+        self.assertIn('AUTHORITY_LIMIT', over_auto_bundle.decision.reason_codes)
+
+        at_plan_limit = replace(p, payload={**p.payload, 'budget_minor_units': '10000000'})
+        plan_limit_bundle = self.run_case(cfg=cfg, p=at_plan_limit)
+        self.assertEqual(plan_limit_bundle.decision.budget_validation.result, 'PASS')
+        self.assertEqual(plan_limit_bundle.decision.outcome, 'HUMAN_REVIEW_REQUIRED')
+
+        above_plan_limit = replace(p, payload={**p.payload, 'budget_minor_units': '10000001'})
+        above_plan_bundle = self.run_case(cfg=cfg, p=above_plan_limit)
+        self.assertEqual(above_plan_bundle.decision.budget_validation.result, 'FAIL')
+        self.assertEqual(above_plan_bundle.decision.outcome, 'HUMAN_REVIEW_REQUIRED')
+
     def test_score_70_requires_policy_review(self):
         e = recommend_review(evaluation(), 'POLICY_OUT_OF_SCOPE')
-        e['feasibility_score'] = e['criterion_scores'][0]['score'] = 70
+        e['feasibility_score'] = 70
+        for criterion in e['criterion_scores']:
+            criterion['score'] = 70
         self.assert_review(self.run_case(e), 'FEASIBILITY_SCORE', 'POLICY_OUT_OF_SCOPE')
 
     def test_budget_exceeded_is_authority_review(self):
@@ -64,6 +95,38 @@ class DecisionTests(unittest.TestCase):
         cfg = config()
         cfg = replace(cfg, authority=replace(cfg.authority, auto_limit_minor_units='9999'))
         self.assert_review(self.run_case(cfg=cfg), 'AUTHORITY_LIMIT', 'AUTHORITY_EXCEEDED')
+
+    def test_missing_or_inactive_authority_actor_requires_review(self):
+        p = plan()
+        context = DecisionContext(
+            'synthetic-eval', 'synthetic-run', 'MOCK_VLM', 'synthetic-trace',
+            'synthetic-intent', NOW, 'PENDING_APPROVAL', 'ACTIVE', 0,
+            p.input_hash, (('synthetic-image', 'a' * 64),), ('synthetic-checker',), False,
+            ('synthetic-checker', 'synthetic-policy-owner'),
+        )
+        bundle = decide(p, config(), evaluation(p), context)
+        self.assertEqual(bundle.decision.outcome, 'HUMAN_REVIEW_REQUIRED')
+        self.assertIn('AUTHORITY_LIMIT', bundle.decision.reason_codes)
+
+    def test_channel_outside_approved_scope_requires_review(self):
+        p = plan()
+        p = replace(p, payload={**p.payload, 'channels': ['email']})
+        bundle = self.run_case(p=p)
+        self.assertEqual(bundle.decision.outcome, 'HUMAN_REVIEW_REQUIRED')
+        self.assertIn('DECISION_SCOPE', bundle.decision.reason_codes)
+
+        p = plan()
+        p = replace(p, payload={**p.payload, 'department': 'Sales'})
+        bundle = self.run_case(p=p)
+        self.assertEqual(bundle.decision.outcome, 'HUMAN_REVIEW_REQUIRED')
+        self.assertIn('DECISION_SCOPE', bundle.decision.reason_codes)
+
+    def test_missing_model_identity_requires_review(self):
+        raw = evaluation()
+        raw['model_version'] = None
+        bundle = self.run_case(raw)
+        self.assertEqual(bundle.decision.outcome, 'HUMAN_REVIEW_REQUIRED')
+        self.assertIn('EVAL_VALID', bundle.decision.reason_codes)
 
     def test_same_inputs_produce_same_complete_bundle(self):
         self.assertEqual(self.run_case(), self.run_case())

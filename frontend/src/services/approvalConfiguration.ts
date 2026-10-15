@@ -19,6 +19,16 @@ export type ConfigurationRevision = {
   configuration_hash: string
   changed_by: string
   created_at: string
+  signoff?: {
+    candidate_revision_id: string
+    approval_policy_revision_id: string
+    approved_configuration_hash: string
+    policy_owner_id: string
+    signed_at: string
+    authority_revision_id: string
+    authority_configuration_hash: string
+    configuration_revisions: Record<string, { revision_id: string; configuration_hash: string }>
+  } | null
 }
 
 export type ConfigurationItem = {
@@ -157,6 +167,7 @@ function isRevision(value: unknown): value is ConfigurationRevision {
     && typeof value.configuration_hash === 'string'
     && typeof value.changed_by === 'string'
     && typeof value.created_at === 'string'
+    && (value.signoff === undefined || value.signoff === null || record(value.signoff))
 }
 
 export const approvalConfigurationService = {
@@ -185,5 +196,15 @@ export const approvalConfigurationService = {
       if (!isRevision(result) || result.kind !== kind) throw new AuthApiError(502, 'Dịch vụ cấu hình trả về revision không hợp lệ.', 'INVALID_RESPONSE')
       return result
     })
+  },
+
+  async signOffPolicy(expectedRevisions: Record<ConfigurationKind, { revision_id: string; configuration_hash: string }>): Promise<{ revision: ConfigurationRevision; replayed: boolean }> {
+    const result = await request<unknown>('/workflow/configuration/approval-policy/signoff', 'POST', {
+      expected_revisions: expectedRevisions,
+    })
+    if (!record(result) || !isRevision(result.revision) || result.revision.kind !== 'approval_policy' || typeof result.replayed !== 'boolean') {
+      throw new AuthApiError(502, 'Dịch vụ sign-off trả về dữ liệu không hợp lệ.', 'INVALID_RESPONSE')
+    }
+    return result as { revision: ConfigurationRevision; replayed: boolean }
   },
 }

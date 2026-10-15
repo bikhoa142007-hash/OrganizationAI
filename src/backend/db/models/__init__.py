@@ -3,6 +3,7 @@ from .user import User
 from .employee import AdminAuditEvent, AuthManagementToken, EmployeeProfile
 from .sla import AuthWorkflowSlaConfiguration, AuthWorkflowSlaRound
 from .approval_configuration import (
+    AuthWorkflowApprovalPolicySignoff,
     AuthWorkflowConfigurationHead,
     AuthWorkflowConfigurationLock,
     AuthWorkflowConfigurationRevision,
@@ -26,5 +27,6 @@ __all__ = [
     "AuthWorkflowEvaluationRun", "AuthWorkflowEngineDecision", "AuthWorkflowNotification",
     "AuthWorkflowSlaConfiguration", "AuthWorkflowSlaRound",
     "AuthWorkflowConfigurationHead", "AuthWorkflowConfigurationLock",
-    "AuthWorkflowConfigurationRevision", "AuthWorkflowRoundConfigurationSnapshot",
+    "AuthWorkflowConfigurationRevision", "AuthWorkflowApprovalPolicySignoff",
+    "AuthWorkflowRoundConfigurationSnapshot",
 ]

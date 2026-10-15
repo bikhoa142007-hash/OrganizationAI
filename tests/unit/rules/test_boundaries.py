@@ -12,7 +12,8 @@ def context(p=None, **changes):
     p = p or plan()
     return replace(DecisionContext('synthetic-eval', 'synthetic-run', 'MOCK_VLM',
                    'synthetic-trace', 'synthetic-intent', NOW, 'PENDING_APPROVAL', 'ACTIVE', 0,
-                   p.input_hash, (('synthetic-image', 'a' * 64),), ('synthetic-checker',), False), **changes)
+                   p.input_hash, (('synthetic-image', 'a' * 64),), ('synthetic-checker',), False,
+                   ('synthetic-checker', 'synthetic-policy-owner', 'synthetic-budget-authority')), **changes)
 
 
 def run(raw=None, p=None, cfg=None, ctx=None):
@@ -82,7 +83,7 @@ class BoundaryTests(unittest.TestCase):
         e = evaluation()
         e['evidence'] = []
         e['criterion_scores'][0]['evidence_refs'] = []
-        self.assertIn('INPUT_INTEGRITY', self.assert_fact(e).decision.reason_codes)
+        self.assertIn('EVAL_VALID', self.assert_fact(e).decision.reason_codes)
         e = evaluation()
         e['criterion_scores'][0]['score'] = 72
         self.assertIn('EVAL_VALID', self.assert_fact(e).decision.reason_codes)

@@ -41,6 +41,21 @@ class ConfigurationRevisionResponse(ConfigurationSchema):
     configuration_hash: str = Field(pattern=r"^[0-9a-f]{64}$")
     changed_by: UUID
     created_at: str
+    signoff: dict[str, Any] | None = None
+
+
+class ExpectedConfigurationRevision(ConfigurationSchema):
+    revision_id: UUID
+    configuration_hash: str = Field(pattern=r"^[0-9a-f]{64}$")
+
+
+class ApprovalPolicySignoffRequest(ConfigurationSchema):
+    expected_revisions: dict[ConfigurationKind, ExpectedConfigurationRevision]
+
+
+class ApprovalPolicySignoffResponse(ConfigurationSchema):
+    revision: ConfigurationRevisionResponse
+    replayed: bool
 
 
 class ConfigurationCurrentItem(ConfigurationSchema):

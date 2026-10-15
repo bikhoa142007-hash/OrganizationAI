@@ -36,6 +36,7 @@ from src.backend.db.models import (
     AuthWorkflowNotification,
     AuthWorkflowPlan,
     AuthWorkflowVersion,
+    EmployeeProfile,
     User,
 )
 from src.ai_pipeline.models import EvaluationRequest
@@ -1345,9 +1346,21 @@ def evaluate_submission(
             config = ApprovalConfiguration.from_dict(run.policy_snapshot)
             valid_checkers = session.scalars(
                 select(User.id)
+                .join(EmployeeProfile, EmployeeProfile.user_id == User.id)
                 .where(
                     User.status == "ACTIVE", User.activation_pending.is_(False),
-                    User.employment_status == "ACTIVE", effective_role_filter("CHECKER"),
+                    User.employment_status == "ACTIVE",
+                    EmployeeProfile.employment_status == "ACTIVE",
+                    effective_role_filter("CHECKER"),
+                )
+            ).all()
+            valid_authority_ids = session.scalars(
+                select(User.id)
+                .join(EmployeeProfile, EmployeeProfile.user_id == User.id)
+                .where(
+                    User.status == "ACTIVE", User.activation_pending.is_(False),
+                    User.employment_status == "ACTIVE",
+                    EmployeeProfile.employment_status == "ACTIVE",
                 )
             ).all()
             context = DecisionContext(
@@ -1364,6 +1377,7 @@ def evaluate_submission(
                 verified_attachment_hashes=verified_hashes,
                 valid_checker_ids=tuple(str(checker_id) for checker_id in valid_checkers),
                 suspicious_input=not snapshot_is_valid,
+                valid_authority_ids=tuple(str(user_id) for user_id in valid_authority_ids),
             )
             try:
                 bundle = decide(snapshot, config, raw_evaluation, context)
@@ -1609,9 +1623,21 @@ def recover_stale_evaluations(
                 )
                 checker_ids = session.scalars(
                     select(User.id)
+                    .join(EmployeeProfile, EmployeeProfile.user_id == User.id)
                     .where(
                         User.status == "ACTIVE", User.activation_pending.is_(False),
-                        User.employment_status == "ACTIVE", effective_role_filter("CHECKER"),
+                        User.employment_status == "ACTIVE",
+                        EmployeeProfile.employment_status == "ACTIVE",
+                        effective_role_filter("CHECKER"),
+                    )
+                ).all()
+                authority_ids = session.scalars(
+                    select(User.id)
+                    .join(EmployeeProfile, EmployeeProfile.user_id == User.id)
+                    .where(
+                        User.status == "ACTIVE", User.activation_pending.is_(False),
+                        User.employment_status == "ACTIVE",
+                        EmployeeProfile.employment_status == "ACTIVE",
                     )
                 ).all()
                 verified = tuple(sorted(
@@ -1624,6 +1650,7 @@ def recover_stale_evaluations(
                     plan.revision, run.input_hash, verified,
                     tuple(str(checker_id) for checker_id in checker_ids),
                     snapshot.input_hash != run.input_hash or version.snapshot_hash != run.input_hash,
+                    tuple(str(user_id) for user_id in authority_ids),
                 )
                 try:
                     if config is None:
