@@ -46,7 +46,7 @@ Backend Render lưu SQLite tại `/tmp/organizationai/demo-organization.sqlite3`
 | `Implemented` | Rule/Policy Evaluation | 13 decision gates kiểm tra integrity, evidence, confidence, budget, authority, policy và trạng thái |
 | `Implemented` | Human Review | Queue cho Checker được gán; hỗ trợ `APPROVED`/`REJECTED`, reason, override reason và stale-revision handling |
 | `Implemented` | Audit và truy vết | Timeline actor, trạng thái trước/sau, policy/model/version/round, decision và correlation metadata |
-| `Implemented` | Policy view | Màn hình chỉ đọc từ `/api/config`; không có API chỉnh policy trong Sprint 1 |
+| `Implemented` | Cấu hình policy | Judge Demo `/api/config` là read-only; Auth có revision API/UI cho Admin nhưng validator vẫn chặn bật auto-approval trước PO sign-off, và repo chưa có sign-off workflow |
 | `Implemented (local)` | Verify dashboard | General 4 ca, Escalation 5 ca và bộ hồi quy tổng hợp 15 ca; mỗi lần chạy dùng workflow in-memory mới. Provider là Mock có nhãn, không phải bằng chứng inference thật |
 | `Implemented` | Demo seed | Tám scenario tổng hợp, seed idempotent và không xóa database hiện có |
 | `Demo/Mock` | Actor identity | Chọn shared demo actor, gửi qua header `X-Demo-Actor`; server vẫn kiểm tra role và ownership |
@@ -54,34 +54,15 @@ Backend Render lưu SQLite tại `/tmp/organizationai/demo-organization.sqlite3`
 | `Implemented (local)` | Approval SLA | Admin-only, revisioned configuration and immutable per-round deadlines; warning/overdue in-app notices come from an explicitly started worker. No active SLA setting is seeded. |
 | `Implemented (local)` | Auth workflow | Cookie JWT xác thực Maker/Checker; PostgreSQL lưu kế hoạch, snapshot, provider evaluation, quyết định policy, audit và hộp thư in-app; AI lỗi chuyển Checker review |
 | `Implemented (local)` | Auth AI stages | Local VLM extraction, Media Compliance và Strategy Evaluation là các bước độc lập; kết quả và cấu hình an toàn được lưu theo từng round; task chưa cấu hình sẽ chuyển Checker |
-| `Planned/TBD` | Production identity và policy operations | Chưa có nguồn budget/authority/content policy được phê duyệt, cấu hình quản trị hoặc rate limiting toàn diện |
+| `Planned/TBD` | Production auto-approval enablement and role assignment | Activation record ngày 15/10 báo budget, Media và Strategy revision đã hiệu lực; approval policy và authority vẫn tắt, Checker assignment chưa cấu hình, PO sign-off và inference production chưa xác minh |
 
-AI không tự động từ chối kế hoạch. Engine chỉ trả `AUTO_APPROVED` hoặc `HUMAN_REVIEW_REQUIRED`; quyết định `REJECTED` chỉ do Checker được gán thực hiện. Policy mặc định cho submission HTTP mới là `DEMO-HTTP-2` với auto-approval tắt, nên mock PASS vẫn chuyển Checker; riêng seed `DEMO-SEED-AUTO` dùng snapshot `DEMO-HTTP-AUTO-1` để minh họa controlled auto-approval.
+AI không tự động từ chối kế hoạch. Engine chỉ trả `AUTO_APPROVED` hoặc `HUMAN_REVIEW_REQUIRED`; quyết định `REJECTED` chỉ do Checker được gán thực hiện. Policy mặc định cho submission HTTP mới là `DEMO-HTTP-2` với auto-approval tắt, nên mock PASS vẫn chuyển Checker; riêng Judge Demo seed scenario `DEMO-SEED-AUTO` dùng snapshot `DEMO-HTTP-AUTO-1` để minh họa controlled auto-approval.
 
 ---
 
 ## 🔄 Quy Trình Xét Duyệt
 
-```mermaid
-flowchart LR
-    A["Maker lưu draft"] --> B["Upload media hợp lệ"]
-    B --> C["Submit kế hoạch"]
-    C --> D["Validation + immutable version/round"]
-    D --> E["AI Evaluation qua MockVLMProvider"]
-    E --> F["Deterministic Rule/Policy Engine"]
-    F --> G{"Tất cả decision gates PASS, gồm POLICY_ENABLED?"}
-    G -->|Có| H["AUTO_APPROVED"]
-    H --> I["Plan APPROVED; round CLOSED"]
-    G -->|Không, UNKNOWN hoặc provider lỗi| J["HUMAN_REVIEW_REQUIRED"]
-    J --> K["Assigned Checker review"]
-    K -->|Approve| L["Plan APPROVED"]
-    K -->|Reject + reason| M["Plan REJECTED"]
-    M --> N["Maker sửa và resubmit"]
-    N --> D
-    I --> O["Audit Timeline"]
-    L --> O
-    M --> O
-```
+Sơ đồ implementation hiện tại: [mục lục diagrams](docs/diagrams/README.md), gồm kiến trúc, luồng Maker–AI–Checker, pipeline, cấu hình, lifecycle và ERD.
 
 Submit được commit trước khi evaluation chạy. Vì vậy provider timeout hoặc evidence không hợp lệ không làm mất bản nộp; hồ sơ được chuyển sang Human Review cùng dấu vết audit.
 
@@ -89,49 +70,7 @@ Submit được commit trước khi evaluation chạy. Vì vậy provider timeou
 
 ## 🏛️ Kiến Trúc Hệ Thống
 
-```mermaid
-flowchart TB
-    U["Browser / Judge"]
-
-    subgraph RF["Render Static Frontend"]
-        FE["React + TypeScript + Vite"]
-        CLIENT["API Client + SessionProvider"]
-        FE --> CLIENT
-    end
-
-    subgraph RB["Render FastAPI Service - Python Monolith"]
-        API["FastAPI routes / DTO / error mapping"]
-        AUTH["Demo actor dependency + role directory"]
-        WF["ApprovalWorkflow"]
-        RULES["Deterministic rule/policy engine"]
-        PIPE["EvaluationOrchestrator + adapter"]
-        PROVIDER["VisualModelProvider<br/>MockVLMProvider active"]
-        REPO["ApprovalRepository"]
-        VERIFY["Verify runner / observation"]
-        AUDIT["Audit + immutable records"]
-
-        API --> AUTH
-        AUTH --> WF
-        WF --> PIPE
-        PIPE --> PROVIDER
-        PROVIDER --> PIPE
-        PIPE -->|structured evidence| WF
-        WF --> RULES
-        WF --> REPO
-        WF --> AUDIT
-        VERIFY --> WF
-        AUDIT --> REPO
-    end
-
-    DB[("SQLite")]
-    ENV["Render environment variables"]
-
-    U --> FE
-    CLIENT -->|"HTTPS + X-Demo-Actor + Idempotency-Key"| API
-    REPO --> DB
-    ENV --> CLIENT
-    ENV --> API
-```
+Thay cho sơ đồ kiến trúc cũ chỉ mô tả Judge Demo: xem [kiến trúc hai profile và inference cục bộ](docs/diagrams/organizationai-architecture.html), cùng [luồng cấu hình Auth](docs/diagrams/organizationai-config-workflow.html).
 
 | Lớp | Trách nhiệm |
 | --- | --- |
@@ -552,7 +491,7 @@ Phạm vi hiện tại chỉ phù hợp cho Sprint 1 Judge Demo và dữ liệu 
 | [Audit event contract](docs/contracts/audit-event-schema.md) | Metadata và yêu cầu audit |
 | [Verify result contract](docs/contracts/verify-result-schema.md) | Assertion và kết quả Verify |
 | [Role 1 v2.1 index](docs/role1/v2.1/00-index.md) | Mục lục BA, policy, authority, test case và expected results |
-| [Marketing approval policy](docs/role1/v2.1/02-marketing-approval-policy.md) | Policy và decision gates nghiệp vụ |
+| [Marketing approval policy](<docs/role1/v2.1/01-tai-lieu-nghiep-vu/02-marketing-approval-policy (3).md>) | Policy và decision gates nghiệp vụ |
 | [Phase 1 scope](docs/scope-phase-1.md) | Phạm vi nghiệp vụ rộng của Phase 1 |
 | [Sprint 1 deliverables](docs/sprint-1-deliverables.md) | Mục tiêu, work package và checklist Sprint 1 |
 | [Sprint 1 packaging report](docs/integration/sprint1-final-packaging-report.md) | Báo cáo đóng gói/lịch sử xác minh trước đó |

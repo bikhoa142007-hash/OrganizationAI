@@ -2,87 +2,71 @@
   "schema_version": 2,
   "diagram_type": "workflow",
   "meta": {
-    "title": "Luồng xử lý phê duyệt OrganizationAI",
+    "title": "Maker–AI–Checker · Auth workflow hiện hành",
+    "output": "docs/diagrams/organizationai-main-workflow.html",
     "quality_profile": "showcase",
     "views": [
       {
-        "id": "maker-submit",
-        "label": "Lập và gửi",
+        "id": "maker-submits",
+        "label": "Maker chuẩn bị và gửi",
         "focus": [
           "draft",
-          "upload",
-          "submit",
-          "commit"
+          "checker",
+          "attachment",
+          "submit"
         ]
       },
       {
-        "id": "ai-routing",
-        "label": "AI và định tuyến",
+        "id": "ai-routes",
+        "label": "AI đánh giá và engine định tuyến",
         "focus": [
-          "commit",
+          "submit",
           "evaluate",
           "decision",
           "auto",
-          "review"
+          "human"
         ]
       },
       {
-        "id": "checker-resubmit",
-        "label": "Checker và gửi lại",
+        "id": "checker-resubmits",
+        "label": "Checker quyết định và Maker gửi lại",
         "focus": [
-          "review",
-          "human_approved",
-          "revise"
+          "human",
+          "submit"
         ]
       }
+    ],
+    "viewBox": [
+      1140,
+      660
     ]
   },
   "lanes": [
     {
-      "label": "Maker",
-      "id": "maker"
+      "id": "maker",
+      "label": "Maker"
     },
     {
-      "label": "React UI · FastAPI · SQLite",
-      "id": "app"
+      "id": "workflow",
+      "label": "Auth workflow"
     },
     {
-      "label": "AI evaluation pipeline",
-      "id": "pipeline"
+      "id": "ai_policy",
+      "label": "AI + Decision Policy"
     },
     {
-      "label": "Assigned Checker",
-      "id": "checker"
-    }
-  ],
-  "phases": [
-    {
-      "id": "prepare",
-      "fromCol": 0,
-      "toCol": 1,
-      "label": "Draft + media"
-    },
-    {
-      "id": "submit-evaluate",
-      "fromCol": 2,
-      "variant": "emphasis",
-      "toCol": 3,
-      "label": "Submit + evaluate"
-    },
-    {
-      "id": "decision",
-      "fromCol": 4,
-      "toCol": 5,
-      "label": "Decision + routing"
+      "id": "checker",
+      "label": "Assigned Checker"
     }
   ],
   "mainPath": [
     "draft",
-    "upload",
+    "checker",
+    "attachment",
     "submit",
-    "commit",
     "evaluate",
-    "decision"
+    "decision",
+    "auto"
   ],
   "nodes": [
     {
@@ -90,182 +74,137 @@
       "lane": "maker",
       "col": 0,
       "type": "external",
-      "label": "Save draft",
-      "sublabel": "Incomplete OK",
-      "tag": "CODE"
+      "label": "DRAFT",
+      "sublabel": "incomplete",
+      "tag": "Maker",
+      "width": 130
     },
     {
-      "id": "upload",
+      "id": "attachment",
+      "lane": "maker",
+      "col": 2,
+      "type": "external",
+      "label": "Upload media",
+      "sublabel": "private media",
+      "tag": "Private file",
+      "width": 130
+    },
+    {
+      "id": "checker",
       "lane": "maker",
       "col": 1,
       "type": "external",
-      "label": "Upload media",
-      "sublabel": "PNG/JPEG/WebP",
-      "tag": "CODE"
+      "label": "Select Checker",
+      "sublabel": "eligible user",
+      "tag": "Marketing",
+      "width": 130
     },
     {
       "id": "submit",
-      "lane": "app",
+      "lane": "workflow",
       "col": 2,
-      "type": "frontend",
-      "label": "Submit",
-      "sublabel": "UI evaluates next",
-      "tag": "CODE"
-    },
-    {
-      "id": "commit",
-      "lane": "app",
-      "col": 3,
       "type": "backend",
-      "label": "Save version",
-      "sublabel": "Round + eval ticket",
-      "tag": "CODE"
+      "label": "Submit + freeze",
+      "sublabel": "POST submit · V/R snapshot",
+      "tag": "Validate",
+      "width": 130
     },
     {
       "id": "evaluate",
-      "lane": "pipeline",
-      "col": 4,
+      "lane": "ai_policy",
+      "col": 3,
       "type": "backend",
-      "label": "Evaluate",
-      "sublabel": "MockVLM in HTTP",
-      "tag": "CODE"
+      "label": "AI evaluation",
+      "sublabel": "VLM → Media → Strat.",
+      "tag": "Ordered",
+      "width": 130
     },
     {
       "id": "decision",
-      "lane": "app",
-      "col": 5,
-      "type": "backend",
-      "label": "Rule decision",
-      "sublabel": "Budget + policy",
-      "tag": "CODE"
+      "lane": "ai_policy",
+      "col": 4,
+      "type": "security",
+      "label": "Decision engine",
+      "sublabel": "deterministic gates",
+      "tag": "Deterministic",
+      "width": 130
     },
     {
       "id": "auto",
-      "lane": "pipeline",
+      "lane": "ai_policy",
       "col": 5,
       "type": "backend",
-      "label": "Auto-approved",
-      "sublabel": "Seed policy only",
-      "tag": "CODE · seeded"
+      "label": "AUTO_APPROVED",
+      "sublabel": "All gates · config off",
+      "tag": "Config off",
+      "width": 130
     },
     {
-      "id": "review",
+      "id": "human",
       "lane": "checker",
       "col": 4,
       "type": "security",
-      "label": "Human review",
-      "sublabel": "Reject needs reason",
-      "tag": "CODE"
-    },
-    {
-      "id": "human_approved",
-      "lane": "checker",
-      "col": 5,
-      "type": "database",
-      "label": "Human-approved",
-      "sublabel": "Decision + audit",
-      "tag": "CODE"
-    },
-    {
-      "id": "revise",
-      "lane": "maker",
-      "col": 5,
-      "type": "external",
-      "label": "Sửa / gửi lại",
-      "sublabel": "Next V / round",
-      "tag": "CODE"
+      "label": "Checker review",
+      "sublabel": "HUMAN_REVIEW_REQUIRED",
+      "tag": "Approve / reject",
+      "width": 130
     }
   ],
   "edges": [
     {
-      "to": "upload",
+      "id": "draft-checker",
       "from": "draft",
-      "label": "add attachment",
-      "variant": "emphasis",
+      "to": "checker",
+      "label": "choose eligible Checker",
       "role": "main"
     },
     {
+      "id": "checker-media",
+      "from": "checker",
+      "to": "attachment",
+      "label": "upload media",
+      "role": "main"
+    },
+    {
+      "id": "media-submit",
+      "from": "attachment",
       "to": "submit",
-      "from": "upload",
-      "label": "Maker submits",
+      "label": "submit for approval",
       "variant": "emphasis",
       "role": "main"
     },
     {
-      "to": "commit",
+      "id": "submit-evaluate",
       "from": "submit",
-      "label": "validate + persist",
-      "variant": "emphasis",
-      "role": "main"
-    },
-    {
       "to": "evaluate",
-      "from": "commit",
-      "label": "ticket + snapshot",
+      "label": "evaluate saved snapshot",
       "variant": "emphasis",
       "role": "main"
     },
     {
+      "id": "evaluate-decision",
+      "from": "evaluate",
       "to": "decision",
-      "from": "evaluate",
-      "label": "structured result",
+      "label": "validated evaluation; not final approval",
       "variant": "emphasis",
       "role": "main"
     },
     {
-      "to": "review",
-      "from": "evaluate",
-      "label": "timeout / error / invalid schema → human review",
-      "variant": "security",
-      "role": "error"
-    },
-    {
+      "id": "decision-auto",
+      "from": "decision",
       "to": "auto",
-      "from": "decision",
-      "label": "all auto-approval gates pass",
+      "label": "every gate passes + enabled",
       "variant": "emphasis",
       "role": "branch"
     },
     {
-      "to": "review",
+      "id": "decision-human",
       "from": "decision",
-      "label": "any gate fails or is unknown",
-      "variant": "security",
-      "role": "branch"
-    },
-    {
-      "to": "human_approved",
-      "from": "review",
-      "label": "approve",
-      "variant": "emphasis",
-      "role": "branch"
-    },
-    {
-      "to": "revise",
-      "from": "review",
-      "label": "reject with reason; Maker revises",
+      "to": "human",
+      "label": "any gate fails / unknown / error",
       "variant": "security",
       "role": "branch"
     }
   ],
-  "cards": [
-    {
-      "items": [
-        "submit_plan stores immutable snapshot, version, round and evaluation ticket before evaluation; Maker draft/upload use API.",
-        "HTTP path uses MockVLMProvider. Timeout/error/malformed output routes to review; the rules engine validates evidence/schema and budget deterministically.",
-        "Checker decision requires assignment; rejection needs a reason. Resubmission creates a new version/round. HTTP auto-approval is off by default; seed enables a scenario.",
-        "Code: src/backend/api/app.py · src/backend/application/workflow.py · src/backend/rules/decision.py · src/ai_pipeline/orchestrator.py · src/backend/seed_demo.py"
-      ],
-      "title": "CODE · HTTP demo",
-      "dot": "emerald"
-    },
-    {
-      "items": [
-        "README/scope describe Local VLM plus dedicated Media Compliance and Strategy Feasibility agents; HTTP currently uses MockVLMProvider, and LocalVLM inference is not configured.",
-        "Production authentication is not implemented. Sources: README.md · docs/scope-phase-1.md · src/ai_pipeline/providers/openai_provider.py"
-      ],
-      "title": "DOC · not separate runtime steps",
-      "dot": "amber"
-    }
-  ]
+  "cards": []
 }
