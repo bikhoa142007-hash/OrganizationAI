@@ -100,9 +100,8 @@ function stableSlaHistory(entry: NonNullable<SlaRound['sla_current']>) {
   return Object.fromEntries(Object.entries(entry).filter(([key]) => key !== 'seconds_until_due'))
 }
 
-function localDateTime(minutesAgo: number): string {
-  const date = new Date(Date.now() - minutesAgo * 60_000)
-  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000)
+function localDateTimeAt(value: Date): string {
+  const local = new Date(value.getTime() - value.getTimezoneOffset() * 60_000)
   return local.toISOString().slice(0, 16)
 }
 
@@ -157,7 +156,12 @@ test('Admin configures SLA; Maker submits, Checker receives reminders, decides l
       maker_may_select_other: false,
       defaults: [{ department: 'Marketing', checker_id: checkerId }],
     }, null, 2))
-    await admin.getByLabel(/Hiệu lực từ thời điểm/).fill(localDateTime(0))
+    // The API clock is frozen at initialClock. Derive the assignment's
+    // effective time from that same instant so it cannot be scheduled after
+    // the clock used by draft creation when the test crosses a minute boundary.
+    const assignmentEffectiveAt = localDateTimeAt(new Date(initialClock))
+    expect(new Date(assignmentEffectiveAt).getTime()).toBeLessThanOrEqual(new Date(initialClock).getTime())
+    await admin.getByLabel(/Hiệu lực từ thời điểm/).fill(assignmentEffectiveAt)
     await admin.getByLabel('Lý do thay đổi').fill('Synthetic PostgreSQL SLA browser default Checker assignment.')
     await admin.getByRole('button', { name: 'Tạo revision bất biến' }).click()
     await expect(admin.getByRole('status').filter({ hasText: 'Đã tạo revision' })).toBeVisible()
