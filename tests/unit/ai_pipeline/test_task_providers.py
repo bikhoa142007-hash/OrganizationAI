@@ -196,8 +196,10 @@ def test_text_adapter_rejects_wrong_model_identity_and_truncated_output():
 def test_sha256_pinned_task_provider_verifies_inventory_before_chat_completion():
     digest = "sha256:" + "c" * 64
     paths = []
+    requests = []
 
     def respond(request):
+        requests.append(request)
         paths.append(request.url.path)
         if request.url.path == "/api/tags":
             return httpx.Response(200, json={"models": [{
@@ -216,6 +218,7 @@ def test_sha256_pinned_task_provider_verifies_inventory_before_chat_completion()
 
     assert analysis.model_revision == digest
     assert paths == ["/api/tags", "/v1/chat/completions"]
+    assert all(item.headers["Authorization"] == "Bearer test-secret" for item in requests)
 
 
 def test_sha256_pinned_task_provider_blocks_digest_mismatch_before_plan_send():
