@@ -147,7 +147,7 @@ def test_admin_api_returns_unconfigured_and_rejects_maker(configuration_postgres
     admin_client = _app(factory, _principal(admin_user, ("ADMIN",)))
     response = admin_client.get("/api/workflow/configuration")
     assert response.status_code == 200
-    assert len(response.json()["items"]) == 6
+    assert {item["kind"] for item in response.json()["items"]} == set(approval_configuration.CONFIGURATION_KINDS)
     assert {item["status"] for item in response.json()["items"]} == {"UNCONFIGURED"}
 
     maker_client = _app(factory, _principal(admin_user, ("MAKER",)))
