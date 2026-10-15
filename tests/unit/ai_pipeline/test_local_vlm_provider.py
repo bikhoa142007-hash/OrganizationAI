@@ -164,11 +164,16 @@ def test_server_binds_extracted_evidence_to_snapshot_and_keeps_model_revision_se
 
 def test_pinned_ollama_digest_is_used_as_model_revision_and_response_model_is_checked():
     digest = "sha256:" + "a" * 64
+    requests = []
+
     def handler(request):
+        requests.append(request)
         if request.url.path == "/api/tags":
             return httpx.Response(200, json={"models": [{
                 "name": "configured-vlm-4b", "digest": "a" * 64,
             }]})
+        if request.url.path == "/v1/models":
+            return httpx.Response(200, json={"data": [{"id": "configured-vlm-4b"}]})
         return chat_response(
             {"images": [extraction_item()]},
             model="configured-vlm-4b",
@@ -178,11 +183,16 @@ def test_pinned_ollama_digest_is_used_as_model_revision_and_response_model_is_ch
     provider = configured_provider(handler, model_version=digest)
     request = make_request(model_version=digest)
 
+    assert provider.health_check()
     analysis = provider.analyze_image(request)
 
     assert provider.get_model_metadata()["model_version"] == digest
     assert analysis.model_revision == digest
     assert analysis.reported_model_id == "configured-vlm-4b"
+    assert [item.url.path for item in requests] == [
+        "/v1/models", "/api/tags", "/api/tags", "/v1/chat/completions",
+    ]
+    assert all(item.headers["authorization"] == "Bearer test-local-token" for item in requests)
 
 
 def test_generic_openai_compatible_visual_provider_does_not_require_ollama_digest():
