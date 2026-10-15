@@ -184,6 +184,10 @@ class VerifyRunManager:
                 error=f"Verify exceeded the {self.timeout_seconds}-second total deadline.",
             )
             self._update_counts(data)
+            # The timed-out run is no longer active. Its worker may still be
+            # unwinding, but _case_completed and _execute ignore its result.
+            if self._active_run_id == run_id:
+                self._active_run_id = None
 
     def _execute(self, run_id: str) -> None:
         with self._lock:

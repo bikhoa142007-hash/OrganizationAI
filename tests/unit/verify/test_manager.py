@@ -67,6 +67,45 @@ def test_total_deadline_marks_current_and_waiting_cases_failed(monkeypatch):
     assert manager.get("admin-1", started["run_id"])["status"] == "TIMED_OUT"
 
 
+def test_timed_out_worker_does_not_block_a_new_verify_run(monkeypatch):
+    entered = Event()
+    release = Event()
+    calls = 0
+
+    def slow_first_suite(*, run_id, on_case_started, on_case_completed, total_timeout_seconds):
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            on_case_started("TC01")
+            entered.set()
+            release.wait(timeout=2)
+        return {"run_id": run_id, "status": "COMPLETED", "rows": []}
+
+    monkeypatch.setattr(manager_module, "run_competition_suite", slow_first_suite)
+    manager = VerifyRunManager(timeout_seconds=0.05)
+    first = manager.start("admin-1", "verify-stuck-0001")
+    assert entered.wait(timeout=1)
+
+    try:
+        deadline = time.monotonic() + 1
+        snapshot = manager.get("admin-1", first["run_id"])
+        while snapshot["status"] == "RUNNING" and time.monotonic() < deadline:
+            time.sleep(0.01)
+            snapshot = manager.get("admin-1", first["run_id"])
+        assert snapshot["status"] == "TIMED_OUT"
+
+        second = manager.start("admin-1", "verify-retry-0001")
+        assert second["run_id"] != first["run_id"]
+        deadline = time.monotonic() + 1
+        snapshot = manager.get("admin-1", second["run_id"])
+        while snapshot["status"] == "RUNNING" and time.monotonic() < deadline:
+            time.sleep(0.01)
+            snapshot = manager.get("admin-1", second["run_id"])
+        assert snapshot["status"] == "COMPLETED"
+    finally:
+        release.set()
+
+
 def test_harness_exception_marks_all_cases_failed_without_exposing_exception_text(monkeypatch):
     def failing_suite(**_kwargs):
         raise RuntimeError("sensitive provider detail")
