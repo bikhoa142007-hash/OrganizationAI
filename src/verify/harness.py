@@ -11,7 +11,10 @@ from src.ai_pipeline.adapters import ApprovalPipelineAdapter
 from src.ai_pipeline.orchestrator import EvaluationOrchestrator
 from src.ai_pipeline.providers.mock import MockVLMProvider
 from src.backend.application.workflow import ApprovalWorkflow
-from src.backend.domain.policy import ApprovalConfiguration, AuthoritySnapshot, BudgetConfiguration, Criterion, PolicySnapshot
+from src.backend.domain.policy import (
+    ApprovalConfiguration, AuthoritySnapshot, BudgetConfiguration, Criterion, PolicySnapshot,
+    MediaCompliancePolicy, MediaPolicyRule, StrategyCriterion, StrategyRubric, STRATEGY_CRITERIA,
+)
 from src.backend.repositories.approval import ApprovalRepository
 
 
@@ -57,16 +60,27 @@ def default_verify_cases() -> tuple[VerifyCase, ...]:
 
 
 def demo_configuration() -> ApprovalConfiguration:
+    rubric = StrategyRubric(
+        "demo-strategy", "DEMO-1", "ACTIVE",
+        tuple(StrategyCriterion(criterion_id, label, weight)
+              for criterion_id, label, weight in STRATEGY_CRITERIA),
+    )
+    media_policy = MediaCompliancePolicy(
+        "demo-media", "DEMO-1", "ACTIVE", ("demo-marketing",), ("social",),
+        (MediaPolicyRule("DEMO-MEDIA-WARNING-1", "WARNING",
+                         "Synthetic demo media evidence check.", ("OBSERVATION",)),),
+    )
     policy = PolicySnapshot(
         "demo-policy", "DEMO-1", True,
         ("title", "maker_id", "checker_id", "department", "objective", "summary",
          "start_date", "end_date", "budget_minor_units", "currency"),
-        (Criterion("strategy", 100),), ("mock-1",), ("image/png",), 1_000_000,
+        tuple(Criterion(item.criterion_id, item.weight) for item in rubric.criteria),
+        ("mock-1",), ("image/png",), 1_000_000,
     )
     budget = BudgetConfiguration("demo-budget", "VND", 0, "10000", "demo-marketing", True)
     authority = AuthoritySnapshot("demo-authority", "VND", "10000", ("demo-marketing",),
                                   CHECKER, "demo-policy-owner", "demo-budget-authority", True)
-    return ApprovalConfiguration(policy, (budget,), authority)
+    return ApprovalConfiguration(policy, (budget,), authority, media_policy, rubric)
 
 
 def _payload(budget: str = "10000") -> dict[str, Any]:
@@ -75,7 +89,7 @@ def _payload(budget: str = "10000") -> dict[str, Any]:
         "department": "demo-marketing", "objective": "Reach qualified customers",
         "summary": "A test-only campaign for the WP5 verify harness.",
         "start_date": "2026-10-01", "end_date": "2026-10-31",
-        "budget_minor_units": budget, "currency": "VND",
+        "budget_minor_units": budget, "currency": "VND", "channels": ["social"],
     }
 
 
