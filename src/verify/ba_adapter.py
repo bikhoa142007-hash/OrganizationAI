@@ -12,7 +12,8 @@ from src.ai_pipeline.providers.base import VisualModelProvider, ProviderTimeout,
 from src.backend.domain.models import EvaluationResult
 from src.backend.domain.policy import (
     ApprovalConfiguration, PolicySnapshot, Criterion, BudgetConfiguration,
-    AuthoritySnapshot, MANDATORY_FIELDS,
+    AuthoritySnapshot, MANDATORY_FIELDS, MediaCompliancePolicy, MediaPolicyRule,
+    StrategyCriterion, StrategyRubric, STRATEGY_CRITERIA,
 )
 from src.shared.validation import require, canonical_hash
 
@@ -116,14 +117,33 @@ def configuration_from_input(data):
              p['strategy_confidence_threshold']) == (70, '>', .85, .8), 'Fixture changes frozen gates')
     limit = p['limit_snapshot']
     checker = data['plan_snapshot']['checker_id']
+    expected_weights = {criterion_id: weight for criterion_id, _label, weight in STRATEGY_CRITERIA}
+    require(p['criteria_weights'] == expected_weights, 'Fixture changes the approved synthetic Strategy rubric')
+    strategy_rubric = StrategyRubric(
+        p['content_policy_ref'] + '-STRATEGY', p['version'], 'ACTIVE',
+        tuple(StrategyCriterion(criterion_id, label, weight)
+              for criterion_id, label, weight in STRATEGY_CRITERIA),
+    )
+    # This adapter runs only bounded synthetic fixtures. Keep the fixture's
+    # documented demo scope explicit; never infer a policy scope from arbitrary
+    # plan data. `policy_scope_covered` controls whether that source policy is
+    # active for this test case, while unknown channels remain out of scope.
+    media_policy = MediaCompliancePolicy(
+        p['content_policy_ref'], p['version'],
+        'ACTIVE' if data['policy_scope_covered'] else 'DISABLED',
+        ('DEMO-DEPT-01',), ('DEMO_SOCIAL', 'DEMO_WEBINAR'),
+        (MediaPolicyRule('DEMO-MEDIA-WARNING-1', 'WARNING',
+                         'Synthetic demo policy evidence check.', ('OBSERVATION',)),),
+    )
     return ApprovalConfiguration(
         PolicySnapshot(p['policy_id'], p['version'], p['enabled'], MANDATORY_FIELDS,
-                       tuple(Criterion(k, v) for k, v in p['criteria_weights'].items()),
+                       tuple(Criterion(item.criterion_id, item.weight) for item in strategy_rubric.criteria),
                        (MODEL,), ('image/png', 'image/jpeg', 'image/webp'), 5_000_000),
         (BudgetConfiguration(limit['id'], 'VND', 0, amount(limit['amount_vnd']),
                              limit['scope_department_id'], True),),
         AuthoritySnapshot('DEMO-AUTHORITY-V2', 'VND', amount(limit['amount_vnd']),
                           (limit['scope_department_id'],), checker, 'DEMO-ADMIN-01', checker, True),
+        media_policy=media_policy, strategy_rubric=strategy_rubric,
     )
 
 
@@ -169,8 +189,8 @@ class BAMockProvider(VisualModelProvider):
                 if not any(e['evidence_id'] == ref for e in evidence):
                     evidence.append(dict(evidence_id=ref, source_type='PLAN_FIELD', source_ref=field,
                                          observation=str(request.plan.payload[field]), content_hash=None))
-            criteria.append(dict(criterion_id=c['id'], score=float(Decimal(str(c['score'])) * Decimal(c['weight']) / 100),
-                                 maximum_score=c['weight'], rationale=c['reason'], evidence_refs=c['evidence_refs']))
+            criteria.append(dict(criterion_id=c['id'], score=float(Decimal(str(c['score']))),
+                                 maximum_score=100, rationale=c['reason'], evidence_refs=c['evidence_refs']))
         media = outputs['media']
         findings = [dict(finding_id=f'hard-{i}', severity='HARD_VIOLATION', description=v,
                          rule_id=v, evidence_refs=media['evidence_refs']) for i, v in enumerate(media['hard_violations'])]

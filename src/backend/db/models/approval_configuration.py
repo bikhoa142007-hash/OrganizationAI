@@ -66,6 +66,36 @@ class AuthWorkflowConfigurationRevision(Base):
     )
 
 
+class AuthWorkflowApprovalPolicySignoff(Base):
+    """Immutable Policy Owner sign-off bound to one activated policy revision."""
+
+    __tablename__ = "auth_workflow_approval_policy_signoffs"
+    __table_args__ = (
+        CheckConstraint("length(approved_configuration_hash) = 64", name="ck_approval_signoffs_policy_hash"),
+        CheckConstraint("length(authority_configuration_hash) = 64", name="ck_approval_signoffs_authority_hash"),
+        UniqueConstraint("candidate_revision_id", name="uq_approval_signoffs_candidate_revision"),
+        UniqueConstraint("approval_policy_revision_id", name="uq_approval_signoffs_policy_revision"),
+    )
+
+    id: Mapped[UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid4)
+    candidate_revision_id: Mapped[UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("auth_workflow_configuration_revisions.id", ondelete="RESTRICT"), nullable=False
+    )
+    approval_policy_revision_id: Mapped[UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("auth_workflow_configuration_revisions.id", ondelete="RESTRICT"), nullable=False
+    )
+    approved_configuration_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    policy_owner_id: Mapped[UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
+    )
+    signed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    authority_revision_id: Mapped[UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("auth_workflow_configuration_revisions.id", ondelete="RESTRICT"), nullable=False
+    )
+    authority_configuration_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    configuration_revisions: Mapped[dict] = mapped_column(JSON, nullable=False)
+
+
 class AuthWorkflowRoundConfigurationSnapshot(Base):
     """Immutable configuration and Checker assignment captured once per approval round."""
 
@@ -106,6 +136,10 @@ def _reject_mutation(_mapper, _connection, _target) -> None:
     raise ValueError("Workflow configuration revisions and round snapshots are immutable.")
 
 
-for _immutable_model in (AuthWorkflowConfigurationRevision, AuthWorkflowRoundConfigurationSnapshot):
+for _immutable_model in (
+    AuthWorkflowConfigurationRevision,
+    AuthWorkflowApprovalPolicySignoff,
+    AuthWorkflowRoundConfigurationSnapshot,
+):
     event.listen(_immutable_model, "before_update", _reject_mutation)
     event.listen(_immutable_model, "before_delete", _reject_mutation)

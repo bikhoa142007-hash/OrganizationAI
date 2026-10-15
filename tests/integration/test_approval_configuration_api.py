@@ -12,6 +12,7 @@ from fastapi.testclient import TestClient
 import pytest
 from sqlalchemy import create_engine, select, text
 from sqlalchemy.orm import selectinload, sessionmaker
+from sqlalchemy.pool import StaticPool
 
 from src.backend.api import approval_configuration as configuration_api
 from src.backend.api import auth_workflow
@@ -20,7 +21,9 @@ from src.backend.application import approval_configuration, employee_admin, role
 from scripts.postgres_test_target import verify_runner_provisioned_database
 from src.backend.application.workflow import ApplicationError
 from src.backend.db.base import Base
-from src.backend.db.models.approval_configuration import AuthWorkflowRoundConfigurationSnapshot
+from src.backend.db.models.approval_configuration import (
+    AuthWorkflowApprovalPolicySignoff, AuthWorkflowRoundConfigurationSnapshot,
+)
 from src.backend.db.models.auth_workflow import AuthWorkflowPlan, AuthWorkflowVersion
 from src.backend.db.models.employee import EmployeeProfile
 from src.backend.db.models import AdminAuditEvent, AuthWorkflowEvent, Role, RolePermission, User, UserRole
@@ -53,6 +56,22 @@ def configuration_postgres():
         with base_engine.begin() as connection:
             connection.execute(text(f'DROP SCHEMA "{schema}" CASCADE'))
         base_engine.dispose()
+
+
+@pytest.fixture
+def configuration_sqlite():
+    """Fast isolated API contract fixture; PostgreSQL behavior has its own gated tests."""
+    engine = create_engine(
+        "sqlite://",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    Base.metadata.create_all(engine)
+    factory = sessionmaker(engine, expire_on_commit=False)
+    try:
+        yield engine, factory
+    finally:
+        engine.dispose()
 
 
 def _principal(
@@ -183,6 +202,170 @@ def test_admin_revision_requires_allowed_browser_origin_and_keeps_auto_approval_
         ))
         assert audit is not None
         assert audit.after_state["result"] == "SUCCESS"
+
+
+def test_policy_owner_signoff_is_bound_to_exact_revisions_and_audited(configuration_sqlite):
+    _engine, factory = configuration_sqlite
+    with factory.begin() as session:
+        roles = {}
+        for code in ("ADMIN", "CHECKER"):
+            role = session.scalar(select(Role).where(Role.code == code))
+            if role is None:
+                role = Role(code=code, name=code.title(), is_builtin=True)
+                session.add(role)
+                session.flush()
+            roles[code] = role
+        created = {}
+        for username, role_code in (("bkhoa", "ADMIN"), ("lekhoi", "CHECKER"), ("budget-authority", None)):
+            suffix = uuid4().hex[:12]
+            user = User(
+                user_code=f"B-SIGN-{suffix}", username=username,
+                email=f"{username}-{suffix}@example.test", password_hash="synthetic-test-only",
+                display_name=f"Synthetic {username}", status="ACTIVE",
+            )
+            session.add(user)
+            session.flush()
+            session.add(EmployeeProfile(
+                id=user.id, user_code=user.user_code, display_name=user.display_name,
+                email=user.email, employment_status="ACTIVE", user_id=user.id,
+            ))
+            if role_code:
+                session.add(UserRole(user_id=user.id, role_id=roles[role_code].id))
+            created[username] = user
+        session.flush()
+        owner = created["bkhoa"]
+        checker = created["lekhoi"]
+        budget_authority = created["budget-authority"]
+
+    owner_principal = _principal(owner, ("ADMIN",))
+    now = datetime.now(timezone.utc)
+    effective_at = now - timedelta(minutes=2)
+    configs = {
+        "budget": {
+            "currency": "VND",
+            "limits": [{"department": "Marketing", "limit_minor_units": "10000000", "active": True}],
+        },
+        "media_policy": {
+            "policy_id": "SYNTHETIC-MEDIA-MARKETING-SOCIAL", "policy_version": "1.0.0",
+            "status": "ACTIVE", "scope_departments": ["Marketing"], "scope_channels": ["social"],
+            "rules": [
+                {"rule_id": "SYNTHETIC-WARNING-1", "severity": "WARNING", "description": "Synthetic approved warning 1.", "required_evidence_kinds": ["OBSERVATION"], "forbidden_literals": []},
+                {"rule_id": "SYNTHETIC-WARNING-2", "severity": "WARNING", "description": "Synthetic approved warning 2.", "required_evidence_kinds": ["OCR_TEXT"], "forbidden_literals": []},
+            ],
+        },
+        "strategy_rubric": {
+            "rubric_id": "SYNTHETIC-STRATEGY", "rubric_version": "1.0.0", "status": "ACTIVE",
+            "criteria": [
+                {"criterion_id": key, "label": key, "weight": weight}
+                for key, weight in (("objective", 15), ("audience", 15), ("channel", 15),
+                                    ("timeline", 15), ("kpi", 15), ("budget_efficiency", 15),
+                                    ("risk_control", 10))
+            ],
+        },
+        "checker_assignment": {
+            "maker_may_select_other": True,
+            "defaults": [{"department": "Marketing", "checker_id": str(checker.id)}],
+        },
+        "authority": {
+            "currency": "VND", "auto_limit_minor_units": "5000000",
+            "allowed_departments": ["Marketing"], "checker_id": str(checker.id),
+            "policy_owner_id": str(owner.id), "budget_authority_id": str(budget_authority.id),
+            "active": True,
+        },
+        "approval_policy": {
+            "enabled": False, "media_confidence_threshold": 0.85,
+            "feasibility_score_threshold_exclusive": 70,
+            "feasibility_confidence_threshold": 0.80,
+        },
+    }
+    current = {}
+    for kind in approval_configuration.CONFIGURATION_KINDS:
+        with factory() as session:
+            current[kind] = approval_configuration.create_configuration_revision(
+                session=session, principal=owner_principal, correlation_id=f"signoff-test-{kind}",
+                kind=kind, expected_revision=None, effective_at=effective_at,
+                change_reason="Synthetic isolated approval-policy sign-off test.", value=configs[kind],
+            )
+
+    expected = {
+        kind: {"revision_id": item["revision_id"], "configuration_hash": item["configuration_hash"]}
+        for kind, item in current.items()
+    }
+    client = _app(factory, owner_principal)
+    response = client.post(
+        "/api/workflow/configuration/approval-policy/signoff",
+        json={"expected_revisions": expected}, headers={"Origin": "http://localhost"},
+    )
+    assert response.status_code == 200, response.text
+    result = response.json()
+    assert result["replayed"] is False
+    assert result["revision"]["value"]["enabled"] is True
+    assert result["revision"]["signoff"]["policy_owner_id"] == str(owner.id)
+    assert result["revision"]["signoff"]["approved_configuration_hash"] == result["revision"]["configuration_hash"]
+    assert set(result["revision"]["signoff"]["configuration_revisions"]) == set(
+        approval_configuration.CONFIGURATION_KINDS
+    ) | {"approval_policy_candidate"}
+
+    repeated = client.post(
+        "/api/workflow/configuration/approval-policy/signoff",
+        json={"expected_revisions": expected}, headers={"Origin": "http://localhost"},
+    )
+    assert repeated.status_code == 200
+    assert repeated.json()["replayed"] is True
+    with factory() as session:
+        signoffs = session.scalars(select(AuthWorkflowApprovalPolicySignoff)).all()
+        audits = session.scalars(select(AdminAuditEvent).where(
+            AdminAuditEvent.action == "WORKFLOW_AUTO_APPROVAL_SIGNOFF",
+        )).all()
+        assert len(signoffs) == 1
+        assert len(audits) == 1
+        assert audits[0].actor_id == owner.id
+        assert audits[0].after_state["approval_policy_revision_id"] == result["revision"]["revision_id"]
+        assert audits[0].after_state["signed_at"] == result["revision"]["signoff"]["signed_at"]
+        assert audits[0].after_state["configuration_revisions"] == result["revision"]["signoff"]["configuration_revisions"]
+
+    with factory() as session:
+        snapshot = approval_configuration.resolve_round_configuration(
+            session=session, plan_id=uuid4(), plan_version=1, approval_round=1,
+            department_id="Marketing", maker_id=uuid4(), selected_checker_id=checker.id,
+            effective_at=datetime.now(timezone.utc) + timedelta(seconds=1),
+        )
+    from src.backend.demo import configuration as demo_configuration
+    applied = approval_configuration.apply_round_configuration_snapshot(demo_configuration(), snapshot)
+    assert applied.policy.auto_approval_policy_enabled is True
+
+    changed_effective_at = datetime.now(timezone.utc) + timedelta(seconds=2)
+    with factory() as session:
+        changed_budget = approval_configuration.create_configuration_revision(
+            session=session, principal=owner_principal, correlation_id="signoff-test-budget-revision",
+            kind="budget", expected_revision=1, effective_at=changed_effective_at,
+            change_reason="Synthetic revision with identical value proves exact-revision binding.",
+            value=configs["budget"],
+        )
+    assert changed_budget["revision"] == 2
+    with factory() as session:
+        changed_snapshot = approval_configuration.resolve_round_configuration(
+            session=session, plan_id=uuid4(), plan_version=1, approval_round=1,
+            department_id="Marketing", maker_id=uuid4(), selected_checker_id=checker.id,
+            effective_at=changed_effective_at + timedelta(seconds=1),
+        )
+        current = approval_configuration.current_configuration(
+            session, owner_principal, "signoff-test-current",
+            as_of=changed_effective_at + timedelta(seconds=1),
+        )
+    changed_applied = approval_configuration.apply_round_configuration_snapshot(
+        demo_configuration(), changed_snapshot,
+    )
+    assert changed_applied.policy.auto_approval_policy_enabled is False
+    assert next(item for item in current["items"] if item["kind"] == "approval_policy")["status"] == "DISABLED"
+
+    other_user = _admin(factory)
+    other_client = _app(factory, _principal(other_user, ("ADMIN",)))
+    denied = other_client.post(
+        "/api/workflow/configuration/approval-policy/signoff",
+        json={"expected_revisions": expected}, headers={"Origin": "http://localhost"},
+    )
+    assert denied.status_code == 403
 
 
 def test_concurrent_first_revision_has_exactly_one_winner(configuration_postgres):

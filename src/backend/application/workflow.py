@@ -318,7 +318,14 @@ class ApprovalWorkflow:
                 ticket['evaluation_id'], ticket['run_id'], ticket['provider'], ticket['correlation_id'],
                 idempotency_key, now(), 'PENDING_APPROVAL', 'ACTIVE', row['revision'],
                 snapshot.input_hash, self._verified_attachments(snapshot, correlation_id),
-                tuple(name for name, roles in self.principals.items() if 'CHECKER' in roles), suspicious_input)
+                tuple(name for name, roles in self.principals.items() if 'CHECKER' in roles), suspicious_input,
+                tuple(
+                    actor_id for actor_id in (
+                        config.authority.checker_id if config.authority else None,
+                        config.authority.policy_owner_id if config.authority else None,
+                        config.authority.budget_authority_id if config.authority else None,
+                    ) if actor_id is not None
+                ))
             bundle = decide(snapshot, config, raw_evaluation, ctx)
             decision = bundle.decision
             for kind, record_id, record in (

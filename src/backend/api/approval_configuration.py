@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from src.backend.api.auth import (
     AuthenticatedPrincipal,
     _check_browser_origin,
+    get_current_principal,
     get_auth_db,
     require_role,
 )
@@ -16,6 +17,8 @@ from src.backend.api.approval_configuration_schemas import (
     ConfigurationHistoryResponse,
     ConfigurationRevisionCreate,
     ConfigurationRevisionResponse,
+    ApprovalPolicySignoffRequest,
+    ApprovalPolicySignoffResponse,
 )
 from src.backend.application import approval_configuration as configuration
 
@@ -67,4 +70,23 @@ def create_configuration_revision(
         effective_at=body.effective_at.astimezone(timezone.utc) if body.effective_at.tzinfo else body.effective_at,
         change_reason=body.change_reason,
         value=body.value,
+    )
+
+
+@router.post("/approval-policy/signoff", response_model=ApprovalPolicySignoffResponse)
+def sign_off_approval_policy(
+    body: ApprovalPolicySignoffRequest,
+    request: Request,
+    principal: AuthenticatedPrincipal = Depends(get_current_principal),
+    session: Session = Depends(get_auth_db),
+):
+    _check_browser_origin(request)
+    return configuration.sign_off_approval_policy(
+        session,
+        principal,
+        _correlation(request),
+        expected_revisions={
+            kind: {"revision_id": str(item.revision_id), "configuration_hash": item.configuration_hash}
+            for kind, item in body.expected_revisions.items()
+        },
     )

@@ -39,25 +39,36 @@ class MockVLMProvider(VisualModelProvider):
             return {"unexpected": True}
 
         criteria = tuple(getattr(request.configuration.policy, "criteria", ())) if request.configuration else ()
+        uses_weighted_rubric = bool(request.configuration and request.configuration.strategy_rubric)
         if not criteria:
             criteria = (type("Criterion", (), {"criterion_id": "strategy", "maximum_score": 100})(),)
         review = self.scenario in {"review", "unknown_media"}
         score = 70.0 if review else 71.0
-        maximum = sum(float(c.maximum_score) for c in criteria)
-        scores = []
-        remaining = score
-        for index, criterion in enumerate(criteria):
-            value = min(float(criterion.maximum_score), remaining) if index == len(criteria) - 1 else 0.0
-            if index == 0 and len(criteria) > 1:
-                value = min(float(criterion.maximum_score), score)
-            remaining -= value
-            scores.append({
+        if uses_weighted_rubric:
+            # Rubric criteria are scored independently on 0..100; the engine
+            # applies configured weights when deriving the overall score.
+            scores = [{
                 "criterion_id": criterion.criterion_id,
-                "score": value,
-                "maximum_score": float(criterion.maximum_score),
+                "score": score,
+                "maximum_score": 100,
                 "rationale": "Deterministic mock observation.",
                 "evidence_refs": [f"evidence-{a.attachment_id}" for a in request.plan.attachments],
-            })
+            } for criterion in criteria]
+        else:
+            remaining = score
+            scores = []
+            for index, criterion in enumerate(criteria):
+                value = min(float(criterion.maximum_score), remaining) if index == len(criteria) - 1 else 0.0
+                if index == 0 and len(criteria) > 1:
+                    value = min(float(criterion.maximum_score), score)
+                remaining -= value
+                scores.append({
+                    "criterion_id": criterion.criterion_id,
+                    "score": value,
+                    "maximum_score": float(criterion.maximum_score),
+                    "rationale": "Deterministic mock observation.",
+                    "evidence_refs": [f"evidence-{a.attachment_id}" for a in request.plan.attachments],
+                })
         evidence = [{
             "evidence_id": f"evidence-{attachment.attachment_id}",
             "source_type": "ATTACHMENT",

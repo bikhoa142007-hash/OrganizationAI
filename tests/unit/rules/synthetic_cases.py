@@ -37,7 +37,8 @@ def cases():
         ctx = DecisionContext('synthetic-eval', 'synthetic-run', 'MOCK_VLM',
                               'synthetic-trace', 'synthetic-intent', NOW,
                               'PENDING_APPROVAL', 'ACTIVE', 0, p.input_hash,
-                              (('synthetic-image', 'a' * 64),), ('synthetic-checker',), False)
+                              (('synthetic-image', 'a' * 64),), ('synthetic-checker',), False,
+                              ('synthetic-checker', 'synthetic-policy-owner', 'synthetic-budget-authority'))
         result.append(SyntheticCase(
             case_id, group, description, p, cfg, evaluation(p) if raw is None else raw, ctx,
             'AUTO_APPROVED' if category is None else 'HUMAN_REVIEW_REQUIRED', category,
@@ -83,7 +84,8 @@ def cases():
 
     cfg = config()
     add('policy-01', 'policy-out-of-scope', 'No applicable budget configuration.',
-        cfg=replace(cfg, budgets=()), category='POLICY_OUT_OF_SCOPE', codes=('BUDGET_LIMIT',))
+        cfg=replace(cfg, budgets=()), category='POLICY_OUT_OF_SCOPE',
+        codes=('DECISION_SCOPE', 'BUDGET_LIMIT'))
     add('policy-02', 'policy-out-of-scope', 'Auto approval disabled.',
         cfg=replace(cfg, policy=replace(cfg.policy, auto_approval_policy_enabled=False)),
         category='POLICY_OUT_OF_SCOPE', codes=('POLICY_ENABLED',))
