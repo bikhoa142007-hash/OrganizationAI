@@ -8,7 +8,7 @@ Status: implementation contract for the Challenge A Judge only. The automatic ou
 - Candidate `abd2cd8` includes `deployment/render.challenge-a.yaml`, which defines separate Demo-only API and static-web services, `PUBLIC_JUDGE_ONLY=true`, one API instance, and automatic deployment disabled. It is deployment configuration only; there is no assigned service URL or live environment to verify. No deployment was performed from this Judge worktree.
 - D reports exact-candidate results: backend synthetic suite `46 passed, 1 Starlette/httpx deprecation warning`; frontend `29 files / 201 tests passed`; typecheck passed; build passed with a 587.17 kB chunk warning; Playwright listed all three specs, including the action spec. Actual browser execution remains blocked by sandbox browser/loopback limits. These results are local synthetic/Mock evidence, not public acceptance.
 - The exact-source tests and code cover the public-only startup profile, but they do not prove the configuration of a deployed service. No public Judge URL or deployed SHA exists. Real-provider inference and quality remain `NOT_MEASURED`; all PASS labels here are synthetic/Mock functional checks.
-- This earlier candidate snapshot is historical. The later release and public-acceptance checkpoint at the end of this runbook is authoritative for current status; do not present this snapshot as a current pass.
+- This earlier candidate snapshot is historical. The live synthetic Judge checkpoint at the end of this runbook is authoritative for current deployment status; retain this snapshot only as earlier source/test evidence.
 
 ## Scope and data boundary
 
@@ -223,9 +223,9 @@ This section records the **pre-action** 12539 integration snapshot. Its “no hu
 - Actual action/browser E2E remains blocked: the local sandbox cannot start the worktree's Python runtime or connect a browser to loopback. Discovery is not execution. Rerun in a disposable environment with a working browser/backend before claiming browser acceptance.
 - These exact-SHA results are D-reported local synthetic/Mock evidence. They do not establish deployed behavior or real inference quality. No deployed URL exists; public acceptance remains open and quality remains `NOT_MEASURED`.
 
-## Release and public-acceptance checkpoint (2026-10-15)
+## Historical pre-deployment checkpoint (main `13cd55b`; 2026-10-15)
 
-This is the latest status record for the Challenge A public Judge. Git ancestry and SHAs below were checked read-only in this documentation worktree. CI and Render details are D-reported handoff evidence; this docs-only update did not rerun CI, execute browser tests, access public endpoints, or change a service.
+This snapshot records the pre-deployment state before PR #36 and the live synthetic smoke below. Its source/CI facts are historical; D supplied the later Render observations. This documentation update did not access public endpoints or change a service.
 
 | Evidence area | Exact evidence and boundary | Current status |
 | --- | --- | --- |
@@ -244,14 +244,14 @@ This is the latest status record for the Challenge A public Judge. Git ancestry 
 - `public-judge-actions.spec.ts` uses mocked API responses. Backend action-store unit/API tests in the backend suite are separate evidence; the mocked browser spec alone does not verify server action-store behavior.
 - The sole CI artifact is `verify-expected-actual` (artifact id `11940178355`). No Judge browser trace/screenshot or candidate public-run receipt is retained. The successful jobs and source-level assertions are evidence, while the missing candidate case-level artifact and deployed acceptance remain open.
 
-### Post-merge main checkpoint: PR #33 and CI run `38672533269`
+### Historical post-merge main checkpoint before Judge deployment: PR #33 and CI run `38672533269`
 
 - Main advanced in merge commit `13cd55b952c27f89663e836a9de34bda190c4f23`, with `6f1088939cb0153025b75ef7ca5016d58c7c192a` as its first parent. The merge adds only `tests/integration/test_public_judge_composition.py`; runtime and `deployment/render.challenge-a.yaml` are unchanged from `6f108893…`.
 - The added test is `test_public_judge_rejects_concurrent_post_while_another_run_is_active`. It pauses a synthetic first general-suite POST, sends a concurrent POST, asserts the second request returns HTTP 429 `RATE_LIMITED` with retry-after `1`, and then asserts the first request returns HTTP 200 and only one suite invocation occurred. This is test coverage of the one-active-POST gate; it does not change runtime behavior.
 - D reports main CI run `38672533269` completed 4/4 jobs successfully. This is post-merge CI evidence, not a deployment or public acceptance result.
 - D's read-only deployment findings remain: Auth SHA `bde2bb130fc9be9daa7598c3b5b0c201f6fa4d5b`, frontend SHA `425b417309c7a9db5ee2bd71a74f5cdad6704178`, `/challenge-a` not-found, and no separate Judge service or URL. Deployment approval remains pending. Public acceptance is **NOT RUN**.
 
-### Latest gap map against the Challenge A brief
+### Historical gap map before live Judge deployment
 
 | Brief criterion | Latest evidence | Status and remaining gap |
 | --- | --- | --- |
@@ -264,3 +264,28 @@ This is the latest status record for the Challenge A public Judge. Git ancestry 
 | Isolation and input/request/concurrency bounds | PR #33 adds a synthetic integration regression test for one active POST: the first general request completes HTTP 200 and the concurrent request receives HTTP 429 `RATE_LIMITED`. The test-only merge leaves runtime and Blueprint unchanged. There is no Judge Render service to inspect; deployed topology, edge body limit, and effective public quota are not established. | Candidate code-level concurrency assertion PASS as reported; deployed isolation and effective public limits remain unverified. |
 | At least 15 cases and policy consistency | The repository's 15-case catalog and simulation policy are documented in this runbook; the release handoff does not provide a separate deployed dataset check. | Local synthetic policy/fixture evidence is not deployed acceptance or real-inference quality evidence. |
 | Exact deployed public acceptance | D reports current Render still has the older Auth/frontend SHAs, `/challenge-a` returns not-found, and no separate Judge service or URL exists; deployment approval is pending. Run `38664773109` includes browser/Mock and disposable PostgreSQL evidence; `38672533269` is the post-merge CI run for the test-only update. Neither establishes live behavior. | **NOT RUN.** No public Judge POST, real inference, production database access, or deployment occurred. |
+
+## Live Judge synthetic-smoke checkpoint (2026-10-15; source/deployed SHA `c2b477a57edf7fb03eed4d8ec4f20c03e4c435f8`)
+
+This is the latest status record. The live service and browser observations below are reported by D; this documentation update did not browse the public service or send requests. They establish a deployed synthetic functional smoke, not real inference quality or complete Challenge A acceptance.
+
+| Evidence area | D-reported evidence | Current status and boundary |
+| --- | --- | --- |
+| Source and deployment | PR #36 `fix isolated Judge static build` merged normally; its diff changes only `deployment/render.challenge-a.yaml` build configuration. Main/Render source SHA is `c2b477a57edf7fb03eed4d8ec4f20c03e4c435f8`; PR #36 CI reports 4/4 PASS. The Judge API and static UI are separate Live services. Service Auto Deploy is off; an explicit Blueprint sync triggered the new deployment. No migration is pending. | Deployed source is identified. The configuration change is build-only; no Judge application runtime or Auth code changed in PR #36. |
+| Public entry and fixed suites | D opened the public page without login. UI: [Challenge A Judge](https://organizationai-challenge-a-web.onrender.com/challenge-a); API: [Judge API](https://organizationai-challenge-a-api.onrender.com). D reports Verify chung `4/4 PASS` at 10:16, run `JUDGE-d716233fb9464dbe909e6f0985e3b915`, and Verify → Escalation `5/5 PASS` at 10:17, run `JUDGE-5058a209e103439aaf3740f84f6bb7ac`. These are synthetic browser smoke results on the Live Judge service. | Public synthetic functional smoke PASS as reported at the identified source SHA. The run IDs/times are handoff evidence; no new Judge screenshot, trace, or public-run receipt was retained. |
+| New synthetic input and action | D reports a new input produced `SIMULATED_AUTO_APPROVE`, labeled `MOCK · NOT_MEASURED` and `USER_SUPPLIED_UNVERIFIED`; this is not a production decision. STOP after a result displayed `STOPPED` with reason, time, and audit fields in the temporary session. | Demonstrates simulation behavior only. It does not establish real inference or a persistent production action/audit. |
+| Isolation and quota | D reports the Judge services do not access Auth or the production database. The Judge action session remains process-local with a 15-minute TTL; STOP is post-result and cannot cancel in-flight work or undo side effects. | Service separation is D-reported. This smoke does not prove multi-instance isolation or durable/effective public quota behavior. |
+| Quality and remaining artifacts | The new-input path remains deterministic simulation; no real inference was run. The earlier CI artifact remains `verify-expected-actual` (`11940178355`); no artifact was supplied for these Live smoke runs. D reports user study, video, five-slide deck, and submission package remain open; Scope1 is PARTIAL. | **Real AI quality: FAIL for the acceptance gate** (no real inference/quality evidence); **VLM: BLOCKED**. Full Challenge A acceptance remains PARTIAL/OPEN. |
+
+### Latest gap map against the Challenge A brief
+
+| Brief criterion | Latest evidence | Status and remaining gap |
+| --- | --- | --- |
+| Public entry without an account; one actionable first instruction | D reports opening the Live UI without login and observing the first instruction at `/challenge-a`. | Deployed entry smoke PASS as reported at SHA `c2b477a…`; retained screenshot/trace evidence is absent. |
+| Verify chung: four cases in one run, pass/fail, and run timestamp | D reports `4/4 PASS` at 10:16, run `JUDGE-d716233fb9464dbe909e6f0985e3b915`. | Live synthetic functional smoke PASS as reported; no candidate public-run receipt or case-level artifact retained. |
+| Verify → Escalation: five cases, three automatic and two transferred | D reports `5/5 PASS` at 10:17, run `JUDGE-5058a209e103439aaf3740f84f6bb7ac`; earlier exact-candidate unit assertions cover 3 AUTO / 2 HUMAN_REVIEW and per-row timing/audit. | Live synthetic functional smoke PASS as reported; no retained run artifact, and no real-inference quality evidence. |
+| New input; separate fact uncertainty, policy scope, and authority; keep unverified values unconfirmed | D reports one new input returning `SIMULATED_AUTO_APPROVE`, `MOCK · NOT_MEASURED`, `USER_SUPPLIED_UNVERIFIED`. Earlier browser/Mock CI exercised an unlisted channel handoff. | Simulation behavior only. No real inference; latest Live smoke report does not evidence all three handoff categories. |
+| Contextual handoff, audit action/time/input/reason, and intervention/STOP | D reports STOP after a result showed `STOPPED`, reason, time, and audit fields in the temporary session. Action data remains process-local/15-minute TTL. | Temporary simulated audit only; STOP does not cancel in-flight work or reverse effects. Durable history and production Checker action remain unproven. |
+| Isolation and request/concurrency bounds | D reports separate Judge services with no Auth or production DB access. PR #33's synthetic test covers one active POST. | Service separation is reported; multi-instance isolation, durable/effective public quota, and edge enforcement remain unverified. |
+| At least 15 cases and consistent policy | Repository fixture/policy and prior candidate CI evidence remain documented above. PR #36 changed only the static build configuration; no migration is pending. | Source/CI fixture evidence only; no real-inference quality claim. |
+| Complete deployed Challenge A acceptance | Live synthetic smoke is reported at source/deployed SHA `c2b477a…`; user study, video, five-slide deck, and submission package remain open. | **PARTIAL/OPEN.** Synthetic browser smoke passes; Real AI quality remains FAIL for acceptance and VLM remains BLOCKED. |
