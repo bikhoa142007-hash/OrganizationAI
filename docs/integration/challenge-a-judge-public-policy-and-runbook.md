@@ -2,13 +2,13 @@
 
 Status: implementation contract for the Challenge A Judge only. The automatic outcomes below apply only to isolated synthetic runs. They do not authorize production auto-approval or deployment.
 
-## Current status (2026-10-15)
+## Earlier implementation checkpoint (2026-10-15; D candidate abd2cd8)
 
 - Judge-owned UI/client code checkpoint: `3e94c1b874b4e98eb4b627837faa1a78af2ecb5b`, based on D baseline `12539b30eaaf74379508f5a5735ab338d0ea64ed`. D's committed combined local candidate is exact SHA `abd2cd8bcbff9c6b2221efa6eddca535dfdcbbaf`; read-only Git inspection found its action/isolation and isolated-deployment commits. This is a local source candidate, not a deployed SHA.
 - Candidate `abd2cd8` includes `deployment/render.challenge-a.yaml`, which defines separate Demo-only API and static-web services, `PUBLIC_JUDGE_ONLY=true`, one API instance, and automatic deployment disabled. It is deployment configuration only; there is no assigned service URL or live environment to verify. No deployment was performed from this Judge worktree.
 - D reports exact-candidate results: backend synthetic suite `46 passed, 1 Starlette/httpx deprecation warning`; frontend `29 files / 201 tests passed`; typecheck passed; build passed with a 587.17 kB chunk warning; Playwright listed all three specs, including the action spec. Actual browser execution remains blocked by sandbox browser/loopback limits. These results are local synthetic/Mock evidence, not public acceptance.
 - The exact-source tests and code cover the public-only startup profile, but they do not prove the configuration of a deployed service. No public Judge URL or deployed SHA exists. Real-provider inference and quality remain `NOT_MEASURED`; all PASS labels here are synthetic/Mock functional checks.
-- Current brief status is summarized in “Current acceptance gap map at this checkpoint” below. Earlier acceptance tables are explicitly historical snapshots and must not be presented as current passes.
+- This earlier candidate snapshot is historical. The later release and public-acceptance checkpoint at the end of this runbook is authoritative for current status; do not present this snapshot as a current pass.
 
 ## Scope and data boundary
 
@@ -200,7 +200,7 @@ This section records the **pre-action** 12539 integration snapshot. Its “no hu
 - The action E2E was attempted with mocked API responses. Playwright Chromium was absent; installed Chrome then failed to load loopback with `ERR_NETWORK_ACCESS_DENIED`, and the sandbox denies local sockets from PowerShell. D likewise reports actual browser execution blocked. The action E2E is BLOCKED, not PASS. The configured Chrome DevTools MCP required by the browser-testing skill is unavailable in this session.
 - Read-only comparison of `12539b30...` to `abd2cd8...` shows no migration or dependency-lockfile changes. The separate blueprint in `deployment/render.challenge-a.yaml` defines an API and static Judge service with auto-deploy disabled; no service URL was assigned and no deployment was performed. Public acceptance remains NOT RUN, and real-provider/real-AI quality remains `NOT_MEASURED`.
 
-### Current acceptance gap map at this checkpoint
+### Historical acceptance gap map for D candidate abd2cd8
 
 | Challenge A brief criterion | Evidence available at this checkpoint | Current status / exact remaining gap |
 | --- | --- | --- |
@@ -222,3 +222,31 @@ This section records the **pre-action** 12539 integration snapshot. Its “no hu
 - D reports `npm run test --prefix frontend -- --pool=threads --maxWorkers=4` → 29 files / 201 tests passed; `npm run typecheck --prefix frontend` passed; `npm run build --prefix frontend` passed with a 587.17 kB chunk warning. Playwright `--list` discovered all three specs.
 - Actual action/browser E2E remains blocked: the local sandbox cannot start the worktree's Python runtime or connect a browser to loopback. Discovery is not execution. Rerun in a disposable environment with a working browser/backend before claiming browser acceptance.
 - These exact-SHA results are D-reported local synthetic/Mock evidence. They do not establish deployed behavior or real inference quality. No deployed URL exists; public acceptance remains open and quality remains `NOT_MEASURED`.
+
+## Release and public-acceptance checkpoint (2026-10-15)
+
+This is the latest status record for the Challenge A public Judge. Git ancestry and SHAs below were checked read-only in this documentation worktree. CI and Render details are D-reported handoff evidence; this docs-only update did not rerun CI, execute browser tests, access public endpoints, or change a service.
+
+| Evidence area | Exact evidence and boundary | Current status |
+| --- | --- | --- |
+| Source identity | D reports PR candidate `0a3e6842e0eeac25dc9242e76df8e8344a8c628c`, merged by main commit `6f1088939cb0153025b75ef7ca5016d58c7c192a`. The merged tree matches the candidate. These are source SHAs, not deployed SHAs. | Code is merged; deployment/public acceptance is a separate gate. |
+| CI run | D reports GitHub Actions run `38664773109` completed all 4/4 jobs successfully on the exact candidate. The browser job passed its public-Judge action checks in browser/Mock mode using synthetic inputs; this is functional simulation evidence and does not measure inference quality. A PostgreSQL job used a disposable CI database, not production data. | CI 4/4 PASS as reported. Do not describe Mock/browser or disposable-PostgreSQL CI as a live service check. |
+| Schema and dependency changes | Read-only comparison from `425b417309c7a9db5ee2bd71a74f5cdad6704178` to candidate `0a3e6842e0eeac25dc9242e76df8e8344a8c628c` found no migration or dependency-lockfile paths. | No migration was introduced in this candidate. |
+| Current Render state | D's read-only check reports the Auth service at SHA `bde2bb130fc9be9daa7598c3b5b0c201f6fa4d5b` and the frontend at SHA `425b417309c7a9db5ee2bd71a74f5cdad6704178`. The live `/challenge-a` entry returns not-found; no separate Judge service or Judge URL exists. The isolated Judge Blueprint has not been deployed. | No deployed Judge service or deployed Judge SHA is available. No deployment or production write was performed. |
+| Real AI quality and VLM | No real inference was executed in the reported CI. The current new-input path is deterministic simulation; Mock evidence is not real VLM/strategy evaluation. | **Real AI quality: FAIL for the acceptance gate** because real-inference quality has not been demonstrated; this is not a failed model output. **VLM: BLOCKED** for public acceptance. |
+| Action storage and STOP | The action store is process-local, capped at 3,000 case records with a 15-minute TTL, and keeps derived recommendation/reason, input hash, bounded audit metadata, and one final action. It does not retain raw input or durable history; restart, expiry, or another process may lose the session. STOP is post-result only: it neither cancels in-flight work nor reverses side effects. | Synthetic action behavior does not provide durable audit or real cancellation/rollback. |
+| User study and candidate artifact | The handoff contains no user-study record and no retrievable browser artifact reference for candidate `0a3e6842…` (for example, a run-linked screenshot or trace). An older local screenshot recorded elsewhere in this runbook belongs to an earlier SHA and cannot establish exact-candidate or deployed acceptance. | Open evidence gaps; do not infer study completion or artifact availability. |
+
+### Latest gap map against the Challenge A brief
+
+| Brief criterion | Latest evidence | Status and remaining gap |
+| --- | --- | --- |
+| Public entry without an account; one actionable first instruction | D reports the candidate browser/Mock CI job passed public-Judge action checks. Render currently serves an older frontend SHA and `/challenge-a` returns not-found. The handoff does not identify a retained artifact for the first-instruction assertion. | Candidate CI evidence PASS as reported; public entry and first instruction at a deployed URL are NOT RUN. |
+| Verify chung: four cases, one run, pass/fail and actual timestamps | The 4/4 CI report includes a browser/Mock job, but its handoff does not enumerate the exact four-case assertions or provide a run artifact. Prior local evidence is tied to earlier SHAs. | Candidate browser job PASS as reported; exact criterion-level artifact and deployed acceptance remain open. |
+| Verify → Escalation: five cases, three automatic and two transferred | Same CI boundary: browser/Mock job PASS is reported, without a retained case-level artifact in this handoff. Prior local browser evidence belongs to earlier SHAs. | Do not promote older browser evidence to candidate or deployed PASS; deployed acceptance remains NOT RUN. |
+| New input; missing fact, policy scope, and authority are distinguished; uncertain values stay unverified | The approved Judge-only policy remains deterministic and labels new input `USER_SUPPLIED_UNVERIFIED`; the CI summary provided does not itemize these assertions. | Simulation policy is documented; this checkpoint has no real-inference quality evidence. Real AI quality acceptance is FAIL and VLM is BLOCKED. |
+| Contextual transfer question; audit captures action, time, input, and reason | Candidate action behavior is covered by D-reported browser/Mock public-action checks. The action record is process-local and expires; raw input and durable history are absent. | Synthetic action checks PASS as reported; durable audit/history remains unavailable. |
+| Intervention, stop, and override follow the contract without false rollback claims | D reports public-action checks passed in browser/Mock CI. STOP remains a completed-result synthetic action only and cannot cancel work or undo effects. | Do not claim production Checker action, cancellation, or reversal. |
+| Isolation and input/request/concurrency bounds | Source/config and CI are code-level evidence. There is no Judge Render service to inspect; deployed topology, edge body limit, and effective public quota are not established. | Deployed isolation and effective public limits remain unverified. |
+| At least 15 cases and policy consistency | The repository's 15-case catalog and simulation policy are documented in this runbook; the release handoff does not provide a separate deployed dataset check. | Local synthetic policy/fixture evidence is not deployed acceptance or real-inference quality evidence. |
+| Exact deployed public acceptance | Current Render entry is not-found; there is no separate Judge service, URL, or deployed Judge SHA. CI run `38664773109` exercised candidate code in browser/Mock and disposable CI infrastructure only. | **NOT RUN.** No public Judge POST, real inference, production database access, or deployment occurred. |
