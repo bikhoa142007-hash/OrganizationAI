@@ -6,6 +6,34 @@ function success(body: unknown) {
 }
 
 describe('PublicJudgeService', () => {
+
+  it('keeps a suite request alive through a free-plan cold-start window, then preserves unknown-outcome semantics', async () => {
+    vi.useFakeTimers()
+    try {
+      const transport = vi.fn((_url: RequestInfo | URL, init?: RequestInit) => new Promise<Response>((_resolve, reject) => {
+        init?.signal?.addEventListener('abort', () => reject(new DOMException('Request aborted.', 'AbortError')), { once: true })
+      }))
+      const service = new PublicJudgeService('https://judge.example/api', false, transport)
+      const outcome = service.startRun('general').catch(error => error)
+      const [, init] = transport.mock.calls[0] as [RequestInfo | URL, RequestInit]
+      const signal = init.signal as AbortSignal
+
+      await vi.advanceTimersByTimeAsync(60_000)
+      expect(signal.aborted).toBe(false)
+      await vi.advanceTimersByTimeAsync(29_999)
+      expect(signal.aborted).toBe(false)
+      await vi.advanceTimersByTimeAsync(1)
+
+      expect(signal.aborted).toBe(true)
+      expect(transport).toHaveBeenCalledTimes(1)
+      expect(await outcome).toMatchObject({
+        code: 'OUTCOME_UNKNOWN',
+        message: 'Request timed out; the outcome is unknown. Timeout does not stop server work or undo an effect.',
+      })
+    } finally {
+      vi.useRealTimers()
+    }
+  })
   it('uses the isolated endpoint without cookies, demo actor, or client oracle fields', async () => {
     const transport = vi.fn().mockResolvedValue(success({
       run_id: 'JUDGE-1', suite: 'general', status: 'COMPLETED', mode: 'MOCK', data_classification: 'SYNTHETIC',
