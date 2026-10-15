@@ -96,7 +96,7 @@ def test_only_approved_scoped_rule_with_hash_bound_ocr_can_auto_reject():
         DecisionResult.from_dict(tampered_trace)
 
 
-def test_authenticated_production_signoff_allows_explicit_rule_to_win_over_auto_approve():
+def test_production_signoff_without_calibrated_located_ocr_still_routes_to_checker():
     p = plan()
     raw = evaluation(p)
     raw["evidence"] = _ocr_evidence(p)
@@ -116,9 +116,9 @@ def test_authenticated_production_signoff_allows_explicit_rule_to_win_over_auto_
 
     decision = _evaluate(policy=signed, raw=raw, p=p).decision
 
-    assert decision.outcome == "AUTO_REJECTED"
-    assert decision.auto_reject_rule_id == fixture_rule.rule_id
-    assert decision.reason_code == fixture_rule.reason_code
+    assert decision.outcome == "HUMAN_REVIEW_REQUIRED"
+    assert decision.auto_reject_rule_id is None
+    assert decision.reason_code is None
 
 
 def test_confidence_floor_is_inclusive_at_each_approved_threshold():

@@ -1105,7 +1105,7 @@ def test_round_snapshot_thresholds_override_legacy_policy_and_keep_auto_approval
     assert [item["event_type"] for item in checker_notifications["items"]] == ["PLAN_SUBMITTED"]
 
 
-def test_authenticated_workflow_persists_signed_auto_reject_and_resubmission(workflow_client):
+def test_authenticated_workflow_signed_auto_reject_routes_unqualified_ocr_to_checker(workflow_client):
     client, factory, app = workflow_client
     maker = create_user(factory, "maker.auto-reject-e2e", ("MAKER",))
     checker = create_user(factory, "lekhoi", ("CHECKER",))
@@ -1216,81 +1216,47 @@ def test_authenticated_workflow_persists_signed_auto_reject_and_resubmission(wor
         budget_minor_units="3000000", department="Marketing", configure_assignment=False,
     )
     draft = upload_plan_image(client, draft["id"], draft["revision"])
-    rejected = submit_plan(client, draft)
+    pending = submit_plan(client, draft)
 
-    assert rejected["status"] == "REJECTED", json.dumps(rejected["engine_decisions"][0]["decision"], indent=2)
-    assert rejected["processing_stage"] == "AI_AUTO_REJECTED"
-    first_evaluation = rejected["ai_evaluations"][0]
-    first_decision = rejected["engine_decisions"][0]
-    assert first_decision["outcome"] == "AUTO_REJECTED"
-    assert first_decision["decision"]["auto_reject_rule_id"] == rule.rule_id
-    assert first_decision["decision"]["reason_code"] == rule.reason_code
-    assert first_decision["decision"]["decided_by"]["actor_type"] == "SYSTEM"
-    assert first_decision["decision"]["evidence"]
+    assert pending["status"] == "PENDING_APPROVAL"
+    assert pending["processing_stage"] == "HUMAN_REVIEW_REQUIRED"
+    first_evaluation = pending["ai_evaluations"][0]
+    first_decision = pending["engine_decisions"][0]
+    assert first_decision["outcome"] == "HUMAN_REVIEW_REQUIRED"
+    assert first_decision["decision"]["auto_reject_rule_id"] is None
+    assert first_decision["decision"]["reason_code"] is None
+    reject_check = next(
+        check for check in first_decision["decision"]["rule_checks"]
+        if check["rule_id"] == "AUTO_REJECT_MATCH"
+    )
+    assert reject_check["result"] == "UNKNOWN"
     assert first_evaluation["visual_extraction"]["attachments"][0]["ocr_text"] == "DEMO-CONTENT-V2"
-    reject_event = next(event for event in rejected["history"] if event["action"] == "AI_AUTO_REJECTED")
-    assert reject_event["actor_type"] == "SYSTEM"
-    assert reject_event["details"]["auto_reject_rule_id"] == rule.rule_id
-    assert reject_event["details"]["reason_code"] == rule.reason_code
-    assert reject_event["details"]["evidence_reference"]
+    assert not any(event["action"] == "AI_AUTO_REJECTED" for event in pending["history"])
 
     maker_notifications = client.get("/api/workflow/notifications").json()["items"]
-    reject_notifications = [item for item in maker_notifications if item["event_type"] == "PLAN_AUTO_REJECTED"]
-    assert len(reject_notifications) == 1
-    assert "rule đã ký" in reject_notifications[0]["message"]
+    assert not [item for item in maker_notifications if item["event_type"] == "PLAN_AUTO_REJECTED"]
     with factory() as session:
         stored_decision = session.scalar(select(AuthWorkflowEngineDecision).where(
-            AuthWorkflowEngineDecision.plan_id == UUID(rejected["id"]),
+            AuthWorkflowEngineDecision.plan_id == UUID(pending["id"]),
             AuthWorkflowEngineDecision.round_number == 1,
         ))
         stored_snapshot = session.scalar(select(AuthWorkflowRoundConfigurationSnapshot).where(
-            AuthWorkflowRoundConfigurationSnapshot.plan_id == UUID(rejected["id"]),
+            AuthWorkflowRoundConfigurationSnapshot.plan_id == UUID(pending["id"]),
         ))
         sla_round = session.scalar(select(AuthWorkflowSlaRound).where(
-            AuthWorkflowSlaRound.plan_id == UUID(rejected["id"]),
+            AuthWorkflowSlaRound.plan_id == UUID(pending["id"]),
             AuthWorkflowSlaRound.round_number == 1,
         ))
-        assert stored_decision is not None and stored_decision.outcome == "AUTO_REJECTED"
+        assert stored_decision is not None and stored_decision.outcome == "HUMAN_REVIEW_REQUIRED"
         assert stored_snapshot is not None
-        assert sla_round is not None and sla_round.closed_at is not None
+        assert sla_round is not None and sla_round.closed_at is None
         assert stored_snapshot.configurations["auto_reject_policy"]["value"]["environment"] == "PRODUCTION"
+        assert stored_snapshot.configurations["auto_reject_policy"]["value"]["enabled"] is True
         assert stored_snapshot.configurations["auto_reject_policy"]["signoff"]["policy_owner_id"] == str(owner.id)
         assert stored_snapshot.configurations["auto_reject_policy"]["configuration_hash"] == signed_revision["configuration_hash"]
-        assert reject_event["details"]["auto_reject_policy_revision_id"] == stored_snapshot.configurations["auto_reject_policy"]["revision_id"]
-        assert reject_event["details"]["auto_reject_policy_configuration_hash"] == stored_snapshot.configurations["auto_reject_policy"]["configuration_hash"]
-        assert reject_event["details"]["auto_reject_policy_signoff_actor_id"] == str(owner.id)
-        assert reject_event["details"]["auto_reject_policy_signed_at"] == stored_snapshot.configurations["auto_reject_policy"]["signoff"]["signed_at"]
         assert stored_snapshot.configurations["authority"]["value"]["budget_authority_id"] == str(budget_authority.id)
-
-    edited = client.put(f"/api/workflow/plans/{rejected['id']}", json={
-        "expected_revision": rejected["revision"],
-        "payload": {**rejected["payload"], "title": "Safe resubmission"},
-    })
-    assert edited.status_code == 200, edited.text
-    resubmitted = submit_plan(client, edited.json())
-
-    assert resubmitted["current_version"] == 2
-    assert resubmitted["current_round"] == 2
-    assert resubmitted["status"] == "APPROVED"
-    assert resubmitted["engine_decisions"][0] == first_decision
-    assert resubmitted["engine_decisions"][1]["outcome"] == "AUTO_APPROVED"
-    def normalize_saved_evaluation(value):
-        normalized = dict(value)
-        for field in ("created_at", "started_at", "completed_at"):
-            timestamp = datetime.fromisoformat(normalized[field].replace("Z", "+00:00"))
-            normalized[field] = (
-                timestamp.replace(tzinfo=timezone.utc)
-                if timestamp.tzinfo is None else timestamp.astimezone(timezone.utc)
-            )
-        return normalized
-
-    assert normalize_saved_evaluation(resubmitted["ai_evaluations"][0]) == normalize_saved_evaluation(first_evaluation)
-    assert app.state.auth_workflow_provider.calls == 2
-    assert next(event for event in resubmitted["history"] if event["action"] == "AI_AUTO_REJECTED")["details"]["round"] == 1
-    audit = authenticated_client(app, owner).get("/api/workflow/audit?offset=0&limit=100").json()
-    assert any(event["plan_id"] == rejected["id"] and event["action"] == "AI_AUTO_REJECTED"
-               and event["details"].get("auto_reject_rule_id") == rule.rule_id
-               for event in audit["items"])
+    checker_notifications = authenticated_client(app, checker).get("/api/workflow/notifications").json()["items"]
+    assert any(item["event_type"] == "PLAN_SUBMITTED" for item in checker_notifications)
 
 
 def test_manual_retry_reuses_round_configuration_and_appends_one_decision_per_attempt(workflow_client):
