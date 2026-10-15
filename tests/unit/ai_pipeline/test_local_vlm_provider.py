@@ -374,7 +374,8 @@ def test_unconfigured_provider_fails_once_without_sending_image_or_using_mock_fa
     assert result.evaluation["agent_errors"][0]["code"] == "PROVIDER_NOT_CONFIGURED"
 
 
-def test_external_endpoint_requires_explicit_https_opt_in():
+def test_external_endpoint_requires_explicit_https_opt_in(monkeypatch):
+    monkeypatch.delenv("LOCAL_VLM_ALLOW_REMOTE", raising=False)
     blocked = LocalVLMProvider(model="model-4b", base_url="https://runtime.example/v1")
     assert blocked.configuration_error == "INVALID_PROVIDER_CONFIGURATION"
 
