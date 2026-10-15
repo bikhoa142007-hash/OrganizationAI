@@ -178,6 +178,13 @@ def _auto_reject_match(policy, plan, evaluation, ctx, config):
     if (policy.environment == "PRODUCTION"
             and policy.signoff_source != "AUTHENTICATED_POLICY_OWNER"):
         return "UNKNOWN", None, (), None
+    if policy.environment == "PRODUCTION":
+        # The production VLM schema currently supplies self-reported,
+        # uncalibrated OCR confidence and no text-region coordinates. The
+        # approved production rule requires both calibrated confidence and
+        # verifiable on-image location, so signed literals must remain
+        # indeterminate and route to Checker until those capabilities exist.
+        return "UNKNOWN", None, (), None
     if not (
         config.media_policy and config.media_policy.status == "ACTIVE"
         and config.media_policy.applies_to(plan.payload)
