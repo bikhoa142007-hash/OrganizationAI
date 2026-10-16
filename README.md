@@ -1,557 +1,163 @@
-# 🏢 OrganizationAI – AI-Assisted Marketing Plan Approval
+# OrganizationAI
 
-![React](https://img.shields.io/badge/React-61DAFB?logo=react&logoColor=111827)
-![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)
-![Vite](https://img.shields.io/badge/Vite-646CFF?logo=vite&logoColor=white)
-![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)
-![Python](https://img.shields.io/badge/Python-3776AB?logo=python&logoColor=white)
-![SQLite](https://img.shields.io/badge/SQLite-003B57?logo=sqlite&logoColor=white)
-![Render](https://img.shields.io/badge/Render-000000?logo=render&logoColor=white)
-![Pytest](https://img.shields.io/badge/Pytest-0A9EDC?logo=pytest&logoColor=white)
+Ứng dụng web hỗ trợ lập và phê duyệt kế hoạch marketing theo luồng Maker–Checker. Repository hiện có hai workflow chạy trên cùng FastAPI monolith:
 
-> Source hiện tại mở đầu bằng Auth: đăng nhập/đăng ký và workflow Maker–Checker dùng PostgreSQL. Judge Demo tổng hợp được tách riêng dưới `/demo`, không yêu cầu đăng ký/đăng nhập, và dùng SQLite riêng cùng actor mô phỏng qua `X-Demo-Actor`.
+- **Authenticated workflow**: tài khoản và vai trò dùng JWT cookie; kế hoạch, tệp đính kèm, phiên bản, đánh giá và audit lưu trong PostgreSQL.
+- **Judge Demo**: dữ liệu tổng hợp, actor demo qua `X-Demo-Actor`, AI giả lập và SQLite riêng. Luồng này phục vụ demo/QA, không phải xác thực người dùng.
 
-Judge Demo vẫn là một môi trường tổng hợp, không phải hệ thống production. Các URL Render bên dưới là lần triển khai demo được xác minh ngày 2026-09-22; Auth-first branch và PostgreSQL staging riêng chưa được deploy.
+## Kiến trúc
 
-Xem [báo cáo Scope 1 ngày 2026-10-03](docs/integration/scope-1-progress-2026-10-03.md)
-và [báo cáo kiểm chứng ngày 2026-10-09](docs/integration/scope-1-review-2026-10-09.md)
-để biết ma trận phạm vi, test evidence, trạng thái bảo toàn dữ liệu và blocker staging.
+![Sơ đồ kiến trúc runtime của OrganizationAI](docs/diagrams/organizationai-runtime-architecture.png)
 
----
+[Mở sơ đồ HTML tương tác](docs/diagrams/organizationai-runtime-architecture.html) · [Xem tệp PNG](docs/diagrams/organizationai-runtime-architecture.png)
 
-## 🌐 Demo Trực Tuyến
+Sơ đồ được đối chiếu với mã nguồn và cấu hình của branch hiện tại. Model endpoint là thành phần tùy chọn, chỉ được dùng khi operator cấu hình.
 
-| Thành phần | URL | Trạng thái/Mục đích |
-| --- | --- | --- |
-| Frontend Demo | [https://organizationai-frontend.onrender.com](https://organizationai-frontend.onrender.com) | Giao diện Sprint 1 Judge Demo |
-| Backend API | [https://organizationai-api.onrender.com](https://organizationai-api.onrender.com) | FastAPI service |
-| Health Check | [https://organizationai-api.onrender.com/api/health](https://organizationai-api.onrender.com/api/health) | Kiểm tra liveness của server |
-| Swagger | [https://organizationai-api.onrender.com/docs](https://organizationai-api.onrender.com/docs) | Interactive API documentation của FastAPI |
+## Chức năng hiện có
 
-Các URL trên đã trả về HTTP `200` ngày **2026-09-22**. Frontend bundle cũng được xác minh đang trỏ tới `https://organizationai-api.onrender.com/api`. Commit/hash đang chạy trên Render và mức độ đồng bộ với working tree hiện tại: **TBD** vì repository không chứa metadata từ Render Dashboard.
-
-> [!NOTE]
-> Render Free có thể cần khoảng 30–60 giây để khởi động sau thời gian không hoạt động. Đây là Judge Demo, không phải trạng thái production-ready.
-
-Backend Render lưu SQLite tại `/tmp/organizationai/demo-organization.sqlite3`. Dữ liệu người dùng có thể mất sau restart, redeploy hoặc spin-down; startup chỉ khôi phục tám scenario seed tất định (`AUTO`, `BUDGET`, `REVIEW`, `TIMEOUT`, `FACTS`, `DRAFT`, `APPROVED`, `REJECTED`).
-
----
-
-## 🌟 Tính Năng Nổi Bật
-
-| Trạng thái | Khả năng | Phạm vi thực tế trong repository |
-| --- | --- | --- |
-| `Implemented` | Quản lý kế hoạch | Lưu draft chưa đầy đủ, cập nhật draft/rejected plan, upload PNG/JPEG/WebP, gửi duyệt và xem danh sách/chi tiết |
-| `Implemented` | Version và approval round | Submit tạo snapshot bất biến, version và round mới; rejected plan có thể sửa rồi resubmit |
-| `Implemented` | Rule/Policy Evaluation | 13 decision gates kiểm tra integrity, evidence, confidence, budget, authority, policy và trạng thái |
-| `Implemented` | Human Review | Queue cho Checker được gán; hỗ trợ `APPROVED`/`REJECTED`, reason, override reason và stale-revision handling |
-| `Implemented` | Audit và truy vết | Timeline actor, trạng thái trước/sau, policy/model/version/round, decision và correlation metadata |
-| `Implemented` | Policy view | Màn hình chỉ đọc từ `/api/config`; không có API chỉnh policy trong Sprint 1 |
-| `Implemented (local)` | Verify dashboard | General 4 ca, Escalation 5 ca và bộ hồi quy tổng hợp 15 ca; mỗi lần chạy dùng workflow in-memory mới. Provider là Mock có nhãn, không phải bằng chứng inference thật |
-| `Implemented` | Demo seed | Tám scenario tổng hợp, seed idempotent và không xóa database hiện có |
-| `Demo/Mock` | Actor identity | Chọn shared demo actor, gửi qua header `X-Demo-Actor`; server vẫn kiểm tra role và ownership |
-| `Demo/Mock` | AI evaluation | FastAPI đang nối `MockVLMProvider`; timeout/error/malformed evidence đều fail closed sang Human Review |
-| `Implemented (local)` | Auth workflow | Cookie JWT xác thực Maker/Checker; PostgreSQL lưu kế hoạch, snapshot, provider evaluation, quyết định policy và audit; AI lỗi chuyển Checker review |
-| `Implemented (local)` | Auth AI stages | Local VLM extraction, Media Compliance và Strategy Evaluation là các bước độc lập; kết quả và cấu hình an toàn được lưu theo từng round; task chưa cấu hình sẽ chuyển Checker |
-| `Planned/TBD` | Production identity và policy operations | Chưa có nguồn budget/authority/content policy được phê duyệt, cấu hình quản trị hoặc rate limiting toàn diện |
-
-AI không tự động từ chối kế hoạch. Engine chỉ trả `AUTO_APPROVED` hoặc `HUMAN_REVIEW_REQUIRED`; quyết định `REJECTED` chỉ do Checker được gán thực hiện. Policy mặc định cho submission HTTP mới là `DEMO-HTTP-2` với auto-approval tắt, nên mock PASS vẫn chuyển Checker; riêng seed `DEMO-SEED-AUTO` dùng snapshot `DEMO-HTTP-AUTO-1` để minh họa controlled auto-approval.
-
----
-
-## 🔄 Quy Trình Xét Duyệt
-
-```mermaid
-flowchart LR
-    A["Maker lưu draft"] --> B["Upload media hợp lệ"]
-    B --> C["Submit kế hoạch"]
-    C --> D["Validation + immutable version/round"]
-    D --> E["AI Evaluation qua MockVLMProvider"]
-    E --> F["Deterministic Rule/Policy Engine"]
-    F --> G{"Tất cả decision gates PASS, gồm POLICY_ENABLED?"}
-    G -->|Có| H["AUTO_APPROVED"]
-    H --> I["Plan APPROVED; round CLOSED"]
-    G -->|Không, UNKNOWN hoặc provider lỗi| J["HUMAN_REVIEW_REQUIRED"]
-    J --> K["Assigned Checker review"]
-    K -->|Approve| L["Plan APPROVED"]
-    K -->|Reject + reason| M["Plan REJECTED"]
-    M --> N["Maker sửa và resubmit"]
-    N --> D
-    I --> O["Audit Timeline"]
-    L --> O
-    M --> O
-```
-
-Submit được commit trước khi evaluation chạy. Vì vậy provider timeout hoặc evidence không hợp lệ không làm mất bản nộp; hồ sơ được chuyển sang Human Review cùng dấu vết audit.
-
----
-
-## 🏛️ Kiến Trúc Hệ Thống
-
-```mermaid
-flowchart TB
-    U["Browser / Judge"]
-
-    subgraph RF["Render Static Frontend"]
-        FE["React + TypeScript + Vite"]
-        CLIENT["API Client + SessionProvider"]
-        FE --> CLIENT
-    end
-
-    subgraph RB["Render FastAPI Service - Python Monolith"]
-        API["FastAPI routes / DTO / error mapping"]
-        AUTH["Demo actor dependency + role directory"]
-        WF["ApprovalWorkflow"]
-        RULES["Deterministic rule/policy engine"]
-        PIPE["EvaluationOrchestrator + adapter"]
-        PROVIDER["VisualModelProvider<br/>MockVLMProvider active"]
-        REPO["ApprovalRepository"]
-        VERIFY["Verify runner / observation"]
-        AUDIT["Audit + immutable records"]
-
-        API --> AUTH
-        AUTH --> WF
-        WF --> PIPE
-        PIPE --> PROVIDER
-        PROVIDER --> PIPE
-        PIPE -->|structured evidence| WF
-        WF --> RULES
-        WF --> REPO
-        WF --> AUDIT
-        VERIFY --> WF
-        AUDIT --> REPO
-    end
-
-    DB[("SQLite")]
-    ENV["Render environment variables"]
-
-    U --> FE
-    CLIENT -->|"HTTPS + X-Demo-Actor + Idempotency-Key"| API
-    REPO --> DB
-    ENV --> CLIENT
-    ENV --> API
-```
-
-| Lớp | Trách nhiệm |
+| Workflow | Khả năng |
 | --- | --- |
-| Frontend | Điều hướng, form, queue, result, policy, audit và Verify UI; không tự tính business outcome |
-| HTTP transport | FastAPI routes, Pydantic DTO, CORS, demo actor dependency và error response thống nhất |
-| Application | `ApprovalWorkflow` điều phối authorization, revision, idempotency, version/round và transaction |
-| AI pipeline | Provider interface, timeout/retry hữu hạn, evidence validation và adapter vào workflow |
-| Decision engine | Tính decision tất định từ snapshot, policy, budget, authority và evidence đã chuẩn hóa |
-| Persistence | `ApprovalRepository` dùng SQLite, migration lặp lại an toàn, append-only records và audit |
-| Verify | Chạy fixture qua workflow thật rồi mới so sánh actual với expected |
+| Authenticated | Đăng nhập/đăng ký, vai trò Maker/Checker/Admin, lưu draft, upload ảnh riêng tư, gửi duyệt, phiên bản và approval round, review/approve/reject, sửa và gửi lại, audit. Các màn hình quản trị nhân viên/tài khoản/vai trò cũng có trong code. |
+| Judge Demo | Tạo và sửa draft, upload, gửi duyệt, xem queue/chi tiết/audit, Checker quyết định, Verify suites và tám seed scenario tổng hợp. Actor được chọn trong giao diện demo. |
+| AI và quyết định | Local VLM adapter và Mock provider; đánh giá media/strategy riêng; budget/policy rules tất định. AI không tự từ chối. Thiếu cấu hình hoặc kết quả không hợp lệ sẽ chuyển hồ sơ sang Human Review. |
 
-Ứng dụng backend là một Python monolith theo lớp, không phải kiến trúc microservice. `app.py`/Streamlit vẫn tồn tại như local legacy demo riêng, không phải frontend được deploy bởi `render.yaml`.
+Auto-approval của Auth workflow tắt theo cấu hình mặc định. Demo HTTP cũng tắt auto-approval theo policy mặc định; seed `DEMO-SEED-AUTO` là scenario riêng để trình diễn nhánh đó.
 
----
-
-## 🧰 Công Nghệ Sử Dụng
-
-| Lớp | Công nghệ | Mục đích |
-| --- | --- | --- |
-| Frontend | React, TypeScript, Vite, React Router | Giao diện Judge Demo và API-backed workflow |
-| Backend | FastAPI, Uvicorn, Python | REST API, DTO, authorization dependency và application workflow |
-| AI pipeline | Python provider interface, deterministic mock provider | Tạo/kiểm tra evidence và mô phỏng các trạng thái AI trong demo |
-| Database | SQLite + PostgreSQL | SQLite giữ Judge Demo; PostgreSQL lưu tài khoản Auth và Auth workflow |
-| Testing | Pytest, Vitest, Testing Library, Playwright | Unit, integration, frontend và browser E2E |
-| Deployment | Render Blueprint | Static frontend và Python web service riêng biệt |
-
-Judge Demo công khai trên Render vẫn dùng cấu hình Render; Docker Compose chạy Judge Demo local cùng Auth PostgreSQL riêng.
-
----
-
-## 📁 Cấu Trúc Thư Mục Dự Án
+## Sơ đồ dự án
 
 ```text
-OrganizationAI/
-├── frontend/                  # React/TypeScript/Vite UI, Vitest và Playwright
-├── src/
-│   ├── backend/
-│   │   ├── api/               # FastAPI routes, dependencies, DTO và errors
-│   │   ├── application/       # ApprovalWorkflow
-│   │   ├── domain/            # Models và policy snapshots
-│   │   ├── repositories/      # SQLite repository và migration_001.sql
-│   │   └── rules/             # Deterministic decision engine
-│   ├── ai_pipeline/           # Provider, orchestrator, validation và adapter
-│   ├── verify/                # Verify runner, BA adapter và observation checks
-│   └── shared/                # Validation/hash dùng chung
-├── tests/                     # Unit, integration, fixtures BA và synthetic media
-├── docs/                      # Scope, contracts, BA/policy và integration reports
-├── deployment/                # Render launcher, validation scripts và deployment runbook
-├── app.py                     # Legacy Streamlit local demo
-├── render.yaml                # Render Blueprint cho frontend/backend
-├── requirements.txt           # Python dependencies
-├── .env.example               # Backend demo environment template
-└── README.md
+frontend/                   React, TypeScript, Vite, Vitest, Playwright
+src/ai_pipeline/            Provider adapters, orchestrator, task evaluators
+src/backend/api/            FastAPI: auth, authenticated workflow, Judge Demo
+src/backend/application/    Workflow orchestration and AI configuration
+src/backend/domain/         Workflow records, policies and business models
+src/backend/db/             PostgreSQL/SQLAlchemy models and session setup
+src/backend/repositories/   SQLite demo repository and its SQL migration
+src/backend/rules/          Deterministic decision and budget rules
+alembic/versions/           PostgreSQL schema migrations
+deployment/                 Container/deployment helpers and validation
+tests/                      Python unit/integration and synthetic fixtures
+docs/                       Scope, contracts, integration notes and diagrams
+compose.yaml                Local frontend + API + PostgreSQL
+render.yaml                 Hosted static frontend + demo API blueprint
 ```
 
-Repository hiện không có thư mục `data/` được Git theo dõi. Fixture nằm trong `tests/fixtures/`; database và report phát sinh nằm trong `runtime/` (được ignore), còn Render dùng `/tmp/organizationai/`.
+## Chạy Judge Demo trên máy cá nhân
 
----
+Yêu cầu: Python theo phiên bản hỗ trợ trong `requirements.txt`, Node.js/npm và hai terminal. Chế độ này chỉ cần API Python và frontend; dữ liệu demo được lưu vào SQLite.
 
-## 🚀 Cài Đặt Và Chạy Local
-
-### 1. Yêu cầu hệ thống
-
-| Thành phần | Khuyến nghị theo repository |
-| --- | --- |
-| Git | Bản hiện hành |
-| Python | `3.13.14` để đồng nhất với `render.yaml` |
-| Node.js | `24.17.0` để đồng nhất với `render.yaml` |
-| npm | Đi kèm Node.js |
-| Trình duyệt E2E | Chromium do Playwright quản lý, chỉ cần khi chạy E2E |
-
-### 2. Clone và chuẩn bị backend
+### 1. Cài dependencies và khởi động API
 
 ```powershell
-git clone https://github.com/bikhoa142007-hash/OrganizationAI.git
-Set-Location OrganizationAI
-
 py -3.13 -m venv .venv
 & .\.venv\Scripts\Activate.ps1
 python -m pip install -r requirements.txt
 
-Copy-Item .env.example .env
-```
-
-Backend không tự động nạp file `.env`. Hãy đặt các biến tương ứng trong terminal chạy server:
-
-```powershell
 $env:APP_ENV = 'demo'
 $env:DEMO_DATABASE = 'runtime/demo-organization.sqlite3'
 $env:DEMO_MOCK_MODE = 'pass'
-$env:CORS_ORIGINS = 'http://127.0.0.1:5173,http://localhost:5173'
+$env:CORS_ORIGINS = 'http://localhost:5173,http://127.0.0.1:5173'
 
 python -m src.backend.seed_demo
 python -m uvicorn src.backend.api.app:app --host 127.0.0.1 --port 8010
 ```
 
-Seed chỉ chạy khi `APP_ENV=demo` và database có tên `demo-*.sqlite3`. Repository constructor tự áp dụng `migration_001.sql`.
+Seed tạo các scenario `AUTO`, `BUDGET`, `REVIEW`, `TIMEOUT`, `FACTS`, `DRAFT`, `APPROVED` và `REJECTED`. Có thể đặt `DEMO_MOCK_MODE` thành `pass`, `review`, `timeout`, `error` hoặc `malformed` để thử các kết quả provider được hỗ trợ.
 
-### 3. Chuẩn bị frontend
+### 2. Khởi động frontend
 
-Mở terminal PowerShell thứ hai:
+Mở terminal thứ hai tại thư mục gốc:
 
 ```powershell
-Set-Location OrganizationAI\frontend
-npm install
+npm ci --prefix frontend
+$env:VITE_API_BASE_URL = 'http://localhost:8010/api'
+$env:VITE_DEMO_ENABLED = 'true'
+npm run dev --prefix frontend -- --host 127.0.0.1
+```
+
+Mở địa chỉ Vite được in ra trong terminal. API health check là `http://127.0.0.1:8010/api/health`; tài liệu API là `http://127.0.0.1:8010/docs`.
+
+## Chạy Auth workflow bằng Docker Compose
+
+Compose khởi động PostgreSQL 16, FastAPI và Vite. Backend tự chạy Alembic migrations và seed tài khoản development khi khởi động. Trước khi chạy, tạo `.env` từ mẫu và thay các giá trị placeholder; `DATABASE_URL` phải dùng cùng mật khẩu với `POSTGRES_PASSWORD`, còn `JWT_SECRET` phải có ít nhất 32 byte ngẫu nhiên.
+
+```powershell
 Copy-Item .env.example .env
-npm run dev -- --host 127.0.0.1 --port 5173 --strictPort
+# Chỉnh POSTGRES_PASSWORD, DATABASE_URL, JWT_SECRET và AUTH_SEED_PASSWORD trong .env
+docker compose up --build
 ```
 
-### 4. URL local
+- Frontend: `http://localhost:5173`
+- API và OpenAPI: `http://localhost:8010/docs`
+- PostgreSQL: chỉ bind trên loopback, cổng host `5433`
+- Tài khoản seed local: `maker`, `checker`, `admin`; mật khẩu ban đầu lấy từ `AUTH_SEED_PASSWORD`.
 
-| Thành phần | URL |
-| --- | --- |
-| Frontend | [http://127.0.0.1:5173](http://127.0.0.1:5173) |
-| Backend health | [http://127.0.0.1:8010/api/health](http://127.0.0.1:8010/api/health) |
-| Swagger | [http://127.0.0.1:8010/docs](http://127.0.0.1:8010/docs) |
-| OpenAPI JSON | [http://127.0.0.1:8010/openapi.json](http://127.0.0.1:8010/openapi.json) |
+Các tài khoản mẫu và mật khẩu trong `.env` chỉ dùng ở môi trường local. Không đưa bí mật thật vào Git. Nếu chạy API trực tiếp thay vì Compose, Alembic cần `DATABASE_URL`; file `.env` không được tự động nạp khi chạy Uvicorn từ shell.
 
----
+## Cấu hình AI
 
-## 🔐 Auth cục bộ với PostgreSQL và Docker Compose
+`.env.example` là danh sách cấu hình hiện hành. Các giá trị endpoint, model, API key, media policy và strategy rubric để trống theo mặc định. Không có endpoint/model bên ngoài nào được gọi cho đến khi operator cấu hình rõ.
 
-Auth dùng PostgreSQL riêng cho tài khoản và role. Judge Demo tiếp tục dùng SQLite cùng `X-Demo-Actor`; cookie Auth không biến tài khoản PostgreSQL thành actor demo. Docker Compose chạy các route demo hiện có cùng Auth cục bộ, còn Judge Demo công khai trên Render vẫn theo cấu hình Render.
+- **Judge Demo** luôn dùng `MockVLMProvider`; `DEMO_MOCK_MODE` chọn scenario giả lập.
+- **Authenticated workflow** chọn `LOCAL_VLM` mặc định. Cần cấu hình `LOCAL_VLM_MODEL`, `LOCAL_VLM_MODEL_VERSION` và `LOCAL_VLM_BASE_URL` cho runtime tương thích Chat Completions (`/v1`). Lỗi không tự chuyển sang Mock.
+- Media Compliance và Strategy Evaluation là các task provider độc lập, cấu hình bằng nhóm `AUTH_WORKFLOW_MEDIA_*` và `AUTH_WORKFLOW_STRATEGY_*`. Chỉ điền policy/rubric đã được phê duyệt vào `AUTH_WORKFLOW_MEDIA_POLICY_JSON` và `AUTH_WORKFLOW_STRATEGY_RUBRIC_JSON`.
+- Endpoint ngoài máy local bị chặn mặc định. Chỉ bật `*_ALLOW_REMOTE=true` khi đã được cho phép; endpoint từ xa phải dùng HTTPS. Giữ API key trong `.env` local hoặc secret store.
+- Budget được kiểm tra bằng rules engine. Auto-approval Auth vẫn tắt khi policy/budget/authority chưa được cấu hình; provider lỗi, timeout, thiếu evidence hoặc output không hợp lệ sẽ yêu cầu Checker review.
 
-1. Sao chép `.env.example` thành `.env`; đặt các giá trị local riêng cho `POSTGRES_PASSWORD`, `JWT_SECRET` (ít nhất 32 byte ngẫu nhiên) và `AUTH_SEED_PASSWORD`. `DATABASE_URL` trong container dùng hostname `db` và port `5432`; PostgreSQL được mở trên host tại port `5433`. Không commit `.env`.
-2. Chạy stack local:
+Khi backend chạy trong Compose và model chạy trên host, dùng `http://host.docker.internal:<port>/v1`, không dùng `localhost` từ bên trong container. Xem [hướng dẫn cấu hình inference local](docs/integration/local-media-strategy-inference.md) để biết thêm giới hạn giao thức và kiểm chứng runtime.
 
-   ```powershell
-   docker compose up --build
-   ```
+## API
 
-   Compose chờ PostgreSQL healthy, chạy `alembic upgrade head`, seed tài khoản demo rồi khởi động FastAPI và Vite.
+- `/api/auth/*`: đăng nhập, đăng ký, kích hoạt, session và logout; phiên đăng nhập dùng JWT cookie HttpOnly.
+- `/api/workflow/*`: authenticated plans, attachments riêng tư, review queue, decisions, audit và các route quản trị. Quyền được kiểm tra phía backend.
+- `/api/plans`, `/api/reviews`, `/api/verify`: Judge Demo, chỉ khả dụng khi `APP_ENV=demo`; mutation dùng `X-Demo-Actor` và `Idempotency-Key`.
+- `/api/health`: liveness. `/api/health/ready`: kiểm tra kết nối Auth PostgreSQL.
 
-3. Dùng `/` để khôi phục phiên hoặc mở đăng nhập; `/register` chỉ hiện biểu mẫu nếu `AUTH_REGISTRATION_ENABLED=true`; `/account` là trang tài khoản. Luồng Judge Demo nằm tại `/demo` khi `VITE_DEMO_ENABLED=true`.
+Chi tiết request/response và ví dụ nằm trong [API examples](docs/integration/api-examples.md). Khi API chạy, FastAPI cung cấp OpenAPI UI tại `/docs`.
 
-| Thành phần | URL local |
-| --- | --- |
-| Frontend | `http://localhost:5173` |
-| FastAPI | `http://localhost:8010` |
-| API docs | `http://localhost:8010/docs` |
-| PostgreSQL host port | `localhost:5433` |
-
-`POST /api/auth/register` nhận username, email hoặc số điện thoại quốc tế, và mật khẩu; tài khoản tự đăng ký chỉ nhận role `MAKER` và sau khi tạo sẽ được chuyển tới đăng nhập. `POST /api/auth/login` nhận username, user code hoặc email và đặt JWT vào cookie `HttpOnly`, `SameSite=Lax`. `GET /api/auth/me` trả hồ sơ và role đã nạp từ PostgreSQL; `POST /api/auth/logout` xóa cookie. Ghi nhớ trên thiết bị này dùng thời hạn `AUTH_REMEMBER_TOKEN_DAYS`; phiên thường dùng `JWT_ACCESS_TOKEN_MINUTES`.
-
-Self-registration mặc định chỉ bật trong Compose local; server trả public feature switch để UI không hiển thị form khi bị tắt. Cookie dùng `AUTH_COOKIE_SECURE=false` cho HTTP localhost; môi trường HTTPS cần bật `AUTH_COOKIE_SECURE=true`. Không dùng `AUTH_SEED_PASSWORD` hoặc seed tài khoản chung trên staging/production. Liên hệ đăng ký chưa được xác minh. Các tài khoản seed local dùng username `maker`, `checker` và `admin`, cùng mật khẩu local trong `AUTH_SEED_PASSWORD`; seed không ghi đè mật khẩu hoặc trạng thái tài khoản hiện có.
-
-Chạy lại migration hoặc seed trong container:
+## Kiểm tra và build
 
 ```powershell
-docker compose exec backend alembic upgrade head
-docker compose exec backend python -m src.backend.seed_auth
+# Backend: unit và integration tests
+python -m pytest
+
+# Frontend
+npm ci --prefix frontend
+npm run test --prefix frontend
+npm run typecheck --prefix frontend
+npm run build --prefix frontend
+
+# Browser end-to-end (cần cài browser cho Playwright)
+npm run test:e2e --prefix frontend
 ```
 
-Đăng nhập Maker sẽ mở `/workflow/plans`; Checker xem `/workflow/reviews`; Admin-only mở danh sách và chi tiết kế hoạch ở chế độ chỉ đọc. Quyết định vẫn dành riêng cho Checker được gán. Draft creation dùng `Idempotency-Key` để retry cùng nội dung không tạo bản nháp trùng. Link nội bộ sau đăng nhập được bảo toàn an toàn. Các trang Auth dùng JWT cookie và `/api/workflow/*`, không gửi `X-Demo-Actor`. `/api/plans`, `/api/reviews`, Verify và `/demo/*` vẫn dùng SQLite cùng actor header riêng.
+Frontend chưa khai báo script lint trong `frontend/package.json`. Bộ kiểm thử Python nằm dưới `tests/`; frontend dùng Vitest/Testing Library và Playwright.
 
-Auth workflow commit snapshot/version/round trước khi chạy AI. Local VLM chỉ trích xuất OCR/quan sát ảnh. Hai text agent riêng đánh giá bằng chứng Media theo content policy và đánh giá kế hoạch Strategy theo rubric bảy tiêu chí; điểm có trọng số được backend tính bằng Decimal. Các bước có model, protocol, endpoint, timeout, giới hạn output, prompt/schema version và retry riêng. Kết quả từng bước cùng hash cấu hình được lưu theo round; không lưu API key hoặc endpoint thô. Khi cấu hình model hoặc policy thiếu, không phát sinh request cho task đó và giao diện ghi `Chưa cấu hình`. Auto-approval mặc định tắt và không lấy budget/authority/policy từ Judge Demo. Migration `20260930_06` bổ sung persistence riêng cho Media và Strategy; SQLite của Judge Demo không bị đổi.
+## Deployment
 
-Để chạy mô phỏng tường minh trong Compose local, đặt `AUTH_WORKFLOW_AI_PROVIDER=MOCK_VLM` và `AUTH_WORKFLOW_MOCK_SCENARIO=pass` (hoặc `review`, `timeout`, `error`, `malformed`, `unknown_media`) trong `.env`. Mock pass vẫn vào Checker review khi dùng Auth policy mặc định; auto-approval chỉ bật với một `ApprovalConfiguration` đã được ứng dụng phê duyệt và inject vào workflow.
+`render.yaml` mô tả một static frontend và một Python API service cho Judge Demo. Trước khi tạo/deploy service, cần cung cấp `VITE_API_BASE_URL` cho frontend và một `CORS_ORIGINS` HTTPS chính xác cho backend trong Render dashboard. Blueprint đặt `autoDeployTrigger: off`.
 
-Chỉ chạy smoke test thủ công sau khi xác nhận API/PostgreSQL là môi trường thử nghiệm
-được phép và Local VLM đã được cấu hình. Script tạo đúng một hồ sơ synthetic, gọi
-AI theo cấu hình hiện tại, rồi thực hiện Maker submit → Checker reject → Maker sửa/
-resubmit → Checker approve. Không chạy script chỉ để kiểm tra deployment; kiểm thử
-tự động đã dùng database cách ly.
+Render blueprint chỉ cấu hình demo SQLite tại `/tmp/organizationai/demo-organization.sqlite3`; đây là lưu trữ tạm thời và không đảm bảo giữ dữ liệu sau khi instance khởi động lại. Blueprint không khai báo PostgreSQL hay cấu hình Auth workflow. Dùng Compose/PostgreSQL hoặc cấu hình hạ tầng bền vững riêng trước khi dùng dữ liệu Auth.
 
-```powershell
-& .\.venv\Scripts\python.exe scripts/smoke_auth_workflow.py
-```
+## Giới hạn đã biết
 
-Script hỏi mật khẩu seed và API base URL, lưu ID ngay khi tạo hồ sơ và kiểm tra
-Maker self-approval, Checker permissions, rejection reason, version/round history
-và tách biệt Auth cookie với `X-Demo-Actor`. Nếu request tạo hồ sơ timeout, script
-đối chiếu chính xác run marker bằng truy vấn PostgreSQL chỉ đọc; nó dừng nếu không
-tìm thấy hồ sơ và không gửi lại request tạo. Chạy lại state đã hoàn tất chỉ in ID
-cũ, không tạo hồ sơ mới. Kiểm tra concurrency nằm trong pytest với database cách ly.
+- Actor của Judge Demo là actor tổng hợp, không thay thế đăng nhập hoặc kiểm soát danh tính thật.
+- Auth workflow cần PostgreSQL và cấu hình môi trường riêng. Mẫu hiện tại không cung cấp budget, authority, media policy, strategy rubric hay auto-approval policy đã được tổ chức phê duyệt.
+- Model/runtime không được đóng gói cùng repository. Tên provider hoặc protocol tương thích không xác nhận rằng một runtime cụ thể đã được kiểm chứng.
+- Render blueprint dùng một API instance và SQLite ephemeral; không phải cấu hình lưu trữ production.
 
-## ☁️ Sử Dụng Và Cập Nhật Server Render
+## Tài liệu
 
-`render.yaml` khai báo hai service riêng:
+- [Phạm vi Phase 1](docs/scope-phase-1.md)
+- [Deliverables Sprint 1](docs/sprint-1-deliverables.md)
+- [Marketing approval policy](docs/role1/v2.1/02-marketing-approval-policy.md)
+- [API examples](docs/integration/api-examples.md)
+- [Authenticated workflow và PostgreSQL](docs/integration/authenticated-workflow-postgresql.md)
+- [Cấu hình Local VLM và task evaluators](docs/integration/local-media-strategy-inference.md)
+- [Decision contract](docs/contracts/decision-contract.md)
+- [Evaluation schema](docs/contracts/evaluation-schema.md)
+- [Audit event schema](docs/contracts/audit-event-schema.md)
 
-- `organizationai-api`: Python/FastAPI web service.
-- `organizationai-frontend`: React/Vite static site.
+## License
 
-`autoDeployTrigger` đang là `off`. Sau khi merge vào branch được cấu hình trong Render Dashboard (tên branch: **TBD**):
-
-1. Deploy backend trước nếu backend và frontend cùng thay đổi.
-2. Mở `Deploys → Manual Deploy → Deploy latest commit`.
-3. Chờ build/start hoàn tất rồi kiểm tra `/api/health`.
-4. Deploy frontend bằng `Deploy latest commit`.
-5. Nếu frontend vẫn dùng bundle/cache cũ, chọn `Clear build cache & deploy`.
-6. Nhấn `Ctrl + F5` trên trình duyệt sau khi frontend hoàn tất.
-
-Không chọn `Restart service` khi mục tiêu là lấy commit mới; restart chỉ khởi động lại deployment hiện có.
-
-### Environment variables
-
-| Biến | Service | Ý nghĩa |
-| --- | --- | --- |
-| `APP_ENV` | Backend | Phải là `demo` để cho phép shared demo actors và seed |
-| `DEMO_DATABASE` | Backend | Render dùng `/tmp/organizationai/demo-organization.sqlite3` |
-| `DEMO_MOCK_MODE` | Backend | Chế độ provider demo, Blueprint hiện đặt `pass` |
-| `CORS_ORIGINS` | Backend | Một HTTPS frontend origin chính xác, không wildcard/path/trailing slash |
-| `PYTHON_VERSION` | Backend build | Blueprint pin `3.13.14` |
-| `VITE_API_BASE_URL` | Frontend build | Public API base URL, ví dụ `https://organizationai-api.onrender.com/api` |
-
-`PORT` do Render cấp cho backend; `NODE_VERSION=24.17.0` cũng được khai báo trong Blueprint. Không đặt credential trong biến bắt đầu bằng `VITE_` vì chúng được đóng gói vào JavaScript công khai.
-
----
-
-## 🔐 Demo Actors Và Phân Quyền
-
-| Actor | Role | Quyền chính |
-| --- | --- | --- |
-| `DEMO-MAKER-01` | `MAKER` | Tạo/lưu draft, upload, submit, xem plan của mình, sửa và resubmit plan bị reject |
-| `DEMO-CHECKER-01` | `CHECKER` | Xem plan được gán, mở review queue, approve/reject Human Review với reason phù hợp |
-| `DEMO-ADMIN-01` | `ADMIN` | Đọc demo config/policy và chạy Verify; chưa có API quản trị policy hoặc quyền đọc mọi plan |
-| `DEMO-DUAL-01` | `MAKER`, `CHECKER` | Có hai role, nhưng Checker action vẫn yêu cầu actor trùng `checker_id`; assignment demo hiện cố định về `DEMO-CHECKER-01` |
-
-> Đây là cơ chế nhận diện actor phục vụ Judge Demo, không phải hệ thống đăng nhập production.
-
-Actor được gửi qua header `X-Demo-Actor`, nhưng role directory, Maker ownership và Checker assignment do server quyết định. Actor lạ hoặc internal evaluator bị từ chối; Maker không được quyết định plan của mình; Checker không được gán và Admin không có global plan access. Frontend có role guard để điều hướng, còn backend vẫn là lớp kiểm tra quyền cuối cùng.
-
----
-
-## 🧪 Kiểm Thử
-
-### Backend, integration và Verify
-
-Chạy tại repository root:
-
-```powershell
-$python = $env:ORGANIZATIONAI_TEST_PYTHON
-if (-not $python) { $python = '.\.venv\Scripts\python.exe' }
-& $python -m pytest -q
-
-& $python -m src.verify.runner `
-  --suite general `
-  --output runtime/verify-general-actual.json
-
-& $python -m src.verify.runner `
-  --suite escalation `
-  --output runtime/verify-escalation-actual.json
-
-& $python -m src.verify.runner `
-  --suite regression `
-  --output runtime/verify-regression-actual.json
-```
-
-`general` chạy 4 case, `escalation` chạy 5 case (3 thường quy và 2 chuyển tiếp), còn `regression` chạy đủ 15 fixture tổng hợp. Các ngưỡng/hạn mức của fixture là mô phỏng, không bật cấu hình Auth/live. Có thể đặt `ORGANIZATIONAI_TEST_PYTHON` để dùng một interpreter test riêng mà không sửa `.venv` cũ.
-
-### Frontend và browser E2E
-
-Chạy trong `frontend/`:
-
-```powershell
-npm run test
-npm run build
-npx playwright install chromium
-npm run test:e2e
-```
-
-E2E tự chạy backend tại `127.0.0.1:8008`, frontend tại `127.0.0.1:5178` và dùng một SQLite demo mới theo timestamp. Trên Windows, có thể giữ `.venv` cũ và tạo môi trường riêng:
-
-```powershell
-py -3.12 -m venv .venv-test
-& .\.venv-test\Scripts\python.exe -m pip install -r requirements.txt
-$env:ORGANIZATIONAI_TEST_PYTHON = '.venv-test\Scripts\python.exe'
-```
-
-Sau đó chạy các lệnh backend ở trên và E2E như bên dưới.
-
-### Kết quả xác minh trong phiên cập nhật README
-
-| Kiểm tra | Kết quả ngày 2026-09-22 |
-| --- | --- |
-| Full Pytest | `179 passed`, `84 subtests passed` |
-| Verify `verify` | `5/5` case passed |
-| Verify `ground-truth` | `15/15` case passed |
-| Vitest | `16/16` test passed trong `3` test files |
-| Production build | TypeScript + Vite build thành công |
-| Playwright E2E | Chưa hoàn tất: Chromium v1243 chưa có và CDN download timeout; không ghi số test pass |
-
-### Kết quả xác minh Auth workflow ngày 2026-09-28
-
-| Kiểm tra | Kết quả |
-|---|---|
-| Full backend Pytest | `215 passed`, `84 subtests passed`; 2 cảnh báo deprecation của Starlette/AnyIO |
-| Vitest | `29 passed` trong 6 test files |
-| Frontend production build | TypeScript và Vite build thành công |
-| Judge Demo Verify | `5/5` case; escalation/ground-truth `15/15` case |
-| Docker/PostgreSQL migration và smoke | Chưa chạy: Docker CLI/Desktop không khả dụng trong môi trường kiểm thử này |
-
-### Kết quả tích hợp AI Auth workflow ngày 2026-09-29
-
-| Kiểm tra | Kết quả |
-|---|---|
-| Full backend Pytest | `218 passed`, `84 subtests passed`; 2 cảnh báo deprecation Starlette/AnyIO |
-| Auth API và migration tests | `12 passed` |
-| Vitest | `31 passed` trong 7 test files |
-| Frontend typecheck và production build | Thành công (`tsc -b`, Vite production build) |
-| PostgreSQL migration | Đã chạy trên Compose PostgreSQL: `20260928_03 -> 20260929_04` |
-| Auth HTTP smoke | Thành công: Maker submit, AI/engine persistence, Checker approve/reject, permission blocks và concurrent decision race; tạo 3 smoke plan tổng hợp trong local PostgreSQL |
-
-### Auth Local VLM, Media Compliance và Strategy Evaluation
-
-`LocalVLMProvider` gửi ảnh riêng tư từ snapshot đã xác minh tới một endpoint OpenAI-compatible Chat Completions do operator cấu hình. Request dùng base64 `image_url` và JSON Schema response format; adapter yêu cầu OCR, quan sát trực tiếp, nhận diện đối tượng, kiểm tra chất lượng kỹ thuật ảnh và confidence trích xuất theo từng ảnh. Confidence là tự báo và chưa hiệu chuẩn; dưới `0.85`, chất lượng cần xem lại hoặc nội dung còn bất định đều buộc chuyển Checker. Server tự gắn attachment ID/hash, version, approval round, run ID và input hash. VLM không trả bounding box, điểm chiến lược, ngân sách hay quyết định duyệt.
-
-`LocalVLMProvider` là bước trích xuất ảnh hiện có. Media và Strategy dùng hai `OpenAICompatibleTaskProvider` tách biệt; chúng không tái sử dụng đầu ra combined evaluator cũ. Mỗi task chỉ gọi khi có provider/model/version và cấu hình policy/rubric đang hoạt động. Repo không kèm content policy Marketing đã được tổ chức phê duyệt, nên policy mẫu chỉ được giới hạn trong `.env` local để smoke test và không áp dụng cho department/channel khác. Strategy rubric được bật riêng trong `.env` local. Auto-approval Auth vẫn tắt. Xem [hướng dẫn inference local](docs/integration/local-media-strategy-inference.md) để biết runtime/model đã xác minh và kết quả smoke PostgreSQL.
-
-Thiết lập các biến sau trong `.env` (không commit file này):
-
-| Biến | Ý nghĩa |
-| --- | --- |
-| `AUTH_WORKFLOW_AI_PROVIDER` | `LOCAL_VLM` mặc định; chỉ chọn `MOCK_VLM` rõ ràng cho demo |
-| `LOCAL_VLM_MODEL` | Model ID do runtime đang chạy nhận diện; không phải revision bất biến |
-| `LOCAL_VLM_BASE_URL` | Root URL, gồm `/v1`, của endpoint tương thích Chat Completions |
-| `LOCAL_VLM_ALLOW_REMOTE` | Mặc định `false`; endpoint không-local cần bật rõ ràng và dùng HTTPS |
-| `LOCAL_VLM_API_KEY` | Tùy chọn; chỉ truyền trong Authorization header ở backend |
-| `LOCAL_VLM_TIMEOUT_SECONDS` | Timeout mỗi lần gọi, 1–45 giây; mặc định 30 |
-| `LOCAL_VLM_MAX_OUTPUT_TOKENS` | Giới hạn output token, mặc định 1536 |
-| `LOCAL_VLM_MAX_RESPONSE_BYTES` | Giới hạn response body, mặc định 262144 byte |
-| `LOCAL_VLM_MAX_INPUT_BYTES` | Giới hạn tổng bytes ảnh mỗi request VLM, mặc định 20 MiB |
-
-Media và Strategy có bộ biến môi trường độc lập trong `.env.example`: `AUTH_WORKFLOW_MEDIA_*` và `AUTH_WORKFLOW_STRATEGY_*`. Mỗi bộ hỗ trợ protocol `OPENAI_COMPATIBLE_CHAT_COMPLETIONS`, base URL, model ID, model version do operator pin, API key tùy chọn cho runtime local, timeout, giới hạn input/output, retry, prompt version và schema version. Schema/prompt version không được tự ý thay đổi; adapter hiện chỉ chấp nhận version được hỗ trợ. API key không được ghi vào snapshot hoặc gửi lên frontend.
-
-Chỉ điền `AUTH_WORKFLOW_MEDIA_POLICY_JSON` với policy do tổ chức phê duyệt, gồm `policy_id`, `policy_version`, `status`, `scope_departments`, `scope_channels` và các rule có severity, mô tả, evidence kind bắt buộc. Không có policy ví dụ được áp dụng mặc định. `AUTH_WORKFLOW_STRATEGY_RUBRIC_JSON` nhận rubric versioned với đúng bảy BA criteria và weights 15/15/15/15/15/15/10; backend từ chối rubric khác. Với endpoint không-local, cần dùng HTTPS và bật riêng `AUTH_WORKFLOW_MEDIA_ALLOW_REMOTE=true` hoặc `AUTH_WORKFLOW_STRATEGY_ALLOW_REMOTE=true` sau khi cho phép truyền dữ liệu. Cấu hình provider/policy là server-side; request client không thể bật model hoặc auto-approval.
-
-Với Docker Compose, không dùng `localhost` làm inference host vì địa chỉ đó trỏ tới backend container. Ví dụ Docker Desktop: `LOCAL_VLM_BASE_URL=http://host.docker.internal:8000/v1`; backend Compose có ánh xạ `host.docker.internal:host-gateway` cho Docker Engine trên Linux. Runtime trên host phải lắng nghe địa chỉ có thể truy cập từ container. Mặc định adapter chỉ cho phép loopback và `host.docker.internal`; host khác cần được duyệt rõ qua `LOCAL_VLM_ALLOW_REMOTE=true` và dùng HTTPS trước khi nhận ảnh riêng tư.
-
-Khởi động Auth workflow và migration PostgreSQL bằng `docker compose up --build -d`. Khi Local VLM/runtime đã được operator cấu hình, Maker có thể gửi kế hoạch có ảnh và xem trang `/workflow/plans/{id}`. Trang chi tiết hiển thị extraction, Media policy checks, Strategy criteria/weights, confidence, bằng chứng và trạng thái từng bước riêng. Reload chỉ đọc kết quả lưu theo round và không chạy lại extraction. Nếu thiếu cấu hình, model sai version, output/schema lỗi, thiếu evidence hoặc timeout, quyết định fail closed sang Checker; không fallback sang Mock.
-
-Endpoint phải hỗ trợ ảnh base64 trong Chat Completions cùng `response_format` kiểu `json_schema`; output được server kiểm tra lại. Đây là giao thức transport, không phải xác nhận một runtime cụ thể tương thích. Tài liệu giao thức chính thức: [image inputs](https://developers.openai.com/api/docs/guides/images-vision) và [structured outputs](https://developers.openai.com/api/docs/guides/structured-outputs). Cần xác minh runtime/model ID và chạy smoke test thật sau khi người vận hành cung cấp cấu hình.
-
----
-
-## 🔌 API Chính
-
-Judge Demo endpoint `/api/plans`, `/api/reviews` và `/api/verify` dùng riêng `X-Demo-Actor`; mutation demo yêu cầu `Idempotency-Key`. Auth workflow `/api/workflow/*` dùng JWT cookie, role từ PostgreSQL và không nhận maker ID/role từ body.
-
-| Method | Endpoint | Actor/Permission | Mục đích |
-| --- | --- | --- | --- |
-| `GET` | `/api/health` | Public | Liveness và environment |
-| `GET` | `/api/config` | Demo actor hợp lệ | Actor/role, policy snapshot, provider và capability flags |
-| `GET` | `/api/plans` | Demo actor hợp lệ | Danh sách plan theo Maker ownership hoặc Checker assignment; hỗ trợ `offset`/`limit` |
-| `PUT` | `/api/plans/{plan_id}/draft` | `MAKER`, chỉ plan của mình | Tạo hoặc cập nhật draft |
-| `GET` | `/api/reviews` | `CHECKER` | Danh sách Human Review đang chờ và được gán cho Checker hiện tại |
-| `GET` | `/api/plans/{plan_id}` | Owning Maker hoặc assigned Checker | Đọc plan, version, round, record và audit history |
-| `POST` | `/api/plans/{plan_id}/attachments` | Owning `MAKER` | Upload private media bằng multipart |
-| `GET` | `/api/plans/{plan_id}/attachments/{attachment_id}` | Actor có quyền đọc plan | Tải private attachment |
-| `POST` | `/api/plans/{plan_id}/submit` | Owning `MAKER` | Khóa snapshot, tạo version/round và evaluation ticket |
-| `POST` | `/api/plans/{plan_id}/rounds/{number}/evaluate` | Actor có quyền đọc plan | Chạy hoặc replay evaluation qua internal evaluator |
-| `POST` | `/api/plans/{plan_id}/rounds/{number}/decision` | Assigned `CHECKER` | Ghi quyết định human `APPROVED`/`REJECTED` |
-| `GET` | `/api/plans/{plan_id}/rounds/{number}/observation` | Actor có quyền đọc plan | Đọc persisted observation cho Verify/audit |
-| `POST` | `/api/verify/{suite}` | Demo actor hợp lệ | Chạy suite `general`, `escalation` hoặc `regression` trong in-memory workflow |
-| `GET` | `/api/workflow/plans` | Auth cookie + `MAKER` | Danh sách kế hoạch mà Maker tạo |
-| `GET` | `/api/workflow/checkers` | Auth cookie + `MAKER` | Checker đang hoạt động để giao kế hoạch |
-| `GET` | `/api/workflow/employees` | Auth cookie + `ADMIN` | Danh bạ nhân viên chỉ đọc, phân trang; tìm tên/mã/tài khoản/liên hệ; lọc bộ phận, chức danh, role, trạng thái nhân viên và tài khoản |
-| `POST` | `/api/workflow/plans` | Auth cookie + `MAKER` | Tạo draft; backend tự gán Maker |
-| `PUT` | `/api/workflow/plans/{plan_id}` | Maker sở hữu, DRAFT/REJECTED | Cập nhật draft với optimistic revision |
-| `POST` | `/api/workflow/plans/{plan_id}/attachments` | Maker sở hữu, DRAFT/REJECTED | Lưu ảnh riêng tư và SHA-256 trong PostgreSQL |
-| `POST` | `/api/workflow/plans/{plan_id}/submit` | Maker sở hữu | Tạo version/round snapshot và chuyển sang Human Review |
-| `GET` | `/api/workflow/reviews` | Auth cookie + `CHECKER` | Queue hồ sơ đang chờ, chỉ hồ sơ giao Checker hiện tại |
-| `GET` | `/api/workflow/plans/{plan_id}` | Maker sở hữu hoặc Checker được giao | Nội dung, version và lịch sử Auth workflow |
-| `POST` | `/api/workflow/plans/{plan_id}/rounds/{round}/decision` | Checker được giao | Phê duyệt/từ chối; từ chối cần lý do, một quyết định mỗi round |
-
-Xem thêm [API examples](docs/integration/api-examples.md) và [generated OpenAPI snapshot](docs/integration/openapi.json).
-
----
-
-## 👥 Thành Viên Thực Hiện
-
-| Họ và tên | Vai trò | Trách nhiệm chính |
-| --- | --- | --- |
-| `[Bổ sung họ tên]` | `[Bổ sung vai trò]` | `[Bổ sung trách nhiệm]` |
-| `[Bổ sung họ tên]` | `[Bổ sung vai trò]` | `[Bổ sung trách nhiệm]` |
-| `[Bổ sung họ tên]` | `[Bổ sung vai trò]` | `[Bổ sung trách nhiệm]` |
-
----
-
-## ⚠️ Giới Hạn Hiện Tại
-
-- Shared demo actors có thể được bất kỳ người dùng demo nào chọn; chưa có production authentication/session management.
-- FastAPI Judge Demo tiếp tục dùng `MockVLMProvider`. Cấu hình local hiện dùng Ollama cho VLM extraction, Media Compliance và Strategy Evaluation trên dữ liệu tổng hợp; model không được đóng gói cùng ứng dụng. Đây chưa phải content policy, budget hoặc authority config đã được tổ chức phê duyệt; Auth auto-approval vẫn tắt và production inference chưa được cấu hình.
-- SQLite phù hợp single-instance demo, không phù hợp horizontal scaling hoặc dữ liệu phê duyệt thật.
-- Render Free dùng ephemeral `/tmp`; plan, attachment, audit và idempotency record có thể mất khi restart/redeploy/spin-down. Chỉ tám seed scenario được tạo lại.
-- Render Free có cold start và có thể gián đoạn trong lúc deploy.
-- Chưa có rate limiting toàn diện; `--limit-concurrency 32` chỉ giới hạn concurrency, không phải rate limit.
-- Không có Stop/Undo hoặc action `request_changes` riêng; chỉnh sửa được thực hiện sau human rejection rồi resubmit.
-- Admin có thể quản lý hồ sơ nhân viên tách biệt với tài khoản, cấp luồng kích hoạt/đặt lại mật khẩu bằng link bàn giao riêng, khóa tài khoản và quản lý role Maker/Checker cùng catalog role tùy chỉnh. Cấp/thu hồi ADMIN vẫn bị khóa chờ chỉ định system owner/operator; catalog quyền không đồng nghĩa mọi hành vi API đã được triển khai.
-- Policy UI chỉ đọc; chưa có API quản trị policy, notification hoặc SLA.
-- UI list hiện lấy tối đa 100 plan đầu; Verify cache và UI run state không bền vững qua process/page session.
-- Public URL đã reachable nhưng deployed commit/hash vẫn `TBD`; chưa tuyên bố public deployment khớp hoàn toàn với working tree hiện tại.
-
-Phạm vi hiện tại chỉ phù hợp cho Sprint 1 Judge Demo và dữ liệu tổng hợp.
-
----
-
-## 📚 Tài Liệu Liên Quan
-
-| Tài liệu | Nội dung |
-| --- | --- |
-| [Deployment runbook](deployment/README.md) | Render provisioning, environment, verification, rollback và persistence limits |
-| [BA – Backend – Frontend Developer integration report](docs/integration/ba-frontend-developer-integration-report.md) | Kiến trúc tích hợp, endpoint, seed, frontend và test handoff |
-| [Frontend/backend gap analysis](docs/integration/frontend-backend-gap-analysis.md) | Mapping UI với backend contract |
-| [Authenticated workflow on PostgreSQL](docs/integration/authenticated-workflow-postgresql.md) | Auth cookie, role checks, schema, SQLite retention and local smoke steps |
-| [BA contract mapping](docs/integration/ba-contract-mapping.md) | Mapping dataset/business evidence vào workflow |
-| [RBAC/workflow validation audit](docs/integration/rbac-workflow-validation-audit.md) | Kiểm tra quyền, validation, policy mode, seed và demo checklist |
-| [API examples](docs/integration/api-examples.md) | Ví dụ request/response demo HTTP API |
-| [Decision contract](docs/contracts/decision-contract.md) | Outcome, rule checks và invariant quyết định |
-| [Evaluation contract](docs/contracts/evaluation-schema.md) | Schema evidence/evaluation |
-| [Escalation contract](docs/contracts/escalation-question-schema.md) | Category và câu hỏi chuyển tiếp |
-| [Audit event contract](docs/contracts/audit-event-schema.md) | Metadata và yêu cầu audit |
-| [Verify result contract](docs/contracts/verify-result-schema.md) | Assertion và kết quả Verify |
-| [Role 1 v2.1 index](docs/role1/v2.1/00-index.md) | Mục lục BA, policy, authority, test case và expected results |
-| [Marketing approval policy](docs/role1/v2.1/02-marketing-approval-policy.md) | Policy và decision gates nghiệp vụ |
-| [Phase 1 scope](docs/scope-phase-1.md) | Phạm vi nghiệp vụ rộng của Phase 1 |
-| [Sprint 1 deliverables](docs/sprint-1-deliverables.md) | Mục tiêu, work package và checklist Sprint 1 |
-| [Sprint 1 packaging report](docs/integration/sprint1-final-packaging-report.md) | Báo cáo đóng gói/lịch sử xác minh trước đó |
-
----
-
-## 📜 Giấy Phép
-
-License: TBD.
+Repository hiện chưa khai báo giấy phép.
