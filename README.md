@@ -44,7 +44,7 @@ render.yaml                 Hosted static frontend + demo API blueprint
 
 ## Chạy Judge Demo trên máy cá nhân
 
-Yêu cầu: Python theo phiên bản hỗ trợ trong `requirements.txt`, Node.js/npm và hai terminal. Chế độ này chỉ cần API Python và frontend; dữ liệu demo được lưu vào SQLite.
+Yêu cầu: Python 3.13 (Render cấu hình 3.13.14), Node.js 24.17.0/npm và hai terminal. Chế độ này chỉ cần API Python và frontend; dữ liệu demo được lưu vào SQLite.
 
 ### 1. Cài dependencies và khởi động API
 
