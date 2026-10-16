@@ -13,6 +13,7 @@ from src.backend.api.auth import (
     require_role,
 )
 from src.backend.api.approval_configuration_schemas import (
+    AutoRejectPolicySignoffRequest,
     ConfigurationCurrentResponse,
     ConfigurationHistoryResponse,
     ConfigurationRevisionCreate,
@@ -94,7 +95,7 @@ def sign_off_approval_policy(
 
 @router.post("/auto-reject-policy/signoff", response_model=ApprovalPolicySignoffResponse)
 def sign_off_auto_reject_policy(
-    body: ApprovalPolicySignoffRequest,
+    body: AutoRejectPolicySignoffRequest,
     request: Request,
     principal: AuthenticatedPrincipal = Depends(get_current_principal),
     session: Session = Depends(get_auth_db),

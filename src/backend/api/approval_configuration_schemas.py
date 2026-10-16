@@ -10,6 +10,9 @@ ConfigurationKind = Literal[
     "approval_policy", "budget", "media_policy", "strategy_rubric", "authority", "checker_assignment",
     "auto_reject_policy",
 ]
+ApprovalPolicyConfigurationKind = Literal[
+    "approval_policy", "budget", "media_policy", "strategy_rubric", "authority", "checker_assignment",
+]
 ConfigurationStatus = Literal["UNCONFIGURED", "DISABLED", "EFFECTIVE", "SCHEDULED", "SUPERSEDED"]
 
 
@@ -51,6 +54,10 @@ class ExpectedConfigurationRevision(ConfigurationSchema):
 
 
 class ApprovalPolicySignoffRequest(ConfigurationSchema):
+    expected_revisions: dict[ApprovalPolicyConfigurationKind, ExpectedConfigurationRevision]
+
+
+class AutoRejectPolicySignoffRequest(ConfigurationSchema):
     expected_revisions: dict[ConfigurationKind, ExpectedConfigurationRevision]
 
 

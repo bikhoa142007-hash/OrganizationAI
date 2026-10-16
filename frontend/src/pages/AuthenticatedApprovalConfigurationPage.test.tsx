@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
+  approvalPolicySignoffKinds,
   configurationKinds,
   approvalConfigurationService,
   type ConfigurationCurrent,
@@ -23,8 +24,8 @@ const current: ConfigurationCurrent = {
   as_of: '2026-10-15T00:00:00Z',
   items: configurationKinds.map(kind => ({
     kind,
-    status: kind === 'approval_policy' ? 'DISABLED' : 'EFFECTIVE',
-    current_revision: revision(kind, kind === 'approval_policy'
+    status: kind === 'auto_reject_policy' ? 'UNCONFIGURED' : kind === 'approval_policy' ? 'DISABLED' : 'EFFECTIVE',
+    current_revision: kind === 'auto_reject_policy' ? null : revision(kind, kind === 'approval_policy'
       ? { enabled: false, media_confidence_threshold: 0.85, feasibility_score_threshold_exclusive: 70, feasibility_confidence_threshold: 0.8 }
       : { synthetic: true }),
     next_scheduled_revision: null,
@@ -49,7 +50,7 @@ describe('Policy Owner sign-off UI', () => {
         approved_configuration_hash: '2'.repeat(64), policy_owner_id: 'synthetic-owner', signed_at: '2026-10-15T01:00:00Z',
         authority_revision_id: 'authority-revision-1', authority_configuration_hash: '3'.repeat(64),
         configuration_revisions: Object.fromEntries([
-          ...configurationKinds.map(kind => [kind, {
+          ...approvalPolicySignoffKinds.map(kind => [kind, {
             revision_id: `${kind}-revision-1`, configuration_hash: '1'.repeat(64),
           }] as const),
           ['approval_policy_candidate', {
@@ -64,10 +65,13 @@ describe('Policy Owner sign-off UI', () => {
 
     await user.click(await screen.findByRole('button', { name: 'Policy Owner ký và bật auto-approve' }))
 
-    const expected = Object.fromEntries(current.items.map(item => [item.kind, {
-      revision_id: item.current_revision!.revision_id,
-      configuration_hash: item.current_revision!.configuration_hash,
-    }]))
+    const expected = Object.fromEntries(approvalPolicySignoffKinds.map(kind => {
+      const item = current.items.find(candidate => candidate.kind === kind)!
+      return [kind, {
+        revision_id: item.current_revision!.revision_id,
+        configuration_hash: item.current_revision!.configuration_hash,
+      }]
+    }))
     expect(signOff).toHaveBeenCalledWith(expected)
     expect(await screen.findByRole('status')).toHaveTextContent('Đã ghi sign-off của Policy Owner cho revision 2')
   })
@@ -114,7 +118,7 @@ describe('Policy Owner sign-off UI', () => {
     await user.selectOptions(await screen.findByLabelText('Loại cấu hình'), 'auto_reject_policy')
     await user.click(await screen.findByRole('button', { name: 'Policy Owner ký và bật auto-reject' }))
 
-    expect(signOff).toHaveBeenCalledWith(Object.fromEntries(candidate.items.map(item => [item.kind, {
+    expect(signOff).toHaveBeenCalledWith(Object.fromEntries(candidate.items.filter(item => item.current_revision).map(item => [item.kind, {
       revision_id: item.current_revision!.revision_id,
       configuration_hash: item.current_revision!.configuration_hash,
     }])))

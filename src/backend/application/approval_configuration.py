@@ -34,6 +34,14 @@ CONFIGURATION_KINDS = (
     "checker_assignment",
     "auto_reject_policy",
 )
+APPROVAL_POLICY_SIGNOFF_KINDS = (
+    "approval_policy",
+    "budget",
+    "media_policy",
+    "strategy_rubric",
+    "authority",
+    "checker_assignment",
+)
 ConfigurationStatus = Literal["UNCONFIGURED", "DISABLED", "EFFECTIVE", "SCHEDULED", "SUPERSEDED"]
 _AMOUNT_PATTERN = re.compile(r"(?:0|[1-9][0-9]{0,23})\Z")
 _STRATEGY_CRITERIA_ORDER = (
@@ -831,8 +839,8 @@ def sign_off_approval_policy(
     """Policy Owner signs and atomically activates the exact, currently configured policy."""
     if "ADMIN" not in getattr(principal, "roles", ()):
         raise ApplicationError("FORBIDDEN", "An authenticated administrator Policy Owner is required for sign-off.", correlation_id)
-    if set(expected_revisions) != set(CONFIGURATION_KINDS):
-        raise ApplicationError("VALIDATION_ERROR", "Sign-off requires the current revision of every workflow configuration.", correlation_id)
+    if set(expected_revisions) != set(APPROVAL_POLICY_SIGNOFF_KINDS):
+        raise ApplicationError("VALIDATION_ERROR", "Sign-off requires the current revision of every approval-policy configuration.", correlation_id)
     try:
         with _write_transaction(session):
             lock_configuration_registry(session)
@@ -863,7 +871,7 @@ def sign_off_approval_policy(
                 }
 
             resolved: dict[str, AuthWorkflowConfigurationRevision] = {}
-            for kind in CONFIGURATION_KINDS:
+            for kind in APPROVAL_POLICY_SIGNOFF_KINDS:
                 row = _revision_row(session, kind, moment)
                 reference = expected_revisions[kind]
                 if (row is None or str(row.id) != reference["revision_id"]

@@ -1183,6 +1183,7 @@ def test_authenticated_workflow_signed_auto_reject_routes_unqualified_ocr_to_che
     expected_approval_revisions = {
         kind: {"revision_id": row["revision_id"], "configuration_hash": row["configuration_hash"]}
         for kind, row in created_revisions.items()
+        if kind != "auto_reject_policy"
     }
     approval_signoff = admin_client.post(
         "/api/workflow/configuration/approval-policy/signoff",
