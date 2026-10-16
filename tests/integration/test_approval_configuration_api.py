@@ -292,8 +292,11 @@ def test_policy_owner_signoff_is_bound_to_exact_revisions_and_audited(configurat
             }],
         },
     }
+    approval_kinds = (
+        "approval_policy", "budget", "media_policy", "strategy_rubric", "authority", "checker_assignment",
+    )
     current = {}
-    for kind in approval_configuration.CONFIGURATION_KINDS:
+    for kind in approval_kinds:
         with factory() as session:
             current[kind] = approval_configuration.create_configuration_revision(
                 session=session, principal=owner_principal, correlation_id=f"signoff-test-{kind}",
@@ -317,7 +320,7 @@ def test_policy_owner_signoff_is_bound_to_exact_revisions_and_audited(configurat
     assert result["revision"]["signoff"]["policy_owner_id"] == str(owner.id)
     assert result["revision"]["signoff"]["approved_configuration_hash"] == result["revision"]["configuration_hash"]
     assert set(result["revision"]["signoff"]["configuration_revisions"]) == set(
-        approval_configuration.CONFIGURATION_KINDS
+        approval_kinds
     ) | {"approval_policy_candidate"}
 
     repeated = client.post(
@@ -327,8 +330,18 @@ def test_policy_owner_signoff_is_bound_to_exact_revisions_and_audited(configurat
     assert repeated.status_code == 200
     assert repeated.json()["replayed"] is True
 
+    # Auto-reject has its own separately signed policy and is not a prerequisite
+    # for enabling the independent auto-approval policy.
+    with factory() as session:
+        current["auto_reject_policy"] = approval_configuration.create_configuration_revision(
+            session=session, principal=owner_principal, correlation_id="signoff-test-auto-reject-candidate",
+            kind="auto_reject_policy", expected_revision=None, effective_at=effective_at,
+            change_reason="Synthetic isolated auto-reject sign-off test.", value=configs["auto_reject_policy"],
+        )
+
     with factory() as session:
         live = approval_configuration.current_configuration(session, owner_principal, "auto-reject-signoff-current")
+    assert next(item for item in live["items"] if item["kind"] == "approval_policy")["status"] == "EFFECTIVE"
     expected_auto_reject = {
         item["kind"]: {
             "revision_id": item["current_revision"]["revision_id"],
@@ -336,6 +349,12 @@ def test_policy_owner_signoff_is_bound_to_exact_revisions_and_audited(configurat
         }
         for item in live["items"] if item["current_revision"] is not None
     }
+    approval_with_auto_reject = client.post(
+        "/api/workflow/configuration/approval-policy/signoff",
+        json={"expected_revisions": {**expected, "auto_reject_policy": expected_auto_reject["auto_reject_policy"]}},
+        headers={"Origin": "http://localhost"},
+    )
+    assert approval_with_auto_reject.status_code == 422
     auto_reject_response = client.post(
         "/api/workflow/configuration/auto-reject-policy/signoff",
         json={"expected_revisions": expected_auto_reject}, headers={"Origin": "http://localhost"},

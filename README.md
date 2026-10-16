@@ -46,7 +46,7 @@ Backend Render lưu SQLite tại `/tmp/organizationai/demo-organization.sqlite3`
 | `Implemented` | Rule/Policy Evaluation | 13 decision gates kiểm tra integrity, evidence, confidence, budget, authority, policy và trạng thái |
 | `Implemented` | Human Review | Queue cho Checker được gán; hỗ trợ `APPROVED`/`REJECTED`, reason, override reason và stale-revision handling |
 | `Implemented` | Audit và truy vết | Timeline actor, trạng thái trước/sau, policy/model/version/round, decision và correlation metadata |
-| `Implemented` | Cấu hình policy | Judge Demo `/api/config` là read-only; Auth có revision API/UI cho Admin nhưng validator vẫn chặn bật auto-approval trước PO sign-off, và repo chưa có sign-off workflow |
+| `Implemented (gated)` | Cấu hình policy | Judge Demo `/api/config` là read-only; Auth có revision API/UI và sign-off bất biến của Policy Owner cho sáu revision approval. Auto-reject có luồng sign-off riêng; auto-approval vẫn tắt tới khi mọi điều kiện production được xác minh |
 | `Implemented (local)` | Verify | Admin-only tại `/workflow/verify`; chạy bốn tình huống TC01–TC04 tuần tự qua workflow tổng hợp, khôi phục lượt gần nhất sau reload, lưu kết quả actual PASS/FAIL và tải JSON report. Mock VLM được gắn nhãn rõ ràng, không phải bằng chứng inference thật |
 | `Implemented` | Demo seed | Tám scenario tổng hợp, seed idempotent và không xóa database hiện có |
 | `Demo/Mock` | Actor identity | Chọn shared demo actor, gửi qua header `X-Demo-Actor`; server vẫn kiểm tra role và ownership |

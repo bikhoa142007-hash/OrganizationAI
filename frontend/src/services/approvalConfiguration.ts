@@ -7,6 +7,10 @@ export const configurationKinds = [
 ] as const
 
 export type ConfigurationKind = typeof configurationKinds[number]
+export const approvalPolicySignoffKinds = [
+  'approval_policy', 'budget', 'media_policy', 'strategy_rubric', 'authority', 'checker_assignment',
+] as const
+export type ApprovalPolicySignoffKind = typeof approvalPolicySignoffKinds[number]
 export type ConfigurationState = 'UNCONFIGURED' | 'DISABLED' | 'EFFECTIVE' | 'SCHEDULED' | 'SUPERSEDED'
 
 export type ConfigurationRevision = {
@@ -225,7 +229,7 @@ export const approvalConfigurationService = {
     })
   },
 
-  async signOffPolicy(expectedRevisions: Record<ConfigurationKind, { revision_id: string; configuration_hash: string }>): Promise<{ revision: ConfigurationRevision; replayed: boolean }> {
+  async signOffPolicy(expectedRevisions: Record<ApprovalPolicySignoffKind, { revision_id: string; configuration_hash: string }>): Promise<{ revision: ConfigurationRevision; replayed: boolean }> {
     const result = await request<unknown>('/workflow/configuration/approval-policy/signoff', 'POST', {
       expected_revisions: expectedRevisions,
     })
