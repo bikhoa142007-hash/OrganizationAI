@@ -1,0 +1,172 @@
+{
+  "schema_version": 1,
+  "diagram_type": "dataflow",
+  "meta": {
+    "title": "Auth AI evaluation · snapshot to decision",
+    "output": "docs/diagrams/organizationai-ai-technical.html",
+    "quality_profile": "showcase",
+    "views": [
+      {
+        "id": "snapshot-input",
+        "label": "Snapshot-bound input",
+        "focus": ["input", "snapshot"]
+      },
+      {
+        "id": "evaluation-policy",
+        "label": "Evaluation and deterministic policy",
+        "focus": ["snapshot", "evaluation", "decision"]
+      },
+      {
+        "id": "persist-review",
+        "label": "Persist and human authority",
+        "focus": ["decision", "persist", "human"]
+      }
+    ],
+    "viewBox": [1200, 920]
+  },
+  "stages": [
+    { "label": "Submit" },
+    { "label": "Snapshot" },
+    { "label": "Evaluate" },
+    { "label": "Decide" },
+    { "label": "Persist / review" }
+  ],
+  "nodes": [
+    {
+      "id": "input",
+      "type": "external",
+      "label": "Maker + media",
+      "stage": 0,
+      "row": 1,
+      "width": 140,
+      "height": 78,
+      "tag": "USER DATA"
+    },
+    {
+      "id": "snapshot",
+      "type": "backend",
+      "label": "Round snapshot",
+      "stage": 1,
+      "row": 1,
+      "width": 140,
+      "height": 78,
+      "tag": "IMMUTABLE"
+    },
+    {
+      "id": "evaluation",
+      "type": "backend",
+      "label": "AI evaluation",
+      "stage": 2,
+      "row": 1,
+      "width": 160,
+      "height": 78,
+      "tag": "SCHEMA CHECKED"
+    },
+    {
+      "id": "decision",
+      "type": "security",
+      "label": "Rules + decision",
+      "stage": 3,
+      "row": 1,
+      "width": 160,
+      "height": 78,
+      "tag": "NO AI AUTO-REJECT"
+    },
+    {
+      "id": "persist",
+      "type": "database",
+      "label": "Persist + audit",
+      "stage": 4,
+      "row": 1,
+      "width": 140,
+      "height": 78,
+      "tag": "BACKEND WRITE"
+    },
+    {
+      "id": "human",
+      "type": "external",
+      "label": "Assigned Checker",
+      "stage": 4,
+      "row": 0,
+      "width": 160,
+      "height": 78,
+      "tag": "PENDING REVIEW"
+    }
+  ],
+  "flows": [
+    {
+      "id": "input-snapshot",
+      "from": "input",
+      "to": "snapshot",
+      "label": "save",
+      "classification": "plan + attachments + config snapshot; hashes",
+      "variant": "emphasis",
+      "labelAt": [208, 220]
+    },
+    {
+      "id": "snapshot-evaluation",
+      "from": "snapshot",
+      "to": "evaluation",
+      "label": "bytes",
+      "classification": "submitted-version attachment bytes",
+      "variant": "security",
+      "labelAt": [418, 220]
+    },
+    {
+      "id": "evaluation-decision",
+      "from": "evaluation",
+      "to": "decision",
+      "label": "score",
+      "classification": "validated output; score unchanged",
+      "variant": "emphasis",
+      "labelAt": [638, 220]
+    },
+    {
+      "id": "decision-persist",
+      "from": "decision",
+      "to": "persist",
+      "label": "audit",
+      "classification": "AUTO_APPROVED or HUMAN_REVIEW_REQUIRED",
+      "variant": "emphasis",
+      "labelAt": [850, 220],
+      "labelDx": -12
+    },
+    {
+      "id": "persist-human",
+      "from": "persist",
+      "to": "human",
+      "label": "review",
+      "classification": "round remains pending for assigned Checker",
+      "variant": "security",
+      "labelAt": [960, 334]
+    }
+  ],
+  "cards": [
+    {
+      "dot": "rose",
+      "title": "Evidence and trust",
+      "items": [
+        "Uploaded media, OCR and model evidence are untrusted; inference reads attachments from the submitted version snapshot.",
+        "VLM extraction runs before the Media and Strategy agents. The orchestrator validates output schema and model identity without rewriting scores.",
+        "The Bearer key is backend-only when configured. Tunnel, proxy allowlist and live inference remain unverified."
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "Deterministic authority",
+      "items": [
+        "Budget validation compares the saved plan and configuration using deterministic backend code.",
+        "The engine can emit AUTO_APPROVED or HUMAN_REVIEW_REQUIRED; AI auto-reject is unsupported.",
+        "Transactions recheck the active round before persisting. The assigned Checker records a separate final decision."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Failure and recovery",
+      "items": [
+        "Timeout, missing configuration, model mismatch, invalid schema or unresolved evidence routes to Human Review without rolling back submission.",
+        "Stale-run recovery routes interrupted work to review and does not replay inference. Technical provider retries do not create decisions."
+      ]
+    }
+  ]
+}

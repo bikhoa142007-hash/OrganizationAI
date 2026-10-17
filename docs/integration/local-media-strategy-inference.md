@@ -1,5 +1,22 @@
 # Local Media Compliance and Strategy Inference
 
+## Bearer proxy and external inference status — 2026-10-17
+
+The repository implements optional backend-to-provider Bearer headers for the
+VLM, Media, and Strategy adapters. The configured API keys remain backend-only.
+The VLM adapter defines `GET /v1/models` in `health_check()`, but the authenticated
+submit path does not call that method; inference requests use
+`POST /v1/chat/completions` and compare the returned model ID with the configured
+ID. A per-request Ollama weight-digest check is not implemented in this path.
+
+No Bearer proxy source, proxy allowlist, bind address, forwarding target, or
+Cloudflare Tunnel configuration is present in this repository. The 2026-10-16
+diagnostic below records the external setup observed on that date, not a current
+deployment assertion. The requested Render → tunnel → Bearer proxy → Ollama route
+therefore remains **unverified externally** here. Do not infer allowed proxy
+methods/paths, local origin protocol, loopback binding, or resource isolation from
+the application's provider paths. See [diagram evidence and limits](../diagrams/README.md).
+
 ## Verified local runtime
 
 The local Compose backend can call Ollama on the Windows host through

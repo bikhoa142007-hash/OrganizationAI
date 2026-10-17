@@ -1,0 +1,278 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "Auth inference sequence · submitted snapshot to Checker",
+    "output": "docs/diagrams/organizationai-inference-sequence.html",
+    "quality_profile": "showcase",
+    "column_fit": "spread",
+    "views": [
+      {
+        "id": "submit-first",
+        "label": "Commit submitted round",
+        "focus": [
+          "browser",
+          "ui",
+          "api",
+          "db"
+        ]
+      },
+      {
+        "id": "inference-boundary",
+        "label": "Configured inference boundary",
+        "focus": [
+          "api",
+          "orchestrator",
+          "tunnel",
+          "proxy",
+          "ollama"
+        ]
+      },
+      {
+        "id": "decide-or-review",
+        "label": "Decision and Checker",
+        "focus": [
+          "orchestrator",
+          "engine",
+          "api",
+          "db",
+          "checker"
+        ]
+      }
+    ],
+    "viewBox": [
+      1440,
+      1120
+    ]
+  },
+  "participants": [
+    {
+      "id": "browser",
+      "type": "external",
+      "label": "User"
+    },
+    {
+      "id": "ui",
+      "type": "frontend",
+      "label": "React"
+    },
+    {
+      "id": "api",
+      "type": "backend",
+      "label": "Auth API"
+    },
+    {
+      "id": "db",
+      "type": "database",
+      "label": "Postgres"
+    },
+    {
+      "id": "orchestrator",
+      "type": "backend",
+      "label": "Orchestrator"
+    },
+    {
+      "id": "tunnel",
+      "type": "cloud",
+      "label": "Tunnel"
+    },
+    {
+      "id": "proxy",
+      "type": "security",
+      "label": "Bearer proxy"
+    },
+    {
+      "id": "ollama",
+      "type": "external",
+      "label": "Ollama"
+    },
+    {
+      "id": "engine",
+      "type": "backend",
+      "label": "Rules"
+    },
+    {
+      "id": "checker",
+      "type": "external",
+      "label": "Checker"
+    }
+  ],
+  "messages": [
+    {
+      "id": "submit",
+      "from": "browser",
+      "to": "ui",
+      "y": 160,
+      "label": "Maker submits",
+      "variant": "emphasis"
+    },
+    {
+      "id": "post-submit",
+      "from": "ui",
+      "to": "api",
+      "y": 198,
+      "label": "POST submit + HttpOnly JWT cookie",
+      "variant": "security"
+    },
+    {
+      "id": "persist-snapshot",
+      "from": "api",
+      "to": "db",
+      "y": 236,
+      "label": "Commit Vn / round n + config + run + audit",
+      "variant": "emphasis"
+    },
+    {
+      "id": "start-run",
+      "from": "api",
+      "to": "orchestrator",
+      "y": 274,
+      "label": "Evaluate committed snapshot",
+      "variant": "emphasis"
+    },
+    {
+      "id": "vlm-request",
+      "from": "orchestrator",
+      "to": "tunnel",
+      "y": 312,
+      "label": "POST /v1/chat/completions · optional Bearer",
+      "variant": "dashed",
+      "note": "Per configured provider endpoint. Auth staging remote access is off; no inference call occurs until allowed configuration exists."
+    },
+    {
+      "id": "tunnel-origin",
+      "from": "tunnel",
+      "to": "proxy",
+      "y": 350,
+      "label": "Origin transport unverified",
+      "variant": "dashed"
+    },
+    {
+      "id": "proxy-forward",
+      "from": "proxy",
+      "to": "ollama",
+      "y": 388,
+      "label": "Proxy route / allowlist unknown",
+      "variant": "dashed"
+    },
+    {
+      "id": "ollama-result",
+      "from": "ollama",
+      "to": "proxy",
+      "y": 426,
+      "label": "Model response",
+      "variant": "return"
+    },
+    {
+      "id": "proxy-result",
+      "from": "proxy",
+      "to": "tunnel",
+      "y": 464,
+      "label": "Proxied response",
+      "variant": "return"
+    },
+    {
+      "id": "tunnel-result",
+      "from": "tunnel",
+      "to": "orchestrator",
+      "y": 502,
+      "label": "Response or transport error",
+      "variant": "return"
+    },
+    {
+      "id": "validated",
+      "from": "orchestrator",
+      "to": "engine",
+      "y": 540,
+      "label": "Validated VLM → Media → Strategy outputs",
+      "variant": "emphasis",
+      "note": "VLM extraction runs first, followed by Media and Strategy. Each configured task provider makes a separate request; they may use different endpoints."
+    },
+    {
+      "id": "outcome",
+      "from": "engine",
+      "to": "api",
+      "y": 578,
+      "label": "AUTO_APPROVED or HUMAN_REVIEW_REQUIRED",
+      "variant": "emphasis",
+      "note": "AUTO_REJECT is not a supported engine outcome."
+    },
+    {
+      "id": "persist-result",
+      "from": "api",
+      "to": "db",
+      "y": 616,
+      "label": "Persist evaluation + outcome + audit",
+      "variant": "security"
+    },
+    {
+      "id": "show-result",
+      "from": "api",
+      "to": "ui",
+      "y": 654,
+      "label": "Return updated plan / route",
+      "variant": "return"
+    },
+    {
+      "id": "show-page",
+      "from": "ui",
+      "to": "browser",
+      "y": 692,
+      "label": "Show decision state",
+      "variant": "return"
+    },
+    {
+      "id": "review-queue",
+      "from": "api",
+      "to": "checker",
+      "y": 730,
+      "label": "Queue only after HUMAN_REVIEW_REQUIRED",
+      "variant": "security"
+    },
+    {
+      "id": "checker-action",
+      "from": "checker",
+      "to": "api",
+      "y": 768,
+      "label": "Approve / reject; rejection reason required",
+      "variant": "security",
+      "note": "Override reason is required when action differs from the stored recommendation."
+    },
+    {
+      "id": "persist-human",
+      "from": "api",
+      "to": "db",
+      "y": 806,
+      "label": "Commit Checker decision + audit",
+      "variant": "emphasis"
+    },
+    {
+      "id": "human-commit",
+      "from": "db",
+      "to": "api",
+      "y": 844,
+      "label": "One final decision per round",
+      "variant": "return"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "rose",
+      "title": "Failure and authority",
+      "items": [
+        "Missing config, HTTP/auth failure, timeout, model mismatch, invalid schema or unresolved evidence leaves the committed submission intact and routes the active round to Human Review.",
+        "Provider retries are technical. Stale-run recovery routes to review; neither is a Checker decision.",
+        "GET /v1/models exists in VLM health_check() with optional Bearer, but no submit-path call site was found. Inference responses are checked against configured model ID."
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "External hops remain unverified",
+      "items": [
+        "Backend Bearer header generation and POST /v1/chat/completions are in repository code; the browser does not receive the service key.",
+        "Tunnel, proxy implementation, allowed paths, origin protocol, loopback binding, Ollama target and current deployment are not verified here.",
+        "VLM, Media and Strategy are logic/model steps, not three servers. The task providers can be configured to different endpoints."
+      ]
+    }
+  ]
+}

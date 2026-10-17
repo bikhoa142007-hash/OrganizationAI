@@ -156,7 +156,9 @@ Staging deliberately has no inference host or model configured. The provider is
 explicitly `LOCAL_VLM`, remote use is disabled, Mock is unavailable in production,
 and the authenticated auto-approval configuration stays disabled. AI evaluation
 therefore routes to Human Review until an approved local inference service and
-business policy are available. No public tunnel or external provider is created.
+business policy are available. This Blueprint creates no public tunnel or external
+provider; independently operated inference endpoints are outside this file and
+their current deployment is not verified here. See [architecture diagram notes](../docs/diagrams/README.md).
 
 Render's current Free Postgres offer expires after 30 days, has a 14-day grace
 period before deletion, and has no managed backups. The workspace also permits

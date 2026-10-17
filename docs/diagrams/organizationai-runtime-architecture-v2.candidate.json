@@ -6,35 +6,58 @@
     "quality_profile": "showcase",
     "repository": {
       "url": "https://github.com/bikhoa142007-hash/OrganizationAI",
-      "revision": "456058cf67081c1eae84a9847db663eb8fc6ba38",
-      "link_mode": "web"
+      "revision": "3c4d982cfad3ca27f54f366c0a7f21b2838c1cf1",
+      "link_mode": "local-only"
     },
     "views": [
       {
         "id": "authenticated-path",
         "label": "Luồng Auth",
-        "focus": ["browser", "frontend", "api", "auth", "providers", "rules", "postgres"],
+        "focus": [
+          "browser",
+          "frontend",
+          "api",
+          "auth",
+          "providers",
+          "rules",
+          "postgres"
+        ],
         "note": "Theo dõi workflow có đăng nhập và dữ liệu PostgreSQL riêng."
       },
       {
         "id": "demo-path",
         "label": "Judge Demo",
-        "focus": ["browser", "frontend", "api", "demo", "rules", "sqlite"],
+        "focus": [
+          "browser",
+          "frontend",
+          "api",
+          "demo",
+          "rules",
+          "sqlite"
+        ],
         "note": "Theo dõi luồng tổng hợp dùng actor và SQLite tách biệt."
       },
       {
         "id": "ai-boundary",
         "label": "Ranh giới AI",
-        "focus": ["auth", "providers", "endpoint", "rules"],
+        "focus": [
+          "auth",
+          "providers",
+          "endpoint",
+          "rules"
+        ],
         "note": "Provider tạo kết quả; backend áp dụng decision rules."
       }
     ]
   },
   "layout": {
     "mode": "grid",
-    "origin": [70, 150],
+    "origin": [
+      70,
+      150
+    ],
     "cols": 5,
-    "gapX": 70,
+    "gapX": 25,
     "gapY": 120,
     "cellW": 180,
     "cellH": 100
@@ -47,8 +70,18 @@
       "sublabel": "Trình duyệt web",
       "row": 1,
       "col": 0,
-      "size": [178, 80],
-      "sources": [{ "path": "frontend/src/routes/AppRoutes.tsx", "line": 34, "end_line": 66, "label": "UI routes" }]
+      "size": [
+        178,
+        80
+      ],
+      "sources": [
+        {
+          "path": "frontend/src/routes/AppRoutes.tsx",
+          "line": 34,
+          "end_line": 66,
+          "label": "UI routes"
+        }
+      ]
     },
     {
       "id": "frontend",
@@ -57,85 +90,173 @@
       "sublabel": "TypeScript · Vite",
       "row": 1,
       "col": 1,
-      "size": [178, 80],
-      "sources": [{ "path": "frontend/src/routes/AppRoutes.tsx", "line": 34, "end_line": 66, "label": "Auth + Demo UI" }]
+      "size": [
+        178,
+        80
+      ],
+      "sources": [
+        {
+          "path": "frontend/src/routes/AppRoutes.tsx",
+          "line": 34,
+          "end_line": 66,
+          "label": "Auth + Demo UI"
+        }
+      ]
     },
     {
       "id": "api",
       "type": "backend",
-      "label": "FastAPI API",
+      "label": "FastAPI application",
       "sublabel": "Auth + Judge Demo routes",
       "row": 1,
       "col": 2,
-      "size": [178, 80],
-      "sources": [{ "path": "src/backend/api/app.py", "line": 32, "end_line": 62, "label": "App wiring" }]
+      "size": [
+        178,
+        80
+      ],
+      "sources": [
+        {
+          "path": "src/backend/api/app.py",
+          "line": 32,
+          "end_line": 62,
+          "label": "App wiring"
+        }
+      ]
     },
     {
       "id": "auth",
       "type": "security",
       "label": "Auth workflow",
-      "sublabel": "JWT · Maker–Checker",
-      "tag": "Authenticated",
+      "sublabel": "JWT cookie · role checks",
+      "tag": "CODE",
       "row": 1,
       "col": 3,
-      "size": [178, 80],
+      "size": [
+        178,
+        80
+      ],
       "sources": [
-        { "path": "src/backend/api/auth.py", "line": 28, "end_line": 40, "label": "Auth routes" },
-        { "path": "src/backend/api/auth_workflow.py", "line": 331, "end_line": 506, "label": "Workflow routes" }
+        {
+          "path": "src/backend/api/auth.py",
+          "line": 28,
+          "end_line": 40,
+          "label": "Auth routes"
+        },
+        {
+          "path": "src/backend/api/auth_workflow.py",
+          "line": 331,
+          "end_line": 506,
+          "label": "Workflow routes"
+        }
       ]
     },
     {
       "id": "postgres",
       "type": "database",
       "label": "PostgreSQL",
-      "sublabel": "Auth workflow records",
+      "sublabel": "Versions · media · AI · audit",
       "row": 1,
       "col": 4,
-      "size": [178, 80],
+      "size": [
+        178,
+        80
+      ],
       "sources": [
-        { "path": "src/backend/db/session.py", "line": 9, "end_line": 25, "label": "PostgreSQL session" },
-        { "path": "src/backend/db/models/auth_workflow.py", "line": 25, "end_line": 190, "label": "Plan + AI tables" }
-      ]
+        {
+          "path": "src/backend/db/session.py",
+          "line": 9,
+          "end_line": 25,
+          "label": "PostgreSQL session"
+        },
+        {
+          "path": "src/backend/db/models/auth_workflow.py",
+          "line": 25,
+          "end_line": 190,
+          "label": "Plan + AI tables"
+        }
+      ],
+      "tag": "CODE / STAGING CONFIG"
     },
     {
       "id": "providers",
       "type": "backend",
-      "label": "AI provider adapters",
-      "sublabel": "Local VLM · Media · Strategy",
+      "label": "AI evaluation steps",
+      "sublabel": "VLM → Media → Strategy",
       "row": 0,
       "col": 3,
-      "size": [178, 80],
+      "size": [
+        178,
+        80
+      ],
       "sources": [
-        { "path": "src/backend/application/auth_workflow_ai.py", "line": 23, "end_line": 38, "label": "VLM selection" },
-        { "path": "src/ai_pipeline/task_config.py", "line": 10, "end_line": 30, "label": "Media + Strategy" }
-      ]
+        {
+          "path": "src/backend/application/auth_workflow_ai.py",
+          "line": 23,
+          "end_line": 38,
+          "label": "VLM selection"
+        },
+        {
+          "path": "src/ai_pipeline/task_config.py",
+          "line": 10,
+          "end_line": 30,
+          "label": "Media + Strategy"
+        }
+      ],
+      "tag": "BACKEND CODE"
     },
     {
       "id": "endpoint",
       "type": "external",
-      "label": "Model endpoint",
-      "sublabel": "OpenAI-compatible · optional",
-      "tag": "Operator configured",
+      "label": "Inference endpoint",
+      "sublabel": "Operator config · blank default",
+      "tag": "CONFIG ONLY / LIVE UNVERIFIED",
       "row": 0,
       "col": 4,
-      "size": [178, 80],
+      "size": [
+        178,
+        80
+      ],
       "sources": [
-        { "path": ".env.example", "line": 20, "end_line": 33, "label": "Local VLM config" },
-        { "path": "src/ai_pipeline/providers/openai_provider.py", "line": 303, "end_line": 333, "label": "Endpoint validation" }
+        {
+          "path": ".env.example",
+          "line": 20,
+          "end_line": 33,
+          "label": "Local VLM config"
+        },
+        {
+          "path": "src/ai_pipeline/providers/openai_provider.py",
+          "line": 303,
+          "end_line": 333,
+          "label": "Endpoint validation"
+        }
       ]
     },
     {
       "id": "sqlite",
       "type": "database",
-      "label": "SQLite",
-      "sublabel": "Judge Demo records",
+      "label": "Judge Demo SQLite",
+      "sublabel": "Demo-only · Render ephemeral",
       "row": 2,
       "col": 1,
-      "size": [178, 80],
+      "size": [
+        178,
+        80
+      ],
       "sources": [
-        { "path": "src/backend/api/dependencies.py", "line": 29, "end_line": 33, "label": "Demo repository" },
-        { "path": "src/backend/demo.py", "line": 29, "end_line": 35, "label": "Demo database path" }
-      ]
+        {
+          "path": "src/backend/api/dependencies.py",
+          "line": 29,
+          "end_line": 33,
+          "label": "Demo repository"
+        },
+        {
+          "path": "src/backend/demo.py",
+          "line": 29,
+          "end_line": 35,
+          "label": "Demo database path"
+        }
+      ],
+      "tag": "MOCK / DEMO"
     },
     {
       "id": "demo",
@@ -144,61 +265,155 @@
       "sublabel": "X-Demo-Actor · MockVLMProvider",
       "row": 2,
       "col": 2,
-      "size": [178, 80],
+      "size": [
+        178,
+        80
+      ],
       "sources": [
-        { "path": "src/backend/api/app.py", "line": 124, "end_line": 177, "label": "Demo endpoints" },
-        { "path": "src/ai_pipeline/providers/mock.py", "line": 15, "end_line": 48, "label": "Mock provider" }
-      ]
+        {
+          "path": "src/backend/api/app.py",
+          "line": 124,
+          "end_line": 177,
+          "label": "Demo endpoints"
+        },
+        {
+          "path": "src/ai_pipeline/providers/mock.py",
+          "line": 15,
+          "end_line": 48,
+          "label": "Mock provider"
+        }
+      ],
+      "tag": "MOCK"
     },
     {
       "id": "rules",
       "type": "backend",
-      "label": "Decision rules",
-      "sublabel": "Deterministic policy engine",
+      "label": "Decision Policy Engine",
+      "sublabel": "Deterministic rules · no AI auto-reject",
       "row": 2,
       "col": 3,
-      "size": [178, 80],
+      "size": [
+        178,
+        80
+      ],
       "sources": [
-        { "path": "src/backend/rules/decision.py", "line": 169, "end_line": 260, "label": "Rule evaluation" },
-        { "path": "src/backend/application/auth_workflow.py", "line": 950, "end_line": 950, "label": "Auth decision call" }
-      ]
+        {
+          "path": "src/backend/rules/decision.py",
+          "line": 169,
+          "end_line": 260,
+          "label": "Rule evaluation"
+        },
+        {
+          "path": "src/backend/application/auth_workflow.py",
+          "line": 950,
+          "end_line": 950,
+          "label": "Auth decision call"
+        }
+      ],
+      "tag": "CODE"
     }
   ],
   "boundaries": [
     {
       "kind": "region",
       "label": "FastAPI modular monolith · one application",
-      "wraps": ["api", "auth", "providers", "demo", "rules"],
+      "wraps": [
+        "api",
+        "auth",
+        "providers",
+        "demo",
+        "rules"
+      ],
       "pad": 22
     }
   ],
   "connections": [
-    { "id": "browser-to-ui", "from": "browser", "to": "frontend" },
-    { "id": "ui-to-api", "from": "frontend", "to": "api" },
-    { "id": "api-to-auth", "from": "api", "to": "auth" },
-    { "id": "api-to-demo", "from": "api", "to": "demo" },
-    { "id": "auth-to-postgres", "from": "auth", "to": "postgres" },
-    { "id": "auth-to-providers", "from": "auth", "to": "providers" },
-    { "id": "providers-to-endpoint", "from": "providers", "to": "endpoint", "label": "configured", "variant": "dashed" },
-    { "id": "auth-to-rules", "from": "auth", "to": "rules", "label": "evaluate", "labelDy": 24 },
-    { "id": "demo-to-sqlite", "from": "demo", "to": "sqlite" },
-    { "id": "demo-to-rules", "from": "demo", "to": "rules" }
+    {
+      "id": "browser-to-ui",
+      "from": "browser",
+      "to": "frontend"
+    },
+    {
+      "id": "ui-to-api",
+      "from": "frontend",
+      "to": "api"
+    },
+    {
+      "id": "api-to-auth",
+      "from": "api",
+      "to": "auth"
+    },
+    {
+      "id": "api-to-demo",
+      "from": "api",
+      "to": "demo"
+    },
+    {
+      "id": "auth-to-postgres",
+      "from": "auth",
+      "to": "postgres"
+    },
+    {
+      "id": "auth-to-providers",
+      "from": "auth",
+      "to": "providers"
+    },
+    {
+      "id": "providers-to-endpoint",
+      "from": "providers",
+      "to": "endpoint",
+      "label": "configured",
+      "variant": "dashed",
+      "labelAt": [
+        1034,
+        244
+      ]
+    },
+    {
+      "id": "auth-to-rules",
+      "from": "auth",
+      "to": "rules",
+      "label": "evaluate",
+      "labelDy": 24
+    },
+    {
+      "id": "demo-to-sqlite",
+      "from": "demo",
+      "to": "sqlite"
+    },
+    {
+      "id": "demo-to-rules",
+      "from": "demo",
+      "to": "rules"
+    }
   ],
   "cards": [
     {
       "dot": "cyan",
-      "title": "Hai luồng lưu trữ",
+      "title": "Auth identity and storage",
       "items": [
-        "Auth dùng JWT cookie và PostgreSQL; phiên bản, attachment, AI result và audit được lưu theo workflow.",
-        "Judge Demo dùng X-Demo-Actor, MockVLMProvider và SQLite riêng."
+        "Auth requests use an HttpOnly JWT cookie; the backend reloads roles from PostgreSQL and enforces permissions.",
+        "Auth versions, private attachment bytes/hashes, evaluation runs, decisions and audit use PostgreSQL in application code.",
+        "The Auth staging Blueprint is CONFIG ONLY; the repository does not prove deployment."
       ]
     },
     {
-      "dot": "violet",
-      "title": "AI và triển khai",
+      "dot": "rose",
+      "title": "Inference and authority",
       "items": [
-        "Auth Local VLM, Media và Strategy chỉ gọi provider đã cấu hình; thiếu cấu hình không tự fallback sang Mock.",
-        "Compose có PostgreSQL/API/Vite; Render Blueprint khai báo demo SQLite tạm thời và static frontend, chưa khai báo Auth PostgreSQL."
+        "Inference API keys are backend-only. Adapters add Authorization: Bearer only when a key is configured.",
+        "Submit calls POST /v1/chat/completions. GET /v1/models exists in VLM health_check(), but no submit-path call site was found.",
+        "Backend rules choose AUTO_APPROVED or HUMAN_REVIEW_REQUIRED; AI auto-reject is unsupported.",
+        "Endpoint, tunnel and proxy are not configured by the checked-in Auth staging Blueprint; live inference is unverified."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Judge Demo is separate",
+      "items": [
+        "Judge Demo routes use X-Demo-Actor, MockVLMProvider and a separate SQLite database.",
+        "Verify uses synthetic cases and Mock providers with in-memory per-case repositories; it is not process isolation or production inference.",
+        "Root Render configuration covers Judge Demo and ephemeral SQLite, not Auth PostgreSQL."
       ]
     }
   ]

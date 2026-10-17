@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="generator" content="archify 2.17.0-dev.1">
-  <title>Luồng xử lý phê duyệt OrganizationAI Diagram</title>
+  <title>Auth workflow · Maker–AI–Checker decision path Diagram</title>
   <script>
     // Resolve the theme before first paint so light-preference users don't
     // see a dark flash. The toolbar script below re-applies with UI state.
@@ -5081,11 +5081,11 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
            data-preset-badge-blueprint="BLUEPRINT / REV 01"
            data-preset-badge-editorial="EDITORIAL / FIELD NOTE">
         <div class="pulse-dot"></div>
-        <h1>Luồng xử lý phê duyệt OrganizationAI</h1>
+        <h1>Auth workflow · Maker–AI–Checker decision path</h1>
       </div>
     </div>
 
-    <script id="archify-guided-views-data" type="application/json">[{"id":"maker-submit","label":"Lập và gửi","focus":["draft","upload","submit","commit"]},{"id":"ai-routing","label":"AI và định tuyến","focus":["commit","evaluate","decision","auto","review"]},{"id":"checker-resubmit","label":"Checker và gửi lại","focus":["review","human_approved","revise"]}]</script>
+    <script id="archify-guided-views-data" type="application/json">[{"id":"maker-submits","label":"Maker gửi hồ sơ","focus":["draft","attachment","checker","submit","snapshot"]},{"id":"ai-routes","label":"AI và chuyển tuyến","focus":["snapshot","evaluate","decision","auto","human"]},{"id":"checker-resubmits","label":"Checker và gửi lại","focus":["human","checker_action","revise","submit"]}]</script>
 
     <script id="archify-i18n-data" type="application/json">{"locale":"en","messages":{"viewer.kind.frontend":"Frontend","viewer.kind.backend":"Backend","viewer.kind.database":"Database","viewer.kind.cloud":"Cloud","viewer.kind.security":"Security","viewer.kind.messagebus":"Message bus","viewer.kind.external":"External","viewer.kind.neutral":"Neutral","viewer.kind.node":"Node","viewer.kind.start":"Start","viewer.kind.active":"Active","viewer.kind.waiting":"Waiting","viewer.kind.decision":"Decision","viewer.kind.success":"Success","viewer.kind.failure":"Failure","viewer.toolbar.actions":"Diagram actions","viewer.theme.toggle.title":"Toggle theme (T)","viewer.theme.toggle":"Toggle color theme","viewer.theme.dark":"Dark","viewer.theme.light":"Light","viewer.preset.choose.title":"Choose visual style (S cycles)","viewer.preset.choose":"Choose visual style","viewer.preset.style":"Style","viewer.preset.menu":"Visual style","viewer.preset.identity":"Visual identity","viewer.preset.cycles":"S cycles","viewer.preset.classic":"Classic","viewer.preset.classic.short":"Classic","viewer.preset.classic.hint":"Stable technical default","viewer.preset.flow":"Signal Flow","viewer.preset.flow.short":"Flow","viewer.preset.flow.hint":"Motion-forward presentation","viewer.preset.blueprint":"Blueprint","viewer.preset.blueprint.hint":"Engineering review","viewer.preset.editorial":"Editorial","viewer.preset.editorial.hint":"Publication and launch notes","viewer.preset.badge.signalFlow":"SIGNAL FLOW","viewer.preset.badge.blueprint":"BLUEPRINT / REV 01","viewer.preset.badge.editorial":"EDITORIAL / FIELD NOTE","viewer.preset.badge.editorialPlate":"ARCHIFY / PLATE 04","viewer.preset.current":"Visual style: {style}. Choose visual style","viewer.motion.live":"Live","viewer.motion.still":"Still","viewer.motion.pause":"Pause motion","viewer.motion.resume":"Resume motion","viewer.motion.reduced":"Motion paused by reduced-motion preference","viewer.motion.hidden":"Motion paused while this page is hidden","viewer.motion.yielding":"Pause motion; currently yielding to {owner}","viewer.motion.yielding.title":"Live preview enabled · yielding to {owner}","viewer.owner.story":"the guided story","viewer.owner.chapter":"the active chapter","viewer.owner.chapterPreview":"the chapter delta preview","viewer.owner.handoff":"the chapter handoff","viewer.owner.route":"Route Probe","viewer.owner.lens":"Semantic Lens","viewer.owner.relationship":"Relationship Preview","viewer.owner.intent":"Intent Trace","viewer.owner.focus":"semantic focus","viewer.owner.legend":"legend preview","viewer.owner.reader":"reader interaction","viewer.present.enter":"Enter presentation stage","viewer.present.enter.title":"Presentation stage (F)","viewer.present.exit":"Exit presentation stage","viewer.present.exit.title":"Exit presentation stage (F or Escape)","viewer.present.present":"Present","viewer.present.exit.label":"Exit","viewer.export.button":"Export","viewer.export.button.title":"Export diagram (E)","viewer.export.diagram":"Export diagram","viewer.export.menu":"Export","viewer.export.subtitle":"Portable, clean outputs","viewer.export.share":"Share","viewer.export.shareCard":"Share Card","viewer.export.routeShareCard":"Route Share Card","viewer.export.reachShareCard":"Reach Share Card","viewer.export.copyShareCard":"Copy Share Card","viewer.export.copyDiagram":"Copy diagram","viewer.export.clipboardPng":"PNG to clipboard","viewer.export.raster":"Raster images","viewer.export.image":"Image","viewer.export.lossless":"Lossless image","viewer.export.compact":"Compact image","viewer.export.modern":"Modern image","viewer.export.vectorMotion":"Vector and motion","viewer.export.vectorMotion.heading":"Vector \u0026 motion","viewer.export.editable":"Editable vector","viewer.export.motion6s":"6s motion","viewer.export.unsupported":"Not supported by this browser","viewer.export.clipboardUnsupported":"Clipboard image write not supported by this browser","viewer.export.clipboardUnsupported.period":"Clipboard image write not supported by this browser.","viewer.export.clipboardUnsupported.short":"Clipboard image write not supported in this browser.","viewer.export.motionUnavailable":"Motion capture unavailable in this browser","viewer.export.webmUnavailable":"WebM unavailable in this browser","viewer.export.failed":"Export failed: {message}","viewer.export.unknownVariant":"Unknown Share Card variant: {variant}","viewer.export.routeRequired":"Trace a route before exporting a Route Share Card","viewer.export.reachRequired":"Trace authored reach before exporting a Reach Share Card","viewer.export.unknown":"unknown","viewer.export.routeFailed":"Route Share Card export failed: {message}","viewer.export.reachFailed":"Reach Share Card export failed: {message}","viewer.export.copyFailed":"Copy failed: {message}","viewer.export.copiedPng":"Copied PNG to clipboard","viewer.export.copiedShare":"Copied Share Card","viewer.export.downloadedShare":"Downloaded Share Card","viewer.export.downloadedRoute":"Downloaded Route Share Card","viewer.export.downloadedReach":"Downloaded Reach Share Card","viewer.export.downloadedWebm":"Downloaded WebM","viewer.export.recording":"Recording 6 seconds of motion…","viewer.export.card.routeSummary.one":"Route: {source} → {target} · {count} directed hop","viewer.export.card.routeSummary.other":"Route: {source} → {target} · {count} directed hops","viewer.export.card.reachSummary":"Authored {direction} from {origin} · {nodes} · {links} · max {hops}","viewer.export.card.node.one":"{count} node","viewer.export.card.node.other":"{count} nodes","viewer.export.card.link.one":"{count} link","viewer.export.card.link.other":"{count} links","viewer.export.card.hop.one":"{count} hop","viewer.export.card.hop.other":"{count} hops","viewer.export.card.routeBadge":"ARCHIFY · ROUTE · {hops}","viewer.export.card.reachBadge":"ARCHIFY · {direction} REACH","viewer.export.card.defaultBadge":"ARCHIFY · {preset} · {theme}","viewer.export.direction.upstream":"Upstream","viewer.export.direction.downstream":"Downstream","viewer.export.error.canvasUnavailable":"Canvas unavailable for {label}","viewer.export.error.contextUnavailable":"2D canvas context unavailable for {label}","viewer.export.error.toBlobUnavailable":"canvas.toBlob unavailable for {label}","viewer.export.error.toBlobNull":"canvas.toBlob returned no data for {label}","viewer.export.error.variantsCombined":"Share Card variants cannot be combined","viewer.export.error.viewerState":"Share Card export could not remove temporary viewer state","viewer.export.error.routeState":"Route Card export could not preserve the resolved route safely","viewer.export.error.reachState":"Reach Card export could not preserve authored reach safely","viewer.export.error.webmRequirements":"WebM motion export requires a trace animation and browser MediaRecorder support","viewer.export.error.mediaRecorder":"MediaRecorder failed","viewer.export.error.emptyWebm":"MediaRecorder produced an empty WebM","viewer.export.error.webmBackground":"SVG background could not be loaded for WebM export","viewer.guided.region":"Guided diagram views","viewer.guided.previous":"Previous guided view","viewer.guided.previous.title":"Previous guided view ([)","viewer.guided.next":"Next guided view","viewer.guided.next.title":"Next guided view (])","viewer.guided.views":"Guided views","viewer.guided.explore":"Explore this system","viewer.guided.intro":"Step through curated paths without changing the source diagram.","viewer.guided.trail":"Story trail","viewer.guided.beat":"Beat","viewer.guided.nextBeat":"Next","viewer.guided.play":"Play guided story","viewer.guided.play.title":"Play guided story (P)","viewer.guided.pause":"Pause guided story","viewer.guided.pause.title":"Pause guided story (P)","viewer.guided.replay":"Replay guided story","viewer.guided.replay.title":"Replay guided story (P)","viewer.guided.playStory":"Play story","viewer.guided.pauseStory":"Pause","viewer.guided.replayStory":"Replay story","viewer.guided.motionUnavailable":"Story playback unavailable while motion is Still","viewer.guided.enableMotion":"Switch motion to Live to play the guided story","viewer.guided.selectBeatLink":"Select a Story Beat to copy its exact link","viewer.guided.copyMoment":"Copy moment","viewer.guided.momentCopied":"Moment link copied","viewer.guided.momentCopyFailed":"Could not copy story moment link","viewer.guided.copied":"Copied","viewer.guided.copyFailed":"Copy failed","viewer.guided.showAll":"Show all","viewer.guided.showAll.aria":"Show entire diagram","viewer.guided.chapters":"Story chapters","viewer.guided.storyTrail":"Story trail for {label}: {count} beats","viewer.guided.chapter.open":"Open chapter {index} of {total}: {label}, {count} stops","viewer.guided.chapter.current":"Current chapter {index} of {total}: {label}, {count} stops","viewer.guided.chapter.selectedNodes":"{count} selected nodes","viewer.guided.chapter.stops":"{count} stops","viewer.guided.chapter.stop.one":"{count} stop","viewer.guided.chapter.stop.other":"{count} stops","viewer.guided.chapter.current.title":"{label} — current chapter, {count} stops","viewer.guided.chapter.delta.expanded":"{stay} stay, {enter} enter, {leave} leave","viewer.guided.chapter.delta.aria":"Open chapter {index} of {total}: {label}. Chapter focus delta: {delta}","viewer.guided.chapter.delta.title":"{label} — {delta} chapter focus","viewer.guided.handoff":"{from} → {to} · via {label}","viewer.guided.share.chapter":"Chapter {index} / {total}","viewer.guided.share.initial":"Chapter 01 / 01","viewer.guided.share.default":"Guided chapter","viewer.guided.state.ready":"Ready","viewer.guided.state.playing":"Playing","viewer.guided.state.settled":"Settled","viewer.guided.state.paused":"Paused","viewer.guided.state.pinned":"Pinned","viewer.guided.state.still":"Still","viewer.guided.share.step":"Step {index} / {total} · {label}","viewer.guided.share.staticMoment":"{step} · Static moment","viewer.guided.share.complete":"{count} steps complete · {note}","viewer.guided.share.settled":"Path settled for reading.","viewer.guided.share.staticPath":"{count} steps · Static path","viewer.guided.share.ready":"{count} steps · Ready","viewer.guided.share.aria":"{state} chapter {index} of {total}: {label}. {beat}. {route}","viewer.guided.beat.start":"Beat {index} / {total} · {label} · starting point","viewer.guided.beat.forward":"Beat {index} / {total} · {from} → {to}","viewer.guided.beat.reverse":"Beat {index} / {total} · {from} → {to} · reverse authored link","viewer.guided.beat.multiple":"Beat {index} / {total} · {from} ⇄ {to} · {count} authored links","viewer.guided.beat.group":"Beat {index} / {total} · {from} · {to} · grouped · no direct link","viewer.guided.beat.aria.prefix":"Story beat {index} of {total}: {label}. ","viewer.guided.beat.aria.start":"Starting point.","viewer.guided.beat.aria.forward":"From {from} through one authored forward relationship.","viewer.guided.beat.aria.reverse":"From {from}; the authored relationship points from {to} to {from}.","viewer.guided.beat.aria.multiple":"From {from} through {count} authored relationships; shown without arbitrary motion.","viewer.guided.beat.aria.group":"Grouped from {from} with no direct authored relationship.","viewer.guided.caption.start":"Starting point","viewer.guided.caption.grouped":"Grouped transition · no direct authored link","viewer.guided.caption.more":" +{count} more","viewer.guided.caption.reverse":"Reverse authored relationship","viewer.guided.caption.relationships":"{count} authored relationships","viewer.guided.caption.relationship":"Authored relationship","viewer.guided.caption.direction":"authored direction: {from} → {to}","viewer.guided.caption.starting":"Authored starting point","viewer.guided.beatLink":"Copy link to current story moment: Beat {index} of {total}: {label}","viewer.guided.noStory":"This diagram has no authored guided story.","viewer.guide.eyebrow":"Diagram guide","viewer.guide.close":"Close diagram guide","viewer.guide.inspecting":"Inspecting compiled semantics","viewer.guide.actions":"Diagram exploration actions","viewer.guide.find":"Find any node","viewer.guide.find.hint":"Search labels, responsibilities, kinds, and stable IDs.","viewer.guide.route":"Trace a route","viewer.guide.route.aria":"Trace a directed route","viewer.guide.route.hint":"Ask how two semantic nodes connect in authored direction.","viewer.guide.map":"See the whole system","viewer.guide.map.hint":"Open Semantic Radar with a live viewport and stable nodes.","viewer.guide.lens":"Compare semantic kinds","viewer.guide.lens.hint":"Count roles, reveal their traffic, and compare direct authored links.","viewer.guide.story":"Play the guided story","viewer.guide.story.hint":"Walk the authored chapters and real relationships.","viewer.guide.present":"Enter Presentation Stage","viewer.guide.present.hint":"Give the live diagram the viewport without changing export.","viewer.guide.shortcuts":"Additional keyboard shortcuts","viewer.guide.shortcut.export":"Export","viewer.guide.shortcut.theme":"Theme","viewer.guide.shortcut.style":"Style","viewer.guide.shortcut.reset":"Reset","viewer.guide.shortcut.zoomIn":"Zoom in","viewer.guide.shortcut.zoomOut":"Zoom out","viewer.guide.shortcut.close":"Close","viewer.guide.facts":"{nodes} · {relationships} · {views}","viewer.guide.fact.node.one":"{count} semantic node","viewer.guide.fact.node.other":"{count} semantic nodes","viewer.guide.fact.relationship.one":"{count} relationship","viewer.guide.fact.relationship.other":"{count} relationships","viewer.guide.fact.view.one":"{count} guided view","viewer.guide.fact.view.other":"{count} guided views","viewer.guide.story.available.one":"Walk {count} authored chapter and its real relationships.","viewer.guide.story.available.other":"Walk {count} authored chapters and their real relationships.","viewer.guide.story.unavailable":"No authored guided story in this diagram.","viewer.guide.open":"Open diagram guide","viewer.guide.noStory":"This diagram has no authored guided story.","viewer.finder.title":"Find a node","viewer.finder.close":"Close node finder","viewer.finder.placeholder":"Search labels or IDs","viewer.finder.search":"Search diagram nodes","viewer.finder.results":"Diagram nodes","viewer.finder.empty":"No matching nodes","viewer.finder.result.focus":"Focus {label}","viewer.finder.result.routeStart":"Choose {label} as route start","viewer.finder.result.routeTarget":"Choose {label} as route destination, {links}","viewer.finder.status.empty":"No matching nodes","viewer.finder.status.count.one":"{count} matching node","viewer.finder.status.count.other":"{count} matching nodes","viewer.finder.noun.nodes":"nodes","viewer.finder.link.one":"{count} link","viewer.finder.link.other":"{count} links","viewer.finder.result.focus.one":"Focus {label}, {count} related connection","viewer.finder.result.focus.other":"Focus {label}, {count} related connections","viewer.finder.status.filtered":"{visible} of {available} {noun}","viewer.finder.status.all":"{available} {noun}","viewer.passport.eyebrow":"Semantic passport","viewer.passport.metadata":"Node metadata","viewer.passport.evidence":"Verified source evidence","viewer.passport.verified":"Verified source","viewer.passport.verificationScope":"Verified against local Git at the pinned revision. Remote access has not been checked.","viewer.passport.reach":"Authored reach","viewer.passport.reach.trace":"Trace authored reachability","viewer.passport.upstream":"Upstream","viewer.passport.downstream":"Downstream","viewer.passport.upstream.trace":"Trace upstream authored reachability","viewer.passport.downstream.trace":"Trace downstream authored reachability","viewer.passport.close":"Close semantic passport","viewer.passport.copy":"Copy link","viewer.passport.copy.focus":"Copy link to focused node","viewer.passport.relations":"Relations","viewer.passport.relations.show":"Show connected relationships","viewer.passport.relations.hide":"Hide connected relationships","viewer.passport.relations.list":"Connected relationships","viewer.passport.copyRelation":"Copy relation","viewer.passport.copyNode":"Copy node","viewer.passport.copyPinned":"Copy link to pinned relationship","viewer.passport.copySource":"Copy link to source node","viewer.passport.copy.focused.success":"Focused node link copied","viewer.passport.copy.pinned.success":"Pinned relationship link copied","viewer.passport.copy.focused.failed":"Could not copy focused node link","viewer.passport.copy.pinned.failed":"Could not copy pinned relationship link","viewer.passport.relationship.none":"No connected relationships","viewer.passport.relationship.count.one":"{count} relation","viewer.passport.relationship.count.other":"{count} relations","viewer.passport.relationship.show.one":"Show {count} connected relationship","viewer.passport.relationship.show.other":"Show {count} connected relationships","viewer.passport.relationship.summary":"{out} outgoing · {in} incoming{loops}","viewer.passport.relationship.loops":" · {count} loop","viewer.passport.relationship.explorer":"Direct relationship explorer","viewer.passport.relationship.help":"Use arrow keys to explore relationships. Press Enter or Space to pin details; Escape clears.","viewer.passport.relationship.loopsBack":"loops back","viewer.passport.relationship.connectsTo":"connects to","viewer.passport.relationship.connectsFrom":"connects from","viewer.passport.relationship.pinned":"Pinned relationship · {from} → {to} · {label}","viewer.passport.relationship.inspect":"Inspect relationship {index} of {total}: {from} to {to}, {label}. Press Enter for details.","viewer.passport.relationship.group.out":"Outgoing","viewer.passport.relationship.group.in":"Incoming","viewer.passport.relationship.group.loop":"Self loops","viewer.passport.relationship.row":"{group}: {relationship}, {neighbor}","viewer.passport.relationship.direction.out":"OUT →","viewer.passport.relationship.direction.in":"← IN","viewer.passport.relationship.direction.loop":"LOOP","viewer.passport.sourceCount.one":"{count} verified source reference","viewer.passport.sourceCount.other":"{count} verified source references","viewer.passport.sourceMarker":"SRC","viewer.passport.beacon.one":"{count} verified source; focus this node to inspect","viewer.passport.beacon.other":"{count} verified sources; focus this node to inspect","viewer.passport.repository.open":"Open verified repository revision {revision}","viewer.passport.source.open":"Open verified source {path} at revision {revision}","viewer.passport.source.openLink":"Open ↗","viewer.passport.reach.upstream.one":"Trace {count} upstream authored node","viewer.passport.reach.upstream.other":"Trace {count} upstream authored nodes","viewer.passport.reach.downstream.one":"Trace {count} downstream authored node","viewer.passport.reach.downstream.other":"Trace {count} downstream authored nodes","viewer.passport.reach.noUpstream":"No upstream authored nodes","viewer.passport.reach.noDownstream":"No downstream authored nodes","viewer.passport.reach.status":"{direction} · {nodes} nodes · {links} links · max {hops} hops","viewer.route.eyebrow":"Route probe","viewer.route.start":"Choose a start node","viewer.route.start.find":"Find start","viewer.route.start.find.aria":"Find a route start","viewer.route.copy":"Copy link","viewer.route.copy.aria":"Copy link to traced route","viewer.route.clear":"Clear","viewer.route.clear.aria":"Clear route probe","viewer.route.traced":"Traced route","viewer.route.pickTwo":"Pick two semantic nodes on the diagram","viewer.route.pickOne":"Pick a semantic node on the diagram","viewer.route.controls":"Route journey controls","viewer.route.previous":"Previous route position","viewer.route.play":"Play route journey","viewer.route.pause":"Pause route journey","viewer.route.replay":"Replay route journey","viewer.route.next":"Next route position","viewer.route.journey":"Journey","viewer.route.pause.label":"Pause","viewer.route.replay.label":"Replay","viewer.route.overview":"Overview","viewer.route.overview.aria":"Show complete route overview","viewer.route.instructions":"Choose the source, then the destination. Direction matters.","viewer.route.destination":"Choose a destination from {label}","viewer.route.destination.find":"Find target","viewer.route.destination.find.aria":"Find a reachable route destination","viewer.route.differentDestination":"Choose a different destination","viewer.route.distinct":"A route needs two distinct semantic nodes.","viewer.route.unreachable":"No directed route to {label}","viewer.route.unreachable.detail":"{target} is not reachable from {source}. Pick a highlighted destination.","viewer.route.start.instructions":"Select the source. The next step will reveal only directed destinations.","viewer.route.copy.success":"Traced route link copied","viewer.route.copy.failed":"Could not copy traced route link","viewer.route.position":"Route position {index} of {total}: {label}","viewer.route.step":"Step {index} of {total} · {phase} · {label}","viewer.route.motionRequired":"Automatic journey requires Live motion","viewer.route.trigger.clear":"Clear traced route","viewer.route.overview.status":"{nodes} · {hops} · shortest authored route","viewer.route.overview.node.one":"{count} node","viewer.route.overview.node.other":"{count} nodes","viewer.route.overview.hop.one":"{count} directed hop","viewer.route.overview.hop.other":"{count} directed hops","viewer.route.phase.playing":"Playing","viewer.route.phase.complete":"Complete","viewer.route.phase.inspecting":"Inspecting","viewer.route.destination.count.one":"{count} directed destination available. Pick a highlighted node.","viewer.route.destination.count.other":"{count} directed destinations available. Pick a highlighted node.","viewer.route.noOutgoing":"No outgoing route starts here. Clear and choose another source.","viewer.route.result.title":"{source} to {target}","viewer.route.finder.source.title":"Choose route start","viewer.route.finder.source.placeholder":"Search route sources","viewer.route.finder.source.empty":"No matching route sources","viewer.route.finder.source.results":"Nodes that can start a route","viewer.route.finder.source.noun":"route sources","viewer.route.finder.source.badge":"start","viewer.route.finder.target.title":"Destination from {label}","viewer.route.finder.target.placeholder":"Search reachable destinations","viewer.route.finder.target.empty":"No matching reachable destinations","viewer.route.finder.target.results":"Reachable route destinations","viewer.route.finder.target.noun":"reachable destinations","viewer.route.hop.one":"{count} hop","viewer.route.hop.other":"{count} hops","viewer.lens.eyebrow":"Semantic lens","viewer.lens.title":"Compare system roles","viewer.lens.close":"Close semantic lens","viewer.lens.instruction":"Choose up to two semantic kinds. One reveals its real traffic; two compare only direct authored relationships.","viewer.lens.kinds":"Semantic kinds","viewer.lens.choose":"Choose a kind to inspect its nodes and touching relationships.","viewer.lens.copy":"Copy link to semantic lens","viewer.lens.clear":"Clear semantic lens","viewer.lens.open":"Open semantic lens","viewer.lens.openActive":"Open active semantic lens","viewer.lens.legend":"Semantic legend","viewer.lens.legend.inspect.one":"Inspect {label}, {count} node","viewer.lens.legend.inspect.other":"Inspect {label}, {count} nodes","viewer.lens.kind.count.one":"{label}, {count} node","viewer.lens.kind.count.other":"{label}, {count} nodes","viewer.lens.compare.one":"{first} → {second}: {forward} · {second} → {first}: {reverse} · {count} direct relationship","viewer.lens.compare.other":"{first} → {second}: {forward} · {second} → {first}: {reverse} · {count} direct relationships","viewer.lens.single":"{nodes} · {relationships} · connected peers remain visible","viewer.lens.node.one":"{count} {label} node","viewer.lens.node.other":"{count} {label} nodes","viewer.lens.relationship.one":"{count} touching relationship","viewer.lens.relationship.other":"{count} touching relationships","viewer.radar.title":"Semantic radar","viewer.radar.building":"Building overview","viewer.radar.openFull":"Open full semantic radar","viewer.radar.open":"Open radar","viewer.radar.close":"Close semantic radar","viewer.radar.surface":"Diagram overview. Click a node to focus it, or use arrow keys to pan.","viewer.radar.click":"Click node","viewer.radar.drag":"Drag to pan","viewer.radar.space":"Semantic radar needs more MAP space.","viewer.radar.nodes":"Semantic diagram radar nodes","viewer.radar.focus":"Focus {label} from Semantic Radar","viewer.radar.status":"{count} nodes · {viewport}","viewer.radar.fullMap":"{count} nodes · full map","viewer.radar.compacted":"Radar compacted to avoid covering the Semantic Passport or MAP controls.","viewer.radar.cancelWaiting":"Cancel semantic radar waiting for more MAP space","viewer.radar.needsSpace":"Semantic radar needs more visible MAP space","viewer.radar.viewport.full":"full map","viewer.radar.viewport.width":"{percent}% width","viewer.radar.viewport.scale":"{percent}% viewport","viewer.nav.controls":"Diagram view controls","viewer.nav.route":"Trace a directed route","viewer.nav.route.title":"Trace route (R)","viewer.nav.route.short":"PATH","viewer.nav.radar":"Open semantic radar","viewer.nav.radar.title":"Semantic radar (M)","viewer.nav.radar.short":"MAP","viewer.nav.lens":"Open semantic lens","viewer.nav.lens.title":"Semantic lens (L)","viewer.nav.lens.short":"LENS","viewer.nav.find":"Find a node","viewer.nav.find.title":"Find a node (/)","viewer.nav.guide":"Open diagram guide","viewer.nav.guide.title":"Diagram guide (?)","viewer.nav.zoomOut":"Zoom out","viewer.nav.zoomOut.title":"Zoom out (-)","viewer.nav.reset":"Reset diagram view","viewer.nav.reset.title":"Reset view (0)","viewer.nav.read":"READ","viewer.nav.zoomIn":"Zoom in","viewer.nav.zoomIn.title":"Zoom in (+)","viewer.nav.camera":"{hint}. Reset diagram view","viewer.nav.camera.title":"{semantic}{hint} · reset view (0)","viewer.nav.camera.semantic":"Semantic camera active · ","viewer.nav.level.map":"MAP","viewer.nav.level.read":"READ","viewer.nav.level.full":"FULL","viewer.nav.level.auto":"AUTO","viewer.nav.detail.map":"Zoom in to reveal relationship labels and node context","viewer.nav.detail.read":"Zoom in again to reveal tags and annotations","viewer.nav.detail.full":"Full diagram detail","viewer.intent.summary":"{label}. {out} outgoing, {in} incoming{loops}. {total} connections. Press Enter for details.","viewer.intent.loops":", {count} self loop","viewer.common.copied":"Copied","viewer.common.copyFailed":"Copy failed","viewer.common.copyLink":"Copy link","viewer.common.clear":"Clear","viewer.common.close":"Close"}}</script>
     <div class="guided-views no-print" id="guided-views" hidden aria-label="Guided diagram views">
@@ -5130,8 +5130,8 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
     <!-- Main Diagram -->
     <div class="diagram-container" data-detail-level="read"
          data-preset-badge-editorial-plate="ARCHIFY / PLATE 04">
-      <svg viewBox="0 0 1090 660" role="img" lang="en" aria-labelledby="archify-diagram-title archify-diagram-description" data-preset="classic" data-quality-profile="showcase">
-        <title id="archify-diagram-title">Luồng xử lý phê duyệt OrganizationAI</title>
+      <svg viewBox="0 0 1236 786" role="img" lang="en" aria-labelledby="archify-diagram-title archify-diagram-description" data-preset="classic" data-quality-profile="showcase">
+        <title id="archify-diagram-title">Auth workflow · Maker–AI–Checker decision path</title>
         <desc id="archify-diagram-description">A workflow diagram generated by Archify.</desc>
         <!-- Definitions -->
         <defs>
@@ -5156,237 +5156,271 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
         <rect width="100%" height="100%" fill="url(#grid)" />
 
         <!-- Swimlanes -->
-        <rect data-graph-role="structural-frame" data-composition-frame-kind="lane" data-composition-frame-id="lane-0" x="40" y="52" width="870" height="106" rx="10" class="c-lane" stroke-width="1"/>
+        <rect data-graph-role="structural-frame" data-composition-frame-kind="lane" data-composition-frame-id="lane-0" x="40" y="52" width="1118" height="106" rx="10" class="c-lane" stroke-width="1"/>
         <text x="54" y="74" class="t-dim" font-size="10" font-weight="600">01 / Maker</text>
 
-        <rect data-graph-role="structural-frame" data-composition-frame-kind="lane" data-composition-frame-id="lane-1" x="40" y="178" width="870" height="106" rx="10" class="c-lane" stroke-width="1"/>
-        <text x="54" y="200" class="t-dim" font-size="10" font-weight="600">02 / React UI · FastAPI · SQLite</text>
+        <rect data-graph-role="structural-frame" data-composition-frame-kind="lane" data-composition-frame-id="lane-1" x="40" y="178" width="1118" height="106" rx="10" class="c-lane" stroke-width="1"/>
+        <text x="54" y="200" class="t-dim" font-size="10" font-weight="600">02 / Auth workflow</text>
 
-        <rect data-graph-role="structural-frame" data-composition-frame-kind="lane" data-composition-frame-id="lane-2" x="40" y="304" width="870" height="106" rx="10" class="c-lane" stroke-width="1"/>
-        <text x="54" y="326" class="t-dim" font-size="10" font-weight="600">03 / AI evaluation pipeline</text>
+        <rect data-graph-role="structural-frame" data-composition-frame-kind="lane" data-composition-frame-id="lane-2" x="40" y="304" width="1118" height="106" rx="10" class="c-lane" stroke-width="1"/>
+        <text x="54" y="326" class="t-dim" font-size="10" font-weight="600">03 / AI + Decision Policy</text>
 
-        <rect data-graph-role="structural-frame" data-composition-frame-kind="lane" data-composition-frame-id="lane-3" x="40" y="430" width="870" height="106" rx="10" class="c-lane" stroke-width="1"/>
-        <text x="54" y="452" class="t-dim" font-size="10" font-weight="600">04 / Assigned Checker</text>
+        <rect data-graph-role="structural-frame" data-composition-frame-kind="lane" data-composition-frame-id="lane-3" x="40" y="430" width="1118" height="106" rx="10" class="c-lane" stroke-width="1"/>
+        <rect data-graph-role="structural-frame" data-composition-frame-kind="exception-lane" data-composition-frame-id="lane-3-exception" x="46" y="436" width="1106" height="94" rx="8" class="c-security-group" stroke-width="1"/>
+        <text x="54" y="452" class="t-security" font-size="10" font-weight="600">EX / System outcome / stop</text>
+
+        <rect data-graph-role="structural-frame" data-composition-frame-kind="lane" data-composition-frame-id="lane-4" x="40" y="556" width="1118" height="106" rx="10" class="c-lane" stroke-width="1"/>
+        <text x="54" y="578" class="t-dim" font-size="10" font-weight="600">05 / Assigned Checker</text>
 
         <!-- Phase headers -->
-        <line x1="48" y1="35" x2="317.2" y2="35" class="a-default" stroke-width="1.1"/>
-        <rect x="48" y="27" width="269.2" height="16" rx="4" class="c-mask"/>
-        <text x="182.6" y="39" class="t-muted" font-size="8" font-weight="600" text-anchor="middle">Draft + media</text>
-        <line x1="345.20000000000005" y1="35" x2="633.5999999999999" y2="35" class="a-emphasis" stroke-width="1.1"/>
-        <rect x="345.20000000000005" y="27" width="288.3999999999999" height="16" rx="4" class="c-mask"/>
-        <text x="489.4" y="39" class="t-backend" font-size="8" font-weight="600" text-anchor="middle">Submit + evaluate</text>
-        <line x1="661.5999999999999" y1="35" x2="897.1999999999999" y2="35" class="a-default" stroke-width="1.1"/>
-        <rect x="661.5999999999999" y="27" width="235.60000000000002" height="16" rx="4" class="c-mask"/>
-        <text x="779.3999999999999" y="39" class="t-muted" font-size="8" font-weight="600" text-anchor="middle">Decision + routing</text>
+        <line x1="57" y1="35" x2="550.2" y2="35" class="a-default" stroke-width="1.1"/>
+        <rect x="57" y="27" width="493.20000000000005" height="16" rx="4" class="c-mask"/>
+        <text x="303.6" y="39" class="t-muted" font-size="8" font-weight="600" text-anchor="middle">Prepare</text>
+        <line x1="578.2" y1="35" x2="895" y2="35" class="a-emphasis" stroke-width="1.1"/>
+        <rect x="578.2" y="27" width="316.79999999999995" height="16" rx="4" class="c-mask"/>
+        <text x="736.6" y="39" class="t-backend" font-size="8" font-weight="600" text-anchor="middle">Submit + freeze</text>
+        <line x1="1028.2" y1="35" x2="1125.8" y2="35" class="a-dashed" stroke-width="1.1"/>
+        <rect x="1028.2" y="27" width="97.6" height="16" rx="4" class="c-mask"/>
+        <text x="1077" y="39" class="t-messagebus" font-size="8" font-weight="600" text-anchor="middle">Evaluate + route</text>
 
         <!-- Workflow groups -->
 
 
         <!-- Edge paths -->
-        <path data-edge-from="commit" data-edge-to="evaluate" data-edge-label="ticket + snapshot" data-edge-key="0" data-composition-points="587.5999999999999,280;587.5999999999999,426;707.5999999999999,426;707.5999999999999,406" d="M 587.5999999999999 280 L 587.5999999999999 426 L 707.5999999999999 426 L 707.5999999999999 406" class="a-emphasis" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
-        <path data-edge-from="decision" data-edge-to="auto" data-edge-label="all auto-approval gates pass" data-edge-key="1" data-composition-points="897.1999999999999,246;1037.601,246;1037.601,372;897.1999999999999,372" d="M 897.1999999999999 246 L 1037.601 246 L 1037.601 372 L 897.1999999999999 372" class="a-emphasis" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
-        <path data-edge-from="decision" data-edge-to="review" data-edge-label="any gate fails or is unknown" data-edge-key="2" data-composition-points="851.1999999999999,212;851.1999999999999,196;802.3999999999999,196;802.3999999999999,498;753.5999999999999,498" d="M 851.1999999999999 212 L 851.1999999999999 196 L 802.3999999999999 196 L 802.3999999999999 498 L 753.5999999999999 498" class="a-security" stroke-width="1.4" marker-end="url(#arrowhead-security)"/>
-        <path data-edge-from="draft" data-edge-to="upload" data-edge-label="add attachment" data-edge-key="3" data-composition-points="140,120;225.2,120" d="M 140 120 L 225.2 120" class="a-emphasis" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
-        <path data-edge-from="evaluate" data-edge-to="decision" data-edge-label="structured result" data-edge-key="4" data-composition-points="707.5999999999999,338;707.5999999999999,294;789.1999999999999,294;789.1999999999999,239;805.1999999999999,239" d="M 707.5999999999999 338 L 707.5999999999999 294 L 789.1999999999999 294 L 789.1999999999999 239 L 805.1999999999999 239" class="a-emphasis" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
-        <path data-edge-from="evaluate" data-edge-to="review" data-edge-label="timeout / error / invalid schema → human review" data-edge-key="5" data-composition-points="661.5999999999999,379;20,379;20,498;661.5999999999999,498" d="M 661.5999999999999 379 L 20 379 L 20 498 L 661.5999999999999 498" class="a-security" stroke-width="1.4" marker-end="url(#arrowhead-security)"/>
-        <path data-edge-from="review" data-edge-to="human_approved" data-edge-label="approve" data-edge-key="6" data-composition-points="707.5999999999999,532;707.5999999999999,548;851.1999999999999,548;851.1999999999999,532" d="M 707.5999999999999 532 L 707.5999999999999 548 L 851.1999999999999 548 L 851.1999999999999 532" class="a-emphasis" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
-        <path data-edge-from="review" data-edge-to="revise" data-edge-label="reject with reason; Maker revises" data-edge-key="7" data-composition-points="707.5999999999999,464;707.5999999999999,448;1073.6,448;1073.6,120;897.1999999999999,120" d="M 707.5999999999999 464 L 707.5999999999999 448 L 1073.6 448 L 1073.6 120 L 897.1999999999999 120" class="a-security" stroke-width="1.4" marker-end="url(#arrowhead-security)"/>
-        <path data-edge-from="submit" data-edge-to="commit" data-edge-label="validate + persist" data-edge-key="8" data-composition-points="437.2,246;541.5999999999999,246" d="M 437.2 246 L 541.5999999999999 246" class="a-emphasis" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
-        <path data-edge-from="upload" data-edge-to="submit" data-edge-label="Maker submits" data-edge-key="9" data-composition-points="271.2,154;271.2,246;345.2,246" d="M 271.2 154 L 271.2 246 L 345.2 246" class="a-emphasis" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
+        <path data-edge-from="checker_action" data-edge-to="revise" data-edge-label="reject + reason" data-edge-key="0" data-edge-id="action-to-revise" data-composition-points="1149.2,624;1217.2,624;1217.2,120;1139.2,120" d="M 1149.2 624 L 1217.2 624 L 1217.2 120 L 1139.2 120" class="a-security" stroke-width="1.4" marker-end="url(#arrowhead-security)"/>
+        <path data-edge-from="checker" data-edge-to="submit" data-edge-label="gửi duyệt" data-edge-key="1" data-edge-id="checker-to-submit" data-composition-points="569.2,120;624.2,120;624.2,212" d="M 569.2 120 L 624.2 120 L 624.2 212" class="a-emphasis" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
+        <path data-edge-from="decision" data-edge-to="auto" data-edge-label="all gates pass" data-edge-key="2" data-edge-id="decision-to-auto" data-composition-points="1074.2,406;1074.2,498;914,498" d="M 1074.2 406 L 1074.2 498 L 914 498" class="a-emphasis" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
+        <path data-edge-from="decision" data-edge-to="human" data-edge-label="any gate fails" data-edge-key="3" data-edge-id="decision-to-human" data-composition-points="1009.2,372;929.1,372;929.1,574;849,574;849,590" d="M 1009.2 372 L 929.1 372 L 929.1 574 L 849 574 L 849 590" class="a-security" stroke-width="1.4" marker-end="url(#arrowhead-security)"/>
+        <path data-edge-from="draft" data-edge-to="attachment" data-edge-label="thêm tệp" data-edge-key="4" data-edge-id="draft-to-media" data-composition-points="158,120;214.39999999999998,120" d="M 158 120 L 214.39999999999998 120" class="a-emphasis" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
+        <path data-edge-from="evaluate" data-edge-to="decision" data-edge-label="validated output" data-edge-key="5" data-edge-id="evaluate-to-decision" data-composition-points="849,338;849,322;1074.2,322;1074.2,338" d="M 849 338 L 849 322 L 1074.2 322 L 1074.2 338" class="a-emphasis" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
+        <path data-edge-from="human" data-edge-to="checker_action" data-edge-label="Checker action" data-edge-key="6" data-edge-id="human-to-action" data-composition-points="849,658;849,674;1074.2,674;1074.2,658" d="M 849 658 L 849 674 L 1074.2 674 L 1074.2 658" class="a-emphasis" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
+        <path data-edge-from="attachment" data-edge-to="checker" data-edge-label="chọn người duyệt" data-edge-key="7" data-edge-id="media-to-checker" data-composition-points="344.4,120;439.2,120" d="M 344.4 120 L 439.2 120" class="a-default" stroke-width="1.4" marker-end="url(#arrowhead)"/>
+        <path data-edge-from="revise" data-edge-to="submit" data-edge-label="new version / round" data-edge-key="8" data-edge-id="revise-to-submit" data-composition-points="1009.2,120;993.2,120;993.2,168;624.2,168;624.2,212" d="M 1009.2 120 L 993.2 120 L 993.2 168 L 624.2 168 L 624.2 212" class="a-dashed" stroke-width="1.4" marker-end="url(#arrowhead-dashed)"/>
+        <path data-edge-from="snapshot" data-edge-to="evaluate" data-edge-label="read snapshot" data-edge-key="9" data-edge-id="snapshot-to-evaluate" data-composition-points="784,246;768,246;768,426;849,426;849,406" d="M 784 246 L 768 246 L 768 426 L 849 426 L 849 406" class="a-emphasis" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
+        <path data-edge-from="submit" data-edge-to="blocked" data-edge-label="invalid submission" data-edge-key="10" data-edge-id="submit-to-blocked" data-composition-points="559.2,253;20,253;20,498;559.2,498" d="M 559.2 253 L 20 253 L 20 498 L 559.2 498" class="a-security" stroke-width="1.4" marker-end="url(#arrowhead-security)"/>
+        <path data-edge-from="submit" data-edge-to="snapshot" data-edge-label="commit V + round" data-edge-key="11" data-edge-id="submit-to-snapshot" data-composition-points="624.2,212;624.2,196;849,196;849,212" d="M 624.2 212 L 624.2 196 L 849 196 L 849 212" class="a-emphasis" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
 
         <!-- Nodes -->
-        <g id="node-draft" data-node-id="draft" data-node-label="Save draft" tabindex="0" role="button" aria-label="Focus Save draft, Incomplete OK, Maker › Draft + media" aria-pressed="false" data-node-kind="external" data-node-sublabel="Incomplete OK" data-node-tag="CODE" data-node-context="Maker › Draft + media">
-          <title>Save draft · Incomplete OK · Maker › Draft + media · CODE</title>
-          <rect x="48" y="86" width="92" height="68" rx="6" class="c-mask"/>
-          <rect x="48" y="86" width="92" height="68" rx="6" class="c-external" stroke-width="1.5"/>
+        <g id="node-draft" data-node-id="draft" data-node-label="Lưu nháp" tabindex="0" role="button" aria-label="Focus Lưu nháp, Có thể thiếu, Maker › Prepare" aria-pressed="false" data-node-kind="external" data-node-sublabel="Có thể thiếu" data-node-tag="CODE" data-node-context="Maker › Prepare">
+          <title>Lưu nháp · Có thể thiếu · Maker › Prepare · CODE</title>
+          <rect x="48" y="86" width="110" height="68" rx="6" class="c-mask"/>
+          <rect x="48" y="86" width="110" height="68" rx="6" class="c-external" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="external" class="semantic-sigil s-external" transform="translate(54 92) scale(0.6875)">
             <rect x="2.5" y="5" width="8.5" height="8" rx="1.5"/>
             <path d="M8 2.5h5.5V8M13.5 2.5 7.5 8.5"/>
           </g>
-          <text data-node-label="" data-detail-anchor="" x="94" y="107" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Save draft</text>
-          <text data-detail="context" x="94" y="124" class="t-muted" font-size="8" text-anchor="middle">Incomplete OK</text>
-        <text data-detail="fine" x="94" y="142" class="t-external" font-size="7" text-anchor="middle">CODE</text>
+          <text data-node-label="" data-detail-anchor="" x="103" y="107" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Lưu nháp</text>
+          <text data-detail="context" x="103" y="124" class="t-muted" font-size="8" text-anchor="middle">Có thể thiếu</text>
+        <text data-detail="fine" x="103" y="142" class="t-external" font-size="7" text-anchor="middle">CODE</text>
         </g>
 
-        <g id="node-upload" data-node-id="upload" data-node-label="Upload media" tabindex="0" role="button" aria-label="Focus Upload media, PNG/JPEG/WebP, Maker › Draft + media" aria-pressed="false" data-node-kind="external" data-node-sublabel="PNG/JPEG/WebP" data-node-tag="CODE" data-node-context="Maker › Draft + media">
-          <title>Upload media · PNG/JPEG/WebP · Maker › Draft + media · CODE</title>
-          <rect x="225.2" y="86" width="92" height="68" rx="6" class="c-mask"/>
-          <rect x="225.2" y="86" width="92" height="68" rx="6" class="c-external" stroke-width="1.5"/>
-          <g aria-hidden="true" data-semantic-sigil="external" class="semantic-sigil s-external" transform="translate(231.2 92) scale(0.6875)">
+        <g id="node-attachment" data-node-id="attachment" data-node-label="Đính kèm media" tabindex="0" role="button" aria-label="Focus Đính kèm media, Hồ sơ cần tệp hợp lệ, Maker › Prepare" aria-pressed="false" data-node-kind="external" data-node-sublabel="Hồ sơ cần tệp hợp lệ" data-node-tag="CODE" data-node-context="Maker › Prepare">
+          <title>Đính kèm media · Hồ sơ cần tệp hợp lệ · Maker › Prepare · CODE</title>
+          <rect x="214.39999999999998" y="86" width="130" height="68" rx="6" class="c-mask"/>
+          <rect x="214.39999999999998" y="86" width="130" height="68" rx="6" class="c-external" stroke-width="1.5"/>
+          <g aria-hidden="true" data-semantic-sigil="external" class="semantic-sigil s-external" transform="translate(220.39999999999998 92) scale(0.6875)">
             <rect x="2.5" y="5" width="8.5" height="8" rx="1.5"/>
             <path d="M8 2.5h5.5V8M13.5 2.5 7.5 8.5"/>
           </g>
-          <text data-node-label="" data-detail-anchor="" x="271.2" y="107" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Upload media</text>
-          <text data-detail="context" x="271.2" y="124" class="t-muted" font-size="8" text-anchor="middle">PNG/JPEG/WebP</text>
-        <text data-detail="fine" x="271.2" y="142" class="t-external" font-size="7" text-anchor="middle">CODE</text>
+          <text data-node-label="" data-detail-anchor="" x="279.4" y="107" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Đính kèm media</text>
+          <text data-detail="context" x="279.4" y="124" class="t-muted" font-size="8" text-anchor="middle">Hồ sơ cần tệp hợp lệ</text>
+        <text data-detail="fine" x="279.4" y="142" class="t-external" font-size="7" text-anchor="middle">CODE</text>
         </g>
 
-        <g id="node-revise" data-node-id="revise" data-node-label="Sửa / gửi lại" tabindex="0" role="button" aria-label="Focus Sửa / gửi lại, Next V / round, Maker › Decision + routing" aria-pressed="false" data-node-kind="external" data-node-sublabel="Next V / round" data-node-tag="CODE" data-node-context="Maker › Decision + routing">
-          <title>Sửa / gửi lại · Next V / round · Maker › Decision + routing · CODE</title>
-          <rect x="805.1999999999999" y="86" width="92" height="68" rx="6" class="c-mask"/>
-          <rect x="805.1999999999999" y="86" width="92" height="68" rx="6" class="c-external" stroke-width="1.5"/>
-          <g aria-hidden="true" data-semantic-sigil="external" class="semantic-sigil s-external" transform="translate(811.1999999999999 92) scale(0.6875)">
+        <g id="node-checker" data-node-id="checker" data-node-label="Chọn Checker" tabindex="0" role="button" aria-label="Focus Chọn Checker, Đổi theo policy, Maker › Prepare" aria-pressed="false" data-node-kind="external" data-node-sublabel="Đổi theo policy" data-node-tag="CODE" data-node-context="Maker › Prepare">
+          <title>Chọn Checker · Đổi theo policy · Maker › Prepare · CODE</title>
+          <rect x="439.2" y="86" width="130" height="68" rx="6" class="c-mask"/>
+          <rect x="439.2" y="86" width="130" height="68" rx="6" class="c-external" stroke-width="1.5"/>
+          <g aria-hidden="true" data-semantic-sigil="external" class="semantic-sigil s-external" transform="translate(445.2 92) scale(0.6875)">
             <rect x="2.5" y="5" width="8.5" height="8" rx="1.5"/>
             <path d="M8 2.5h5.5V8M13.5 2.5 7.5 8.5"/>
           </g>
-          <text data-node-label="" data-detail-anchor="" x="851.1999999999999" y="107" class="t-primary" font-size="10.7" font-weight="600" text-anchor="middle">Sửa / gửi lại</text>
-          <text data-detail="context" x="851.1999999999999" y="124" class="t-muted" font-size="8" text-anchor="middle">Next V / round</text>
-        <text data-detail="fine" x="851.1999999999999" y="142" class="t-external" font-size="7" text-anchor="middle">CODE</text>
+          <text data-node-label="" data-detail-anchor="" x="504.2" y="107" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Chọn Checker</text>
+          <text data-detail="context" x="504.2" y="124" class="t-muted" font-size="8" text-anchor="middle">Đổi theo policy</text>
+        <text data-detail="fine" x="504.2" y="142" class="t-external" font-size="7" text-anchor="middle">CODE</text>
         </g>
 
-        <g id="node-submit" data-node-id="submit" data-node-label="Submit" tabindex="0" role="button" aria-label="Focus Submit, UI evaluates next, React UI · FastAPI · SQLite › Submit + evaluate" aria-pressed="false" data-node-kind="frontend" data-node-sublabel="UI evaluates next" data-node-tag="CODE" data-node-context="React UI · FastAPI · SQLite › Submit + evaluate">
-          <title>Submit · UI evaluates next · React UI · FastAPI · SQLite › Submit + evaluate · CODE</title>
-          <rect x="345.2" y="212" width="92" height="68" rx="6" class="c-mask"/>
-          <rect x="345.2" y="212" width="92" height="68" rx="6" class="c-frontend" stroke-width="1.5"/>
-          <g aria-hidden="true" data-semantic-sigil="frontend" class="semantic-sigil s-frontend" transform="translate(351.2 218) scale(0.6875)">
-            <rect x="2" y="3" width="12" height="10" rx="2"/>
-            <path d="M2 6.5h12"/>
-            <circle cx="4.1" cy="4.8" r=".7" class="sigil-fill"/>
-            <circle cx="6.3" cy="4.8" r=".7" class="sigil-fill"/>
+        <g id="node-revise" data-node-id="revise" data-node-label="Sửa và gửi lại" tabindex="0" role="button" aria-label="Focus Sửa và gửi lại, Version + round mới, Maker › Evaluate + route" aria-pressed="false" data-node-kind="external" data-node-sublabel="Version + round mới" data-node-tag="CODE" data-node-context="Maker › Evaluate + route">
+          <title>Sửa và gửi lại · Version + round mới · Maker › Evaluate + route · CODE</title>
+          <rect x="1009.2" y="86" width="130" height="68" rx="6" class="c-mask"/>
+          <rect x="1009.2" y="86" width="130" height="68" rx="6" class="c-external" stroke-width="1.5"/>
+          <g aria-hidden="true" data-semantic-sigil="external" class="semantic-sigil s-external" transform="translate(1015.2 92) scale(0.6875)">
+            <rect x="2.5" y="5" width="8.5" height="8" rx="1.5"/>
+            <path d="M8 2.5h5.5V8M13.5 2.5 7.5 8.5"/>
           </g>
-          <text data-node-label="" data-detail-anchor="" x="391.2" y="233" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Submit</text>
-          <text data-detail="context" x="391.2" y="250" class="t-muted" font-size="8" text-anchor="middle">UI evaluates next</text>
-        <text data-detail="fine" x="391.2" y="268" class="t-frontend" font-size="7" text-anchor="middle">CODE</text>
+          <text data-node-label="" data-detail-anchor="" x="1074.2" y="107" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Sửa và gửi lại</text>
+          <text data-detail="context" x="1074.2" y="124" class="t-muted" font-size="8" text-anchor="middle">Version + round mới</text>
+        <text data-detail="fine" x="1074.2" y="142" class="t-external" font-size="7" text-anchor="middle">CODE</text>
         </g>
 
-        <g id="node-commit" data-node-id="commit" data-node-label="Save version" tabindex="0" role="button" aria-label="Focus Save version, Round + eval ticket, React UI · FastAPI · SQLite › Submit + evaluate" aria-pressed="false" data-node-kind="backend" data-node-sublabel="Round + eval ticket" data-node-tag="CODE" data-node-context="React UI · FastAPI · SQLite › Submit + evaluate">
-          <title>Save version · Round + eval ticket · React UI · FastAPI · SQLite › Submit + evaluate · CODE</title>
-          <rect x="541.5999999999999" y="212" width="92" height="68" rx="6" class="c-mask"/>
-          <rect x="541.5999999999999" y="212" width="92" height="68" rx="6" class="c-backend" stroke-width="1.5"/>
-          <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(547.5999999999999 218) scale(0.6875)">
+        <g id="node-submit" data-node-id="submit" data-node-label="Gửi hồ sơ" tabindex="0" role="button" aria-label="Focus Gửi hồ sơ, Validate + authorize, Auth workflow › Submit + freeze" aria-pressed="false" data-node-kind="backend" data-node-sublabel="Validate + authorize" data-node-tag="CODE" data-node-context="Auth workflow › Submit + freeze">
+          <title>Gửi hồ sơ · Validate + authorize · Auth workflow › Submit + freeze · CODE</title>
+          <rect x="559.2" y="212" width="130" height="68" rx="6" class="c-mask"/>
+          <rect x="559.2" y="212" width="130" height="68" rx="6" class="c-backend" stroke-width="1.5"/>
+          <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(565.2 218) scale(0.6875)">
             <path d="M6 3 3 8l3 5M10 3l3 5-3 5"/>
           </g>
-          <text data-node-label="" data-detail-anchor="" x="587.5999999999999" y="233" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Save version</text>
-          <text data-detail="context" x="587.5999999999999" y="250" class="t-muted" font-size="7.3" text-anchor="middle">Round + eval ticket</text>
-        <text data-detail="fine" x="587.5999999999999" y="268" class="t-backend" font-size="7" text-anchor="middle">CODE</text>
+          <text data-node-label="" data-detail-anchor="" x="624.2" y="233" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Gửi hồ sơ</text>
+          <text data-detail="context" x="624.2" y="250" class="t-muted" font-size="8" text-anchor="middle">Validate + authorize</text>
+        <text data-detail="fine" x="624.2" y="268" class="t-backend" font-size="7" text-anchor="middle">CODE</text>
         </g>
 
-        <g id="node-decision" data-node-id="decision" data-node-label="Rule decision" tabindex="0" role="button" aria-label="Focus Rule decision, Budget + policy, React UI · FastAPI · SQLite › Decision + routing" aria-pressed="false" data-node-kind="backend" data-node-sublabel="Budget + policy" data-node-tag="CODE" data-node-context="React UI · FastAPI · SQLite › Decision + routing">
-          <title>Rule decision · Budget + policy · React UI · FastAPI · SQLite › Decision + routing · CODE</title>
-          <rect x="805.1999999999999" y="212" width="92" height="68" rx="6" class="c-mask"/>
-          <rect x="805.1999999999999" y="212" width="92" height="68" rx="6" class="c-backend" stroke-width="1.5"/>
-          <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(811.1999999999999 218) scale(0.6875)">
-            <path d="M6 3 3 8l3 5M10 3l3 5-3 5"/>
-          </g>
-          <text data-node-label="" data-detail-anchor="" x="851.1999999999999" y="233" class="t-primary" font-size="10.7" font-weight="600" text-anchor="middle">Rule decision</text>
-          <text data-detail="context" x="851.1999999999999" y="250" class="t-muted" font-size="8" text-anchor="middle">Budget + policy</text>
-        <text data-detail="fine" x="851.1999999999999" y="268" class="t-backend" font-size="7" text-anchor="middle">CODE</text>
-        </g>
-
-        <g id="node-evaluate" data-node-id="evaluate" data-node-label="Evaluate" tabindex="0" role="button" aria-label="Focus Evaluate, MockVLM in HTTP, AI evaluation pipeline › Decision + routing" aria-pressed="false" data-node-kind="backend" data-node-sublabel="MockVLM in HTTP" data-node-tag="CODE" data-node-context="AI evaluation pipeline › Decision + routing">
-          <title>Evaluate · MockVLM in HTTP · AI evaluation pipeline › Decision + routing · CODE</title>
-          <rect x="661.5999999999999" y="338" width="92" height="68" rx="6" class="c-mask"/>
-          <rect x="661.5999999999999" y="338" width="92" height="68" rx="6" class="c-backend" stroke-width="1.5"/>
-          <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(667.5999999999999 344) scale(0.6875)">
-            <path d="M6 3 3 8l3 5M10 3l3 5-3 5"/>
-          </g>
-          <text data-node-label="" data-detail-anchor="" x="707.5999999999999" y="359" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Evaluate</text>
-          <text data-detail="context" x="707.5999999999999" y="376" class="t-muted" font-size="8" text-anchor="middle">MockVLM in HTTP</text>
-        <text data-detail="fine" x="707.5999999999999" y="394" class="t-backend" font-size="7" text-anchor="middle">CODE</text>
-        </g>
-
-        <g id="node-auto" data-node-id="auto" data-node-label="Auto-approved" tabindex="0" role="button" aria-label="Focus Auto-approved, Seed policy only, AI evaluation pipeline › Decision + routing" aria-pressed="false" data-node-kind="backend" data-node-sublabel="Seed policy only" data-node-tag="CODE · seeded" data-node-context="AI evaluation pipeline › Decision + routing">
-          <title>Auto-approved · Seed policy only · AI evaluation pipeline › Decision + routing · CODE · seeded</title>
-          <rect x="805.1999999999999" y="338" width="92" height="68" rx="6" class="c-mask"/>
-          <rect x="805.1999999999999" y="338" width="92" height="68" rx="6" class="c-backend" stroke-width="1.5"/>
-          <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(811.1999999999999 344) scale(0.6875)">
-            <path d="M6 3 3 8l3 5M10 3l3 5-3 5"/>
-          </g>
-          <text data-node-label="" data-detail-anchor="" x="851.1999999999999" y="359" class="t-primary" font-size="10.7" font-weight="600" text-anchor="middle">Auto-approved</text>
-          <text data-detail="context" x="851.1999999999999" y="376" class="t-muted" font-size="8" text-anchor="middle">Seed policy only</text>
-        <text data-detail="fine" x="851.1999999999999" y="394" class="t-backend" font-size="7" text-anchor="middle">CODE · seeded</text>
-        </g>
-
-        <g id="node-review" data-node-id="review" data-node-label="Human review" tabindex="0" role="button" aria-label="Focus Human review, Reject needs reason, Assigned Checker › Decision + routing" aria-pressed="false" data-node-kind="security" data-node-sublabel="Reject needs reason" data-node-tag="CODE" data-node-context="Assigned Checker › Decision + routing">
-          <title>Human review · Reject needs reason · Assigned Checker › Decision + routing · CODE</title>
-          <rect x="661.5999999999999" y="464" width="92" height="68" rx="6" class="c-mask"/>
-          <rect x="661.5999999999999" y="464" width="92" height="68" rx="6" class="c-security" stroke-width="1.5"/>
-          <g aria-hidden="true" data-semantic-sigil="security" class="semantic-sigil s-security" transform="translate(667.5999999999999 470) scale(0.6875)">
-            <path d="M8 2.2 13 4v3.5c0 3.1-1.8 5.4-5 6.5-3.2-1.1-5-3.4-5-6.5V4Z"/>
-            <path d="m5.8 8 1.5 1.5 3-3"/>
-          </g>
-          <text data-node-label="" data-detail-anchor="" x="707.5999999999999" y="485" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Human review</text>
-          <text data-detail="context" x="707.5999999999999" y="502" class="t-muted" font-size="7.3" text-anchor="middle">Reject needs reason</text>
-        <text data-detail="fine" x="707.5999999999999" y="520" class="t-security" font-size="7" text-anchor="middle">CODE</text>
-        </g>
-
-        <g id="node-human_approved" data-node-id="human_approved" data-node-label="Human-approved" tabindex="0" role="button" aria-label="Focus Human-approved, Decision + audit, Assigned Checker › Decision + routing" aria-pressed="false" data-node-kind="database" data-node-sublabel="Decision + audit" data-node-tag="CODE" data-node-context="Assigned Checker › Decision + routing">
-          <title>Human-approved · Decision + audit · Assigned Checker › Decision + routing · CODE</title>
-          <rect x="805.1999999999999" y="464" width="92" height="68" rx="6" class="c-mask"/>
-          <rect x="805.1999999999999" y="464" width="92" height="68" rx="6" class="c-database" stroke-width="1.5"/>
-          <g aria-hidden="true" data-semantic-sigil="database" class="semantic-sigil s-database" transform="translate(811.1999999999999 470) scale(0.6875)">
+        <g id="node-snapshot" data-node-id="snapshot" data-node-label="Version + round" tabindex="0" role="button" aria-label="Focus Version + round, Input + config, Auth workflow › Submit + freeze" aria-pressed="false" data-node-kind="database" data-node-sublabel="Input + config" data-node-tag="CODE" data-node-context="Auth workflow › Submit + freeze">
+          <title>Version + round · Input + config · Auth workflow › Submit + freeze · CODE</title>
+          <rect x="784" y="212" width="130" height="68" rx="6" class="c-mask"/>
+          <rect x="784" y="212" width="130" height="68" rx="6" class="c-database" stroke-width="1.5"/>
+          <g aria-hidden="true" data-semantic-sigil="database" class="semantic-sigil s-database" transform="translate(790 218) scale(0.6875)">
             <ellipse cx="8" cy="4" rx="5" ry="2"/>
             <path d="M3 4v8c0 1.1 2.2 2 5 2s5-.9 5-2V4M3 8c0 1.1 2.2 2 5 2s5-.9 5-2"/>
           </g>
-          <text data-node-label="" data-detail-anchor="" x="851.1999999999999" y="485" class="t-primary" font-size="10" font-weight="600" text-anchor="middle">Human-approved</text>
-          <text data-detail="context" x="851.1999999999999" y="502" class="t-muted" font-size="8" text-anchor="middle">Decision + audit</text>
-        <text data-detail="fine" x="851.1999999999999" y="520" class="t-database" font-size="7" text-anchor="middle">CODE</text>
+          <text data-node-label="" data-detail-anchor="" x="849" y="233" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Version + round</text>
+          <text data-detail="context" x="849" y="250" class="t-muted" font-size="8" text-anchor="middle">Input + config</text>
+        <text data-detail="fine" x="849" y="268" class="t-database" font-size="7" text-anchor="middle">CODE</text>
+        </g>
+
+        <g id="node-evaluate" data-node-id="evaluate" data-node-label="Evaluate snapshot" tabindex="0" role="button" aria-label="Focus Evaluate snapshot, VLM, Media, Strategy, AI + Decision Policy › Submit + freeze" aria-pressed="false" data-node-kind="backend" data-node-sublabel="VLM, Media, Strategy" data-node-tag="CODE" data-node-context="AI + Decision Policy › Submit + freeze">
+          <title>Evaluate snapshot · VLM, Media, Strategy · AI + Decision Policy › Submit + freeze · CODE</title>
+          <rect x="784" y="338" width="130" height="68" rx="6" class="c-mask"/>
+          <rect x="784" y="338" width="130" height="68" rx="6" class="c-backend" stroke-width="1.5"/>
+          <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(790 344) scale(0.6875)">
+            <path d="M6 3 3 8l3 5M10 3l3 5-3 5"/>
+          </g>
+          <text data-node-label="" data-detail-anchor="" x="849" y="359" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Evaluate snapshot</text>
+          <text data-detail="context" x="849" y="376" class="t-muted" font-size="8" text-anchor="middle">VLM, Media, Strategy</text>
+        <text data-detail="fine" x="849" y="394" class="t-backend" font-size="7" text-anchor="middle">CODE</text>
+        </g>
+
+        <g id="node-decision" data-node-id="decision" data-node-label="Decision Policy" tabindex="0" role="button" aria-label="Focus Decision Policy, Budget + gates, AI + Decision Policy › Evaluate + route" aria-pressed="false" data-node-kind="security" data-node-sublabel="Budget + gates" data-node-tag="CODE · NO AUTO-REJECT" data-node-context="AI + Decision Policy › Evaluate + route">
+          <title>Decision Policy · Budget + gates · AI + Decision Policy › Evaluate + route · CODE · NO AUTO-REJECT</title>
+          <rect x="1009.2" y="338" width="130" height="68" rx="6" class="c-mask"/>
+          <rect x="1009.2" y="338" width="130" height="68" rx="6" class="c-security" stroke-width="1.5"/>
+          <g aria-hidden="true" data-semantic-sigil="security" class="semantic-sigil s-security" transform="translate(1015.2 344) scale(0.6875)">
+            <path d="M8 2.2 13 4v3.5c0 3.1-1.8 5.4-5 6.5-3.2-1.1-5-3.4-5-6.5V4Z"/>
+            <path d="m5.8 8 1.5 1.5 3-3"/>
+          </g>
+          <text data-node-label="" data-detail-anchor="" x="1074.2" y="359" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Decision Policy</text>
+          <text data-detail="context" x="1074.2" y="376" class="t-muted" font-size="8" text-anchor="middle">Budget + gates</text>
+        <text data-detail="fine" x="1074.2" y="394" class="t-security" font-size="7" text-anchor="middle">CODE · NO AUTO-REJECT</text>
+        </g>
+
+        <g id="node-blocked" data-node-id="blocked" data-node-label="Submit blocked" tabindex="0" role="button" aria-label="Focus Submit blocked, Invalid data / Checker, System outcome / stop › Submit + freeze" aria-pressed="false" data-node-kind="security" data-node-sublabel="Invalid data / Checker" data-node-tag="CODE" data-node-context="System outcome / stop › Submit + freeze">
+          <title>Submit blocked · Invalid data / Checker · System outcome / stop › Submit + freeze · CODE</title>
+          <rect x="559.2" y="464" width="130" height="68" rx="6" class="c-mask"/>
+          <rect x="559.2" y="464" width="130" height="68" rx="6" class="c-security" stroke-width="1.5"/>
+          <g aria-hidden="true" data-semantic-sigil="security" class="semantic-sigil s-security" transform="translate(565.2 470) scale(0.6875)">
+            <path d="M8 2.2 13 4v3.5c0 3.1-1.8 5.4-5 6.5-3.2-1.1-5-3.4-5-6.5V4Z"/>
+            <path d="m5.8 8 1.5 1.5 3-3"/>
+          </g>
+          <text data-node-label="" data-detail-anchor="" x="624.2" y="485" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Submit blocked</text>
+          <text data-detail="context" x="624.2" y="502" class="t-muted" font-size="8" text-anchor="middle">Invalid data / Checker</text>
+        <text data-detail="fine" x="624.2" y="520" class="t-security" font-size="7" text-anchor="middle">CODE</text>
+        </g>
+
+        <g id="node-auto" data-node-id="auto" data-node-label="Auto-approved" tabindex="0" role="button" aria-label="Focus Auto-approved, Gates pass; policy on, System outcome / stop › Submit + freeze" aria-pressed="false" data-node-kind="backend" data-node-sublabel="Gates pass; policy on" data-node-tag="CODE PATH · DEFAULT OFF" data-node-context="System outcome / stop › Submit + freeze">
+          <title>Auto-approved · Gates pass; policy on · System outcome / stop › Submit + freeze · CODE PATH · DEFAULT OFF</title>
+          <rect x="784" y="464" width="130" height="68" rx="6" class="c-mask"/>
+          <rect x="784" y="464" width="130" height="68" rx="6" class="c-backend" stroke-width="1.5"/>
+          <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(790 470) scale(0.6875)">
+            <path d="M6 3 3 8l3 5M10 3l3 5-3 5"/>
+          </g>
+          <text data-node-label="" data-detail-anchor="" x="849" y="485" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Auto-approved</text>
+          <text data-detail="context" x="849" y="502" class="t-muted" font-size="8" text-anchor="middle">Gates pass; policy on</text>
+        <text data-detail="fine" x="849" y="520" class="t-backend" font-size="7" text-anchor="middle">CODE PATH · DEFAULT OFF</text>
+        </g>
+
+        <g id="node-human" data-node-id="human" data-node-label="Human Review" tabindex="0" role="button" aria-label="Focus Human Review, Pending Checker review, Assigned Checker › Submit + freeze" aria-pressed="false" data-node-kind="security" data-node-sublabel="Pending Checker review" data-node-tag="CODE" data-node-context="Assigned Checker › Submit + freeze">
+          <title>Human Review · Pending Checker review · Assigned Checker › Submit + freeze · CODE</title>
+          <rect x="784" y="590" width="130" height="68" rx="6" class="c-mask"/>
+          <rect x="784" y="590" width="130" height="68" rx="6" class="c-security" stroke-width="1.5"/>
+          <g aria-hidden="true" data-semantic-sigil="security" class="semantic-sigil s-security" transform="translate(790 596) scale(0.6875)">
+            <path d="M8 2.2 13 4v3.5c0 3.1-1.8 5.4-5 6.5-3.2-1.1-5-3.4-5-6.5V4Z"/>
+            <path d="m5.8 8 1.5 1.5 3-3"/>
+          </g>
+          <text data-node-label="" data-detail-anchor="" x="849" y="611" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Human Review</text>
+          <text data-detail="context" x="849" y="628" class="t-muted" font-size="8" text-anchor="middle">Pending Checker review</text>
+        <text data-detail="fine" x="849" y="646" class="t-security" font-size="7" text-anchor="middle">CODE</text>
+        </g>
+
+        <g id="node-checker_action" data-node-id="checker_action" data-node-label="Checker decision" tabindex="0" role="button" aria-label="Focus Checker decision, Reason on reject / override, Assigned Checker › Evaluate + route" aria-pressed="false" data-node-kind="backend" data-node-sublabel="Reason on reject / override" data-node-tag="CODE" data-node-context="Assigned Checker › Evaluate + route">
+          <title>Checker decision · Reason on reject / override · Assigned Checker › Evaluate + route · CODE</title>
+          <rect x="999.2" y="590" width="150" height="68" rx="6" class="c-mask"/>
+          <rect x="999.2" y="590" width="150" height="68" rx="6" class="c-backend" stroke-width="1.5"/>
+          <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(1005.2 596) scale(0.6875)">
+            <path d="M6 3 3 8l3 5M10 3l3 5-3 5"/>
+          </g>
+          <text data-node-label="" data-detail-anchor="" x="1074.2" y="611" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Checker decision</text>
+          <text data-detail="context" x="1074.2" y="628" class="t-muted" font-size="8" text-anchor="middle">Reason on reject / override</text>
+        <text data-detail="fine" x="1074.2" y="646" class="t-backend" font-size="7" text-anchor="middle">CODE</text>
         </g>
 
         <!-- Edge labels -->
-        <g data-detail="context" data-edge-from="commit" data-edge-to="evaluate" data-edge-label="ticket + snapshot" data-edge-key="0">
-          <rect x="601.8" y="406" width="91.6" height="14" rx="3" class="c-mask"/>
-          <text x="647.5999999999999" y="416" class="t-backend" font-size="8" text-anchor="middle">ticket + snapshot</text>
+        <g data-detail="context" data-edge-from="checker_action" data-edge-to="revise" data-edge-label="reject + reason" data-edge-key="0" data-edge-id="action-to-revise">
+          <rect x="1137.2" y="100" width="82" height="14" rx="3" class="c-mask"/>
+          <text x="1178.2" y="110" class="t-security" font-size="8" text-anchor="middle">reject + reason</text>
         </g>
-        <g data-detail="context" data-edge-from="decision" data-edge-to="auto" data-edge-label="all auto-approval gates pass" data-edge-key="1">
-          <rect x="895.2004999999999" y="226" width="144.4" height="14" rx="3" class="c-mask"/>
-          <text x="967.4005" y="236" class="t-backend" font-size="8" text-anchor="middle">all auto-approval gates pass</text>
+        <g data-detail="context" data-edge-from="checker" data-edge-to="submit" data-edge-label="gửi duyệt" data-edge-key="1" data-edge-id="checker-to-submit">
+          <rect x="570.1" y="100" width="53.199999999999996" height="14" rx="3" class="c-mask"/>
+          <text x="596.7" y="110" class="t-backend" font-size="8" text-anchor="middle">gửi duyệt</text>
         </g>
-        <g data-detail="context" data-edge-from="decision" data-edge-to="review" data-edge-label="any gate fails or is unknown" data-edge-key="2">
-          <rect x="754.5999999999999" y="176" width="144.4" height="14" rx="3" class="c-mask"/>
-          <text x="826.8" y="186" class="t-security" font-size="8" text-anchor="middle">any gate fails or is unknown</text>
+        <g data-detail="context" data-edge-from="decision" data-edge-to="auto" data-edge-label="all gates pass" data-edge-key="2" data-edge-id="decision-to-auto">
+          <rect x="955.5" y="478" width="77.2" height="14" rx="3" class="c-mask"/>
+          <text x="994.1" y="488" class="t-backend" font-size="8" text-anchor="middle">all gates pass</text>
         </g>
-        <g data-detail="context" data-edge-from="draft" data-edge-to="upload" data-edge-label="add attachment" data-edge-key="3">
-          <rect x="144" y="100" width="77.2" height="14" rx="3" class="c-mask"/>
-          <text x="182.6" y="110" class="t-backend" font-size="8" text-anchor="middle">add attachment</text>
+        <g data-detail="context" data-edge-from="decision" data-edge-to="human" data-edge-label="any gate fails" data-edge-key="3" data-edge-id="decision-to-human">
+          <rect x="930.5500000000001" y="352" width="77.2" height="14" rx="3" class="c-mask"/>
+          <text x="969.1500000000001" y="362" class="t-security" font-size="8" text-anchor="middle">any gate fails</text>
         </g>
-        <g data-detail="context" data-edge-from="evaluate" data-edge-to="decision" data-edge-label="structured result" data-edge-key="4">
-          <rect x="702.5999999999999" y="274" width="91.6" height="14" rx="3" class="c-mask"/>
-          <text x="748.3999999999999" y="284" class="t-backend" font-size="8" text-anchor="middle">structured result</text>
+        <g data-detail="context" data-edge-from="draft" data-edge-to="attachment" data-edge-label="thêm tệp" data-edge-key="4" data-edge-id="draft-to-media">
+          <rect x="162" y="100" width="48.4" height="14" rx="3" class="c-mask"/>
+          <text x="186.2" y="110" class="t-backend" font-size="8" text-anchor="middle">thêm tệp</text>
         </g>
-        <g data-detail="context" data-edge-from="evaluate" data-edge-to="review" data-edge-label="timeout / error / invalid schema → human review" data-edge-key="5">
-          <rect x="222.99999999999994" y="359" width="235.6" height="14" rx="3" class="c-mask"/>
-          <text x="340.79999999999995" y="369" class="t-security" font-size="8" text-anchor="middle">timeout / error / invalid schema → human review</text>
+        <g data-detail="context" data-edge-from="evaluate" data-edge-to="decision" data-edge-label="validated output" data-edge-key="5" data-edge-id="evaluate-to-decision">
+          <rect x="918.2" y="302" width="86.8" height="14" rx="3" class="c-mask"/>
+          <text x="961.6" y="312" class="t-backend" font-size="8" text-anchor="middle">validated output</text>
         </g>
-        <g data-detail="context" data-edge-from="review" data-edge-to="human_approved" data-edge-label="approve" data-edge-key="6">
-          <rect x="757.5999999999999" y="528" width="43.6" height="14" rx="3" class="c-mask"/>
-          <text x="779.3999999999999" y="538" class="t-backend" font-size="8" text-anchor="middle">approve</text>
+        <g data-detail="context" data-edge-from="human" data-edge-to="checker_action" data-edge-label="Checker action" data-edge-key="6" data-edge-id="human-to-action">
+          <rect x="923" y="654" width="77.2" height="14" rx="3" class="c-mask"/>
+          <text x="961.6" y="664" class="t-backend" font-size="8" text-anchor="middle">Checker action</text>
         </g>
-        <g data-detail="context" data-edge-from="review" data-edge-to="revise" data-edge-label="reject with reason; Maker revises" data-edge-key="7">
-          <rect x="806.3999999999999" y="428" width="168.4" height="14" rx="3" class="c-mask"/>
-          <text x="890.5999999999999" y="438" class="t-security" font-size="8" text-anchor="middle">reject with reason; Maker revises</text>
+        <g data-detail="context" data-edge-from="attachment" data-edge-to="checker" data-edge-label="chọn người duyệt" data-edge-key="7" data-edge-id="media-to-checker">
+          <rect x="348.4" y="100" width="86.8" height="14" rx="3" class="c-mask"/>
+          <text x="391.79999999999995" y="110" class="t-muted" font-size="8" text-anchor="middle">chọn người duyệt</text>
         </g>
-        <g data-detail="context" data-edge-from="submit" data-edge-to="commit" data-edge-label="validate + persist" data-edge-key="8">
-          <rect x="441.2" y="226" width="96.39999999999999" height="14" rx="3" class="c-mask"/>
-          <text x="489.4" y="236" class="t-backend" font-size="8" text-anchor="middle">validate + persist</text>
+        <g data-detail="context" data-edge-from="revise" data-edge-to="submit" data-edge-label="new version / round" data-edge-key="8" data-edge-id="revise-to-submit">
+          <rect x="758.1" y="148" width="101.2" height="14" rx="3" class="c-mask"/>
+          <text x="808.7" y="158" class="t-database" font-size="8" text-anchor="middle">new version / round</text>
         </g>
-        <g data-detail="context" data-edge-from="upload" data-edge-to="submit" data-edge-label="Maker submits" data-edge-key="9">
-          <rect x="272" y="226" width="72.4" height="14" rx="3" class="c-mask"/>
-          <text x="308.2" y="236" class="t-backend" font-size="8" text-anchor="middle">Maker submits</text>
+        <g data-detail="context" data-edge-from="snapshot" data-edge-to="evaluate" data-edge-label="read snapshot" data-edge-key="9" data-edge-id="snapshot-to-evaluate">
+          <rect x="772.3" y="406" width="72.4" height="14" rx="3" class="c-mask"/>
+          <text x="808.5" y="416" class="t-backend" font-size="8" text-anchor="middle">read snapshot</text>
+        </g>
+        <g data-detail="context" data-edge-from="submit" data-edge-to="blocked" data-edge-label="invalid submission" data-edge-key="10" data-edge-id="submit-to-blocked">
+          <rect x="241.40000000000003" y="233" width="96.39999999999999" height="14" rx="3" class="c-mask"/>
+          <text x="289.6" y="243" class="t-security" font-size="8" text-anchor="middle">invalid submission</text>
+        </g>
+        <g data-detail="context" data-edge-from="submit" data-edge-to="snapshot" data-edge-label="commit V + round" data-edge-key="11" data-edge-id="submit-to-snapshot">
+          <rect x="693.2" y="176" width="86.8" height="14" rx="3" class="c-mask"/>
+          <text x="736.6" y="186" class="t-backend" font-size="8" text-anchor="middle">commit V + round</text>
         </g>
 
         <!-- Legend -->
         <g data-legend="" data-legend-bridge="">
-          <text x="20" y="560" class="t-primary" font-size="12" font-weight="650">Legend</text>
-          <g data-legend-semantic-kind="frontend" data-legend-kind="frontend" data-legend-label="User UI" data-legend-x="20" data-legend-baseline="580" data-legend-width="74">
-            <rect x="20" y="572" width="14" height="9" rx="2" class="c-frontend" stroke-width="1"/>
-            <text x="42" y="580" class="t-muted" font-size="7.5" font-weight="500">User UI</text>
+          <text x="20" y="686" class="t-primary" font-size="12" font-weight="650">Legend</text>
+          <g data-legend-semantic-kind="backend" data-legend-kind="backend" data-legend-label="Agent logic" data-legend-x="20" data-legend-baseline="706" data-legend-width="91">
+            <rect x="20" y="698" width="14" height="9" rx="2" class="c-backend" stroke-width="1"/>
+            <text x="42" y="706" class="t-muted" font-size="7.5" font-weight="500">Agent logic</text>
           </g>
-          <g data-legend-semantic-kind="backend" data-legend-kind="backend" data-legend-label="Agent logic" data-legend-x="101" data-legend-baseline="580" data-legend-width="91">
-            <rect x="101" y="572" width="14" height="9" rx="2" class="c-backend" stroke-width="1"/>
-            <text x="123" y="580" class="t-muted" font-size="7.5" font-weight="500">Agent logic</text>
+          <g data-legend-semantic-kind="security" data-legend-kind="security" data-legend-label="Policy" data-legend-x="118" data-legend-baseline="706" data-legend-width="70">
+            <rect x="118" y="698" width="14" height="9" rx="2" class="c-security" stroke-width="1"/>
+            <text x="140" y="706" class="t-muted" font-size="7.5" font-weight="500">Policy</text>
           </g>
-          <g data-legend-semantic-kind="security" data-legend-kind="security" data-legend-label="Policy" data-legend-x="199" data-legend-baseline="580" data-legend-width="70">
-            <rect x="199" y="572" width="14" height="9" rx="2" class="c-security" stroke-width="1"/>
-            <text x="221" y="580" class="t-muted" font-size="7.5" font-weight="500">Policy</text>
+          <g data-legend-semantic-kind="database" data-legend-kind="database" data-legend-label="Context / trace" data-legend-x="195" data-legend-baseline="706" data-legend-width="109">
+            <rect x="195" y="698" width="14" height="9" rx="2" class="c-database" stroke-width="1"/>
+            <text x="217" y="706" class="t-muted" font-size="7.5" font-weight="500">Context / trace</text>
           </g>
-          <g data-legend-semantic-kind="database" data-legend-kind="database" data-legend-label="Context / trace" data-legend-x="276" data-legend-baseline="580" data-legend-width="109">
-            <rect x="276" y="572" width="14" height="9" rx="2" class="c-database" stroke-width="1"/>
-            <text x="298" y="580" class="t-muted" font-size="7.5" font-weight="500">Context / trace</text>
-          </g>
-          <g data-legend-semantic-kind="external" data-legend-kind="external" data-legend-label="External system" data-legend-x="392" data-legend-baseline="580" data-legend-width="109">
-            <rect x="392" y="572" width="14" height="9" rx="2" class="c-external" stroke-width="1"/>
-            <text x="414" y="580" class="t-muted" font-size="7.5" font-weight="500">External system</text>
+          <g data-legend-semantic-kind="external" data-legend-kind="external" data-legend-label="External system" data-legend-x="311" data-legend-baseline="706" data-legend-width="109">
+            <rect x="311" y="698" width="14" height="9" rx="2" class="c-external" stroke-width="1"/>
+            <text x="333" y="706" class="t-muted" font-size="7.5" font-weight="500">External system</text>
           </g>
         </g>
       </svg>
@@ -5577,25 +5611,37 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
     <div class="cards">
       <div class="card">
         <div class="card-header">
-          <div class="card-dot emerald"></div>
-          <h3>CODE · HTTP demo</h3>
+          <div class="card-dot cyan"></div>
+          <h3>Commit before inference</h3>
         </div>
         <ul>
-          <li>&bull; submit_plan stores immutable snapshot, version, round and evaluation ticket before evaluation; Maker draft/upload use API.</li>
-          <li>&bull; HTTP path uses MockVLMProvider. Timeout/error/malformed output routes to review; the rules engine validates evidence/schema and budget deterministically.</li>
-          <li>&bull; Checker decision requires assignment; rejection needs a reason. Resubmission creates a new version/round. HTTP auto-approval is off by default; seed enables a scenario.</li>
-          <li>&bull; Code: src/backend/api/app.py · src/backend/application/workflow.py · src/backend/rules/decision.py · src/ai_pipeline/orchestrator.py · src/backend/seed_demo.py</li>
+          <li>&bull; Successful submit commits the immutable version, approval round, configuration snapshot, evaluation run and audit before provider work.</li>
+          <li>&bull; VLM consumes snapshot attachment bytes; Media and Strategy validate structured outputs against saved policy/rubric and evidence.</li>
+          <li>&bull; AI/provider failure does not roll back a committed submission; it routes an eligible active round to Human Review.</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-dot rose"></div>
+          <h3>Decision and human authority</h3>
+        </div>
+        <ul>
+          <li>&bull; Decision Policy applies deterministic budget, authority, evidence, confidence and state gates; failed or unknown checks route to HUMAN_REVIEW_REQUIRED.</li>
+          <li>&bull; Runtime engine outcomes are AUTO_APPROVED or HUMAN_REVIEW_REQUIRED. AI auto-reject is unsupported; only the assigned Checker can record REJECTED.</li>
+          <li>&bull; Checker rejection requires a reason. An action that overrides the stored AI recommendation requires an override reason.</li>
         </ul>
       </div>
 
       <div class="card">
         <div class="card-header">
           <div class="card-dot amber"></div>
-          <h3>DOC · not separate runtime steps</h3>
+          <h3>Code support vs enabled policy</h3>
         </div>
         <ul>
-          <li>&bull; README/scope describe Local VLM plus dedicated Media Compliance and Strategy Feasibility agents; HTTP currently uses MockVLMProvider, and LocalVLM inference is not configured.</li>
-          <li>&bull; Production authentication is not implemented. Sources: README.md · docs/scope-phase-1.md · src/ai_pipeline/providers/openai_provider.py</li>
+          <li>&bull; The code contains a controlled AUTO_APPROVED path; the default unconfigured Auth policy disables it.</li>
+          <li>&bull; Judge Demo seed policy is separate. Auth staging is configuration only and has no approved inference/policy setup.</li>
+          <li>&bull; No live production auto-approval or inference status was verified on 2026-10-17.</li>
         </ul>
       </div>
     </div>

@@ -1,0 +1,511 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "KIẾN TRÚC HỆ THỐNG – MÔ HÌNH TRIỂN KHAI",
+    "quality_profile": "showcase",
+    "viewBox": [
+      1240,
+      1100
+    ],
+    "repository": {
+      "url": "https://github.com/bikhoa142007-hash/OrganizationAI",
+      "provider": "github",
+      "link_mode": "local-only",
+      "revision": "3c4d982cfad3ca27f54f366c0a7f21b2838c1cf1"
+    },
+    "views": [
+      {
+        "id": "auth-data",
+        "label": "Auth và dữ liệu",
+        "focus": [
+          "browser",
+          "auth_web",
+          "auth_api",
+          "auth_postgres"
+        ]
+      },
+      {
+        "id": "inference-boundary",
+        "label": "Inference qua ranh giới ngoài",
+        "focus": [
+          "auth_api",
+          "cloudflare_tunnel",
+          "bearer_proxy",
+          "ollama_local"
+        ]
+      },
+      {
+        "id": "judge-demo",
+        "label": "Judge Demo riêng",
+        "focus": [
+          "auth_web",
+          "demo_api",
+          "mock_vlm",
+          "demo_sqlite"
+        ]
+      }
+    ]
+  },
+  "components": [
+    {
+      "id": "browser",
+      "type": "external",
+      "label": "Maker / Checker",
+      "pos": [
+        40,
+        245
+      ],
+      "size": [
+        160,
+        70
+      ],
+      "tag": "USER SESSION"
+    },
+    {
+      "id": "auth_web",
+      "type": "frontend",
+      "label": "React Auth web",
+      "tag": "CODE / CONFIG ONLY",
+      "sources": [
+        {
+          "path": "frontend/src/routes/AppRoutes.tsx",
+          "label": "Auth routes"
+        },
+        {
+          "path": "deployment/render.auth-staging.yaml",
+          "label": "Auth web config"
+        }
+      ],
+      "pos": [
+        300,
+        245
+      ],
+      "size": [
+        190,
+        78
+      ]
+    },
+    {
+      "id": "auth_api",
+      "type": "backend",
+      "label": "FastAPI Auth",
+      "tag": "CODE / STAGING CONFIG",
+      "sources": [
+        {
+          "path": "src/backend/api/auth_workflow.py",
+          "label": "Workflow API"
+        },
+        {
+          "path": "src/backend/application/auth_workflow.py",
+          "label": "Submit + persist"
+        },
+        {
+          "path": "src/ai_pipeline/authenticated_orchestrator.py",
+          "label": "AI orchestration"
+        }
+      ],
+      "pos": [
+        600,
+        245
+      ],
+      "size": [
+        235,
+        85
+      ]
+    },
+    {
+      "id": "auth_postgres",
+      "type": "database",
+      "label": "PostgreSQL",
+      "tag": "AUTH DATA",
+      "sources": [
+        {
+          "path": "src/backend/db/session.py",
+          "label": "PostgreSQL"
+        },
+        {
+          "path": "src/backend/db/models/auth_workflow.py",
+          "label": "Workflow records"
+        }
+      ],
+      "pos": [
+        930,
+        420
+      ],
+      "size": [
+        190,
+        78
+      ]
+    },
+    {
+      "id": "cloudflare_tunnel",
+      "type": "security",
+      "label": "Cloudflare Tunnel",
+      "tag": "UNVERIFIED EXTERNAL",
+      "pos": [
+        930,
+        540
+      ],
+      "size": [
+        190,
+        78
+      ]
+    },
+    {
+      "id": "ollama_local",
+      "type": "external",
+      "label": "Ollama runtime",
+      "tag": "UNVERIFIED EXTERNAL",
+      "pos": [
+        932.5,
+        820
+      ],
+      "size": [
+        185,
+        78
+      ]
+    },
+    {
+      "id": "checker",
+      "type": "external",
+      "label": "Assigned Checker",
+      "tag": "ROLE-CHECKED",
+      "sources": [
+        {
+          "path": "src/backend/api/auth_workflow.py",
+          "label": "Checker endpoint"
+        },
+        {
+          "path": "src/backend/application/auth_workflow.py",
+          "label": "Authorization"
+        }
+      ],
+      "pos": [
+        600,
+        420
+      ],
+      "size": [
+        235,
+        78
+      ]
+    },
+    {
+      "id": "demo_api",
+      "type": "backend",
+      "label": "Judge Demo FastAPI",
+      "tag": "MOCK / CONFIG ONLY",
+      "sources": [
+        {
+          "path": "render.yaml",
+          "label": "Root Blueprint"
+        },
+        {
+          "path": "src/backend/api/app.py",
+          "label": "Demo routes"
+        }
+      ],
+      "pos": [
+        300,
+        760
+      ],
+      "size": [
+        235,
+        78
+      ]
+    },
+    {
+      "id": "mock_vlm",
+      "type": "external",
+      "label": "Mock VLM",
+      "tag": "NO OLLAMA",
+      "sources": [
+        {
+          "path": "src/ai_pipeline/providers/mock.py",
+          "label": "Mock provider"
+        },
+        {
+          "path": "src/backend/api/app.py",
+          "label": "Demo wiring"
+        }
+      ],
+      "pos": [
+        600,
+        760
+      ],
+      "size": [
+        190,
+        78
+      ]
+    },
+    {
+      "id": "demo_sqlite",
+      "type": "database",
+      "label": "Judge Demo SQLite",
+      "tag": "DEMO PERSISTENCE",
+      "sources": [
+        {
+          "path": "src/backend/demo.py",
+          "label": "Demo database"
+        },
+        {
+          "path": "deployment/start_backend.py",
+          "label": "Hosted launcher"
+        },
+        {
+          "path": "render.yaml",
+          "label": "Render config"
+        }
+      ],
+      "pos": [
+        300,
+        920
+      ],
+      "size": [
+        235,
+        78
+      ]
+    },
+    {
+      "id": "bearer_proxy",
+      "type": "security",
+      "label": "Bearer proxy",
+      "tag": "UNVERIFIED EXTERNAL",
+      "pos": [
+        930,
+        680
+      ],
+      "size": [
+        190,
+        78
+      ]
+    },
+    {
+      "id": "demo_web",
+      "type": "frontend",
+      "label": "React Demo web",
+      "tag": "CONFIG ONLY",
+      "pos": [
+        25,
+        760
+      ],
+      "size": [
+        190,
+        78
+      ],
+      "sources": [
+        {
+          "path": "frontend/src/routes/AppRoutes.tsx",
+          "label": "Demo routes"
+        },
+        {
+          "path": "render.yaml",
+          "label": "Demo web config"
+        }
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "Browser",
+      "wraps": [
+        "browser"
+      ],
+      "pad": 18
+    },
+    {
+      "kind": "region",
+      "label": "Render Auth staging · CONFIG ONLY",
+      "wraps": [
+        "auth_web",
+        "auth_api",
+        "auth_postgres"
+      ],
+      "pad": 20
+    },
+    {
+      "kind": "region",
+      "label": "External inference path · UNVERIFIED",
+      "wraps": [
+        "cloudflare_tunnel",
+        "bearer_proxy",
+        "ollama_local"
+      ],
+      "pad": 14
+    },
+    {
+      "kind": "region",
+      "label": "Render Judge Demo root · CONFIG ONLY",
+      "wraps": [
+        "demo_web",
+        "demo_api",
+        "mock_vlm",
+        "demo_sqlite"
+      ],
+      "pad": 20
+    }
+  ],
+  "connections": [
+    {
+      "id": "browser_to_auth",
+      "from": "browser",
+      "to": "auth_web",
+      "label": "HTTPS",
+      "variant": "emphasis"
+    },
+    {
+      "id": "web_to_api",
+      "from": "auth_web",
+      "to": "auth_api",
+      "label": "HTTPS",
+      "variant": "emphasis"
+    },
+    {
+      "id": "api_to_db",
+      "from": "auth_api",
+      "to": "auth_postgres",
+      "label": "SQL",
+      "variant": "security",
+      "fromSide": "right",
+      "toSide": "top",
+      "via": [
+        [905, 287.5],
+        [905, 390],
+        [1025, 390]
+      ],
+      "labelAt": [
+        970,
+        370
+      ]
+    },
+    {
+      "id": "api_to_checker",
+      "from": "auth_api",
+      "to": "checker",
+      "label": "Human Review",
+      "variant": "emphasis",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "route": "straight",
+      "labelAt": [
+        800,
+        375
+      ]
+    },
+    {
+      "id": "api_to_tunnel",
+      "from": "auth_api",
+      "to": "cloudflare_tunnel",
+      "label": "Conditional HTTPS",
+      "variant": "dashed",
+      "fromSide": "right",
+      "toSide": "top",
+      "via": [
+        [880, 287.5],
+        [880, 520],
+        [1025, 520]
+      ],
+      "labelAt": [
+        850,
+        350
+      ]
+    },
+    {
+      "id": "tunnel_to_proxy",
+      "from": "cloudflare_tunnel",
+      "to": "bearer_proxy",
+      "label": "origin ?",
+      "variant": "dashed",
+      "labelAt": [
+        1150,
+        650
+      ]
+    },
+    {
+      "id": "proxy_to_ollama",
+      "from": "bearer_proxy",
+      "to": "ollama_local",
+      "label": "forward ?",
+      "variant": "dashed",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "route": "straight",
+      "labelAt": [
+        1150,
+        790
+      ]
+    },
+    {
+      "id": "browser_to_demo",
+      "from": "browser",
+      "to": "demo_web",
+      "label": "HTTPS",
+      "variant": "dashed",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "route": "straight",
+      "labelAt": [
+        120,
+        520
+      ]
+    },
+    {
+      "id": "demo_web_to_api",
+      "from": "demo_web",
+      "to": "demo_api",
+      "label": "HTTPS",
+      "variant": "dashed"
+    },
+    {
+      "id": "demo_to_mock",
+      "from": "demo_api",
+      "to": "mock_vlm",
+      "label": "Mock",
+      "variant": "dashed"
+    },
+    {
+      "id": "demo_to_sqlite",
+      "from": "demo_api",
+      "to": "demo_sqlite",
+      "label": "Demo records",
+      "variant": "emphasis",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "route": "straight",
+      "labelAt": [
+        420,
+        750
+      ]
+    }
+  ],
+  "cards": [
+    {
+      "dot": "rose",
+      "title": "Separate trust and authority",
+      "items": [
+        "Browser JWT session authenticates a user; optional inference Bearer keys remain backend-only.",
+        "Tunnel transports traffic. Bearer proxy is access control, not a complete sandbox; its method/path allowlist is unknown here.",
+        "Model output is evidence. The deterministic backend engine and application transaction own decision writes."
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "Auth and Judge Demo data",
+      "items": [
+        "Auth application code stores versions, private attachments/hashes, AI runs, decisions and audit in PostgreSQL.",
+        "Judge Demo uses Mock VLM and separate SQLite; Render root config is ephemeral. Verify uses in-memory SQLite per case in the same process (see Verify diagram).",
+        "The Mock and Verify paths do not connect to Ollama."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Configuration is not deployment evidence · 2026-10-17",
+      "items": [
+        "Root Render config describes Judge Demo. Auth staging is a separate Blueprint and is not proof of a live service.",
+        "Auth staging sets LOCAL_VLM_ALLOW_REMOTE=false; .env.example leaves endpoint and keys blank.",
+        "No proxy source/config, tunnel config, origin transport, Ollama target or current live inference was verified."
+      ]
+    }
+  ]
+}

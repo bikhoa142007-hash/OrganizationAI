@@ -154,6 +154,7 @@ Render blueprint chỉ cấu hình demo SQLite tại `/tmp/organizationai/demo-o
 - [API examples](docs/integration/api-examples.md)
 - [Authenticated workflow và PostgreSQL](docs/integration/authenticated-workflow-postgresql.md)
 - [Cấu hình Local VLM và task evaluators](docs/integration/local-media-strategy-inference.md)
+- [Sơ đồ kiến trúc và trạng thái triển khai](docs/diagrams/README.md)
 - [Decision contract](docs/contracts/decision-contract.md)
 - [Evaluation schema](docs/contracts/evaluation-schema.md)
 - [Audit event schema](docs/contracts/audit-event-schema.md)

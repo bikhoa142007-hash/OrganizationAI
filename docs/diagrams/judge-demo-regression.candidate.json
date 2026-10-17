@@ -1,0 +1,232 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "Judge Demo and Verify · mock/test boundaries",
+    "output": "docs/diagrams/judge-demo-regression.html",
+    "quality_profile": "showcase",
+    "views": [
+      {
+        "id": "demo-run",
+        "label": "Run demo fixtures",
+        "focus": [
+          "visitor",
+          "demo_ui",
+          "verify",
+          "service",
+          "fixtures",
+          "report"
+        ]
+      },
+      {
+        "id": "isolation",
+        "label": "Demo boundary",
+        "focus": [
+          "demo_ui",
+          "verify",
+          "service",
+          "report"
+        ]
+      }
+    ]
+  },
+  "lanes": [
+    {
+      "id": "user",
+      "label": "Demo user"
+    },
+    {
+      "id": "ui",
+      "label": "Judge Demo UI"
+    },
+    {
+      "id": "demo_api",
+      "label": "Demo API"
+    },
+    {
+      "id": "harness",
+      "label": "VerifyService + fixtures"
+    },
+    {
+      "id": "stop",
+      "label": "Unavailable outside Demo",
+      "variant": "exception"
+    }
+  ],
+  "phases": [
+    {
+      "id": "open",
+      "label": "Open demo",
+      "fromCol": 0,
+      "toCol": 1
+    },
+    {
+      "id": "run",
+      "label": "Run regression",
+      "fromCol": 2,
+      "toCol": 4,
+      "variant": "emphasis"
+    },
+    {
+      "id": "result",
+      "label": "Show labeled result",
+      "fromCol": 5,
+      "toCol": 5
+    }
+  ],
+  "mainPath": [
+    "visitor",
+    "demo_ui",
+    "verify",
+    "service",
+    "fixtures",
+    "report"
+  ],
+  "nodes": [
+    {
+      "id": "visitor",
+      "lane": "user",
+      "col": 0,
+      "type": "external",
+      "label": "Demo user",
+      "sublabel": "Synthetic inputs",
+      "tag": "DEMO",
+      "width": 140,
+      "height": 78
+    },
+    {
+      "id": "demo_ui",
+      "lane": "ui",
+      "col": 1,
+      "type": "frontend",
+      "label": "Verify UI",
+      "sublabel": "Demo page",
+      "tag": "DEMO BUILD",
+      "width": 140,
+      "height": 78
+    },
+    {
+      "id": "verify",
+      "lane": "demo_api",
+      "col": 2,
+      "type": "backend",
+      "label": "/api/verify",
+      "sublabel": "Demo-only · actor gate",
+      "tag": "DEMO API",
+      "width": 140,
+      "height": 78
+    },
+    {
+      "id": "service",
+      "lane": "harness",
+      "col": 3,
+      "type": "backend",
+      "label": "Verify runner",
+      "sublabel": "Fixtures + mock",
+      "tag": "SYNTHETIC / MOCK",
+      "width": 140,
+      "height": 78
+    },
+    {
+      "id": "fixtures",
+      "lane": "harness",
+      "col": 4,
+      "type": "database",
+      "label": "Fixture suite",
+      "sublabel": "4 / 5 / 15 cases",
+      "tag": "SYNTHETIC",
+      "width": 140,
+      "height": 78
+    },
+    {
+      "id": "report",
+      "lane": "ui",
+      "col": 5,
+      "type": "frontend",
+      "label": "Mock result",
+      "sublabel": "Logic only; no inference",
+      "tag": "PROCESS-LOCAL",
+      "width": 140,
+      "height": 78
+    },
+    {
+      "id": "unavailable",
+      "lane": "stop",
+      "col": 2,
+      "type": "security",
+      "label": "Unavailable",
+      "sublabel": "APP_ENV != demo",
+      "tag": "FAIL CLOSED",
+      "width": 140,
+      "height": 78
+    }
+  ],
+  "edges": [
+    {
+      "id": "user-demo",
+      "from": "visitor",
+      "to": "demo_ui",
+      "label": "open demo",
+      "variant": "emphasis",
+      "role": "main"
+    },
+    {
+      "id": "demo-verify",
+      "from": "demo_ui",
+      "to": "verify",
+      "label": "run regression",
+      "variant": "emphasis",
+      "role": "main"
+    },
+    {
+      "id": "verify-service",
+      "from": "verify",
+      "to": "service",
+      "label": "Demo mode only",
+      "role": "main"
+    },
+    {
+      "id": "service-fixtures",
+      "from": "service",
+      "to": "fixtures",
+      "label": "evaluate fixed cases",
+      "role": "main"
+    },
+    {
+      "id": "fixtures-report",
+      "from": "fixtures",
+      "to": "report",
+      "label": "assert + label MOCK",
+      "variant": "emphasis",
+      "role": "main"
+    },
+    {
+      "id": "verify-stop",
+      "from": "verify",
+      "to": "unavailable",
+      "label": "Demo disabled",
+      "variant": "security",
+      "role": "error"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "amber",
+      "title": "Verify proves workflow logic",
+      "items": [
+        "POST /api/verify runs synthetic fixture suites through the workflow/rules path with Mock providers.",
+        "Each case gets a fresh SQLite :memory: repository that closes after the case; all cases run in the API process.",
+        "Memory SQLite is not process isolation. Verify does not call Ollama or write Auth PostgreSQL or persistent Judge Demo plans."
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "Judge Demo persistence is separate",
+      "items": [
+        "Maker/Checker demo plans use MockVLMProvider and the separate Judge Demo SQLite file.",
+        "Root Render config places that file on ephemeral storage. It is not the Auth PostgreSQL database.",
+        "There is no connection from the Verify mock path to Ollama; these results do not prove production inference quality."
+      ]
+    }
+  ]
+}
