@@ -90,10 +90,10 @@ class LocalVLMProvider(VisualModelProvider):
         self.base_url = (base_url if base_url is not None else os.getenv("LOCAL_VLM_BASE_URL", "")).strip().rstrip("/")
         self.api_key = api_key if api_key is not None else os.getenv("LOCAL_VLM_API_KEY", "")
         self.timeout_seconds = _bounded_setting(
-            timeout_seconds, "LOCAL_VLM_TIMEOUT_SECONDS", 30, 1, 45
+            timeout_seconds, "LOCAL_VLM_TIMEOUT_SECONDS", 45, 1, 45
         )
         self.max_output_tokens = _bounded_setting(
-            max_output_tokens, "LOCAL_VLM_MAX_OUTPUT_TOKENS", 1536, 128, 4096
+            max_output_tokens, "LOCAL_VLM_MAX_OUTPUT_TOKENS", 4096, 128, 4096
         )
         self.max_response_bytes = _bounded_setting(
             max_response_bytes, "LOCAL_VLM_MAX_RESPONSE_BYTES", 262_144, 1_024, 1_048_576
