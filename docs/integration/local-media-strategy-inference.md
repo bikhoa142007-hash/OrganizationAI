@@ -31,6 +31,13 @@ The local Compose backend can call Ollama on the Windows host through
 | Media Compliance | `organizationai-qwen3:4b-ctx8192` | Evaluate extracted evidence against the configured content policy |
 | Strategy Evaluation | `organizationai-qwen3:4b-ctx8192` | Score the fixed seven-criterion BA rubric and surface assumptions/gaps |
 
+Visual extraction defaults to `LOCAL_VLM_MAX_OUTPUT_TOKENS=4096` and
+`LOCAL_VLM_TIMEOUT_SECONDS=45`, the provider's supported upper bounds. The
+adapter sends the token limit as `max_tokens`; if the provider reports
+`finish_reason=length`, it rejects the entire extraction as `TRUNCATED_OUTPUT`.
+No partial OCR text is used by Media Compliance. The response-byte cap is a
+separate transport limit and cannot recover a token-truncated completion.
+
 The task alias is Qwen3-4B Q4_K_M (2.5 GB download, Apache-2.0) with an 8,192-token context. Its Ollama model digest is pinned in local `.env` as
 `sha256:b2ef2f414e31e4e10ef46366751464631a5fa4b5c1bf183b1e3b9076ab2116ef`.
 The base tag is `qwen3:4b`; create the constrained alias with:

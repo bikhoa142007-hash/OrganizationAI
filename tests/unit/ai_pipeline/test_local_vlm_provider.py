@@ -84,6 +84,29 @@ def configured_provider(handler, **settings):
     return LocalVLMProvider(**configuration)
 
 
+def test_default_local_vlm_output_budget_is_sent_to_provider(monkeypatch):
+    monkeypatch.delenv("LOCAL_VLM_MAX_OUTPUT_TOKENS", raising=False)
+    captured = []
+
+    def handler(request):
+        captured.append(json.loads(request.content))
+        return chat_response({"images": [extraction_item()]})
+
+    provider = LocalVLMProvider(
+        model="configured-vlm-4b",
+        model_version=TEST_MODEL_VERSION,
+        base_url="http://localhost:8000/v1",
+        client=httpx.Client(transport=httpx.MockTransport(handler)),
+    )
+
+    result = EvaluationOrchestrator(provider).evaluate(make_request())
+
+    assert provider.timeout_seconds == 45
+    assert provider.max_output_tokens == 4096
+    assert captured[0]["max_tokens"] == 4096
+    assert result.visual_extraction["status"] == "SUCCEEDED"
+
+
 def test_sends_private_image_as_base64_with_extraction_only_schema_and_prompt():
     captured = []
 
