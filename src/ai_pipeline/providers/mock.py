@@ -38,26 +38,41 @@ class MockVLMProvider(VisualModelProvider):
         if self.scenario == "malformed":
             return {"unexpected": True}
 
-        criteria = tuple(getattr(request.configuration.policy, "criteria", ())) if request.configuration else ()
+        rubric = getattr(request.configuration, "strategy_rubric", None) if request.configuration else None
+        uses_weighted_rubric = rubric is not None
+        criteria = tuple(rubric.criteria) if rubric else (
+            tuple(getattr(request.configuration.policy, "criteria", ())) if request.configuration else ()
+        )
         if not criteria:
             criteria = (type("Criterion", (), {"criterion_id": "strategy", "maximum_score": 100})(),)
         review = self.scenario in {"review", "unknown_media"}
-        score = 70.0 if review else 71.0
-        maximum = sum(float(c.maximum_score) for c in criteria)
-        scores = []
-        remaining = score
-        for index, criterion in enumerate(criteria):
-            value = min(float(criterion.maximum_score), remaining) if index == len(criteria) - 1 else 0.0
-            if index == 0 and len(criteria) > 1:
-                value = min(float(criterion.maximum_score), score)
-            remaining -= value
-            scores.append({
+        v2_rubric = bool(rubric and rubric.has_score_anchors)
+        score = (50.0 if review else 75.0) if v2_rubric else (70.0 if review else 71.0)
+        if uses_weighted_rubric:
+            # Rubric criteria are scored independently on 0..100; the engine
+            # applies configured weights when deriving the overall score.
+            scores = [{
                 "criterion_id": criterion.criterion_id,
-                "score": value,
-                "maximum_score": float(criterion.maximum_score),
+                "score": score,
+                "maximum_score": 100,
                 "rationale": "Deterministic mock observation.",
                 "evidence_refs": [f"evidence-{a.attachment_id}" for a in request.plan.attachments],
-            })
+            } for criterion in criteria]
+        else:
+            remaining = score
+            scores = []
+            for index, criterion in enumerate(criteria):
+                value = min(float(criterion.maximum_score), remaining) if index == len(criteria) - 1 else 0.0
+                if index == 0 and len(criteria) > 1:
+                    value = min(float(criterion.maximum_score), score)
+                remaining -= value
+                scores.append({
+                    "criterion_id": criterion.criterion_id,
+                    "score": value,
+                    "maximum_score": float(criterion.maximum_score),
+                    "rationale": "Deterministic mock observation.",
+                    "evidence_refs": [f"evidence-{a.attachment_id}" for a in request.plan.attachments],
+                })
         evidence = [{
             "evidence_id": f"evidence-{attachment.attachment_id}",
             "source_type": "ATTACHMENT",
@@ -77,7 +92,7 @@ class MockVLMProvider(VisualModelProvider):
             "plan_version": request.plan_version,
             "approval_round": request.approval_round,
             "run_id": request.run_id,
-            "schema_version": 1,
+            "schema_version": 2 if v2_rubric else 1,
             "input_hash": request.input_hash,
             "policy_version": request.policy_version,
             "provider": "MOCK_VLM",
@@ -104,6 +119,8 @@ class MockVLMProvider(VisualModelProvider):
             "correlation_id": request.correlation_id,
             "criterion_scores": scores,
             "assumptions": [],
+            "strategy_critical_gaps": [],
+            "strategy_rubric_version": rubric.rubric_version if rubric else None,
         }
 
 

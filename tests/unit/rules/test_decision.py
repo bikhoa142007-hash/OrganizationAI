@@ -1,8 +1,10 @@
 import unittest
 from dataclasses import replace
+from decimal import Decimal
 
 from fixtures import plan, config, evaluation, recommend_review, NOW
 from src.backend.rules.decision import decide, DecisionContext
+from src.backend.domain.policy import Criterion, StrategyRubric, STRATEGY_CRITERIA, STRATEGY_RUBRIC_V2_VERSION
 
 
 class DecisionTests(unittest.TestCase):
@@ -67,3 +69,84 @@ class DecisionTests(unittest.TestCase):
 
     def test_same_inputs_produce_same_complete_bundle(self):
         self.assertEqual(self.run_case(), self.run_case())
+
+    def strategy_v2_case(self, scores, *, critical_gaps=()):
+        p = plan()
+        base = config()
+        rubric = StrategyRubric.from_dict({
+            "rubric_id": "BA-STRATEGY-7",
+            "rubric_version": STRATEGY_RUBRIC_V2_VERSION,
+            "status": "ACTIVE",
+            "criteria": [
+                {"criterion_id": criterion_id, "label": label, "weight": weight}
+                for criterion_id, label, weight in STRATEGY_CRITERIA
+            ],
+        })
+        configured_policy = replace(
+            base.policy,
+            criteria=tuple(Criterion(criterion_id, weight)
+                           for criterion_id, _label, weight in STRATEGY_CRITERIA),
+        )
+        cfg = replace(base, policy=configured_policy, strategy_rubric=rubric)
+        weighted_score = sum(
+            Decimal(str(score)) * Decimal(weight) / Decimal(100)
+            for score, (_criterion_id, _label, weight) in zip(scores, STRATEGY_CRITERIA)
+        )
+        raw = evaluation(p)
+        raw.update(
+            schema_version=2,
+            strategy_rubric_version=STRATEGY_RUBRIC_V2_VERSION,
+            strategy_critical_gaps=list(critical_gaps),
+            feasibility_score=float(weighted_score),
+            criterion_scores=[
+                {"criterion_id": criterion_id, "score": score, "maximum_score": 100,
+                 "rationale": "Synthetic rubric-gate case.", "evidence_refs": ["ev-image"]}
+                for score, (criterion_id, _label, _weight) in zip(scores, STRATEGY_CRITERIA)
+            ],
+        )
+        if critical_gaps or any(
+            (criterion_id in ("objective", "audience", "channel", "timeline") and score == 0)
+            or (criterion_id in ("kpi", "budget_efficiency", "risk_control") and score < 50)
+            for score, (criterion_id, _label, _weight) in zip(scores, STRATEGY_CRITERIA)
+        ):
+            recommend_review(raw)
+        return cfg, p, raw
+
+    def test_v2_zero_core_criterion_routes_checker_even_when_weighted_total_passes(self):
+        scores = [0, 100, 100, 100, 100, 100, 100]
+        cfg, p, raw = self.strategy_v2_case(scores)
+
+        bundle = self.run_case(raw, cfg, p)
+
+        self.assertEqual(raw["feasibility_score"], 85)
+        self.assert_review(bundle, "STRATEGY_REVIEW_GATES", "FACT_UNCERTAIN")
+
+    def test_v2_kpi_budget_and_risk_scores_below_50_route_checker(self):
+        for criterion_id in ("kpi", "budget_efficiency", "risk_control"):
+            scores = [100] * 7
+            scores[next(index for index, row in enumerate(STRATEGY_CRITERIA)
+                        if row[0] == criterion_id)] = 25
+            cfg, p, raw = self.strategy_v2_case(scores)
+            with self.subTest(criterion=criterion_id):
+                self.assert_review(self.run_case(raw, cfg, p), "STRATEGY_REVIEW_GATES", "FACT_UNCERTAIN")
+
+    def test_v2_fifty_points_passes_individual_checker_gate_and_critical_gaps_do_not(self):
+        scores = [100] * 7
+        scores[-1] = 50
+        cfg, p, raw = self.strategy_v2_case(scores)
+        self.assertEqual(self.run_case(raw, cfg, p).decision.outcome, "AUTO_APPROVED")
+
+        cfg, p, raw = self.strategy_v2_case([75, 75, 75, 75, 75, 75, 50],
+                                             critical_gaps=("A material assumption is unverified.",))
+        self.assert_review(self.run_case(raw, cfg, p), "STRATEGY_REVIEW_GATES", "FACT_UNCERTAIN")
+
+    def test_v2_rubric_version_mismatch_and_non_anchor_score_fail_closed(self):
+        cfg, p, raw = self.strategy_v2_case([75, 75, 75, 75, 75, 75, 50])
+        wrong_version = dict(raw, strategy_rubric_version="BA-STRATEGY-7-1.0")
+        self.assert_review(self.run_case(wrong_version, cfg, p), "EVAL_VALID", "FACT_UNCERTAIN")
+
+        wrong_score = dict(raw)
+        wrong_score["criterion_scores"] = [dict(item) for item in raw["criterion_scores"]]
+        wrong_score["criterion_scores"][0]["score"] = 74
+        wrong_score["feasibility_score"] = 72.35
+        self.assert_review(self.run_case(wrong_score, cfg, p), "EVAL_VALID", "FACT_UNCERTAIN")

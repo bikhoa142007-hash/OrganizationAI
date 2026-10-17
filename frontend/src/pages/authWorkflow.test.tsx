@@ -167,7 +167,7 @@ it('shows the verified strategy score, weights, and weighted contributions', asy
     result: {
       feasibility_score: 71, confidence: 0.82, reason: 'Backend-verified weighted score.',
       criterion_scores: [
-        { criterion_id: 'objective', weight: 15, score: 71, maximum_score: 100, rationale: 'Clear objective.', evidence_refs: ['plan-field:objective'] },
+        { criterion_id: 'objective', weight: 15, score: 75, maximum_score: 100, score_anchor: 'Có kết quả định lượng, thời hạn và liên kết với KPI.', rationale: 'Clear objective.', evidence_refs: ['plan-field:objective'], missing_information: ['Cơ sở chọn mức mục tiêu.'], recommendation: 'Bổ sung căn cứ định lượng.' },
         { criterion_id: 'risk_control', weight: 10, score: 71, maximum_score: 100, rationale: 'Risks described.', evidence_refs: ['plan-field:notes'] },
       ],
     },
@@ -176,10 +176,17 @@ it('shows the verified strategy score, weights, and weighted contributions', asy
   vi.spyOn(authWorkflowService, 'getAttachment').mockResolvedValue(new Blob())
   renderDetail()
 
-  expect(await screen.findAllByText(/71\s*\/\s*100/)).toHaveLength(4)
+  expect(await screen.findAllByText(/71\s*\/\s*100/)).toHaveLength(3)
   expect(screen.getByText('15%')).toBeVisible()
   expect(screen.getByText('10%')).toBeVisible()
-  expect(screen.getByText('10.65')).toBeVisible()
+  expect(screen.getByText('11.25')).toBeVisible()
+  expect(screen.getAllByText(/Độ tin cậy do model tự báo cáo — chưa hiệu chuẩn/).length).toBeGreaterThan(0)
+  expect(screen.getByText('Mốc rubric:')).toBeVisible()
+  expect(screen.getByText('Có kết quả định lượng, thời hạn và liên kết với KPI.')).toBeVisible()
+  expect(screen.getByText('Còn thiếu:')).toBeVisible()
+  expect(screen.getByText('Cơ sở chọn mức mục tiêu.')).toBeVisible()
+  expect(screen.getByText('Đề xuất:')).toBeVisible()
+  expect(screen.getByText('Bổ sung căn cứ định lượng.')).toBeVisible()
 })
 
 it('keeps a successful zero-score Strategy stage visible when Media fails and Checker has already approved', async () => {

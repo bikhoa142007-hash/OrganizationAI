@@ -12,6 +12,7 @@ from src.ai_pipeline.task_evaluation import (
     STRATEGY_OUTPUT_SCHEMA,
     STRATEGY_PROMPT_VERSION,
     STRATEGY_SCHEMA_VERSION,
+    STRATEGY_SYSTEM_PROMPT,
     media_policy_from_json,
     strategy_rubric_from_json,
 )
@@ -20,7 +21,9 @@ from src.ai_pipeline.task_providers import (
     OpenAICompatibleTaskProvider,
     TaskEvaluationRequest,
     TaskModelSettings,
+    _schema_for,
 )
+from src.backend.domain.policy import STRATEGY_CRITERIA, STRATEGY_RUBRIC_V2_VERSION
 
 
 POLICY = media_policy_from_json('''{
@@ -210,6 +213,32 @@ def test_strategy_request_schema_constrains_snapshot_identifiers_without_mutatin
     ]
     assert properties["criterion_scores"]["items"]["properties"]["evidence_refs"]["items"]["enum"] == ["plan-title"]
     assert "enum" not in STRATEGY_OUTPUT_SCHEMA["properties"]["rubric_id"]
+
+
+def test_strategy_v2_provider_schema_requires_exact_approved_anchors_and_explanations():
+    criteria = ",".join(
+        f'{{"criterion_id":"{criterion_id}","label":"{label}","weight":{weight}}}'
+        for criterion_id, label, weight in STRATEGY_CRITERIA
+    )
+    rubric = strategy_rubric_from_json(
+        '{"rubric_id":"BA-STRATEGY-7","rubric_version":"'
+        + STRATEGY_RUBRIC_V2_VERSION
+        + '","status":"ACTIVE","criteria":[' + criteria + ']}'
+    )
+    evaluation_request = TaskEvaluationRequest(
+        task="STRATEGY_EVALUATION", input_hash="c" * 64,
+        plan_payload={"title": "A synthetic strategy"},
+        evidence=[{"evidence_id": "plan-title", "text": "Synthetic campaign", "kind": "PLAN_FIELD"}],
+        rubric=rubric,
+    )
+
+    _name, schema = _schema_for(evaluation_request)
+    criterion = schema["properties"]["criterion_scores"]["items"]
+
+    assert {"score_anchor", "missing_information", "recommendation"} <= set(criterion["required"])
+    assert criterion["properties"]["score"]["enum"] == [0, 25, 50, 75, 100]
+    assert "Không có mục tiêu chiến dịch" in criterion["properties"]["score_anchor"]["enum"][0]
+    assert "independently" in STRATEGY_SYSTEM_PROMPT
 
 
 def test_text_adapter_fails_closed_on_timeout_and_response_cap():

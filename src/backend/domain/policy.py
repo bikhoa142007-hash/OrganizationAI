@@ -16,6 +16,62 @@ STRATEGY_CRITERIA = (
     ("budget_efficiency", "Hiệu quả ngân sách", 15),
     ("risk_control", "Kiểm soát rủi ro", 10),
 )
+STRATEGY_RUBRIC_V2_ID = "BA-STRATEGY-7"
+STRATEGY_RUBRIC_V2_VERSION = "BA-STRATEGY-7-2.0"
+STRATEGY_SCORE_ANCHOR_SCORES = (0, 25, 50, 75, 100)
+STRATEGY_RUBRIC_V2_ANCHORS = {
+    "objective": (
+        (0, "Không có mục tiêu chiến dịch, hoặc chỉ yêu cầu duyệt hồ sơ."),
+        (25, "Có mong muốn chung như tăng nhận diện hoặc bán hàng."),
+        (50, "Nêu kết quả cần đạt và đối tượng hoặc sản phẩm liên quan."),
+        (75, "Có kết quả định lượng, thời hạn và liên kết với KPI."),
+        (100, "Đạt mức 75; có cơ sở giải thích mức mục tiêu, ưu tiên rõ và cách xác định thành công."),
+    ),
+    "audience": (
+        (0, "Không xác định đối tượng hoặc nội dung không liên quan."),
+        (25, "Chỉ nêu nhóm rộng như trẻ em hoặc mọi người."),
+        (50, "Mô tả phân khúc và nhu cầu hoặc tình huống sử dụng."),
+        (75, "Giải thích quan hệ giữa đối tượng, sản phẩm, thông điệp và cách tiếp cận."),
+        (100, "Đạt mức 75; có căn cứ phù hợp hoặc kế hoạch kiểm chứng giả thuyết trước khi mở rộng."),
+    ),
+    "channel": (
+        (0, "Không nêu kênh triển khai."),
+        (25, "Có danh sách kênh nhưng chưa giải thích cách dùng."),
+        (50, "Mô tả hoạt động hoặc nội dung trên từng kênh và quan hệ với đối tượng."),
+        (75, "Nêu vai trò từng kênh, lời kêu gọi hành động và đường dẫn tới mục tiêu."),
+        (100, "Đạt mức 75; có cách đo đóng góp từng kênh và nguyên tắc thử nghiệm, điều chỉnh."),
+    ),
+    "timeline": (
+        (0, "Không có lịch hoặc có mâu thuẫn thời gian khiến kế hoạch không thể thực hiện."),
+        (25, "Chỉ có ngày bắt đầu, ngày kết thúc hoặc tổng thời lượng."),
+        (50, "Có các giai đoạn và đầu việc chính theo thứ tự hợp lý."),
+        (75, "Có mốc bàn giao, người hoặc nhóm phụ trách và các phụ thuộc chính."),
+        (100, "Đạt mức 75; có thời gian dự phòng và cách xử lý khi một mốc bị chậm."),
+    ),
+    "kpi": (
+        (0, "Không có KPI hoặc chỉ số không liên quan đến mục tiêu."),
+        (25, "Nêu tên chỉ số nhưng chưa có mức cần đạt."),
+        (50, "Có mục tiêu số và khoảng thời gian đo."),
+        (75, "Có định nghĩa chỉ số, nguồn dữ liệu hoặc công cụ và cách ghi nhận."),
+        (100, "Đạt mức 75; có lịch kiểm tra, người phụ trách và ngưỡng dẫn tới hành động điều chỉnh."),
+    ),
+    "budget_efficiency": (
+        (0, "Không có ngân sách sử dụng được hoặc số liệu mâu thuẫn nghiêm trọng chưa giải quyết."),
+        (25, "Chỉ có tổng ngân sách."),
+        (50, "Có phân bổ theo hạng mục hoặc kênh; tổng cộng khớp và phạm vi chi phí được nêu."),
+        (75, "Có cơ sở tính các khoản chính: số lượng × đơn giá, báo giá hoặc giả định ghi rõ; liên kết chi phí với đầu ra."),
+        (100, "Đạt mức 75; có cách kiểm soát chi phí, xử lý phát sinh và đánh giá hiệu quả hoặc quyết định tiếp tục hay dừng."),
+    ),
+    "risk_control": (
+        (0, "Không nêu rủi ro và biện pháp xử lý."),
+        (25, "Chỉ ghi chung như theo dõi hoặc xử lý khi có vấn đề."),
+        (50, "Nêu rủi ro liên quan kế hoạch và biện pháp tương ứng."),
+        (75, "Có người chịu trách nhiệm, dấu hiệu kích hoạt và phương án dự phòng."),
+        (100, "Đạt mức 75; có ngưỡng dừng hoặc chuyển cấp, cách theo dõi và xử lý rủi ro còn lại."),
+    ),
+}
+STRATEGY_REVIEW_ZERO_CRITERIA = ("objective", "audience", "channel", "timeline")
+STRATEGY_REVIEW_MINIMUM_CRITERIA = ("kpi", "budget_efficiency", "risk_control")
 
 MEDIA_EVIDENCE_KINDS = frozenset({
     "OCR_TEXT", "OBSERVATION", "OBJECT_DETECTION", "VISUAL_QUALITY", "VISUAL_INSPECTION",
@@ -25,7 +81,9 @@ RULE_IDS = (
     'INPUT_INTEGRITY', 'EVAL_VALID', 'MEDIA_PASS', 'MEDIA_CONFIDENCE',
     'FEASIBILITY_SCORE', 'FEASIBILITY_CONFIDENCE', 'BUDGET_LIMIT', 'AUTHORITY_LIMIT',
     'NO_HARD_VIOLATION', 'NO_EVIDENCE_CONFLICT', 'POLICY_ENABLED', 'PLAN_PENDING', 'ROUND_ACTIVE',
+    'STRATEGY_REVIEW_GATES',
 )
+LEGACY_RULE_IDS = RULE_IDS[:-1]
 
 
 @dataclass(frozen=True)
@@ -96,6 +154,19 @@ class StrategyCriterion(Contract):
     criterion_id: str
     label: str
     weight: Positive
+    score_anchors: tuple["StrategyScoreAnchor", ...] = ()
+
+    @classmethod
+    def from_dict(cls, value):
+        if isinstance(value, Mapping) and "score_anchors" not in value:
+            value = {**value, "score_anchors": []}
+        return super().from_dict(value)
+
+
+@dataclass(frozen=True)
+class StrategyScoreAnchor(Contract):
+    score: Literal[0, 25, 50, 75, 100]
+    description: str
 
 
 @dataclass(frozen=True)
@@ -105,6 +176,40 @@ class StrategyRubric(Contract):
     status: Literal["ACTIVE", "DISABLED"]
     criteria: tuple[StrategyCriterion, ...]
 
+    @classmethod
+    def from_dict(cls, value):
+        if isinstance(value, Mapping):
+            value = dict(value)
+            is_v2 = value.get("rubric_id") == STRATEGY_RUBRIC_V2_ID and \
+                value.get("rubric_version") == STRATEGY_RUBRIC_V2_VERSION
+            criteria = value.get("criteria")
+            if isinstance(criteria, (list, tuple)):
+                hydrated = []
+                for item in criteria:
+                    if not isinstance(item, Mapping):
+                        hydrated.append(item)
+                        continue
+                    item = dict(item)
+                    if "score_anchors" not in item:
+                        item["score_anchors"] = [
+                            {"score": score, "description": description}
+                            for score, description in STRATEGY_RUBRIC_V2_ANCHORS.get(
+                                item.get("criterion_id"), ()
+                            )
+                        ] if is_v2 else []
+                    hydrated.append(item)
+                value["criteria"] = hydrated
+        return super().from_dict(value)
+
+    @property
+    def criteria_by_id(self):
+        return {criterion.criterion_id: criterion for criterion in self.criteria}
+
+    @property
+    def has_score_anchors(self):
+        return self.rubric_id == STRATEGY_RUBRIC_V2_ID and \
+            self.rubric_version == STRATEGY_RUBRIC_V2_VERSION
+
     def validate(self):
         distinct([criterion.criterion_id for criterion in self.criteria])
         configured = {criterion.criterion_id: criterion.weight for criterion in self.criteria}
@@ -112,6 +217,36 @@ class StrategyRubric(Contract):
         require(configured == expected, "Strategy rubric must use the seven BA criteria and weights")
         require(sum(criterion.weight for criterion in self.criteria) == 100,
                 "Strategy rubric weights must total 100")
+        if self.has_score_anchors:
+            require(set(configured) == set(STRATEGY_RUBRIC_V2_ANCHORS),
+                    "Strategy rubric v2 must define every approved criterion anchor")
+            for criterion in self.criteria:
+                expected_anchors = STRATEGY_RUBRIC_V2_ANCHORS[criterion.criterion_id]
+                actual_anchors = tuple((anchor.score, anchor.description)
+                                       for anchor in criterion.score_anchors)
+                require(actual_anchors == expected_anchors,
+                        "Strategy rubric v2 anchors must match the approved version")
+        else:
+            require(not any(criterion.score_anchors for criterion in self.criteria),
+                    "Scoring anchors require the approved Strategy rubric v2 version")
+
+
+def strategy_checker_gate_failures(criterion_scores, critical_gaps=()):
+    """Return the approved Strategy conditions that require human Checker review."""
+    scores = {
+        (item.get("criterion_id") if isinstance(item, Mapping) else item.criterion_id):
+        (item.get("score") if isinstance(item, Mapping) else item.score)
+        for item in criterion_scores
+    }
+    failures = [f"missing_{criterion_id}" for criterion_id, _label, _weight in STRATEGY_CRITERIA
+                if criterion_id not in scores]
+    failures.extend(criterion_id for criterion_id in STRATEGY_REVIEW_ZERO_CRITERIA
+                    if scores.get(criterion_id) == 0)
+    failures.extend(criterion_id for criterion_id in STRATEGY_REVIEW_MINIMUM_CRITERIA
+                    if criterion_id in scores and scores[criterion_id] < 50)
+    if critical_gaps:
+        failures.append("unresolved_critical_gaps")
+    return tuple(failures)
 
 
 @dataclass(frozen=True)
@@ -130,7 +265,7 @@ class PolicySnapshot(Contract):
     feasibility_confidence_threshold: Literal[0.8] = .80
 
     def validate(self):
-        require(self.rule_ids == RULE_IDS, 'Required rules cannot be disabled')
+        require(self.rule_ids in (LEGACY_RULE_IDS, RULE_IDS), 'Required rules cannot be disabled')
         require(set(MANDATORY_FIELDS) <= set(self.mandatory_fields) and bool(self.criteria),
                 'Incomplete policy')
         require(sum(c.maximum_score for c in self.criteria) == 100, 'Criteria must total 100')

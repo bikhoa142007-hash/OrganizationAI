@@ -4,7 +4,7 @@ from typing import Any, Literal
 from collections.abc import Mapping
 from datetime import datetime
 from decimal import Decimal
-from src.backend.domain.policy import RULE_IDS
+from src.backend.domain.policy import LEGACY_RULE_IDS, RULE_IDS, strategy_checker_gate_failures
 
 from src.shared.validation import (
     Contract, Hash, Timestamp, MinorUnits, Positive, Nonnegative,
@@ -112,7 +112,7 @@ class EvaluationResult(Contract):
     plan_version: Positive
     approval_round: Positive
     run_id: str
-    schema_version: Literal[1]
+    schema_version: Literal[1, 2]
     input_hash: Hash
     policy_version: str
     provider: Literal['LOCAL_VLM', 'MOCK_VLM']
@@ -139,10 +139,23 @@ class EvaluationResult(Contract):
     correlation_id: str
     criterion_scores: tuple[CriterionScore, ...]
     assumptions: tuple[str, ...]
+    strategy_critical_gaps: tuple[str, ...] = ()
+    strategy_rubric_version: str | None = None
+
+    @classmethod
+    def from_dict(cls, value):
+        if isinstance(value, Mapping):
+            value = dict(value)
+            value.setdefault('strategy_critical_gaps', [])
+            value.setdefault('strategy_rubric_version', None)
+        return super().from_dict(value)
 
     def validate(self):
         require(datetime.fromisoformat(self.completed_at) >=
                 datetime.fromisoformat(self.started_at), 'Invalid attempt times')
+        if self.schema_version == 2:
+            require(bool(self.strategy_rubric_version),
+                    'Version 2 Strategy result requires its rubric version')
         for value, maximum in ((self.media_confidence, 1),
                                (self.feasibility_confidence, 1),
                                (self.feasibility_score, 100)):
@@ -168,6 +181,10 @@ class EvaluationResult(Contract):
                         and not self.evidence_conflicts
                         and not any(f.severity == 'HARD_VIOLATION' for f in self.media_findings),
                         'Invalid auto recommendation')
+                if self.schema_version == 2:
+                    require(not self.strategy_critical_gaps and
+                            not strategy_checker_gate_failures(self.criterion_scores),
+                            'Strategy rubric requires Checker review')
             else:
                 require(self.escalation_category is not None, 'Review needs category')
         else:
@@ -217,7 +234,7 @@ class DecisionResult(Contract):
     evaluation_id: str
     decided_by: Actor
     decided_at: Timestamp
-    schema_version: Literal[1]
+    schema_version: Literal[1, 2]
     rule_checks: tuple[RuleCheck, ...]
     evidence: tuple[Evidence, ...]
     escalation_ids: tuple[str, ...]
@@ -232,7 +249,8 @@ class DecisionResult(Contract):
 
     def validate(self):
         distinct(self.applied_rule_ids)
-        require(set(RULE_IDS) <= set(self.applied_rule_ids), 'Missing required decision gates')
+        required_rule_ids = RULE_IDS if self.schema_version == 2 else LEGACY_RULE_IDS
+        require(set(required_rule_ids) <= set(self.applied_rule_ids), 'Missing required decision gates')
         distinct(self.escalation_ids)
         require(bool(self.applied_rule_ids) and self.applied_rule_ids ==
                 tuple(c.rule_id for c in self.rule_checks), 'Rule trace mismatch')

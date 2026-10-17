@@ -113,11 +113,19 @@ of any particular runtime.
 `AUTH_WORKFLOW_MEDIA_POLICY_JSON` must contain an organization-approved,
 versioned policy with department/channel scope and rules describing severity,
 meaning and required evidence kinds. This repository does not supply a live
-content policy. `AUTH_WORKFLOW_STRATEGY_RUBRIC_JSON` accepts only the seven BA
+content policy. `AUTH_WORKFLOW_STRATEGY_RUBRIC_JSON` accepts the seven BA
 criteria and fixed weights: objective, audience, channel, timeline, KPI and
-budget efficiency at 15 each, and risk control at 10. Both JSON variables are
-blank by default; until a required task policy/rubric and model are configured,
-the task is marked `NOT_CONFIGURED` and makes no inference request.
+budget efficiency at 15 each, and risk control at 10. Rubric version
+`BA-STRATEGY-7-2.0` adds the approved 0/25/50/75/100 scoring anchors, requires
+each criterion's selected anchor, evidence references, missing information and
+recommendation, and persists the expanded rubric in the submitted snapshot.
+Only new evaluations use v2; existing snapshots and decisions keep their
+recorded version. The deterministic engine sends v2 results to Checker when
+objective, audience, channel or timeline is 0; when KPI, budget efficiency or
+risk control is below 50; or when Strategy reports a critical gap. This does
+not create an automatic rejection rule. Model-reported confidence is
+uncalibrated and must be labeled as such in the UI. Blank task configuration
+still means `NOT_CONFIGURED` and makes no inference request.
 
 Remote endpoints require HTTPS and the task-specific `*_ALLOW_REMOTE=true`
 opt-in. The endpoint itself is not persisted or returned; each submitted round

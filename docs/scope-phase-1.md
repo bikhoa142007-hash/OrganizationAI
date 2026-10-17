@@ -845,6 +845,10 @@ Ví dụ:
 | BR-AI-14 | Việc tắt auto-approve không dừng pipeline đánh giá; mọi hồ sơ được chuyển Checker sau khi có kết quả khuyến nghị |
 | BR-AI-15 | Thay đổi model, prompt, trọng số, policy hoặc ngưỡng chỉ áp dụng cho run bắt đầu sau thời điểm cấu hình có hiệu lực |
 | BR-AI-16 | Dữ liệu hình ảnh và nội dung kế hoạch không được gửi ra dịch vụ bên ngoài nếu chưa có cấu hình và phê duyệt bảo mật riêng |
+| BR-AI-17 | Strategy rubric `BA-STRATEGY-7-2.0` chấm riêng bảy tiêu chí theo mốc 0/25/50/75/100; thiếu dữ kiện ở một tiêu chí không tự làm các tiêu chí khác bằng 0 |
+| BR-AI-18 | Mỗi điểm Strategy phải khớp chính xác mốc rubric và tham chiếu evidence; thiếu benchmark chỉ hạn chế kết luận phụ thuộc benchmark, không tự tạo mâu thuẫn hoặc mức phạt |
+| BR-AI-19 | Ngoài các điều kiện auto-approve hiện hành, Strategy v2 chuyển Checker khi mục tiêu/đối tượng/kênh/thời gian bằng 0, KPI/ngân sách/rủi ro dưới 50, hoặc còn critical gap |
+| BR-AI-20 | Confidence Strategy do model tự báo cáo phải được hiển thị là chưa hiệu chuẩn và không được diễn giải như xác suất đúng |
 
 ### 11.11. Quy tắc hạn mức ngân sách
 

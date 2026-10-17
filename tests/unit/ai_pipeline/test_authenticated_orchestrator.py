@@ -20,6 +20,8 @@ from src.backend.domain.policy import (
     Criterion,
     MANDATORY_FIELDS,
     PolicySnapshot,
+    STRATEGY_CRITERIA,
+    STRATEGY_RUBRIC_V2_VERSION,
 )
 from src.backend.rules.decision import DecisionContext, decide
 
@@ -42,10 +44,22 @@ STRATEGY_RUBRIC_JSON = '''{
     {"criterion_id":"risk_control","label":"Risk control","weight":10}
   ]
 }'''
+STRATEGY_RUBRIC_V2_JSON = '''{
+  "rubric_id":"BA-STRATEGY-7","rubric_version":"BA-STRATEGY-7-2.0","status":"ACTIVE",
+  "criteria":[
+    {"criterion_id":"objective","label":"Mục tiêu","weight":15},
+    {"criterion_id":"audience","label":"Đối tượng","weight":15},
+    {"criterion_id":"channel","label":"Kênh","weight":15},
+    {"criterion_id":"timeline","label":"Thời gian","weight":15},
+    {"criterion_id":"kpi","label":"KPI","weight":15},
+    {"criterion_id":"budget_efficiency","label":"Hiệu quả ngân sách","weight":15},
+    {"criterion_id":"risk_control","label":"Kiểm soát rủi ro","weight":10}
+  ]
+}'''
 
 
-def configuration(*, media_policy=None):
-    rubric = strategy_rubric_from_json(STRATEGY_RUBRIC_JSON)
+def configuration(*, media_policy=None, rubric_v2=False):
+    rubric = strategy_rubric_from_json(STRATEGY_RUBRIC_V2_JSON if rubric_v2 else STRATEGY_RUBRIC_JSON)
     policy = PolicySnapshot(
         "AUTH-UNCONFIGURED", "AUTH-1", False, MANDATORY_FIELDS,
         tuple(Criterion(item.criterion_id, item.weight) for item in rubric.criteria),
@@ -56,7 +70,7 @@ def configuration(*, media_policy=None):
 
 def request(
     *, extraction_status="COMPLETE", media_policy=None, image_observation=True,
-    extraction_confidence=0.97, visual_quality=None,
+    extraction_confidence=0.97, visual_quality=None, rubric_v2=False,
 ):
     content = b"synthetic-image-bytes"
     attachment_id = "attachment-1"
@@ -75,7 +89,10 @@ def request(
     return EvaluationRequest(
         plan=plan, policy_version="AUTH-1", evaluation_id="eval-1", run_id="run-1",
         correlation_id="trace-1", provider="LOCAL_VLM", model_version="vlm-rev-1",
-        configuration=configuration(media_policy=media_policy or media_policy_from_json(MEDIA_POLICY_JSON)),
+        configuration=configuration(
+            media_policy=media_policy or media_policy_from_json(MEDIA_POLICY_JSON),
+            rubric_v2=rubric_v2,
+        ),
         metadata={"model_id": "qwen3-vl:4b", "attachment_contents": {attachment_id: content},
                   "fake_extraction_status": extraction_status,
                   "fake_visual_observation": image_observation,
@@ -135,11 +152,13 @@ class RetryOnceExtractionProvider(FakeExtractionProvider):
 
 
 class FakeTaskProvider:
-    def __init__(self, task, *, fail=None, score=71):
+    def __init__(self, task, *, fail=None, score=71, v2_scores=None, critical_gaps=()):
         self.settings = settings(task)
         self.task = task
         self.fail = fail
         self.score = score
+        self.v2_scores = v2_scores
+        self.critical_gaps = critical_gaps
         self.calls = 0
         self.last_evidence = ()
 
@@ -175,15 +194,44 @@ class FakeTaskProvider:
             )
         refs = ["plan-field:objective"]
         score = Decimal(str(self.score))
+        if task_request.rubric.has_score_anchors:
+            scores_by_id = dict(zip(
+                [criterion_id for criterion_id, _label, _weight in STRATEGY_CRITERIA],
+                self.v2_scores or [75, 75, 75, 75, 75, 75, 50],
+            ))
+            score = sum(
+                Decimal(str(scores_by_id[criterion_id])) * Decimal(weight) / Decimal(100)
+                for criterion_id, _label, weight in STRATEGY_CRITERIA
+            )
+            score_refs = {
+                "objective": "plan-field:objective", "audience": "plan-field:target_audience",
+                "channel": "plan-field:channels", "timeline": "plan-field:start_date",
+                "kpi": "plan-field:kpi_expected", "budget_efficiency": "plan-field:budget_minor_units",
+                "risk_control": "plan-field:summary",
+            }
+        criterion_results = []
+        for criterion_id, _label, _weight in STRATEGY_CRITERIA:
+            item = {
+                "criterion_id": criterion_id,
+                "score": scores_by_id[criterion_id] if task_request.rubric.has_score_anchors else float(score),
+                "rationale": "Grounded in plan evidence.",
+                "evidence_refs": [score_refs[criterion_id]] if task_request.rubric.has_score_anchors else refs,
+            }
+            if task_request.rubric.has_score_anchors:
+                item.update({
+                    "score_anchor": next(anchor.description for anchor in
+                                          task_request.rubric.criteria_by_id[criterion_id].score_anchors
+                                          if anchor.score == scores_by_id[criterion_id]),
+                    "missing_information": [],
+                    "recommendation": "Keep the stated measurement plan.",
+                })
+            criterion_results.append(item)
         output = {
             "rubric_id": task_request.rubric.rubric_id,
             "rubric_version": task_request.rubric.rubric_version,
             "total_score": float(score), "confidence": 0.82,
-            "criterion_scores": [{
-                "criterion_id": criterion_id, "score": float(score), "rationale": "Grounded in plan evidence.",
-                "evidence_refs": refs,
-            } for criterion_id, _label, _weight in STRATEGY_CRITERIA],
-            "assumptions": [], "missing_facts": [], "critical_gaps": [],
+            "criterion_scores": criterion_results,
+            "assumptions": [], "missing_facts": [], "critical_gaps": list(self.critical_gaps),
             "evidence_conflicts": [], "reason": "Advisory score from the submitted plan.",
         }
         if self.fail == "mismatched_total":
@@ -223,6 +271,44 @@ def test_authenticated_orchestrator_reuses_extraction_and_builds_weighted_strate
     }
     assert ("media_evaluation", "PROCESSING") in updates
     assert ("strategy_evaluation", "SUCCEEDED") in updates
+
+
+def test_authenticated_v2_strategy_persists_selected_anchors_and_routes_core_zero_to_checker():
+    media = FakeTaskProvider("MEDIA_COMPLIANCE")
+    strategy = FakeTaskProvider("STRATEGY_EVALUATION")
+    result = make_orchestrator(media=media, strategy=strategy).evaluate(request(rubric_v2=True))
+
+    assert result.strategy_evaluation["status"] == "SUCCEEDED"
+    assert result.strategy_evaluation["configuration_version"] == STRATEGY_RUBRIC_V2_VERSION
+    assert result.strategy_evaluation["result"]["feasibility_score"] == 72.5
+    assert result.strategy_evaluation["result"]["criterion_scores"][0]["score"] == 75
+    assert result.strategy_evaluation["result"]["criterion_scores"][0]["score_anchor"]
+    assert result.strategy_evaluation["result"]["criterion_scores"][0]["recommendation"]
+    assert result.evaluation["schema_version"] == 2
+    assert result.evaluation["strategy_rubric_version"] == STRATEGY_RUBRIC_V2_VERSION
+    assert result.evaluation["proposed_action"] == "RECOMMEND_AUTO_APPROVAL"
+
+    core_zero = make_orchestrator(
+        media=FakeTaskProvider("MEDIA_COMPLIANCE"),
+        strategy=FakeTaskProvider("STRATEGY_EVALUATION", v2_scores=[0, 100, 100, 100, 100, 100, 100]),
+    ).evaluate(request(rubric_v2=True))
+    assert core_zero.strategy_evaluation["result"]["feasibility_score"] == 85
+    assert core_zero.evaluation["proposed_action"] == "RECOMMEND_HUMAN_REVIEW"
+    assert core_zero.evaluation["escalation_category"] == "FACT_UNCERTAIN"
+
+
+def test_authenticated_v2_strategy_critical_gap_is_preserved_and_routes_to_checker():
+    result = make_orchestrator(
+        media=FakeTaskProvider("MEDIA_COMPLIANCE"),
+        strategy=FakeTaskProvider(
+            "STRATEGY_EVALUATION", critical_gaps=("Synthetic unresolved decision fact.",),
+        ),
+    ).evaluate(request(rubric_v2=True))
+
+    assert result.evaluation["strategy_critical_gaps"] == ["Synthetic unresolved decision fact."]
+    assert "Synthetic unresolved decision fact." in result.evaluation["missing_facts"]
+    assert result.evaluation["proposed_action"] == "RECOMMEND_HUMAN_REVIEW"
+    assert result.evaluation["escalation_category"] == "FACT_UNCERTAIN"
 
 
 def test_unconfigured_media_does_not_fake_pass_and_keeps_strategy_result():
@@ -288,6 +374,26 @@ def test_invalid_policy_reference_and_weighted_total_are_step_failures():
     assert result.media_evaluation["error_code"] == "INVALID_SCHEMA"
     assert result.strategy_evaluation["status"] == "FAILED"
     assert result.strategy_evaluation["error_code"] == "INVALID_SCHEMA"
+    assert result.evaluation["status"] == "FAILED"
+
+
+def test_literal_rule_conflict_is_distinguished_from_structural_schema_failure():
+    literal_policy = media_policy_from_json(MEDIA_POLICY_JSON.replace(
+        '"required_evidence_kinds":["OBSERVATION"]',
+        '"required_evidence_kinds":["OCR_TEXT"],"forbidden_literals":["Summer offer"]',
+    ))
+    media = FakeTaskProvider("MEDIA_COMPLIANCE")
+    result = make_orchestrator(
+        media=media, strategy=FakeTaskProvider("STRATEGY_EVALUATION"),
+    ).evaluate(request(media_policy=literal_policy))
+
+    assert result.media_evaluation["status"] == "FAILED"
+    assert result.media_evaluation["error_code"] == "POLICY_OUTPUT_CONFLICT"
+    assert result.media_evaluation["reason"] == (
+        "Media output conflict at rule_results[BRAND-LOGO].result: "
+        "expected FAIL, received PASS."
+    )
+    assert result.strategy_evaluation["status"] == "SUCCEEDED"
     assert result.evaluation["status"] == "FAILED"
 
 

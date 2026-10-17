@@ -12,7 +12,11 @@ from src.backend.domain.models import (
     Actor, AgentError, AuditEvent, AnswerOption, BudgetValidation, DecisionResult,
     Escalation, EvaluationResult, Evidence, MarketingPlan, RuleCheck, State, TargetAuthority,
 )
-from src.backend.domain.policy import ApprovalConfiguration, RULE_IDS
+from src.backend.domain.policy import (
+    ApprovalConfiguration,
+    RULE_IDS,
+    strategy_checker_gate_failures,
+)
 
 
 @dataclass(frozen=True)
@@ -67,6 +71,15 @@ def normalize_evaluation(raw, plan, config, ctx):
         error_code = 'INVALID_SCHEMA'
         if result.status == 'SUCCEEDED':
             if config.strategy_rubric is not None:
+                rubric = config.strategy_rubric
+                if rubric.has_score_anchors:
+                    require(result.schema_version == 2 and
+                            result.strategy_rubric_version == rubric.rubric_version,
+                            'Strategy rubric version mismatch')
+                else:
+                    require(result.schema_version == 1 and
+                            result.strategy_rubric_version in (None, rubric.rubric_version),
+                            'Strategy rubric version mismatch')
                 weights = {c.criterion_id: c.weight for c in config.strategy_rubric.criteria}
                 require({c.criterion_id for c in result.criterion_scores} == set(weights),
                         'Strategy criterion set mismatch')
@@ -78,7 +91,17 @@ def normalize_evaluation(raw, plan, config, ctx):
                 )
                 require(weighted_total == Decimal(str(result.feasibility_score)),
                         'Strategy weighted total mismatch')
+                if rubric.has_score_anchors:
+                    anchors = {
+                        criterion.criterion_id: {Decimal(item.score) for item in criterion.score_anchors}
+                        for criterion in rubric.criteria
+                    }
+                    require(all(Decimal(str(score.score)) in anchors[score.criterion_id]
+                                for score in result.criterion_scores),
+                            'Strategy score is not one of the configured rubric anchors')
             else:
+                require(result.schema_version == 1 and result.strategy_rubric_version is None,
+                        'Strategy result is not backed by a configured rubric')
                 maxima = {c.criterion_id: c.maximum_score for c in config.policy.criteria}
                 require({c.criterion_id: c.maximum_score for c in result.criterion_scores} == maxima,
                         'Criterion set mismatch')
@@ -238,6 +261,26 @@ def decide(plan: MarketingPlan, config: ApprovalConfiguration, raw_evaluation,
           'auto_approval_policy_enabled = true', 'POLICY_OUT_OF_SCOPE')
     check('PLAN_PENDING', True, ctx.plan_status, 'plan_status = PENDING_APPROVAL', 'FACT_UNCERTAIN')
     check('ROUND_ACTIVE', True, ctx.approval_round_status, 'approval_round_status = ACTIVE', 'FACT_UNCERTAIN')
+    rubric_v2 = config.strategy_rubric is not None and config.strategy_rubric.has_score_anchors
+    strategy_gate_failures = (
+        strategy_checker_gate_failures(ev.criterion_scores, ev.strategy_critical_gaps)
+        if successful and rubric_v2 else ()
+    )
+    strategy_gate_evidence = tuple(dict.fromkeys(
+        ref for score in ev.criterion_scores
+        if score.criterion_id in strategy_gate_failures
+        for ref in score.evidence_refs
+    ))
+    check(
+        'STRATEGY_REVIEW_GATES',
+        None if not successful else not strategy_gate_failures,
+        {'rubric_version': ev.strategy_rubric_version,
+         'failed_conditions': strategy_gate_failures,
+         'critical_gaps': ev.strategy_critical_gaps},
+        'No zero score for objective/audience/channel/timeline; KPI/budget/risk_control >= 50; '
+        'no unresolved Strategy critical gaps.',
+        'FACT_UNCERTAIN', strategy_gate_evidence,
+    )
     require(tuple(c.rule_id for c in checks) == RULE_IDS, 'Incomplete engine checks')
     categories = [c for c in ('AUTHORITY_EXCEEDED', 'POLICY_OUT_OF_SCOPE', 'FACT_UNCERTAIN') if c in triggered]
     outcome = 'HUMAN_REVIEW_REQUIRED' if categories else 'AUTO_APPROVED'
@@ -281,7 +324,7 @@ def decide(plan: MarketingPlan, config: ApprovalConfiguration, raw_evaluation,
         decision_id, plan.plan_id, plan.plan_version, plan.approval_round, outcome,
         categories[0] if categories else None, reason, RULE_IDS, plan.input_hash,
         policy.policy_version, ev.evaluation_id, Actor('SYSTEM', 'decision-engine'),
-        ctx.decided_at, 1, tuple(checks), tuple(engine_evidence),
+        ctx.decided_at, 2, tuple(checks), tuple(engine_evidence),
         tuple(q.escalation_id for q in questions), policy.snapshot_id, canonical_hash(policy),
         budget, authority.snapshot_id if authority else None,
         canonical_hash(authority) if authority else None, ctx.idempotency_key,

@@ -59,6 +59,9 @@ export interface WorkflowEvaluation {
   media_confidence: number | null
   feasibility_score: number | null
   feasibility_confidence: number | null
+  schema_version?: number
+  strategy_rubric_version?: string | null
+  strategy_critical_gaps?: string[]
   proposed_action: 'RECOMMEND_AUTO_APPROVAL' | 'RECOMMEND_HUMAN_REVIEW' | null
   reason: string
   media_findings: Array<{ finding_id: string; severity: 'HARD_VIOLATION' | 'WARNING'; description: string; rule_id: string | null; evidence_refs: string[] }>
@@ -121,7 +124,17 @@ export interface WorkflowTaskEvaluation {
     reason?: string
     findings?: Array<{ finding_id: string; severity: 'HARD_VIOLATION' | 'WARNING'; description: string; rule_id: string | null; evidence_refs: string[] }>
     rule_results?: Array<{ rule_id: string; result: string; rationale: string; evidence_refs: string[] }>
-    criterion_scores?: Array<{ criterion_id: string; weight: number; score: number; maximum_score: number; rationale: string; evidence_refs: string[] }>
+    criterion_scores?: Array<{
+      criterion_id: string
+      weight: number
+      score: number
+      maximum_score: number
+      score_anchor?: string | null
+      rationale: string
+      evidence_refs: string[]
+      missing_information?: string[]
+      recommendation?: string | null
+    }>
     feasibility_score?: number
     assumptions?: string[]
     missing_facts?: string[]

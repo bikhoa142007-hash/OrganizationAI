@@ -26,6 +26,7 @@ from src.ai_pipeline.task_evaluation import (
     STRATEGY_SCHEMA_VERSION,
     task_messages,
 )
+from src.backend.domain.policy import STRATEGY_SCORE_ANCHOR_SCORES
 from src.shared.validation import canonical_hash
 
 
@@ -328,6 +329,23 @@ def _schema_for(request):
             properties["criterion_scores"]["items"]["properties"]["criterion_id"],
             criterion_ids,
         )
+        criterion_schema = properties["criterion_scores"]["items"]
+        if request.rubric.has_score_anchors:
+            criterion_schema["required"] = [
+                *criterion_schema["required"],
+                "score_anchor", "missing_information", "recommendation",
+            ]
+            criterion_properties = criterion_schema["properties"]
+            set_enum(criterion_properties["score"], list(STRATEGY_SCORE_ANCHOR_SCORES))
+            set_enum(criterion_properties["score_anchor"], [
+                anchor.description
+                for criterion in request.rubric.criteria
+                for anchor in criterion.score_anchors
+            ])
+        else:
+            criterion_schema["properties"].pop("score_anchor", None)
+            criterion_schema["properties"].pop("missing_information", None)
+            criterion_schema["properties"].pop("recommendation", None)
         for key in ("criterion_scores", "evidence_conflicts"):
             refs = schema["properties"][key]["items"]["properties"]["evidence_refs"]
             set_enum(refs["items"], evidence_ids)

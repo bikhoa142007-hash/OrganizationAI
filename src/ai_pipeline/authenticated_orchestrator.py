@@ -23,6 +23,7 @@ from src.shared.validation import canonical_hash
 
 
 PLAN_EVIDENCE_FIELDS = (
+from src.backend.domain.policy import strategy_checker_gate_failures
     "title", "objective", "summary", "department", "start_date", "end_date",
     "budget_minor_units", "currency", "target_audience", "channels", "kpi_expected", "notes",
 )
@@ -313,16 +314,23 @@ class AuthenticatedEvaluationOrchestrator:
             media_output["outcome"] == "PASS"
             and media_output["confidence"] >= configuration.policy.media_confidence_threshold
             and strategy_output["feasibility_score"] > configuration.policy.feasibility_threshold
+        strategy_gate_failures = (
+            strategy_checker_gate_failures(strategy_output["criterion_scores"],
+                                           strategy_output["critical_gaps"])
+            if configuration.strategy_rubric.has_score_anchors else ()
+        )
             and strategy_output["confidence"] >= configuration.policy.feasibility_confidence_threshold
             and not hard_violations and not conflicts and not missing_facts
             and extraction.get("status") == "SUCCEEDED"
         )
         recommendation = "RECOMMEND_AUTO_APPROVAL" if auto_recommendation else "RECOMMEND_HUMAN_REVIEW"
         if recommendation == "RECOMMEND_AUTO_APPROVAL":
+            and not strategy_gate_failures
             category = None
             reason = "Media and Strategy checks meet their configured evaluation thresholds; the deterministic engine still applies budget, authority, policy, and state gates."
         else:
-            category = "FACT_UNCERTAIN" if missing_facts or conflicts else "POLICY_OUT_OF_SCOPE"
+            category = "FACT_UNCERTAIN" if missing_facts or conflicts or strategy_gate_failures \
+                else "POLICY_OUT_OF_SCOPE"
             reason = "Checker review is required because one or more evaluation, evidence, or policy conditions were not met."
 
         now = utc_now()
@@ -332,7 +340,7 @@ class AuthenticatedEvaluationOrchestrator:
             "plan_version": request.plan_version,
             "approval_round": request.approval_round,
             "run_id": request.run_id,
-            "schema_version": 1,
+            "schema_version": 2 if configuration.strategy_rubric.has_score_anchors else 1,
             "input_hash": request.input_hash,
             "policy_version": request.policy_version,
             "provider": request.provider,
@@ -358,7 +366,9 @@ class AuthenticatedEvaluationOrchestrator:
             "reported_model_version": extraction.get("reported_model_id"),
             "correlation_id": request.correlation_id,
             "criterion_scores": [
-                {key: value for key, value in item.items() if key != "weight"}
+                {key: item[key] for key in (
+                    "criterion_id", "score", "maximum_score", "rationale", "evidence_refs",
+                )}
                 for item in strategy_output["criterion_scores"]
             ],
             "assumptions": strategy_output["assumptions"],
@@ -366,6 +376,8 @@ class AuthenticatedEvaluationOrchestrator:
         return PipelineResult(
             evaluation,
             attempts=visual_result.attempts + media_step["attempts"] + strategy_step["attempts"],
+            "strategy_critical_gaps": strategy_output["critical_gaps"],
+            "strategy_rubric_version": configuration.strategy_rubric.rubric_version,
             retried=visual_result.retried or media_step["retried"] or strategy_step["retried"],
             visual_extraction=extraction,
             media_evaluation=media_step,

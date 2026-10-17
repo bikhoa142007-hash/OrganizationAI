@@ -14,6 +14,10 @@ from src.ai_pipeline.task_evaluation import (
     validate_strategy_output,
 )
 
+from src.backend.domain.policy import (
+    STRATEGY_RUBRIC_V2_VERSION,
+    STRATEGY_RUBRIC_V2_ANCHORS,
+)
 
 def media_policy():
     return media_policy_from_json('''{
@@ -66,6 +70,18 @@ def strategy_rubric():
 
 
 def valid_media_output():
+def strategy_rubric_v2():
+    criteria = ",".join(
+        f'{{"criterion_id":"{criterion_id}","label":"{label}","weight":{weight}}}'
+        for criterion_id, label, weight in STRATEGY_CRITERIA
+    )
+    return strategy_rubric_from_json(
+        '{"rubric_id":"BA-STRATEGY-7","rubric_version":"'
+        + STRATEGY_RUBRIC_V2_VERSION
+        + '","status":"ACTIVE","criteria":[' + criteria + ']}'
+    )
+
+
     return {
         "policy_id": "MEDIA-POLICY-TEST",
         "policy_version": "1",
@@ -104,6 +120,35 @@ def valid_strategy_output(score=71):
 
 
 def test_media_result_requires_configured_policy_and_resolvable_evidence():
+def valid_strategy_v2_output(rubric):
+    scores = [75, 75, 75, 75, 75, 75, 50]
+    criterion_scores = []
+    for (criterion_id, _label, _weight), score in zip(STRATEGY_CRITERIA, scores):
+        anchors = {anchor.score: anchor.description
+                   for anchor in rubric.criteria_by_id[criterion_id].score_anchors}
+        criterion_scores.append({
+            "criterion_id": criterion_id,
+            "score": score,
+            "score_anchor": anchors[score],
+            "rationale": "Dữ kiện trong hồ sơ hỗ trợ mốc này.",
+            "evidence_refs": ["ev-plan-objective"],
+            "missing_information": [],
+            "recommendation": "Bổ sung căn cứ đo lường nếu cần.",
+        })
+    return {
+        "rubric_id": rubric.rubric_id,
+        "rubric_version": rubric.rubric_version,
+        "total_score": 72.5,
+        "confidence": 0.82,
+        "criterion_scores": criterion_scores,
+        "assumptions": [],
+        "missing_facts": [],
+        "critical_gaps": [],
+        "evidence_conflicts": [],
+        "reason": "Điểm tư vấn theo các mốc rubric đã duyệt.",
+    }
+
+
     policy = media_policy()
     result = validate_media_output(valid_media_output(), policy, {"ev-image-1"})
 
@@ -150,6 +195,9 @@ def test_media_forbidden_literal_must_match_evidence_and_be_reported_as_a_findin
     with pytest.raises(ValueError, match="literal rule"):
         validate_media_output(output, policy, evidence)
 
+    assert conflict.value.field_path == "rule_results[BRAND-LOGO].result"
+    assert conflict.value.expected == "FAIL"
+    assert conflict.value.actual == "PASS"
     output["outcome"] = "REVIEW_REQUIRED"
     output["rule_results"][0].update(result="FAIL", rationale="The configured OCR literal is present.")
     output["findings"] = [{
@@ -285,3 +333,45 @@ def test_strategy_prompt_requires_verbatim_rubric_version_weighted_total_and_str
     assert "total_score must be the weighted decimal sum of the seven criterion scores" in prompt
     assert "absence of evidence, a missing benchmark, or an unsupported target is not a conflict" in prompt
     assert "conflicts require two mutually incompatible factual claims" in prompt
+
+
+def test_strategy_rubric_v2_has_the_approved_five_anchors_for_each_criterion():
+    rubric = strategy_rubric_v2()
+
+    assert rubric.rubric_version == STRATEGY_RUBRIC_V2_VERSION
+    assert sum(item.weight for item in rubric.criteria) == 100
+    for criterion_id, _label, _weight in STRATEGY_CRITERIA:
+        anchors = rubric.criteria_by_id[criterion_id].score_anchors
+        assert [anchor.score for anchor in anchors] == [0, 25, 50, 75, 100]
+        assert all(anchor.description.strip() for anchor in anchors)
+        assert tuple((anchor.score, anchor.description) for anchor in anchors) == \
+            STRATEGY_RUBRIC_V2_ANCHORS[criterion_id]
+
+
+def test_strategy_v2_validates_anchor_selection_and_decimal_weighted_score():
+    rubric = strategy_rubric_v2()
+    output = valid_strategy_v2_output(rubric)
+
+    result = validate_strategy_output(output, rubric, {"ev-plan-objective"})
+
+    assert result["feasibility_score"] == 72.5
+    assert result["criterion_scores"][0]["score_anchor"] == output["criterion_scores"][0]["score_anchor"]
+    assert result["criterion_scores"][0]["recommendation"] == "Bổ sung căn cứ đo lường nếu cần."
+
+    invalid_score = valid_strategy_v2_output(rubric)
+    invalid_score["criterion_scores"][0]["score"] = 74
+    with pytest.raises(ValueError, match="anchor score"):
+        validate_strategy_output(invalid_score, rubric, {"ev-plan-objective"})
+
+    invalid_anchor = valid_strategy_v2_output(rubric)
+    invalid_anchor["criterion_scores"][0]["score_anchor"] = "A model-invented anchor"
+    with pytest.raises(ValueError, match="rubric anchor"):
+        validate_strategy_output(invalid_anchor, rubric, {"ev-plan-objective"})
+
+
+def test_strategy_v2_prompt_requires_independent_scoring_and_evidence_for_every_anchor():
+    prompt = STRATEGY_SYSTEM_PROMPT.lower()
+
+    assert "score each criterion independently" in prompt
+    assert "use only one of the supplied anchors" in prompt
+    assert "missing information in one criterion must not zero other criteria" in prompt
